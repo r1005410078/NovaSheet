@@ -626,13 +626,15 @@ describe('InMemoryDataSource', () => {
     expect(ds.getSchema()).toBe(SCHEMA)
   })
 
-  it('getRows returns the requested slice', () => {
+  it('getRows returns the requested inclusive slice', () => {
+    // endIndex is INCLUSIVE — matches ChunkedAxis.getVisibleRange [first, last] semantics
     const rows = Array.from({ length: 10 }, (_, i) => ({ name: `n${i}`, age: i }))
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows })
     expect(ds.getRows(2, 5)).toEqual([
       { name: 'n2', age: 2 },
       { name: 'n3', age: 3 },
       { name: 'n4', age: 4 },
+      { name: 'n5', age: 5 },
     ])
   })
 
@@ -714,6 +716,7 @@ export interface DataSource {
   getSchema(): Schema
   /**
    * Range prefetch channel. Renderer calls once per frame with the visible row range.
+   * endIndex is INCLUSIVE — matches ChunkedAxis.getVisibleRange [first, last] semantics.
    * Sync impls return rows immediately; async impls may return a Promise that resolves
    * after IO. Async resolution should emit a `rowsChanged` event to trigger re-paint.
    */
