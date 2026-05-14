@@ -14,6 +14,47 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 ---
 
+## Current state (read first on a fresh session)
+
+**Last shipped:** **M1 Foundation** — tag `m1-foundation` at the HEAD of `main`. 87 tests, lint/typecheck/build all clean. Renders a single static frame.
+
+**Next milestone:** **M2 Virtualization & Scroll** — not yet planned. Scope (per spec §6):
+- `NativeScroller` with RAF-throttled scroll events going through the shared `frameScheduler`
+- `ScrollMapper` with non-linear `scrollTop ↔ logicalY` mapping (`SAFE_MAX = 6_000_000` px)
+- DOM structure update: scroll-host as sibling of canvas, spacer sized by `ScrollMapper.computeSpacerSize`, canvas `pointer-events: none`
+- `Viewport.setScroll` wired through scroll events
+- `Renderer.paintQuadrant` must subtract `scrollX/Y` from cell positions (M1 currently has scroll=0 stub)
+- `GridLinesPainter` scroll-offset stub must be replaced (currently returns 0)
+
+**M3-M5 status:** outlined only — see spec §1 In Scope + spec appendix B for the Phase ordering.
+
+**Locked architectural decisions** (do NOT revisit casually, see spec ADR §A):
+
+1. Single Canvas, full visible-region redraw
+2. Native scroll + non-linear `scrollTop` mapping; reject self-painted scrollbar
+3. ChunkedAxis with `CHUNK_SIZE = 1024`
+4. DataSource `getRows(start, end)` returns `Row[] | Promise<Row[]>`, **`endIndex` is INCLUSIVE** to match `ChunkedAxis.getVisibleRange [first, last]`. `getCell` is sync hot path returning `CellValue | undefined`.
+5. Theme tokens — zero hardcoded visual values in `src/render/`
+6. DOM `<handle-layer>` siblings for resize hit-zones (M4) — solves the canvas pointer-events vs hover-detection paradox AND fixes a11y
+7. Single `frameScheduler` per Grid — all RAF sources coalesce
+
+**How to pick up:** start a new session by reading this file + the spec + the M1 plan. Then read the most-recent N commits to understand the latest delta. Open the M1 hardening review (`9579959`) if anything feels off about Renderer / ChunkedAxis / Grid.destroy — that commit captured the post-M1-review polish.
+
+---
+
+## Working with this user (operational style)
+
+Built up over the M1 cycle. Apply to all sessions, not just M1:
+
+- **Terse, technical, table-driven.** Use comparison tables (`维度 | 方案 A | 方案 B`) over prose paragraphs. Lead with recommendation + reason, options second. Surface runtime constraints with concrete numbers (e.g., "Firefox max scrollHeight ~17.9M px"), not vague hedges.
+- **Default to Chinese for prose, English for code/identifiers.** No emoji unless explicitly requested.
+- **End-of-turn summary: one or two sentences max. No celebratory tone.**
+- **Plan-bug catches are a feature, not a failure.** When implementing tasks, if a test expectation contradicts the reference implementation or a plan formula doesn't add up, STOP and ask before silently choosing. The M1 cycle caught 3 plan bugs mid-execution and 4 post-review issues — the user accepted every finding. The system is designed to catch these; don't shortcut it.
+- **When a plan bug is found, fix the plan file FIRST in a `docs(plan): ...` commit**, then re-dispatch the implementer with the corrected truth. Audit trail in `git log` matters.
+- **Don't skip self-review.** Both the plan self-review (placeholder scan / consistency / scope / ambiguity) and the spec self-review are load-bearing. After an entire milestone, dispatch a final code-reviewer subagent — even when tests + lint + typecheck are green; latent bugs at module boundaries are common.
+
+---
+
 ## Toolchain (NON-NEGOTIABLE)
 
 - **Package manager:** `pnpm` (>= 9). **NEVER** use `npm` or `yarn` — they will desync the lockfile and break CI.
