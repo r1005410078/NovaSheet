@@ -1245,8 +1245,11 @@ describe('ChunkedAxis (mutation)', () => {
     const axis = new ChunkedAxis({ count: 3000, defaultSize: 28 })
     axis.setSize(100, 100)
     axis.setSize(2000, 200)
+    // indexToPosition(2001) = sum of sizes for rows 0..2000
+    //   = 2001 default rows × 28 + delta(row 100: 100-28=72) + delta(row 2000: 200-28=172)
+    //   = 56028 + 72 + 172 = 56272
     expect(axis.indexToPosition(2001)).toBe(
-      100 * 28 + (100 - 28) + (2000 - 101) * 28 + 200,
+      101 * 28 + (100 - 28) + (2000 - 101) * 28 + 200,
     )
     expect(axis.getTotalSize()).toBe(3000 * 28 + (100 - 28) + (200 - 28))
   })
