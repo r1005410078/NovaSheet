@@ -1368,12 +1368,13 @@ describe('ChunkedAxis (range + default size)', () => {
     axis.setSize(5, 100)
     axis.setDefaultSize(40)
     expect(axis.getDefaultSize()).toBe(40)
-    // Override sticks: row 5 still 100; the chunk with override scales
-    // the *other* rows from 28→40 (since chunk holds explicit sizes)
-    // For non-override chunks: all rows become 40
-    const overrideChunk = 0
-    const sumChunk0 = 100 + 99 * 40 // row 5 still 100, others 40
-    expect(axis.indexToPosition(1024)).toBe(sumChunk0)
+    // Override sticks: row 5 stays at 100. All other rows (which were 28) scale to 40.
+    // Total = 99 rows × 40 + 1 override × 100 = 4060
+    expect(axis.getTotalSize()).toBe(99 * 40 + 100)
+    // Row 5 still 100 wide: position of row 6 = 5 defaults + the override
+    expect(axis.indexToPosition(6)).toBe(5 * 40 + 100)
+    // Row 5 itself starts after 5 default rows
+    expect(axis.indexToPosition(5)).toBe(5 * 40)
   })
 })
 ```
