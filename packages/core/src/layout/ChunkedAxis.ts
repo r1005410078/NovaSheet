@@ -109,6 +109,41 @@ export class ChunkedAxis {
     this._version++
   }
 
+  getVisibleRange(startPos: number, endPos: number): [number, number] {
+    if (this.count === 0) return [0, -1]
+    const first = this.positionToIndex(startPos)
+    const last = this.positionToIndex(endPos)
+    return [first, last]
+  }
+
+  setDefaultSize(newDefault: number): void {
+    if (newDefault === this.defaultSize) return
+    const oldDefault = this.defaultSize
+    this.defaultSize = newDefault
+    // Recompute every chunk
+    this.totalSize = 0
+    this.chunkPrefixSum = new Float64Array(this.chunks.length + 1)
+    for (let i = 0; i < this.chunks.length; i++) {
+      const chunk = this.chunks[i]!
+      if (chunk.sizes === null) {
+        const rowsInChunk =
+          i === this.chunks.length - 1 ? this.count - i * CHUNK_SIZE : CHUNK_SIZE
+        chunk.totalSize = rowsInChunk * newDefault
+      } else {
+        // chunk has explicit per-row sizes: only those equal to oldDefault scale up
+        let sum = 0
+        for (let k = 0; k < chunk.sizes.length; k++) {
+          if (chunk.sizes[k] === oldDefault) chunk.sizes[k] = newDefault
+          sum += chunk.sizes[k]!
+        }
+        chunk.totalSize = sum
+      }
+      this.chunkPrefixSum[i + 1] = this.chunkPrefixSum[i]! + chunk.totalSize
+      this.totalSize += chunk.totalSize
+    }
+    this._version++
+  }
+
   private rebuild(): void {
     const nChunks = Math.ceil(this.count / CHUNK_SIZE)
     this.chunks = new Array(nChunks)

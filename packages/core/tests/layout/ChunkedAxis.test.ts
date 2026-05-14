@@ -92,3 +92,35 @@ describe('ChunkedAxis (mutation)', () => {
     expect(axis.positionToIndex(axis.indexToPosition(12) - 1)).toBe(11)
   })
 })
+
+describe('ChunkedAxis (range + default size)', () => {
+  it('getVisibleRange returns inclusive [first, last]', () => {
+    const axis = new ChunkedAxis({ count: 1000, defaultSize: 28 })
+    expect(axis.getVisibleRange(0, 100)).toEqual([0, 3]) // 0..27, 28..55, 56..83, 84..111 (last covered)
+    expect(axis.getVisibleRange(56, 84)).toEqual([2, 3])
+  })
+
+  it('getVisibleRange clamps to 0..count-1', () => {
+    const axis = new ChunkedAxis({ count: 5, defaultSize: 28 })
+    expect(axis.getVisibleRange(-100, 99999)).toEqual([0, 4])
+  })
+
+  it('getVisibleRange with count=0 returns [0, -1] (empty)', () => {
+    const axis = new ChunkedAxis({ count: 0, defaultSize: 28 })
+    expect(axis.getVisibleRange(0, 100)).toEqual([0, -1])
+  })
+
+  it('setDefaultSize updates total but preserves overrides', () => {
+    const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
+    axis.setSize(5, 100)
+    axis.setDefaultSize(40)
+    expect(axis.getDefaultSize()).toBe(40)
+    // Override sticks: row 5 stays at 100. All other rows (which were 28) scale to 40.
+    // Total = 99 rows × 40 + 1 override × 100 = 4060
+    expect(axis.getTotalSize()).toBe(99 * 40 + 100)
+    // Row 5 still 100 wide: position of row 6 = 5 defaults + the override
+    expect(axis.indexToPosition(6)).toBe(5 * 40 + 100)
+    // Row 5 itself starts after 5 default rows
+    expect(axis.indexToPosition(5)).toBe(5 * 40)
+  })
+})
