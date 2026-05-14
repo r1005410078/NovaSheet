@@ -28,7 +28,7 @@ export class GridLinesPainter {
 
     // Horizontal lines: after each visible row's bottom edge
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
-      const yBase = rowsAxis.indexToPosition(r) + this.rowHeight(rowsAxis, r)
+      const yBase = rowsAxis.indexToPosition(r) + rowsAxis.getSize(r)
       const y = Math.floor(yBase - this.scrollOffsetY(rect)) + 0.5
       if (y < rect.y || y > rect.y + rect.height) continue
       ctx.moveTo(rect.x, y)
@@ -37,7 +37,7 @@ export class GridLinesPainter {
 
     // Vertical lines: after each visible column's right edge
     for (let c = colRange[0]; c <= colRange[1]; c++) {
-      const xBase = colsAxis.indexToPosition(c) + this.colWidth(colsAxis, c)
+      const xBase = colsAxis.indexToPosition(c) + colsAxis.getSize(c)
       const x = Math.floor(xBase - this.scrollOffsetX(rect)) + 0.5
       if (x < rect.x || x > rect.x + rect.width) continue
       ctx.moveTo(x, rect.y)
@@ -45,14 +45,6 @@ export class GridLinesPainter {
     }
 
     ctx.stroke()
-  }
-
-  private rowHeight(axis: ChunkedAxis, index: number): number {
-    return axis.indexToPosition(index + 1) - axis.indexToPosition(index)
-  }
-
-  private colWidth(axis: ChunkedAxis, index: number): number {
-    return axis.indexToPosition(index + 1) - axis.indexToPosition(index)
   }
 
   /** M1: no scroll, scroll offset = 0. Renderer will pass adjusted rect later. */

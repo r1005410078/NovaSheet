@@ -43,6 +43,20 @@ export class ChunkedAxis {
     return this.defaultSize
   }
 
+  /**
+   * Returns the size (width or height) of the row/col at `index`.
+   * Correct at the boundary: getSize(count - 1) returns the last row's actual size,
+   * not 0 like indexToPosition(count) - indexToPosition(count - 1) would.
+   */
+  getSize(index: number): number {
+    if (index < 0 || index >= this.count) return 0
+    const chunkIdx = index >>> 10
+    const offsetInChunk = index & 1023
+    const chunk = this.chunks[chunkIdx]!
+    if (chunk.sizes === null) return this.defaultSize
+    return chunk.sizes[offsetInChunk]!
+  }
+
   indexToPosition(index: number): number {
     if (this.count === 0) return 0
     const clamped = Math.max(0, Math.min(this.count - 1, index))
@@ -70,13 +84,13 @@ export class ChunkedAxis {
       return Math.min(this.count - 1, chunkIdx * CHUNK_SIZE + inner)
     }
     let acc = 0
-    for (let i = 0; i < chunk.sizes.length; i++) {
+    for (let i = 0; i < chunk.length; i++) {
       acc += chunk.sizes[i]!
       if (acc > yInChunk) {
         return Math.min(this.count - 1, chunkIdx * CHUNK_SIZE + i)
       }
     }
-    return Math.min(this.count - 1, chunkIdx * CHUNK_SIZE + chunk.sizes.length - 1)
+    return Math.min(this.count - 1, chunkIdx * CHUNK_SIZE + chunk.length - 1)
   }
 
   setSize(index: number, size: number): void {
@@ -132,7 +146,7 @@ export class ChunkedAxis {
       } else {
         // chunk has explicit per-row sizes: only those equal to oldDefault scale up
         let sum = 0
-        for (let k = 0; k < chunk.sizes.length; k++) {
+        for (let k = 0; k < chunk.length; k++) {
           if (chunk.sizes[k] === oldDefault) chunk.sizes[k] = newDefault
           sum += chunk.sizes[k]!
         }

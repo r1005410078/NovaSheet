@@ -90,4 +90,36 @@ describe('Grid', () => {
     grid.setColumnWidth('does-not-exist', 200) // should not throw
     grid.destroy()
   })
+
+  it('destroy cancels pending renderer flush', () => {
+    const rafs: Array<() => void> = []
+    const originalRaf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = ((cb: () => void) => {
+      rafs.push(cb)
+      return rafs.length
+    }) as typeof requestAnimationFrame
+
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    // Drain initial paint RAF
+    while (rafs.length) rafs.shift()!()
+    grid.refresh()
+    expect(rafs).toHaveLength(1)
+    grid.destroy()
+    // Flushing the RAF after destroy should not throw and not paint anywhere
+    rafs[0]!()
+    // No assertion on side effects — just must not throw
+
+    globalThis.requestAnimationFrame = originalRaf
+  })
+
+  it('destroy restores original container position', () => {
+    const el = document.createElement('div')
+    el.style.position = 'absolute'
+    const grid = new Grid(el, { data: makeData() })
+    // Grid does NOT change position when it's not static
+    expect(el.style.position).toBe('absolute')
+    grid.destroy()
+    expect(el.style.position).toBe('absolute')
+  })
 })

@@ -124,3 +124,34 @@ describe('ChunkedAxis (range + default size)', () => {
     expect(axis.indexToPosition(5)).toBe(5 * 40)
   })
 })
+
+describe('ChunkedAxis.getSize', () => {
+  it('returns default size for default chunks', () => {
+    const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
+    expect(axis.getSize(0)).toBe(28)
+    expect(axis.getSize(99)).toBe(28)
+  })
+
+  it('returns override size for materialized chunks', () => {
+    const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
+    axis.setSize(5, 60)
+    expect(axis.getSize(5)).toBe(60)
+    expect(axis.getSize(4)).toBe(28)
+    expect(axis.getSize(6)).toBe(28)
+  })
+
+  it('returns 0 for out-of-range indices', () => {
+    const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
+    expect(axis.getSize(-1)).toBe(0)
+    expect(axis.getSize(10)).toBe(0)
+    expect(axis.getSize(100)).toBe(0)
+  })
+
+  it('returns the correct size at the LAST row (no zero-out-bug at boundary)', () => {
+    const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
+    axis.setSize(9, 50)
+    expect(axis.getSize(9)).toBe(50)
+    // Confirm the buggy alternative gives 0
+    expect(axis.indexToPosition(10) - axis.indexToPosition(9)).toBe(0)
+  })
+})

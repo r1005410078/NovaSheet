@@ -62,6 +62,10 @@ export class Renderer {
     this.scheduler.schedule(RENDERER_KEY, () => this.paint())
   }
 
+  destroy(): void {
+    this.scheduler.cancel(RENDERER_KEY)
+  }
+
   paint(): void {
     const snapshot = this.viewport.snapshot()
     const { contentRect, headerHeight, quadrants } = snapshot
@@ -104,20 +108,14 @@ export class Renderer {
     const schema = this.data.getSchema()
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
       const yTop = this.rowsAxis.indexToPosition(r)
-      const yBottom = this.rowsAxis.indexToPosition(r + 1)
-      const rowHeight = (r + 1 >= this.rowsAxis.getCount())
-        ? this.rowsAxis.getTotalSize() - yTop
-        : yBottom - yTop
+      const rowHeight = this.rowsAxis.getSize(r)
       const cellY = rect.y + yTop // M1: no scroll subtraction (scrollY = 0)
 
       for (let c = colRange[0]; c <= colRange[1]; c++) {
         const field = schema.fields[c]
         if (!field) continue
         const xLeft = this.colsAxis.indexToPosition(c)
-        const xRight = this.colsAxis.indexToPosition(c + 1)
-        const colWidth = (c + 1 >= this.colsAxis.getCount())
-          ? this.colsAxis.getTotalSize() - xLeft
-          : xRight - xLeft
+        const colWidth = this.colsAxis.getSize(c)
         const cellX = rect.x + xLeft
         const value = this.data.getCell(r, field.id)
         this.cellPainter.paint(this.ctx, {

@@ -37,4 +37,24 @@ describe('GridLinesPainter', () => {
     })
     expect(ops.filter((o) => o.op === 'stroke')).toHaveLength(0)
   })
+
+  it('draws the last row bottom boundary at the correct position (not 0)', () => {
+    const { ctx, ops } = createRecordingContext()
+    const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    const painter = new GridLinesPainter(denseGridTheme)
+    painter.paint(ctx, {
+      rowsAxis,
+      colsAxis,
+      rowRange: [0, 2],
+      colRange: [0, 1],
+      rect: { x: 0, y: 0, width: 200, height: 100 },
+    })
+    // The last row's bottom line should be at y = 3*28 = 84 (with +0.5 alignment)
+    const lineYs = ops
+      .filter((o) => o.op === 'moveTo')
+      .map((o) => o.op === 'moveTo' ? o.args[1] : 0)
+      .filter((y) => y > 0 && y < 100)
+    expect(lineYs).toContain(84.5) // last row bottom (after floor + 0.5 alignment)
+  })
 })

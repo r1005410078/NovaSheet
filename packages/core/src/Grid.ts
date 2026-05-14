@@ -29,6 +29,7 @@ export class Grid {
   private highDpi: HighDPI
   private renderer: Renderer
   private destroyed = false
+  private originalPosition: string
 
   constructor(container: HTMLElement, options: GridOptions) {
     this.container = container
@@ -43,7 +44,9 @@ export class Grid {
       left: '0',
       pointerEvents: 'none',
     })
-    if (getComputedStyle(this.container).position === 'static') {
+    const computedPos = getComputedStyle(this.container).position
+    this.originalPosition = this.container.style.position
+    if (computedPos === 'static') {
       this.container.style.position = 'relative'
     }
     this.container.appendChild(this.canvas)
@@ -149,9 +152,11 @@ export class Grid {
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
+    this.renderer.destroy()
     if (this.canvas.parentNode === this.container) {
       this.container.removeChild(this.canvas)
     }
+    this.container.style.position = this.originalPosition
   }
 
   private invalidate(): void {
