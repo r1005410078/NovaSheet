@@ -1823,10 +1823,14 @@ export class FrozenRegions {
    * when frozenRows > 0 or frozenCols > 0.
    */
   getQuadrants(vp: ViewportRect): Quadrants {
+    // Viewport rect is half-open [start, start+size), but getVisibleRange
+    // takes inclusive position endpoints. Subtract 1 from end positions
+    // so position == start+size (which is OUTSIDE the viewport) doesn't
+    // get included as a visible row/column.
     const yStart = vp.scrollY
-    const yEnd = vp.scrollY + (vp.height - vp.headerHeight)
+    const yEnd = vp.scrollY + (vp.height - vp.headerHeight) - 1
     const xStart = vp.scrollX
-    const xEnd = vp.scrollX + vp.width
+    const xEnd = vp.scrollX + vp.width - 1
 
     const rowRange = this.rowsAxis.getVisibleRange(yStart, yEnd)
     const colRange = this.colsAxis.getVisibleRange(xStart, xEnd)
