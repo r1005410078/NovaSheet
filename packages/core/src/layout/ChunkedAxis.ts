@@ -79,6 +79,36 @@ export class ChunkedAxis {
     return Math.min(this.count - 1, chunkIdx * CHUNK_SIZE + chunk.sizes.length - 1)
   }
 
+  setSize(index: number, size: number): void {
+    if (index < 0 || index >= this.count) return
+    const chunkIdx = index >>> 10
+    const offsetInChunk = index & 1023
+    const chunk = this.chunks[chunkIdx]!
+
+    if (chunk.sizes === null) {
+      if (size === this.defaultSize) return
+      const rowsInChunk =
+        chunkIdx === this.chunks.length - 1
+          ? this.count - chunkIdx * CHUNK_SIZE
+          : CHUNK_SIZE
+      const sizes = new Float32Array(CHUNK_SIZE)
+      for (let i = 0; i < rowsInChunk; i++) sizes[i] = this.defaultSize
+      chunk.sizes = sizes
+    }
+
+    const old = chunk.sizes[offsetInChunk]!
+    const delta = size - old
+    if (delta === 0) return
+    chunk.sizes[offsetInChunk] = size
+    chunk.totalSize += delta
+
+    for (let i = chunkIdx + 1; i <= this.chunks.length; i++) {
+      this.chunkPrefixSum[i] = this.chunkPrefixSum[i]! + delta
+    }
+    this.totalSize += delta
+    this._version++
+  }
+
   private rebuild(): void {
     const nChunks = Math.ceil(this.count / CHUNK_SIZE)
     this.chunks = new Array(nChunks)

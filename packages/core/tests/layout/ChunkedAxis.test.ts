@@ -46,3 +46,49 @@ describe('ChunkedAxis (all default)', () => {
     expect(axis.getChunkCount()).toBe(0)
   })
 })
+
+describe('ChunkedAxis (mutation)', () => {
+  it('setSize materializes the chunk and updates total', () => {
+    const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
+    const before = axis.version
+    axis.setSize(5, 50)
+    expect(axis.getTotalSize()).toBe(99 * 28 + 50)
+    expect(axis.indexToPosition(5)).toBe(5 * 28)
+    expect(axis.indexToPosition(6)).toBe(5 * 28 + 50)
+    expect(axis.version).toBeGreaterThan(before)
+  })
+
+  it('setSize across multiple chunks updates the prefix sums', () => {
+    const axis = new ChunkedAxis({ count: 3000, defaultSize: 28 })
+    axis.setSize(100, 100)
+    axis.setSize(2000, 200)
+    expect(axis.indexToPosition(2001)).toBe(
+      101 * 28 + (100 - 28) + (2000 - 101) * 28 + 200,
+    )
+    expect(axis.getTotalSize()).toBe(3000 * 28 + (100 - 28) + (200 - 28))
+  })
+
+  it('setSize to defaultSize on a null chunk is a no-op (no allocation)', () => {
+    const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
+    const before = axis.version
+    axis.setSize(5, 28)
+    expect(axis.getTotalSize()).toBe(100 * 28)
+    expect(axis.version).toBe(before)
+  })
+
+  it('setSize on out-of-range index is a no-op', () => {
+    const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
+    axis.setSize(-1, 100)
+    axis.setSize(100, 100)
+    expect(axis.getTotalSize()).toBe(10 * 28)
+  })
+
+  it('positionToIndex still inverts after mutation', () => {
+    const axis = new ChunkedAxis({ count: 1000, defaultSize: 28 })
+    axis.setSize(10, 100)
+    axis.setSize(11, 100)
+    expect(axis.positionToIndex(axis.indexToPosition(10))).toBe(10)
+    expect(axis.positionToIndex(axis.indexToPosition(11))).toBe(11)
+    expect(axis.positionToIndex(axis.indexToPosition(12) - 1)).toBe(11)
+  })
+})
