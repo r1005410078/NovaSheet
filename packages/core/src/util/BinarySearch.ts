@@ -1,7 +1,6 @@
 /**
- * Returns the smallest index `i` in [0, length) such that arr[i] > target.
- * If no such index exists, returns `length`.
- * arr must be sorted ascending.
+ * 返回升序数组 arr 中第一个严格大于 target 的元素下标（上界）。
+ * 搜索范围为 [0, length)；若所有元素均不大于 target，返回 length。
  */
 export function upperBound(arr: ArrayLike<number>, length: number, target: number): number {
   let lo = 0

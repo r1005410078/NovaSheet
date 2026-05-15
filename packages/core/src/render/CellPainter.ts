@@ -2,22 +2,30 @@ import type { CellValue, Field } from '../data/Schema'
 import type { QuadrantRect } from '../layout/FrozenRegions'
 import type { Theme } from '../theme/Theme'
 
+/** 单次单元格绘制所需参数 */
 export interface CellPaintParams {
+  /** 单元格值（undefined 时跳过绘制） */
   value: CellValue | undefined
+  /** 单元格在画布上的矩形区域 */
   rect: QuadrantRect
+  /** 字段定义（决定类型与对齐） */
   field: Field
 }
 
+/** 负责将单个单元格的值渲染到画布，含截断缓存优化 */
 export class CellPainter {
+  /** 截断结果缓存，key = `font|maxWidth|text` */
   private truncationCache = new Map<string, string>()
 
   constructor(private theme: Theme) {}
 
+  /** 切换主题并清空截断缓存（字体变更后缓存失效） */
   setTheme(theme: Theme): void {
     this.theme = theme
     this.truncationCache.clear()
   }
 
+  /** 绘制单个单元格：裁剪至矩形区域，按字段类型分发到对应绘制方法 */
   paint(ctx: CanvasRenderingContext2D, params: CellPaintParams): void {
     const { value, rect, field } = params
     if (value === null || value === undefined) return
@@ -42,6 +50,7 @@ export class CellPainter {
     ctx.restore()
   }
 
+  /** 绘制文本类型单元格（左对齐，超长截断加省略号） */
   private paintText(ctx: CanvasRenderingContext2D, text: string, rect: QuadrantRect): void {
     const padX = this.theme.metrics.cellPaddingX
     const availableWidth = rect.width - padX * 2
@@ -52,8 +61,9 @@ export class CellPainter {
     ctx.fillText(display, x, y)
   }
 
+  /** 绘制数字类型单元格（右对齐，千分位格式化） */
   private paintNumber(ctx: CanvasRenderingContext2D, value: number, rect: QuadrantRect): void {
-    const text = value.toLocaleString('en-US') // 千分位
+    const text = value.toLocaleString('en-US') // 千分位格式化
     const padX = this.theme.metrics.cellPaddingX
     const availableWidth = rect.width - padX * 2
     const display = this.truncate(ctx, text, availableWidth)
@@ -63,6 +73,7 @@ export class CellPainter {
     ctx.fillText(display, x, y)
   }
 
+  /** 兜底绘制：Date → ISO 字符串，数组 → 逗号拼接，其他 → String() 转换后走文本路径 */
   private paintFallback(
     ctx: CanvasRenderingContext2D,
     value: CellValue,
@@ -76,6 +87,7 @@ export class CellPainter {
     this.paintText(ctx, str, rect)
   }
 
+  /** 截断文本至 maxWidth 内，超出时用二分查找确定最大前缀并附加省略号，结果缓存 */
   private truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
     if (maxWidth <= 0) return ''
     const cacheKey = `${ctx.font}|${maxWidth}|${text}`
@@ -93,7 +105,7 @@ export class CellPainter {
       this.truncationCache.set(cacheKey, '')
       return ''
     }
-    // Binary search for the largest prefix fitting in (maxWidth - ellipsisWidth)
+    // 二分查找：找到能放入 (maxWidth - ellipsisWidth) 的最长前缀
     let lo = 0
     let hi = text.length
     while (lo < hi) {
