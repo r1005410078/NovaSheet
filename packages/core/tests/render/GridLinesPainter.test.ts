@@ -72,13 +72,16 @@ describe('GridLinesPainter', () => {
       scrollOffsetX: 0,
       scrollOffsetY: 28, // scroll down by 1 row
     })
-    // Without scroll, the last row bottom is at y = 84 (3 × 28). With scrollY=28, lines should be
-    // shifted up by 28. The bottom line for row 2 should be at y = 84 - 28 = 56 (+0.5 = 56.5).
+    // Without scroll, last-row bottom is at y = 84 (3 × 28). With scrollY=28, lines must shift
+    // up by 28; row-2 bottom becomes 56.5 and row-0 bottom (originally 28.5) becomes 0.5.
+    // The "unshifted" 84.5 must NOT appear — that's the precise gate that fails if subtraction is missing.
     const lineYs = ops
       .filter((o) => o.op === 'moveTo')
       .map((o) => (o.op === 'moveTo' ? o.args[1] : 0))
-      .filter((y) => y > 0 && y < 100)
     expect(lineYs).toContain(56.5)
+    expect(lineYs).not.toContain(84.5)
+    // Row-0 bottom shifts from 28.5 to 0.5 (still within rect [0, 100] so it's emitted)
+    expect(lineYs).toContain(0.5)
   })
 
   it('keeps backward-compatible default (no scroll offset = no shift)', () => {

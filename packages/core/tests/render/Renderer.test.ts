@@ -76,29 +76,34 @@ describe('Renderer (M1 single quadrant)', () => {
     viewport.setScroll(0, 56) // scroll down by 2 rows (28px each)
     ops.length = 0
     renderer.paint()
-    // First cell of the FIRST visible row should be at cellY ≈ rect.y + indexToPosition(visibleFirst) - 56
-    // For our 200px viewport with headerHeight 32, scrollY 56 → visibleFirst = 2 (rows 2,3,4..)
-    // Row 2 starts at y = 56 in content space; rect.y = headerHeight = 32; cellY = 32 + 56 - 56 = 32
-    const firstCellFillText = ops.find(
-      (o) => o.op === 'fillText' && typeof o.args[0] === 'string' && o.args[0] === 'Carol',
+    // Carol is row 2. With M2 subtraction: cellY = rect.y(32) + yTop(56) - scrollY(56) = 32.
+    // text rendering uses textBaseline=middle, fillText y = cellY + rowHeight/2 = 32 + 14 = 46.
+    // Without subtraction: cellY = 88, fillText y = 102. So 46 is the discriminator.
+    const carol = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Carol',
     )
-    // Carol is row 2 (Alice=0, Bob=1, Carol=2). It should still be in fillText
-    expect(firstCellFillText).toBeDefined()
+    expect(carol).toBeDefined()
+    expect(carol!.args[2]).toBe(46)
   })
 
   it('paintQuadrant subtracts viewport.scrollX from cellX for horizontal scroll', () => {
     const { ops, viewport, renderer } = setup()
-    viewport.setScroll(100, 0) // scroll right by 100px (= 1 col)
+    viewport.setScroll(100, 0) // scroll right by 100px = 1 col
     ops.length = 0
     renderer.paint()
-    // Column 0 (Name) starts at xLeft=0; with scrollX=100 it should be at cellX = 0 + 0 - 100 = -100,
-    // which means it's mostly clipped. But the fillText call is still made if the col is in visible range.
-    // After scrolling left, visible col range starts at col 1 (Age). Verify "Age" header is the leftmost visible.
-    const ageHeader = ops.find((o) => o.op === 'fillText' && o.args[0] === 'Age')
-    expect(ageHeader).toBeDefined()
-    if (ageHeader && ageHeader.op === 'fillText') {
-      // Age column starts at content x=100; with scrollX=100 it lands at cellX = 0 + 100 - 100 = 0 + padX = 8
-      expect(typeof ageHeader.args[1]).toBe('number')
-    }
+    // After scroll, visible col range = [1, 1] (Age only). Body cells render values "30","25","40"
+    // via paintNumber (right-aligned). Test's ChunkedAxis uses defaultSize=100 (not the schema
+    // widths of 100/80 — those would be applied by Grid.applyFieldWidths, which the bare Renderer
+    // test setup skips). So colWidth = 100 here.
+    // With M2 subtraction:    cellX = rect.x(0) + xLeft(100) - scrollX(100) = 0; fillText x = 0 + 100 - 8 = 92.
+    // Without subtraction:    cellX = 100;                                       fillText x = 192.
+    // 92 is the discriminator that fails without scroll subtraction.
+    const thirty = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === '30',
+    )
+    expect(thirty).toBeDefined()
+    expect(thirty!.args[1]).toBe(92)
   })
 })
