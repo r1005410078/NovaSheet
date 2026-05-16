@@ -1,3 +1,14 @@
+/**
+ * HeaderPainter——绘制顶部列头条（spec §5.6）。
+ *
+ * M1 内容：headerBackground 填充 + 每列绘制字段名（左对齐、垂直居中、`…` 截断）。
+ * 不绘制字段类型 icon——Theme.icons 已备好，M2/M3 给 header 加 icon / 排序图标 /
+ * 列拖拽 indicator 时再消费。
+ *
+ * Header 永远在最顶层，最后绘（spec §5.3 顺序），覆盖滚动区。冻结列的 header 段在
+ * 主 header 之后再绘一次（M3 才会启用，因为 M1 没有冻结列）。
+ */
+
 import type { ChunkedAxis } from '../layout/ChunkedAxis'
 import type { Schema } from '../data/Schema'
 import type { Theme } from '../theme/Theme'

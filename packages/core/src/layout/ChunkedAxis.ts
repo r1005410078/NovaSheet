@@ -1,3 +1,27 @@
+/**
+ * ChunkedAxis——行轴 / 列轴共用的尺寸-偏移算法核心（spec §4）。
+ *
+ * 设计动机：1,000,000+ 行的偏移数组若每行单独存储，仅 Float64 累计就要 8MB 且不利于
+ * 局部失效。CHUNKED 设计把项切成长度 = `CHUNK_SIZE` 的 chunk，整 chunk 未偏离默认值时
+ * `sizes = null`（O(1) 存储），任何一项偏离才懒分配 Float32Array(CHUNK_SIZE)。
+ *
+ * 核心操作复杂度（n = 1M，n_chunks ≈ 977）：
+ *   - indexToPosition / getSize / positionToIndex：默认 chunk 走 O(1) 快路径，
+ *     非默认 chunk 在 chunk 内累加，最坏 O(CHUNK_SIZE)，受 SIMD-友好的 Float32Array 加持
+ *     单次 < 1μs
+ *   - setSize：单 chunk 内更新 + O(n_chunks) 维护 chunkPrefixSum，~3μs（写 977 个 Float64）
+ *   - getVisibleRange：两次 positionToIndex（半开区间在调用方处理，spec §6.4）
+ *
+ * 关键不变量（破坏 = 渲染崩）：
+ *   - `chunkPrefixSum[i]` = chunks[0..i) 的尺寸总和；长度 = chunks.length + 1
+ *   - `chunk.length` 是该 chunk 实际行数（末块可能 < CHUNK_SIZE）；迭代 `chunk.sizes` 必须
+ *     用 `chunk.length`，不能用 `chunk.sizes.length`（M1 hardening 修复，CLAUDE.md 不变量 #7）
+ *   - `getSize(index)` 是边界正确的尺寸访问器；不要用 `indexToPosition(i+1) - indexToPosition(i)`
+ *     在 `i = count - 1` 时会因 clamp 返回 0
+ *
+ * version 字段：每次 mutate 自增，Viewport.snapshot 据此判脏；Renderer 不直接读 axis。
+ */
+
 import { upperBound } from '../util/BinarySearch'
 import { type Chunk, createDefaultChunk } from '../util/ChunkArray'
 

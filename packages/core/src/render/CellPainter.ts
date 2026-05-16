@@ -1,3 +1,22 @@
+/**
+ * CellPainter——按 FieldType 分派绘制单个单元格（spec §5.4）。
+ *
+ * M1 实现了两条专门路径 + 一条 fallback：
+ *   - `text`：左对齐 + 文本省略号截断
+ *   - `number`：右对齐 + `toLocaleString('en-US')` 千分位 + 省略号截断
+ *   - 其他 5 种 FieldType（singleSelect / multiSelect / date / checkbox / url）：
+ *     `String(value)` → 走 text 路径。M2/M3 加专属编辑器与绘制时只在此处补 case。
+ *
+ * 文本截断：二分搜索最长能容纳的前缀 + `…`，结果按 `${ctx.font}|${maxWidth}|${text}`
+ * 缓存到 `truncationCache`（Map）。`setTheme` 会清空缓存（字体可能变）。M1 没有 LRU 上限，
+ * M2 启用滚动后建议加上限以防极端场景内存爆涨（见 spec §9.1 风险）。
+ *
+ * `null` / `undefined` 值在最前面短路返回——既不 save/clip 也不 fillText，0 副作用。
+ *
+ * 整 cell 用 `ctx.save() + rect() + clip() + ... + restore()` 包住，防止长文本越过单元格。
+ * 实测 600 个 cell × save/clip/restore < 3 ms，可接受。
+ */
+
 import type { CellValue, Field } from '../data/Schema'
 import type { QuadrantRect } from '../layout/FrozenRegions'
 import type { Theme } from '../theme/Theme'

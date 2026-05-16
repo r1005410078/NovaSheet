@@ -1,3 +1,21 @@
+/**
+ * Renderer——单帧绘制的总调度（spec §5）。
+ *
+ * 职责：
+ *   - 从 Viewport.snapshot() 取「该绘什么」的不可变快照
+ *   - 按 spec §5.3 顺序合成各 painter：清屏 → main 象限（cell + grid lines）→ 冻结象限 → header
+ *   - 通过共享 frameScheduler 调度 RAF；同帧多次 invalidate() 合并为一次 flush（key 去重）
+ *   - destroy() 时取消 pending RAF，避免组件销毁后还有一次延迟 paint（M1 hardening 修复）
+ *
+ * M1 实现降级：
+ *   - 只画 `main` 象限（FrozenRegions 暂只返回 main）；冻结的 3 个象限留 M3
+ *   - scrollX/Y 始终为 0；M2 NativeScroller 接入后会让 paintQuadrant 减去 viewport.scrollX/Y
+ *   - 不做局部脏区——全帧整片重绘（spec §5.2，预算 < 5ms 内绰绰有余）
+ *
+ * `getRows` 同步路径返回数组立即可用，Promise 返回值在 M1 直接忽略（M2+ 异步源会
+ * 通过 DataSource.subscribe 发 rowsChanged 触发重绘）。
+ */
+
 import type { DataSource } from '../data/DataSource'
 import type { ChunkedAxis } from '../layout/ChunkedAxis'
 import type { Quadrant } from '../layout/FrozenRegions'

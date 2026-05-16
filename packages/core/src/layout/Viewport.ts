@@ -1,3 +1,14 @@
+/**
+ * Viewport——聚合 ChunkedAxis（行列轴）+ FrozenRegions（象限切分）+ 当前 scroll 状态，
+ * 对外提供 `snapshot()`，是 Renderer **唯一**允许读取的数据源（CLAUDE.md 不变量 #1）。
+ *
+ * 不变量：
+ *   - Renderer 永远从 snapshot 取数，不直接访问 axis / frozen / dataSource
+ *   - 每次状态变更（setSize / setScroll / setHeaderHeight）`_version` 自增；snapshot.version
+ *     取 max(_version, rowsAxis.version, colsAxis.version)，下游可基于此做脏判
+ *   - M1 scroll 始终为 0；M2 NativeScroller 通过 setScroll 注入逻辑滚动位置
+ */
+
 import type { ChunkedAxis } from './ChunkedAxis'
 import type { FrozenRegions, Quadrants } from './FrozenRegions'
 

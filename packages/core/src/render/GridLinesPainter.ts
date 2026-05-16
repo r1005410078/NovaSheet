@@ -1,3 +1,16 @@
+/**
+ * GridLinesPainter——绘制可见区的水平 / 垂直分隔线（spec §5.5）。
+ *
+ * 优化：所有同色线合并到一次 ctx.beginPath()+stroke()——600 个 cell 范围内大约
+ * 几十条线一次描边，远比 per-line stroke 快。线坐标采用 `floor + 0.5` 对齐避免亚像素模糊。
+ *
+ * 边界正确性：rowHeight / colWidth 通过 axis.getSize(index) 取值，而非
+ * indexToPosition(index+1) - indexToPosition(index)——后者在末行/末列因 clamp 返回 0
+ * （CLAUDE.md 不变量 #7，M1 hardening 修复）。
+ *
+ * scrollOffsetX/Y 在 M1 始终返回 0；M2 接入 NativeScroller 后由 Renderer 传入或 painter 自行读取。
+ */
+
 import type { ChunkedAxis } from '../layout/ChunkedAxis'
 import type { QuadrantRect } from '../layout/FrozenRegions'
 import type { Theme } from '../theme/Theme'

@@ -1,3 +1,22 @@
+/**
+ * Grid——@novasheet/core 的公共门面（facade）。
+ *
+ * 职责：
+ *   - 把容器 DOM、用户配置组装成完整渲染管线（DataSource + Theme + 两根 ChunkedAxis +
+ *     FrozenRegions + Viewport + HighDPI + Renderer）
+ *   - 暴露**所有外部可写入口**：setData / setTheme / setRowHeight / setColumnWidth / refresh / destroy。
+ *     CLAUDE.md 不变量 #2：所有 mutation 走 Grid，painter / layout 不自我 invalidate。
+ *   - 维护 destroy 幂等性（CLAUDE.md 不变量 #6）：取消所有 RAF、恢复 container.style.position、
+ *     移除 canvas；mount → destroy → mount 在 React Strict Mode 下不报错。
+ *
+ * 与子系统的边界：
+ *   - 子系统（Renderer / Viewport / ChunkedAxis）对外只接受快照读 + 受控写
+ *   - Grid 不参与单帧绘制逻辑——绘制时序由 Renderer 走共享 frameScheduler 决定
+ *
+ * 当前里程碑：M1 已完成静态单帧渲染；scroll / frozen quadrants / 交互 resize handle 留待 M2-M4。
+ * 见 docs/superpowers/specs §3 公共 API 与 §5 渲染管线。
+ */
+
 import type { DataSource } from './data/DataSource'
 import { ChunkedAxis } from './layout/ChunkedAxis'
 import { FrozenRegions } from './layout/FrozenRegions'

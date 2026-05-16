@@ -1,3 +1,16 @@
+/**
+ * FrozenRegions——把视口切分为 4 个象限：topLeft / topRight / bottomLeft / main（spec §4）。
+ *
+ * **M1 实现是降级版**：永远只返回 `main` 一个象限（覆盖整个内容区，无冻结行列）。
+ * topLeft / topRight / bottomLeft 字段在类型上保留为 optional，M3 落地真正的冻结时填充。
+ *
+ * 视口矩形按半开区间处理：xEnd / yEnd 减 1 后再传给 ChunkedAxis.getVisibleRange
+ * （后者接收 inclusive 端点），避免恰好落在下一行/列起点的位置被错误包进可见集合。
+ *
+ * Renderer 通过 Viewport.snapshot() 取 quadrants，按 main → bottomLeft → topRight → topLeft
+ * 顺序绘制（spec §5.3），冻结区在最上面。
+ */
+
 import type { ChunkedAxis } from './ChunkedAxis'
 
 /** 画布坐标系中的矩形区域，单位为 CSS 像素 */
