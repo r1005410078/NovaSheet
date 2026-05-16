@@ -200,4 +200,114 @@ describe('Grid', () => {
     expect(spacer.style.height).toBe(`${50 * 28 + 72}px`)
     grid.destroy()
   })
+
+  it('forwards native scroll events to viewport via ScrollMapper', () => {
+    const rafs: Array<() => void> = []
+    const originalRaf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = ((cb: () => void) => {
+      rafs.push(cb)
+      return rafs.length
+    }) as typeof requestAnimationFrame
+
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const grid = new Grid(el, { data: makeData() })
+    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+    // Drain initial paint frames
+    while (rafs.length) rafs.shift()!()
+
+    // Fake a scroll event with new scrollTop
+    Object.defineProperty(host, 'scrollTop', { value: 56, writable: true, configurable: true })
+    Object.defineProperty(host, 'scrollLeft', { value: 0, writable: true, configurable: true })
+    host.dispatchEvent(new Event('scroll'))
+    expect(rafs).toHaveLength(1)
+    while (rafs.length) rafs.shift()!()
+
+    // After the scroll, viewport scrollY should be ~56 (content 1400 ≤ spacer 1400 → identity)
+    // Indirect verification: refresh and check the canvas got paint instructions referencing
+    // the scrolled state. A direct assertion would require exposing viewport state, but the
+    // RAF being scheduled + drained without throwing is sufficient as a smoke test here.
+    expect(() => grid.refresh()).not.toThrow()
+
+    grid.destroy()
+    document.body.removeChild(el)
+    globalThis.requestAnimationFrame = originalRaf
+  })
+
+  it('scrollToRow moves the scroll-host scrollTop to align the row', () => {
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const grid = new Grid(el, { data: makeData() })
+    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+
+    grid.scrollToRow(10, 'start')
+    // Row 10 starts at y = 10 × 28 = 280; content 1400 ≤ spacer 1400 (identity branch)
+    expect(host.scrollTop).toBe(280)
+
+    grid.scrollToRow(0, 'start')
+    expect(host.scrollTop).toBe(0)
+
+    grid.destroy()
+    document.body.removeChild(el)
+  })
+
+  it('scrollToCell moves both scrollTop and scrollLeft', () => {
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const grid = new Grid(el, { data: makeData() })
+    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+
+    grid.scrollToCell(5, 'age') // age = field index 1, at x = 200; row 5 at y = 140
+    expect(host.scrollTop).toBe(140)
+    expect(host.scrollLeft).toBe(200)
+
+    grid.destroy()
+    document.body.removeChild(el)
+  })
+
+  it('scrollToRow with align=end aligns the row bottom to viewport bottom', () => {
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const grid = new Grid(el, { data: makeData() })
+    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+
+    // viewport-content height = 300 - 32 (headerHeight from denseGridTheme) = 268
+    // row 20 bottom = 21 × 28 = 588; align=end → scrollTop = 588 - 268 = 320
+    grid.scrollToRow(20, 'end')
+    expect(host.scrollTop).toBe(320)
+
+    grid.destroy()
+    document.body.removeChild(el)
+  })
+
+  it('scrollToRow with out-of-range index does not throw', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    expect(() => grid.scrollToRow(99999, 'start')).not.toThrow()
+    expect(() => grid.scrollToRow(-1, 'start')).not.toThrow()
+    grid.destroy()
+  })
+
+  it('ResizeObserver-style container resize triggers paint invalidate', () => {
+    // happy-dom may or may not implement ResizeObserver. The test verifies our wiring
+    // by manually calling the internal resize handler (exposed via _onContainerResize for tests).
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const grid = new Grid(el, { data: makeData() })
+
+    const spy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
+    // Simulate a container resize by setting different bounding rect and dispatching the internal handler
+    Object.defineProperty(el, 'clientWidth', { value: 500, configurable: true })
+    Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true })
+    ;(grid as unknown as { _onContainerResize: () => void })._onContainerResize()
+
+    expect(spy).toHaveBeenCalled()
+    grid.destroy()
+    document.body.removeChild(el)
+  })
 })

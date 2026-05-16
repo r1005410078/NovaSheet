@@ -23,3 +23,6 @@ export type {
 // 主题层
 export { denseGridTheme } from './theme/denseGridTheme'
 export type { Theme } from './theme/Theme'
+
+// 滚动层
+export { ScrollMapper, SAFE_MAX } from './scroll/ScrollMapper'

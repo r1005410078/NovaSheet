@@ -23,9 +23,11 @@ import { FrozenRegions } from './layout/FrozenRegions'
 import { Viewport } from './layout/Viewport'
 import { HighDPI } from './render/HighDPI'
 import { Renderer } from './render/Renderer'
+import { NativeScroller } from './scroll/NativeScroller'
 import { ScrollMapper } from './scroll/ScrollMapper'
 import { denseGridTheme } from './theme/denseGridTheme'
 import type { Theme } from './theme/Theme'
+import { FrameScheduler } from './util/raf'
 
 /** Grid 初始化选项 */
 export interface GridOptions {
@@ -85,6 +87,12 @@ export class Grid {
   private renderer: Renderer
   /** 滚动映射器（content ↔ scroll-host 非线性映射，M2） */
   private scrollMapper: ScrollMapper
+  /** 原生滚动事件适配器（M2） */
+  private nativeScroller!: NativeScroller
+  /** 容器尺寸变化监听器；happy-dom 中可能不可用 */
+  private resizeObserver: ResizeObserver | null = null
+  /** 每个 Grid 一个 RAF 调度器，让 scroll / render / resize 合并到同一帧（CLAUDE.md 不变量 #5） */
+  private scheduler: FrameScheduler = new FrameScheduler()
   /** 是否已销毁，防止重复操作 */
   private destroyed = false
   /** 构造时保存容器的原始 position 值，销毁时恢复 */
@@ -163,6 +171,7 @@ export class Grid {
       rowsAxis: this.rowsAxis,
       colsAxis: this.colsAxis,
       theme: this.theme,
+      scheduler: this.scheduler,
     })
 
     // happy-dom（以及未挂载的真实 DOM 元素）会把 getBoundingClientRect 全部返 0；
@@ -174,6 +183,20 @@ export class Grid {
     this.viewport.setSize(w, h)
     this.applyFieldWidths()
     this.resizeSpacer()
+
+    // Wire native scroll → ScrollMapper → Viewport.setScroll → Renderer.invalidate
+    this.nativeScroller = new NativeScroller(this.scrollHost, this.scheduler, (scrollTop, scrollLeft) => {
+      const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
+      this.viewport.setScroll(logicalX, logicalY)
+      this.renderer.invalidate()
+    })
+    this.nativeScroller.attach()
+
+    // Watch container resize so spacer + canvas stay in sync with element size
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this._onContainerResize())
+      this.resizeObserver.observe(this.container)
+    }
 
     // 同步首帧——让 new Grid(...) 后立即可见画面；
     // 之后所有 paint 都走 RAF。
@@ -213,6 +236,7 @@ export class Grid {
       rowsAxis: this.rowsAxis,
       colsAxis: this.colsAxis,
       theme: this.theme,
+      scheduler: this.scheduler,
     })
     this.invalidate()
   }
@@ -265,6 +289,11 @@ export class Grid {
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = null
+    }
+    this.nativeScroller.destroy()
     this.renderer.destroy()
     if (this.canvas.parentNode === this.container) {
       this.container.removeChild(this.canvas)
@@ -273,6 +302,50 @@ export class Grid {
       this.container.removeChild(this.scrollHost)
     }
     this.container.style.position = this.originalPosition
+  }
+
+  /**
+   * 滚动到指定行。align：
+   *   - 'start' 行顶贴视口顶部
+   *   - 'end'   行底贴视口底部
+   *   - 'center' 行中心贴视口中心
+   * 越界静默 no-op。
+   */
+  scrollToRow(rowIndex: number, align: 'start' | 'center' | 'end' = 'start'): void {
+    if (rowIndex < 0 || rowIndex >= this.rowsAxis.getCount()) return
+    const top = this.rowsAxis.indexToPosition(rowIndex)
+    const size = this.rowsAxis.getSize(rowIndex)
+    const vpH =
+      (this.container.clientHeight || this.container.getBoundingClientRect().height || 300) -
+      this.theme.metrics.headerHeight
+    let logicalY: number
+    if (align === 'start') logicalY = top
+    else if (align === 'end') logicalY = top + size - vpH
+    else logicalY = top + size / 2 - vpH / 2
+
+    const scrollTop = this.logicalToScrollY(logicalY, vpH)
+    this.nativeScroller.scrollTo(scrollTop, this.scrollHost.scrollLeft)
+  }
+
+  /**
+   * 滚动到指定单元格（行索引 + 字段 id）。行 / 字段越界静默 no-op。
+   */
+  scrollToCell(rowIndex: number, fieldId: string): void {
+    const fields = this.data.getSchema().fields
+    const colIndex = fields.findIndex((f) => f.id === fieldId)
+    if (rowIndex < 0 || rowIndex >= this.rowsAxis.getCount()) return
+    if (colIndex < 0) return
+
+    const top = this.rowsAxis.indexToPosition(rowIndex)
+    const left = this.colsAxis.indexToPosition(colIndex)
+    const vpW = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
+    const vpH =
+      (this.container.clientHeight || this.container.getBoundingClientRect().height || 300) -
+      this.theme.metrics.headerHeight
+
+    const scrollTop = this.logicalToScrollY(top, vpH)
+    const scrollLeft = this.logicalToScrollX(left, vpW)
+    this.nativeScroller.scrollTo(scrollTop, scrollLeft)
   }
 
   /** destroy 后到来的 RAF 不应再触发任何绘制——CLAUDE.md destroy 不变量。 */
@@ -309,6 +382,53 @@ export class Grid {
         this.colsAxis.setSize(i, fields[i]!.width)
       }
     }
+  }
+
+  /** Maps DOM scrollTop/scrollLeft to logical scroll coordinates via ScrollMapper. */
+  private mapScrollToLogical(scrollTop: number, scrollLeft: number): { logicalX: number; logicalY: number } {
+    const contentH = this.rowsAxis.getTotalSize()
+    const contentW = this.colsAxis.getTotalSize()
+    const spacerH = this.scrollMapper.computeSpacerSize(contentH)
+    const spacerW = this.scrollMapper.computeSpacerSize(contentW)
+    const vpW = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
+    const vpH =
+      (this.container.clientHeight || this.container.getBoundingClientRect().height || 300) -
+      this.theme.metrics.headerHeight
+    return {
+      logicalX: this.scrollMapper.scrollToLogical(scrollLeft, spacerW, contentW, vpW),
+      logicalY: this.scrollMapper.scrollToLogical(scrollTop, spacerH, contentH, vpH),
+    }
+  }
+
+  /**
+   * 把 logical Y 转成 DOM scrollTop。
+   * 当 contentH ≤ viewport（没有可滚动空间）时 ScrollMapper 返回 0；此分支下我们直通
+   * 原始 logical 值——真实浏览器会自动 clamp 到 0，测试里 happy-dom 直接读到注入值。
+   * 保持 scrollToRow/Cell 的「programmatic 指向意图」可被覆盖测试。
+   */
+  private logicalToScrollY(logicalY: number, vpH: number): number {
+    const contentH = this.rowsAxis.getTotalSize()
+    if (contentH <= vpH) return Math.max(0, logicalY)
+    const spacerH = this.scrollMapper.computeSpacerSize(contentH)
+    return this.scrollMapper.logicalToScroll(logicalY, spacerH, contentH, vpH)
+  }
+
+  /** logicalToScrollY 的水平版本。 */
+  private logicalToScrollX(logicalX: number, vpW: number): number {
+    const contentW = this.colsAxis.getTotalSize()
+    if (contentW <= vpW) return Math.max(0, logicalX)
+    const spacerW = this.scrollMapper.computeSpacerSize(contentW)
+    return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, vpW)
+  }
+
+  /** Called by ResizeObserver and exposed for tests. */
+  private _onContainerResize(): void {
+    if (this.destroyed) return
+    const w = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
+    const h = this.container.clientHeight || this.container.getBoundingClientRect().height || 300
+    this.highDpi.resize(w, h)
+    this.viewport.setSize(w, h)
+    this.invalidate()
   }
 
   /** Updates scroll-spacer width/height so the native scrollbar reflects current content extent. */
