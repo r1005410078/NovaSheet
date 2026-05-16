@@ -1,7 +1,11 @@
 import type { DataSource, DataSourceEvent, DataSourceListener } from './DataSource'
 import type { CellValue, Row, Schema } from './Schema'
 
-/** 内存数据源：同步实现，适用于测试和小规模数据场景 */
+/**
+ * 全内存 DataSource——M1 的默认实现，所有方法同步。
+ * 推荐容量上限：~30 万行 × 50 列（视行内字段数量而定，参考 spec §3）。
+ * 超过此规模应使用 M4 提供的分页 DataSource。
+ */
 export class InMemoryDataSource implements DataSource {
   /** 当前 Schema */
   private schema: Schema
@@ -12,6 +16,8 @@ export class InMemoryDataSource implements DataSource {
 
   constructor(opts: { schema: Schema; rows: Row[] }) {
     this.schema = opts.schema
+    // 防御性拷贝：避免外部 push/splice 偷偷改我们的数据；
+    // 同时保证 setRows 时旧引用与新引用解耦。
     this.rows = opts.rows.slice()
   }
 
@@ -25,7 +31,7 @@ export class InMemoryDataSource implements DataSource {
     return this.schema
   }
 
-  /** 返回 [startIndex, endIndex]（含）范围内的行数组（同步） */
+  /** endIndex 包含——与 ChunkedAxis.getVisibleRange 保持一致。 */
   getRows(startIndex: number, endIndex: number): Row[] {
     const start = Math.max(0, startIndex)
     const end = Math.min(this.rows.length, endIndex + 1)
@@ -56,7 +62,10 @@ export class InMemoryDataSource implements DataSource {
     this.emit({ type: 'rowsChanged', startIndex: rowIndex, endIndex: rowIndex })
   }
 
-  /** 整体替换行数据并 emit `rowCountChanged` + `reset` 事件 */
+  /**
+   * 整体替换数据。先发 rowCountChanged 让 Grid 重建 axis（行数变了），
+   * 再发 reset 触发完整 invalidate。
+   */
   setRows(rows: Row[]): void {
     this.rows = rows.slice()
     this.emit({ type: 'rowCountChanged', newCount: this.rows.length })

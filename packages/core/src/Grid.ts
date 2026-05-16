@@ -11,17 +11,29 @@ import type { Theme } from './theme/Theme'
 export interface GridOptions {
   /** 数据源 */
   data: DataSource
-  /** 主题，默认使用 denseGridTheme */
+  /** 缺省 denseGridTheme */
   theme?: Theme
-  /** 冻结行数 */
+  /** 顶部冻结的行数（M3）；M1 始终为 0 */
   frozenRows?: number
-  /** 冻结列数 */
+  /** 左侧冻结的列数（M3）；M1 始终为 0 */
   frozenCols?: number
-  /** 覆盖主题的默认行高（px） */
+  /**
+   * 覆写默认行高。缺省时跟随 `theme.metrics.rowHeight`，后续 `setTheme()` 会同步更新；
+   * 显式传值则 sticky——后续 setTheme 不再改它。
+   * 见 CLAUDE.md「defaultRowHeight 可选时跟随主题」决策。
+   */
   defaultRowHeight?: number
 }
 
-/** NovaSheet 表格的公共门面类，负责初始化、协调各子系统并对外暴露变更接口 */
+/**
+ * NovaSheet 渲染引擎的公开门面。持有 canvas、行/列轴布局、viewport、renderer；
+ * 宿主应用的所有 mutate 都走这一层，让内部子系统之间保持解耦
+ * （CLAUDE.md 不变量 #2：「所有 mutation 走 Grid 门面」）。
+ *
+ * 生命周期：`new Grid(container, opts)` 在 container 内挂一个 canvas 子节点 + 同步绘首帧，
+ * 之后全部走 RAF 调度，直到 `destroy()`。
+ * `destroy()` 幂等，并把 container 的 CSS `position` 还原为原值——避免污染宿主页面。
+ */
 export class Grid {
   /** 宿主容器 DOM 节点 */
   private container: HTMLElement
@@ -63,8 +75,12 @@ export class Grid {
       position: 'absolute',
       top: '0',
       left: '0',
+      // M2 puppet-scroll 模式：canvas 只负责绘制；M2 加入的 scroll-host 位于其下方接收
+      // 滚轮/触控事件。M1 还没有 scroll-host，但提前禁用 pointer-events 保持契约一致。
       pointerEvents: 'none',
     })
+    // 如果 container 是 `position: static`，绝对定位的 canvas 会锚到错位的祖先；
+    // 仅当需要时提升为 relative，并记录原值以便 destroy() 还原。
     const computedPos = getComputedStyle(this.container).position
     this.originalPosition = this.container.style.position
     if (computedPos === 'static') {
@@ -101,6 +117,8 @@ export class Grid {
       theme: this.theme,
     })
 
+    // happy-dom（以及未挂载的真实 DOM 元素）会把 getBoundingClientRect 全部返 0；
+    // 退到默认尺寸保证首帧仍有内容，宿主会在 M2 引入 ResizeObserver 后立即纠正尺寸。
     const rect = this.container.getBoundingClientRect()
     const w = rect.width || 400
     const h = rect.height || 300
@@ -108,10 +126,15 @@ export class Grid {
     this.viewport.setSize(w, h)
     this.applyFieldWidths()
 
+    // 同步首帧——让 new Grid(...) 后立即可见画面；
+    // 之后所有 paint 都走 RAF。
     this.renderer.paint()
   }
 
-  /** 替换数据源并重建所有子系统，触发重绘 */
+  /**
+   * 切换 DataSource。axis / FrozenRegions / viewport / renderer 都要重建：
+   * 字段数、行数、字段宽度都可能变。frozenRows/Cols 与显式 defaultRowHeight 保留。
+   */
   setData(data: DataSource): void {
     this.data = data
     this.rowsAxis = new ChunkedAxis({
@@ -144,7 +167,10 @@ export class Grid {
     this.invalidate()
   }
 
-  /** 切换主题并同步更新行高、表头高度及所有 Painter，触发重绘 */
+  /**
+   * 换主题。只有当用户未在构造期 pin 默认行高时，行高才跟随新主题——
+   * 详见 GridOptions.defaultRowHeight。
+   */
   setTheme(theme: Theme): void {
     this.theme = theme
     this.viewport.setHeaderHeight(theme.metrics.headerHeight)
@@ -155,13 +181,16 @@ export class Grid {
     this.invalidate()
   }
 
-  /** 设置指定行的高度（px），触发重绘 */
+  /** 覆写单行行高。索引越界静默 no-op。 */
   setRowHeight(rowIndex: number, height: number): void {
     this.rowsAxis.setSize(rowIndex, height)
     this.invalidate()
   }
 
-  /** 通过字段 id 设置列宽（px），触发重绘 */
+  /**
+   * 覆写单列列宽（按 fieldId 而非索引，方便 M3 列重排后 API 仍稳定）。
+   * 未知 fieldId 静默 no-op。
+   */
   setColumnWidth(fieldId: string, width: number): void {
     const fields = this.data.getSchema().fields
     const index = fields.findIndex((f) => f.id === fieldId)
@@ -170,12 +199,16 @@ export class Grid {
     this.invalidate()
   }
 
-  /** 手动触发一次重绘（数据源外部发生变更时使用） */
+  /** 强制重绘。外部状态（自定义装饰等）变化时调用。 */
   refresh(): void {
     this.invalidate()
   }
 
-  /** 销毁 Grid：取消待执行的 RAF、移除 canvas、恢复容器 position。幂等。 */
+  /**
+   * 销毁。Renderer.destroy() 取消挂起的 RAF，移除 canvas DOM 节点，
+   * 还原 container 的 position——确保宿主页面回到初始状态。
+   * 幂等——可重复调用（对 React Strict Mode 的 mount → unmount → mount 至关重要）。
+   */
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
@@ -186,7 +219,7 @@ export class Grid {
     this.container.style.position = this.originalPosition
   }
 
-  /** 通知渲染器在下一帧重绘（已销毁则忽略） */
+  /** destroy 后到来的 RAF 不应再触发任何绘制——CLAUDE.md destroy 不变量。 */
   private invalidate(): void {
     if (this.destroyed) return
     this.renderer.invalidate()
@@ -197,7 +230,10 @@ export class Grid {
     return this.explicitDefaultRowHeight ?? this.theme.metrics.rowHeight
   }
 
-  /** 计算 Schema 各字段宽度的均值，用作 colsAxis 的默认列宽 */
+  /**
+   * 选一个能让 applyFieldWidths() 物化最少 chunk 的 defaultSize。
+   * Airtable 风格 schema 里多数字段宽度相近，这样列轴 ChunkedAxis 大概率维持默认状态。
+   */
   private averageColWidth(): number {
     const fields = this.data.getSchema().fields
     if (fields.length === 0) return 100
@@ -205,7 +241,10 @@ export class Grid {
     return Math.max(1, Math.round(sum / fields.length))
   }
 
-  /** 将各字段声明的宽度写入 colsAxis（仅非均值字段，避免无谓写入） */
+  /**
+   * 把 schema 里 per-field 的 width 物化到列轴。
+   * 仅对宽度 !== axis 默认值的字段调 setSize——宽度统一时整个列轴维持 O(1) 快路径。
+   */
   private applyFieldWidths(): void {
     const fields = this.data.getSchema().fields
     const avg = this.colsAxis.getDefaultSize()

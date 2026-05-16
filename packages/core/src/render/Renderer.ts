@@ -22,14 +22,21 @@ export interface RendererOptions {
   colsAxis: ChunkedAxis
   /** 当前主题 */
   theme: Theme
-  /** 帧调度器，默认创建独立实例 */
+  /** 共享同一个 scheduler，让 scroll / resize / render 合并到同一帧 RAF（见 CLAUDE.md 不变量 5） */
   scheduler?: FrameScheduler
 }
 
-/** FrameScheduler 中注册 Renderer 刷新任务所用的 key */
+/** scheduler key——每个 Renderer 实例同一时间最多一个待执行 flush */
 const RENDERER_KEY = 'renderer:flush'
 
-/** 负责单帧全量绘制：清空背景 → 单元格 → 网格线 → 表头 */
+/**
+ * 拥有每帧绘制管线。除 painter 实例外，Renderer 本身基本无状态：
+ * 每次 paint() 都从 Viewport.snapshot() 取最新快照（spec §4 单一数据源），
+ * 通过 DataSource 取数（由 DataSource 自行决定同步/异步），把像素绘制委托给三个 painter。
+ *
+ * M1 只画 `main` 象限（无滚动、无冻结）。管线骨架已为 M2/M3 留好——
+ * paint() 入口与 Viewport 契约都不需要变。
+ */
 export class Renderer {
   /** canvas 2D 绘图上下文 */
   private ctx: CanvasRenderingContext2D
@@ -80,39 +87,46 @@ export class Renderer {
     this.invalidate()
   }
 
-  /** 将重绘任务注册到 FrameScheduler，下一帧执行（幂等，重复调用仅保留最后一次） */
+  /**
+   * 请求下一帧绘制。一帧内多次调用会通过 scheduler 的 key 去重合并为单次绘制。
+   * 任何控制流（scroll 处理、data 事件、theme 切换、容器 resize）都可以安全调用。
+   */
   invalidate(): void {
     this.scheduler.schedule(RENDERER_KEY, () => this.paint())
   }
 
-  /** 取消待执行的重绘任务 */
+  /** 取消已入队但未执行的 flush。被 Grid.destroy() 调用——见 CLAUDE.md destroy 不变量。 */
   destroy(): void {
     this.scheduler.cancel(RENDERER_KEY)
   }
 
+  /**
+   * 同步绘制一帧。直接调用会绕开 RAF 调度——仅用于 Grid 构造期的首帧同步绘制
+   * 以及测试。生产路径走 invalidate() → scheduler → paint()。
+   */
   paint(): void {
     const snapshot = this.viewport.snapshot()
     const { contentRect, headerHeight, quadrants } = snapshot
 
-    // 1) 清空画布 / 填充背景色
+    // 1) 清屏 + 背景色
     this.ctx.fillStyle = this.theme.colors.background
     this.ctx.fillRect(0, 0, contentRect.width, contentRect.height)
 
-    // 2) 每帧设置一次字体（避免在单元格循环中反复赋值）
+    // 2) 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
     this.ctx.font = `${this.theme.metrics.fontSize}px ${this.theme.metrics.fontFamily}`
 
-    // 3) 预取可见行（InMemoryDataSource 为同步路径；异步源返回 Promise 暂忽略）
+    // 3) 区间预热：把可见行范围打给 DataSource（同步源直接返回，异步源借此触发 IO）
     const main = quadrants.main
     if (main.rowRange[1] >= main.rowRange[0]) {
       const maybe = this.data.getRows(main.rowRange[0], main.rowRange[1])
-      // M1：仅支持同步数据源，暂时忽略 Promise 返回值
+      // M1 仅同步源；M2+ 接异步源时这里要加 `if (maybe instanceof Promise) maybe.then(invalidate)`
       void maybe
     }
 
-    // 4) 绘制主象限（单元格 + 网格线）
+    // 4) 绘主区
     this.paintQuadrant(main)
 
-    // 5) 表头（最后绘制，始终覆盖在内容之上）
+    // 5) 列头（始终在最顶层，M3 加冻结象限后仍最后绘以覆盖滚动列头）
     this.headerPainter.paint(this.ctx, {
       schema: this.data.getSchema(),
       colsAxis: this.colsAxis,
@@ -120,10 +134,20 @@ export class Renderer {
       width: contentRect.width,
     })
 
-    // M1 不绘制冻结象限（FrozenRegions 仅返回 main）；M3 将遍历 quadrants 中所有象限
+    // 备注：M1 不画冻结象限（FrozenRegions stub 只返回 main）。
+    // M3 会把 paint() 扩展为遍历 quadrants 中所有非空象限。
     void headerHeight
   }
 
+  /**
+   * 绘制单个象限——M1 仅 main 象限；M3 会按 topLeft / topRight / bottomLeft / main
+   * 顺序调用四次。
+   *
+   * 坐标说明：M1 里 `cellX = rect.x + xLeft` 是对的，因为 scrollX === 0。
+   * M2 在标记位置减去 scroll 偏移（或预先把 quadrant.rect 的原点平移到滚动后的位置）——
+   * 这种「埋点」方式让 M2 的接入是一行改动而非一次重构。
+   * 单元格尺寸用 ChunkedAxis.getSize 而非 indexToPosition 差分——CLAUDE.md 不变量 #7。
+   */
   private paintQuadrant(quadrant: Quadrant): void {
     const { rowRange, colRange, rect } = quadrant
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -132,14 +156,16 @@ export class Renderer {
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
       const yTop = this.rowsAxis.indexToPosition(r)
       const rowHeight = this.rowsAxis.getSize(r)
-      const cellY = rect.y + yTop // M1：暂不减去 scrollY（滚动偏移固定为 0）
+      const cellY = rect.y + yTop // M2: 在此处减 scrollY
 
       for (let c = colRange[0]; c <= colRange[1]; c++) {
         const field = schema.fields[c]
         if (!field) continue
         const xLeft = this.colsAxis.indexToPosition(c)
         const colWidth = this.colsAxis.getSize(c)
-        const cellX = rect.x + xLeft
+        const cellX = rect.x + xLeft // M2: 在此处减 scrollX
+        // 异步 DataSource 范围未加载时 getCell 返回 undefined；CellPainter 直接 noop
+        // （未来 M2+ 加占位骨架时改为绘灰色占位条）
         const value = this.data.getCell(r, field.id)
         this.cellPainter.paint(this.ctx, {
           value,
@@ -149,6 +175,8 @@ export class Renderer {
       }
     }
 
+    // 网格线最后绘——覆盖在单元格之上（与 Excel / Numbers 一致）。
+    // GridLinesPainter 内部把所有线合并到一次 stroke 调用，避免重复 strokeStyle/beginPath。
     this.gridLinesPainter.paint(this.ctx, {
       rowsAxis: this.rowsAxis,
       colsAxis: this.colsAxis,

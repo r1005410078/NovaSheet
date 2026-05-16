@@ -8,13 +8,16 @@ export interface HeaderPaintParams {
   schema: Schema
   /** 列轴（提供列宽与位置查询） */
   colsAxis: ChunkedAxis
-  /** 可见列范围 [首列, 末列]（含） */
+  /** 可见列索引区间（两端均闭） */
   colRange: [number, number]
-  /** 画布总宽度（用于填充表头背景） */
+  /** 整个 viewport 宽度，用于 header 背景占满 */
   width: number
 }
 
-/** 负责绘制表头行：背景 + 各列字段名称文字 */
+/**
+ * 列头绘制。M1 只画字段名；M2+ 加排序箭头、字段类型 icon、resize handle 命中区时
+ * 都在这里扩展（icon path 已在 theme.icons.byFieldType 准备好）。
+ */
 export class HeaderPainter {
   constructor(private theme: Theme) {}
 
@@ -28,6 +31,7 @@ export class HeaderPainter {
     const { schema, colsAxis, colRange, width } = params
     const headerHeight = this.theme.metrics.headerHeight
 
+    // header 背景：占满整个 viewport 宽——M3 后冻结列 header 也由这一笔覆盖。
     ctx.fillStyle = this.theme.colors.headerBackground
     ctx.fillRect(0, 0, width, headerHeight)
 

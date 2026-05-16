@@ -1,12 +1,20 @@
 import type { FieldType } from '../data/Schema'
 
-/** 图标定义（SVG path 数据，适用于 16×16 viewBox） */
+/**
+ * Theme 是渲染层视觉值的**唯一来源**（CLAUDE.md 不变量 #3：
+ * 「Theme is the ONLY source of visual values」）。
+ * render/ 下任何模块都不应出现硬编码的 px / 颜色字面量——所有数值与色值都从这里取。
+ *
+ * M1 内置 denseGridTheme（紧凑网格风）。M3 可加 airtableLikeTheme / notionLikeTheme
+ * 作为可选 export。
+ */
+
+/** 字段类型 icon 定义。16×16 viewBox 内的 SVG path。 */
 export interface IconDef {
-  /** SVG path 路径数据 */
   readonly path: string
 }
 
-/** 尺寸度量 token */
+/** 度量类——尺寸、字号、padding 等几何参数。 */
 export interface ThemeMetrics {
   /** 默认行高（px） */
   readonly rowHeight: number
@@ -24,7 +32,7 @@ export interface ThemeMetrics {
   readonly borderWidth: number
 }
 
-/** 颜色 token */
+/** 色板——所有 fillStyle / strokeStyle 都从这里取。 */
 export interface ThemeColors {
   /** 内容区背景色 */
   readonly background: string
@@ -48,23 +56,23 @@ export interface ThemeColors {
   readonly selectionBorder: string
 }
 
-/** 单元格渲染 token */
+/** 单元格相关 token。 */
 export interface ThemeCell {
-  /** 各字段类型的文本对齐方式 */
+  /** 按字段类型决定 ctx.textAlign。number 通常右对齐，其余左对齐。 */
   readonly textAlignByType: Readonly<Record<FieldType, CanvasTextAlign>>
-  /** 标签徽章圆角半径（px） */
+  /** singleSelect/multiSelect 标签圆角与水平内边距——M2+ 使用 */
   readonly tagRadius: number
   /** 标签徽章水平内边距（px） */
   readonly tagPaddingX: number
 }
 
-/** 图标 token */
+/** 列头 icon 表——按字段类型取对应 SVG path。 */
 export interface ThemeIcons {
   /** 各字段类型对应的图标定义 */
   readonly byFieldType: Readonly<Record<FieldType, IconDef>>
 }
 
-/** 滚动条 token（M2 NativeScroller 使用） */
+/** 滚动条样式（M2 引入 NativeScroller 后启用）。 */
 export interface ThemeScrollbar {
   /** 滚动条轨道宽度（px） */
   readonly trackWidth: number

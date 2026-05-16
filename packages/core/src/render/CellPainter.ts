@@ -4,7 +4,7 @@ import type { Theme } from '../theme/Theme'
 
 /** 单次单元格绘制所需参数 */
 export interface CellPaintParams {
-  /** 单元格值（undefined 时跳过绘制） */
+  /** undefined：异步源未加载；null：显式空。两者都不绘制。 */
   value: CellValue | undefined
   /** 单元格在画布上的矩形区域 */
   rect: QuadrantRect
@@ -12,9 +12,20 @@ export interface CellPaintParams {
   field: Field
 }
 
-/** 负责将单个单元格的值渲染到画布，含截断缓存优化 */
+/**
+ * 单元格绘制。两条专用快路径（text / number），其余 5 种 FieldType 走 fallback
+ * （M1 占位，M2+ 加专属编辑器/绘制路径，到时候只补 switch case 不动 Schema）。
+ *
+ * 每个单元格做 ctx.save/clip/restore——保证长文本不会越界到相邻单元格，
+ * 单次成本 ~5μs，M1 cell 数量下完全在 16ms 帧预算内。
+ * 如果 profile 显示是热点，可以改成手动 clip：在 fillText 前与象限 rect 求交集。
+ */
 export class CellPainter {
-  /** 截断结果缓存，key = `font|maxWidth|text` */
+  /**
+   * (font|maxWidth|text) → 截断后的显示字符串。
+   * 同一个值在多行重复出现（status 枚举等）非常常见——缓存命中率高。
+   * setTheme 时清空，避免字体变化后残留过期截断。
+   */
   private truncationCache = new Map<string, string>()
 
   constructor(private theme: Theme) {}
@@ -28,8 +39,11 @@ export class CellPainter {
   /** 绘制单个单元格：裁剪至矩形区域，按字段类型分发到对应绘制方法 */
   paint(ctx: CanvasRenderingContext2D, params: CellPaintParams): void {
     const { value, rect, field } = params
+    // null / undefined 都不绘制：null = 显式空（与 SQL 语义一致），
+    // undefined = 异步源缓存未命中（未来 M2+ 改成绘灰色占位骨架条）。
     if (value === null || value === undefined) return
 
+    // 裁剪到单元格矩形，防止长文本溢出到邻格。
     ctx.save()
     ctx.beginPath()
     ctx.rect(rect.x, rect.y, rect.width, rect.height)
@@ -39,6 +53,7 @@ export class CellPainter {
     ctx.textBaseline = 'middle'
     ctx.textAlign = this.theme.cell.textAlignByType[field.type]
 
+    // 先 dispatch 专用路径；其他走 fallback 字符串化。
     if (field.type === 'number' && typeof value === 'number') {
       this.paintNumber(ctx, value, rect)
     } else if (field.type === 'text' && typeof value === 'string') {
@@ -63,17 +78,24 @@ export class CellPainter {
 
   /** 绘制数字类型单元格（右对齐，千分位格式化） */
   private paintNumber(ctx: CanvasRenderingContext2D, value: number, rect: QuadrantRect): void {
-    const text = value.toLocaleString('en-US') // 千分位格式化
+    // 固定用 'en-US' 千分位——与浏览器 locale 解耦，避免不同用户跑出不同结果（影响测试和回归）。
+    // 真正的本地化在更高层处理，M2+ 引入 locale-aware 字段时再做。
+    const text = value.toLocaleString('en-US')
     const padX = this.theme.metrics.cellPaddingX
     const availableWidth = rect.width - padX * 2
     const display = this.truncate(ctx, text, availableWidth)
     if (!display) return
+    // 右对齐：锚点在 padding 内沿右边界；textAlign='right' 由调用方 paint() 设置
+    // （theme.cell.textAlignByType.number === 'right'）。
     const x = rect.x + rect.width - padX
     const y = rect.y + rect.height / 2
     ctx.fillText(display, x, y)
   }
 
-  /** 兜底绘制：Date → ISO 字符串，数组 → 逗号拼接，其他 → String() 转换后走文本路径 */
+  /**
+   * 把值字符串化后走 text 路径——M1 里 5 种非 text/number FieldType 的 fallback。
+   * 见 CLAUDE.md「Things explicitly NOT in M1」。
+   */
   private paintFallback(
     ctx: CanvasRenderingContext2D,
     value: CellValue,
@@ -87,7 +109,13 @@ export class CellPainter {
     this.paintText(ctx, str, rect)
   }
 
-  /** 截断文本至 maxWidth 内，超出时用二分查找确定最大前缀并附加省略号，结果缓存 */
+  /**
+   * 找出 `text` 能放进 `maxWidth` 的最长前缀，末尾拼 "…"；
+   * 整串放得下直接返回原文；连省略号都放不下返回空串（极窄列）。
+   *
+   * 二分搜索把 measureText 调用次数压到 O(log n) per cell（80 字符 → ~7 次而非 80 次）。
+   * 缓存 key 是 (font|width|text)，让多行重复值（status 枚举等）命中率最大化。
+   */
   private truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
     if (maxWidth <= 0) return ''
     const cacheKey = `${ctx.font}|${maxWidth}|${text}`
@@ -105,7 +133,7 @@ export class CellPainter {
       this.truncationCache.set(cacheKey, '')
       return ''
     }
-    // 二分查找：找到能放入 (maxWidth - ellipsisWidth) 的最长前缀
+    // 二分：找最大的 lo，使 prefix[0..lo) + '…' 仍能放进 maxWidth。
     let lo = 0
     let hi = text.length
     while (lo < hi) {

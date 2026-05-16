@@ -3,9 +3,9 @@ import type { FrozenRegions, Quadrants } from './FrozenRegions'
 
 /** 视口快照：单帧内 Renderer 读取的唯一不可变数据源 */
 export interface ViewportSnapshot {
-  /** 各象限的行列范围与画布矩形 */
+  /** 4 个象限的绘制范围（M1 只有 main） */
   quadrants: Quadrants
-  /** 整个内容区域的 CSS 像素尺寸 */
+  /** canvas 当前 CSS 尺寸 */
   contentRect: { width: number; height: number }
   /** 表头高度（px） */
   headerHeight: number
@@ -13,11 +13,15 @@ export interface ViewportSnapshot {
   scrollX: number
   /** 垂直滚动偏移（px） */
   scrollY: number
-  /** 综合版本号（取 viewport、rowsAxis、colsAxis 三者最大值） */
+  /** Viewport 与两个 axis 的最大 version——作为 Renderer 的脏标判定 */
   version: number
 }
 
-/** 视口状态管理：持有尺寸、滚动偏移，并按需生成单帧快照供 Renderer 消费 */
+/**
+ * Viewport 聚合「画什么」的输入：尺寸、滚动位置、header 高度、冻结配置（通过 FrozenRegions）。
+ * Renderer 每帧只调 snapshot()——这是 spec §4「single read source per frame」的实现：
+ * 渲染过程中 Renderer 永远不直接读 axis / FrozenRegions，避免并发 mutate 造成视觉撕裂。
+ */
 export class Viewport {
   /** 视口宽度（CSS px） */
   private width = 0
@@ -58,7 +62,11 @@ export class Viewport {
     this._version++
   }
 
-  /** 生成当前帧的不可变快照，版本号取三者最大值以捕获任意维度的变更 */
+  /**
+   * 不可变快照。每帧绘制开始时调用一次；FrozenRegions 内部根据 viewport 状态实时切分象限。
+   * version 取 viewport 自身 + 两个 axis 的最大值——
+   * 这样 axis 的 setSize / setDefaultSize 也会反映到 Renderer 的 invalidate 缓存键。
+   */
   snapshot(): ViewportSnapshot {
     const quadrants = this.frozen.getQuadrants({
       width: this.width,

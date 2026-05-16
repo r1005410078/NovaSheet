@@ -2,7 +2,7 @@ import type { ChunkedAxis } from './ChunkedAxis'
 
 /** 画布坐标系中的矩形区域，单位为 CSS 像素 */
 export interface QuadrantRect {
-  /** 左边界（canvas 坐标） */
+  /** canvas 坐标系，单位 CSS 像素 */
   x: number
   /** 上边界（canvas 坐标） */
   y: number
@@ -14,15 +14,22 @@ export interface QuadrantRect {
 
 /** 单个象限：包含可见行列范围及对应的画布绘制矩形 */
 export interface Quadrant {
-  /** 可见行范围 [首行, 末行]（含） */
+  /** 该象限内的行索引区间，两端均闭 */
   rowRange: [number, number]
-  /** 可见列范围 [首列, 末列]（含） */
+  /** 该象限内的列索引区间，两端均闭 */
   colRange: [number, number]
   /** 该象限在画布上的绘制区域 */
   rect: QuadrantRect
 }
 
-/** 一帧内所有象限的集合（M1 仅含 main；M3 补充冻结区象限） */
+/**
+ * 4 个象限：
+ * - main：滚动行 × 滚动列（M1 唯一的象限）
+ * - topLeft：冻结行 × 冻结列（M3）
+ * - topRight：冻结行 × 滚动列（M3）
+ * - bottomLeft：滚动行 × 冻结列（M3）
+ * 命名按 viewport 内的位置：top/bottom 描述行、left/right 描述列。
+ */
 export interface Quadrants {
   /** 主滚动区（非冻结内容区） */
   main: Quadrant
@@ -48,7 +55,11 @@ export interface ViewportRect {
   headerHeight: number
 }
 
-/** 管理冻结行/列区域划分，为每帧计算各象限的行列范围与绘制矩形 */
+/**
+ * 把 viewport 切分成 1~4 个象限，每个象限对应一组可见 row/col 索引。
+ * M1：frozenRows = frozenCols = 0，永远只输出 main 象限。
+ * M3：根据 frozenRows / frozenCols > 0 增加 topLeft / topRight / bottomLeft。
+ */
 export class FrozenRegions {
   constructor(
     private rowsAxis: ChunkedAxis,
@@ -66,11 +77,11 @@ export class FrozenRegions {
   }
 
   /**
-   * M1：仅填充 main 象限。
-   * M3 在 frozenRows > 0 或 frozenCols > 0 时补充 topLeft / topRight / bottomLeft。
+   * M1：只输出 main 象限。M3 在此添加另外 3 个象限。
    */
   getQuadrants(vp: ViewportRect): Quadrants {
-    // 视口区间为半开区间 [start, end)；末端减 1，避免恰好落在下一行/列起始像素时多计一格
+    // viewport rect 是「左闭右开」[start, end)，而 ChunkedAxis.getVisibleRange 两端都闭。
+    // 末尾 -1 是为了不让恰好落在下一行/列起始像素的位置错误地把那一行/列也包含进来。
     const yStart = vp.scrollY
     const yEnd = vp.scrollY + (vp.height - vp.headerHeight) - 1
     const xStart = vp.scrollX
