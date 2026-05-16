@@ -122,4 +122,82 @@ describe('Grid', () => {
     grid.destroy()
     expect(el.style.position).toBe('absolute')
   })
+
+  it('mounts scroll-host, scroll-spacer, and canvas with correct DOM hierarchy', () => {
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const grid = new Grid(el, { data: makeData() })
+
+    const scrollHost = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement | null
+    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement | null
+    const canvas = el.querySelector('canvas') as HTMLCanvasElement | null
+
+    expect(scrollHost).not.toBeNull()
+    expect(spacer).not.toBeNull()
+    expect(canvas).not.toBeNull()
+    expect(scrollHost!.contains(spacer!)).toBe(true)
+    expect(scrollHost!.parentNode).toBe(el)
+    expect(canvas!.parentNode).toBe(el)
+
+    grid.destroy()
+    document.body.removeChild(el)
+  })
+
+  it('canvas has pointer-events: none so scroll events pass through', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const canvas = el.querySelector('canvas') as HTMLCanvasElement
+    expect(canvas.style.pointerEvents).toBe('none')
+    grid.destroy()
+  })
+
+  it('scroll-host has overflow auto so it produces a native scrollbar', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+    expect(host.style.overflow).toBe('auto')
+    grid.destroy()
+  })
+
+  it('scroll-spacer is sized via ScrollMapper.computeSpacerSize for both axes', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
+    // makeData has 50 rows × 2 cols × default theme rowHeight=28; widths come from SCHEMA
+    // contentH = 50 × 28 = 1400; contentW = 200 + 80 = 280 (both well under SAFE_MAX)
+    expect(spacer.style.height).toBe('1400px')
+    expect(spacer.style.width).toBe('280px')
+    grid.destroy()
+  })
+
+  it('destroy removes scroll-host along with canvas', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    grid.destroy()
+    expect(el.querySelector('[data-novasheet-scroll-host]')).toBeNull()
+    expect(el.querySelector('canvas')).toBeNull()
+  })
+
+  it('setData re-sizes the spacer to match the new dataset', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const newData = new InMemoryDataSource({
+      schema: SCHEMA,
+      rows: Array.from({ length: 200 }, (_, i) => ({ name: `n${i}`, age: i })),
+    })
+    grid.setData(newData)
+    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
+    expect(spacer.style.height).toBe(`${200 * 28}px`)
+    grid.destroy()
+  })
+
+  it('setRowHeight re-sizes the spacer', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    grid.setRowHeight(0, 100) // delta = 100 - 28 = 72
+    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
+    expect(spacer.style.height).toBe(`${50 * 28 + 72}px`)
+    grid.destroy()
+  })
 })

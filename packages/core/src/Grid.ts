@@ -23,6 +23,7 @@ import { FrozenRegions } from './layout/FrozenRegions'
 import { Viewport } from './layout/Viewport'
 import { HighDPI } from './render/HighDPI'
 import { Renderer } from './render/Renderer'
+import { ScrollMapper } from './scroll/ScrollMapper'
 import { denseGridTheme } from './theme/denseGridTheme'
 import type { Theme } from './theme/Theme'
 
@@ -58,6 +59,10 @@ export class Grid {
   private container: HTMLElement
   /** 渲染用 canvas 元素 */
   private canvas: HTMLCanvasElement
+  /** 原生滚动宿主（提供原生滚动条，M2） */
+  private scrollHost!: HTMLDivElement
+  /** 滚动占位元素（撑出 native scrollbar 的可滚动范围，M2） */
+  private scrollSpacer!: HTMLDivElement
   /** canvas 2D 绘图上下文 */
   private ctx: CanvasRenderingContext2D
   /** 当前数据源 */
@@ -78,6 +83,8 @@ export class Grid {
   private highDpi: HighDPI
   /** 帧渲染器 */
   private renderer: Renderer
+  /** 滚动映射器（content ↔ scroll-host 非线性映射，M2） */
+  private scrollMapper: ScrollMapper
   /** 是否已销毁，防止重复操作 */
   private destroyed = false
   /** 构造时保存容器的原始 position 值，销毁时恢复 */
@@ -89,22 +96,43 @@ export class Grid {
     this.theme = options.theme ?? denseGridTheme
     this.explicitDefaultRowHeight = options.defaultRowHeight
 
-    this.canvas = document.createElement('canvas')
-    Object.assign(this.canvas.style, {
-      position: 'absolute',
-      top: '0',
-      left: '0',
-      // M2 puppet-scroll 模式：canvas 只负责绘制；M2 加入的 scroll-host 位于其下方接收
-      // 滚轮/触控事件。M1 还没有 scroll-host，但提前禁用 pointer-events 保持契约一致。
-      pointerEvents: 'none',
-    })
-    // 如果 container 是 `position: static`，绝对定位的 canvas 会锚到错位的祖先；
-    // 仅当需要时提升为 relative，并记录原值以便 destroy() 还原。
+    // Position the container so absolute children (canvas, scroll-host) anchor correctly
     const computedPos = getComputedStyle(this.container).position
     this.originalPosition = this.container.style.position
     if (computedPos === 'static') {
       this.container.style.position = 'relative'
     }
+
+    // Scroll-host: native scrollbar provider; absolutely fills container
+    this.scrollHost = document.createElement('div')
+    this.scrollHost.setAttribute('data-novasheet-scroll-host', '')
+    Object.assign(this.scrollHost.style, {
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      right: '0',
+      bottom: '0',
+      overflow: 'auto',
+    })
+    // Spacer: sized to ScrollMapper.computeSpacerSize, gives the scrollbar its range
+    this.scrollSpacer = document.createElement('div')
+    this.scrollSpacer.setAttribute('data-novasheet-scroll-spacer', '')
+    Object.assign(this.scrollSpacer.style, {
+      display: 'block',
+      width: '0px',
+      height: '0px',
+    })
+    this.scrollHost.appendChild(this.scrollSpacer)
+    this.container.appendChild(this.scrollHost)
+
+    // Canvas: sits on top, pointer-events: none so wheel/touch scroll passes through
+    this.canvas = document.createElement('canvas')
+    Object.assign(this.canvas.style, {
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      pointerEvents: 'none',
+    })
     this.container.appendChild(this.canvas)
 
     const ctx = this.canvas.getContext('2d')
@@ -123,6 +151,7 @@ export class Grid {
       options.frozenRows ?? 0,
       options.frozenCols ?? 0,
     )
+    this.scrollMapper = new ScrollMapper()
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
 
@@ -144,6 +173,7 @@ export class Grid {
     this.highDpi.resize(w, h)
     this.viewport.setSize(w, h)
     this.applyFieldWidths()
+    this.resizeSpacer()
 
     // 同步首帧——让 new Grid(...) 后立即可见画面；
     // 之后所有 paint 都走 RAF。
@@ -175,6 +205,7 @@ export class Grid {
     const rect = this.container.getBoundingClientRect()
     this.viewport.setSize(rect.width || 400, rect.height || 300)
     this.applyFieldWidths()
+    this.resizeSpacer()
     this.renderer = new Renderer({
       ctx: this.ctx,
       data: this.data,
@@ -196,6 +227,7 @@ export class Grid {
     if (this.explicitDefaultRowHeight === undefined) {
       this.rowsAxis.setDefaultSize(theme.metrics.rowHeight)
     }
+    this.resizeSpacer()
     this.renderer.setTheme(theme)
     this.invalidate()
   }
@@ -203,6 +235,7 @@ export class Grid {
   /** 覆写单行行高。索引越界静默 no-op。 */
   setRowHeight(rowIndex: number, height: number): void {
     this.rowsAxis.setSize(rowIndex, height)
+    this.resizeSpacer()
     this.invalidate()
   }
 
@@ -215,6 +248,7 @@ export class Grid {
     const index = fields.findIndex((f) => f.id === fieldId)
     if (index < 0) return
     this.colsAxis.setSize(index, width)
+    this.resizeSpacer()
     this.invalidate()
   }
 
@@ -234,6 +268,9 @@ export class Grid {
     this.renderer.destroy()
     if (this.canvas.parentNode === this.container) {
       this.container.removeChild(this.canvas)
+    }
+    if (this.scrollHost.parentNode === this.container) {
+      this.container.removeChild(this.scrollHost)
     }
     this.container.style.position = this.originalPosition
   }
@@ -272,5 +309,13 @@ export class Grid {
         this.colsAxis.setSize(i, fields[i]!.width)
       }
     }
+  }
+
+  /** Updates scroll-spacer width/height so the native scrollbar reflects current content extent. */
+  private resizeSpacer(): void {
+    const w = this.scrollMapper.computeSpacerSize(this.colsAxis.getTotalSize())
+    const h = this.scrollMapper.computeSpacerSize(this.rowsAxis.getTotalSize())
+    this.scrollSpacer.style.width = `${w}px`
+    this.scrollSpacer.style.height = `${h}px`
   }
 }
