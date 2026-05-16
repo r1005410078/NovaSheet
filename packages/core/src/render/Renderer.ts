@@ -7,9 +7,10 @@
  *   - 通过共享 frameScheduler 调度 RAF；同帧多次 invalidate() 合并为一次 flush（key 去重）
  *   - destroy() 时取消 pending RAF，避免组件销毁后还有一次延迟 paint（M1 hardening 修复）
  *
- * M1 实现降级：
+ * 当前实现降级：
  *   - 只画 `main` 象限（FrozenRegions 暂只返回 main）；冻结的 3 个象限留 M3
- *   - scrollX/Y 始终为 0；M2 NativeScroller 接入后会让 paintQuadrant 减去 viewport.scrollX/Y
+ *   - paintQuadrant 已经按 viewport.scrollX/Y 偏移单元格与网格线；M2 NativeScroller
+ *     接入后由它驱动 viewport.setScroll
  *   - 不做局部脏区——全帧整片重绘（spec §5.2，预算 < 5ms 内绰绰有余）
  *
  * `getRows` 同步路径返回数组立即可用，Promise 返回值在 M1 直接忽略（M2+ 异步源会
@@ -124,7 +125,7 @@ export class Renderer {
    */
   paint(): void {
     const snapshot = this.viewport.snapshot()
-    const { contentRect, headerHeight, quadrants } = snapshot
+    const { contentRect, headerHeight, quadrants, scrollX, scrollY } = snapshot
 
     // 1) 清屏 + 背景色
     this.ctx.fillStyle = this.theme.colors.background
@@ -141,8 +142,8 @@ export class Renderer {
       void maybe
     }
 
-    // 4) 绘主区
-    this.paintQuadrant(main)
+    // 4) 绘主区——main 象限两轴都跟随滚动
+    this.paintQuadrant(main, scrollX, scrollY)
 
     // 5) 列头（始终在最顶层，M3 加冻结象限后仍最后绘以覆盖滚动列头）
     this.headerPainter.paint(this.ctx, {
@@ -158,15 +159,12 @@ export class Renderer {
   }
 
   /**
-   * 绘制单个象限——M1 仅 main 象限；M3 会按 topLeft / topRight / bottomLeft / main
-   * 顺序调用四次。
+   * 绘制单个象限——main 象限两轴都跟随滚动；M3 的 topLeft / topRight / bottomLeft
+   * 分别传 (0, 0) / (scrollX, 0) / (0, scrollY)，逻辑统一。
    *
-   * 坐标说明：M1 里 `cellX = rect.x + xLeft` 是对的，因为 scrollX === 0。
-   * M2 在标记位置减去 scroll 偏移（或预先把 quadrant.rect 的原点平移到滚动后的位置）——
-   * 这种「埋点」方式让 M2 的接入是一行改动而非一次重构。
    * 单元格尺寸用 ChunkedAxis.getSize 而非 indexToPosition 差分——CLAUDE.md 不变量 #7。
    */
-  private paintQuadrant(quadrant: Quadrant): void {
+  private paintQuadrant(quadrant: Quadrant, scrollX: number, scrollY: number): void {
     const { rowRange, colRange, rect } = quadrant
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
 
@@ -174,14 +172,14 @@ export class Renderer {
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
       const yTop = this.rowsAxis.indexToPosition(r)
       const rowHeight = this.rowsAxis.getSize(r)
-      const cellY = rect.y + yTop // M2: 在此处减 scrollY
+      const cellY = rect.y + yTop - scrollY
 
       for (let c = colRange[0]; c <= colRange[1]; c++) {
         const field = schema.fields[c]
         if (!field) continue
         const xLeft = this.colsAxis.indexToPosition(c)
         const colWidth = this.colsAxis.getSize(c)
-        const cellX = rect.x + xLeft // M2: 在此处减 scrollX
+        const cellX = rect.x + xLeft - scrollX
         // 异步 DataSource 范围未加载时 getCell 返回 undefined；CellPainter 直接 noop
         // （未来 M2+ 加占位骨架时改为绘灰色占位条）
         const value = this.data.getCell(r, field.id)
@@ -201,6 +199,8 @@ export class Renderer {
       rowRange,
       colRange,
       rect,
+      scrollOffsetX: scrollX,
+      scrollOffsetY: scrollY,
     })
   }
 }

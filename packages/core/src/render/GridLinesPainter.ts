@@ -8,7 +8,7 @@
  * indexToPosition(index+1) - indexToPosition(index)——后者在末行/末列因 clamp 返回 0
  * （CLAUDE.md 不变量 #7，M1 hardening 修复）。
  *
- * scrollOffsetX/Y 在 M1 始终返回 0；M2 接入 NativeScroller 后由 Renderer 传入或 painter 自行读取。
+ * scrollOffsetX/Y 由 Renderer 从 viewport.snapshot() 取出后传入；冻结象限传 0 即可。
  */
 
 import type { ChunkedAxis } from '../layout/ChunkedAxis'
@@ -27,6 +27,10 @@ export interface GridLinesPaintParams {
   colRange: [number, number]
   /** 象限矩形（canvas 坐标系） */
   rect: QuadrantRect
+  /** Horizontal scroll offset to subtract from content X positions; 0 for frozen quadrants */
+  scrollOffsetX?: number
+  /** Vertical scroll offset to subtract from content Y positions; 0 for frozen quadrants */
+  scrollOffsetY?: number
 }
 
 /**
@@ -44,6 +48,8 @@ export class GridLinesPainter {
   /** 绘制可见行列的底边与右边网格线（像素对齐 + 0.5 偏移，消除模糊） */
   paint(ctx: CanvasRenderingContext2D, params: GridLinesPaintParams): void {
     const { rowsAxis, colsAxis, rowRange, colRange, rect } = params
+    const scrollOffsetX = params.scrollOffsetX ?? 0
+    const scrollOffsetY = params.scrollOffsetY ?? 0
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
 
     ctx.strokeStyle = this.theme.colors.gridLine
@@ -57,7 +63,7 @@ export class GridLinesPainter {
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
       const yBase = rowsAxis.indexToPosition(r) + rowsAxis.getSize(r)
       // 亚像素对齐：floor + 0.5 把整数坐标偏移到像素中心，避免 1px 线变成 2px 模糊。
-      const y = Math.floor(yBase - this.scrollOffsetY(rect)) + 0.5
+      const y = Math.floor(rect.y + yBase - scrollOffsetY) + 0.5
       if (y < rect.y || y > rect.y + rect.height) continue
       ctx.moveTo(rect.x, y)
       ctx.lineTo(rect.x + rect.width, y)
@@ -66,7 +72,7 @@ export class GridLinesPainter {
     // 垂直线：每列右边（同样用 getSize 取末列的实际宽度）。
     for (let c = colRange[0]; c <= colRange[1]; c++) {
       const xBase = colsAxis.indexToPosition(c) + colsAxis.getSize(c)
-      const x = Math.floor(xBase - this.scrollOffsetX(rect)) + 0.5
+      const x = Math.floor(rect.x + xBase - scrollOffsetX) + 0.5
       if (x < rect.x || x > rect.x + rect.width) continue
       ctx.moveTo(x, rect.y)
       ctx.lineTo(x, rect.y + rect.height)
@@ -74,9 +80,4 @@ export class GridLinesPainter {
 
     ctx.stroke()
   }
-
-  // M1 无滚动：偏移恒为 0。M2 把这两个方法替换为读 viewport.scrollX/Y 的实现，
-  // 调用方接口（paint(params)）不变。
-  private scrollOffsetX(_rect: QuadrantRect): number { return 0 }
-  private scrollOffsetY(_rect: QuadrantRect): number { return 0 }
 }

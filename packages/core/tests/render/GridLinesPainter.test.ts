@@ -57,4 +57,46 @@ describe('GridLinesPainter', () => {
       .filter((y) => y > 0 && y < 100)
     expect(lineYs).toContain(84.5) // last row bottom (after floor + 0.5 alignment)
   })
+
+  it('shifts line positions by scrollOffset when provided', () => {
+    const { ctx, ops } = createRecordingContext()
+    const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    const painter = new GridLinesPainter(denseGridTheme)
+    painter.paint(ctx, {
+      rowsAxis,
+      colsAxis,
+      rowRange: [0, 2],
+      colRange: [0, 1],
+      rect: { x: 0, y: 0, width: 200, height: 100 },
+      scrollOffsetX: 0,
+      scrollOffsetY: 28, // scroll down by 1 row
+    })
+    // Without scroll, the last row bottom is at y = 84 (3 × 28). With scrollY=28, lines should be
+    // shifted up by 28. The bottom line for row 2 should be at y = 84 - 28 = 56 (+0.5 = 56.5).
+    const lineYs = ops
+      .filter((o) => o.op === 'moveTo')
+      .map((o) => (o.op === 'moveTo' ? o.args[1] : 0))
+      .filter((y) => y > 0 && y < 100)
+    expect(lineYs).toContain(56.5)
+  })
+
+  it('keeps backward-compatible default (no scroll offset = no shift)', () => {
+    const { ctx, ops } = createRecordingContext()
+    const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    new GridLinesPainter(denseGridTheme).paint(ctx, {
+      rowsAxis,
+      colsAxis,
+      rowRange: [0, 2],
+      colRange: [0, 1],
+      rect: { x: 0, y: 0, width: 200, height: 100 },
+      // scrollOffsetX / scrollOffsetY omitted — defaults to 0
+    })
+    const lineYs = ops
+      .filter((o) => o.op === 'moveTo')
+      .map((o) => (o.op === 'moveTo' ? o.args[1] : 0))
+      .filter((y) => y > 0 && y < 100)
+    expect(lineYs).toContain(84.5)
+  })
 })

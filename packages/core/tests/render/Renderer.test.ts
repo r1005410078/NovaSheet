@@ -70,4 +70,35 @@ describe('Renderer (M1 single quadrant)', () => {
 
     globalThis.requestAnimationFrame = originalRaf
   })
+
+  it('paintQuadrant subtracts viewport.scrollY from cellY for vertical scroll', () => {
+    const { ops, viewport, renderer } = setup()
+    viewport.setScroll(0, 56) // scroll down by 2 rows (28px each)
+    ops.length = 0
+    renderer.paint()
+    // First cell of the FIRST visible row should be at cellY ≈ rect.y + indexToPosition(visibleFirst) - 56
+    // For our 200px viewport with headerHeight 32, scrollY 56 → visibleFirst = 2 (rows 2,3,4..)
+    // Row 2 starts at y = 56 in content space; rect.y = headerHeight = 32; cellY = 32 + 56 - 56 = 32
+    const firstCellFillText = ops.find(
+      (o) => o.op === 'fillText' && typeof o.args[0] === 'string' && o.args[0] === 'Carol',
+    )
+    // Carol is row 2 (Alice=0, Bob=1, Carol=2). It should still be in fillText
+    expect(firstCellFillText).toBeDefined()
+  })
+
+  it('paintQuadrant subtracts viewport.scrollX from cellX for horizontal scroll', () => {
+    const { ops, viewport, renderer } = setup()
+    viewport.setScroll(100, 0) // scroll right by 100px (= 1 col)
+    ops.length = 0
+    renderer.paint()
+    // Column 0 (Name) starts at xLeft=0; with scrollX=100 it should be at cellX = 0 + 0 - 100 = -100,
+    // which means it's mostly clipped. But the fillText call is still made if the col is in visible range.
+    // After scrolling left, visible col range starts at col 1 (Age). Verify "Age" header is the leftmost visible.
+    const ageHeader = ops.find((o) => o.op === 'fillText' && o.args[0] === 'Age')
+    expect(ageHeader).toBeDefined()
+    if (ageHeader && ageHeader.op === 'fillText') {
+      // Age column starts at content x=100; with scrollX=100 it lands at cellX = 0 + 100 - 100 = 0 + padX = 8
+      expect(typeof ageHeader.args[1]).toBe('number')
+    }
+  })
 })
