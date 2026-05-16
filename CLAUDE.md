@@ -16,15 +16,16 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 ## Current state (read first on a fresh session)
 
-**Last shipped:** **M1 Foundation** — tag `m1-foundation` at the HEAD of `main`. 87 tests, lint/typecheck/build all clean. Renders a single static frame.
+**Last shipped:** **M2 Virtualization & Scroll** — tag `m2-virtualization` at the HEAD of `main`. 122 tests, lint/typecheck/build all clean. 1M+ rows scroll smoothly with non-linear `scrollTop` mapping. Visible in Storybook → Grid/Scroll (10k / 1M / scrollToRow).
 
-**Next milestone:** **M2 Virtualization & Scroll** — not yet planned. Scope (per spec §6):
-- `NativeScroller` with RAF-throttled scroll events going through the shared `frameScheduler`
-- `ScrollMapper` with non-linear `scrollTop ↔ logicalY` mapping (`SAFE_MAX = 6_000_000` px)
-- DOM structure update: scroll-host as sibling of canvas, spacer sized by `ScrollMapper.computeSpacerSize`, canvas `pointer-events: none`
-- `Viewport.setScroll` wired through scroll events
-- `Renderer.paintQuadrant` must subtract `scrollX/Y` from cell positions (M1 currently has scroll=0 stub)
-- `GridLinesPainter` scroll-offset stub must be replaced (currently returns 0)
+**Next milestone:** **M3 Frozen + Dynamic sizing** — not yet planned. Scope (per spec §4 + §5.3 + §5.7):
+- `FrozenRegions` returning 4 quadrants (topLeft / topRight / bottomLeft / main) when `frozenRows > 0` or `frozenCols > 0`
+- `Renderer` iterating all populated quadrants with per-quadrant scroll offsets (frozen quadrants don't scroll)
+- New `FrozenPainter` for inter-quadrant shadow gradients (spec §5.7)
+- Dynamic row-height autofit (multi-line text measurement)
+- Grid `setFrozen(rows, cols)` becomes load-bearing (currently a no-op stub from M1)
+
+**Per-Grid scheduler convention** (clarification of invariant #5): each `Grid` owns `new FrameScheduler()` shared by its `Renderer` and `NativeScroller`; the `frameScheduler` singleton exported from `util/raf` is NOT used cross-Grid (would clobber via `'renderer:flush'` key collision). When M3 / M4 add more RAF sources, they pass the same per-Grid instance.
 
 **M3-M5 status:** outlined only — see spec §1 In Scope + spec appendix B for the Phase ordering.
 
