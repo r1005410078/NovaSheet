@@ -260,9 +260,15 @@ describe('Grid', () => {
     const grid = new Grid(el, { data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
 
-    grid.scrollToCell(5, 'age') // age = field index 1, at x = 200; row 5 at y = 140
+    // Widen 'name' so content width (500 + 80 = 580) > viewport width (400) — without this,
+    // ScrollMapper.logicalToScroll returns 0 for X (no horizontal scroll possible, matches the
+    // browser behavior of auto-clamping scrollTo on overflow:auto elements that don't overflow).
+    grid.setColumnWidth('name', 500)
+    grid.scrollToCell(5, 'age') // col 1 at x=500, row 5 at y=140
+    // Vertical: content 1400 ≤ spacer 1400, vp 268, maxLogical=1132 → identity branch, returns 140
     expect(host.scrollTop).toBe(140)
-    expect(host.scrollLeft).toBe(200)
+    // Horizontal: content 580 ≤ spacer 580, vp 400, maxLogical=180 → identity, but clamp(500, 0, 180) = 180
+    expect(host.scrollLeft).toBe(180)
 
     grid.destroy()
     document.body.removeChild(el)

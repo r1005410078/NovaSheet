@@ -401,14 +401,12 @@ export class Grid {
   }
 
   /**
-   * 把 logical Y 转成 DOM scrollTop。
-   * 当 contentH ≤ viewport（没有可滚动空间）时 ScrollMapper 返回 0；此分支下我们直通
-   * 原始 logical 值——真实浏览器会自动 clamp 到 0，测试里 happy-dom 直接读到注入值。
-   * 保持 scrollToRow/Cell 的「programmatic 指向意图」可被覆盖测试。
+   * 把 logical Y 转成 DOM scrollTop——直通 ScrollMapper。
+   * content ≤ viewport 时 ScrollMapper 返回 0（与真实浏览器行为一致：内容塞得下时
+   * `scrollTo({ top: N })` 会被自动 clamp）。callers 必须接受这一约定。
    */
   private logicalToScrollY(logicalY: number, vpH: number): number {
     const contentH = this.rowsAxis.getTotalSize()
-    if (contentH <= vpH) return Math.max(0, logicalY)
     const spacerH = this.scrollMapper.computeSpacerSize(contentH)
     return this.scrollMapper.logicalToScroll(logicalY, spacerH, contentH, vpH)
   }
@@ -416,7 +414,6 @@ export class Grid {
   /** logicalToScrollY 的水平版本。 */
   private logicalToScrollX(logicalX: number, vpW: number): number {
     const contentW = this.colsAxis.getTotalSize()
-    if (contentW <= vpW) return Math.max(0, logicalX)
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
     return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, vpW)
   }
