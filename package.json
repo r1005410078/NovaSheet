@@ -7,7 +7,9 @@
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "lint": "eslint packages",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "storybook": "pnpm --filter @novasheet/storybook storybook",
+    "build-storybook": "pnpm --filter @novasheet/storybook build-storybook"
   },
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"]

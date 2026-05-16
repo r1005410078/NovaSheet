@@ -145,9 +145,14 @@ Subagent prompts must:
 - Dynamic row-height autofit (multi-line text) — M3
 - `src/interaction/` — M4
 - `packages/react/` — M4
-- `apps/playground/` — M5
+- `apps/playground/` — M5 (custom Vite app with FPS overlay + 1M mock data for perf validation)
 
 If you find yourself wanting to add any of these, stop and confirm with the user. They've been deferred for a reason.
+
+**Note:** `apps/storybook/` exists separately and is **in scope already** (added post-M1). It's the
+component-variant showcase using `@storybook/html-vite` — every Grid configuration form gets a
+story. As M2-M4 add new variants (scroll, frozen, resize states), add stories there too. Storybook
+serves variant exploration; `apps/playground/` will serve perf validation — different purposes.
 
 ---
 

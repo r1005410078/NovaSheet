@@ -112,6 +112,8 @@ grid.setRowHeight(3, 60)
 novasheet/
 ├── packages/
 │   └── core/                @novasheet/core — TS 渲染引擎（M1 已交付）
+├── apps/
+│   └── storybook/           组件变体玩具间（vanilla HTML flavor，无 React 依赖）
 ├── docs/
 │   └── superpowers/
 │       ├── specs/           设计 spec
@@ -122,7 +124,7 @@ novasheet/
 
 后续会陆续加入：
 - `packages/react/` (M4) — React Wrapper
-- `apps/playground/` (M5) — 含 1M mock 的开发演示
+- `apps/playground/` (M5) — 含 1M mock 的性能验证演示
 
 ---
 
@@ -134,6 +136,8 @@ pnpm test                 # 跑全部包测试
 pnpm build                # 构建全部包
 pnpm lint                 # ESLint
 pnpm format               # Prettier 全量格式化
+pnpm storybook            # 启动组件变体玩具间（localhost:6006）
+pnpm build-storybook      # 构建静态 storybook 站点
 ```
 
 针对单包：

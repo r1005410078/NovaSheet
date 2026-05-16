@@ -1,0 +1,21 @@
+{
+  "name": "@novasheet/storybook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "@novasheet/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@storybook/addon-essentials": "^8.6.0",
+    "@storybook/html": "^8.6.0",
+    "@storybook/html-vite": "^8.6.0",
+    "storybook": "^8.6.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.4.0"
+  }
+}
