@@ -36,6 +36,33 @@
         "typescript": "^5.4.5",
       },
     },
+    "packages/web": {
+      "name": "@novasheet/web",
+      "version": "0.0.0",
+      "dependencies": {
+        "@novasheet/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.9.0",
+        "@types/bun": "latest",
+        "happy-dom": "^14.7.1",
+        "typescript": "^5.4.5",
+      },
+    },
+    "packages/web-canvas2d": {
+      "name": "@novasheet/web-canvas2d",
+      "version": "0.0.0",
+      "dependencies": {
+        "@novasheet/core": "workspace:*",
+        "@novasheet/web": "workspace:*",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.9.0",
+        "@types/bun": "latest",
+        "happy-dom": "^14.7.1",
+        "typescript": "^5.4.5",
+      },
+    },
   },
   "trustedDependencies": [
     "esbuild",
@@ -138,6 +165,10 @@
     "@novasheet/core": ["@novasheet/core@workspace:packages/core"],
 
     "@novasheet/storybook": ["@novasheet/storybook@workspace:apps/storybook"],
+
+    "@novasheet/web": ["@novasheet/web@workspace:packages/web"],
+
+    "@novasheet/web-canvas2d": ["@novasheet/web-canvas2d@workspace:packages/web-canvas2d"],
 
     "@oxc-parser/binding-android-arm-eabi": ["@oxc-parser/binding-android-arm-eabi@0.127.0", "", { "os": "android", "cpu": "arm" }, "sha512-0LC7ye4hvqbIKxAzThzvswgHLFu2AURKzYLeSVvLdu2TBOYWQDmHnTqPLeA597BcUCxiLqLsS4CJ5uoI5WYWCQ=="],
 
