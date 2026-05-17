@@ -61,6 +61,7 @@ import { CellPainter } from '../painters/CellPainter'
 import { EmptyStatePainter } from '../painters/EmptyStatePainter'
 import { GridLinesPainter } from '../painters/GridLinesPainter'
 import { HeaderPainter } from '../painters/HeaderPainter'
+import { RowHeaderPainter } from '../painters/RowHeaderPainter'
 
 /** Canvas2DRenderer 构造选项 */
 export interface Canvas2DRendererOptions {
@@ -116,6 +117,8 @@ export class Canvas2DRenderer {
   private gridLinesPainter: GridLinesPainter
   /** 表头绘制器 */
   private headerPainter: HeaderPainter
+  /** 行号列绘制器（Excel 门面） */
+  private rowHeaderPainter: RowHeaderPainter
   /** 无数据插画绘制器 */
   private emptyStatePainter: EmptyStatePainter
 
@@ -163,6 +166,7 @@ export class Canvas2DRenderer {
     this.cellPainter = new CellPainter(this.theme, { measurer: opts.measurer })
     this.gridLinesPainter = new GridLinesPainter(this.theme)
     this.headerPainter = new HeaderPainter(this.theme)
+    this.rowHeaderPainter = new RowHeaderPainter(this.theme)
     this.emptyStatePainter = new EmptyStatePainter(this.theme)
   }
 
@@ -177,6 +181,7 @@ export class Canvas2DRenderer {
     this.cellPainter.setTheme(theme)
     this.gridLinesPainter.setTheme(theme)
     this.headerPainter.setTheme(theme)
+    this.rowHeaderPainter.setTheme(theme)
     this.emptyStatePainter.setTheme(theme)
   }
 
@@ -252,17 +257,26 @@ export class Canvas2DRenderer {
 
     const isEmpty = data.getRowCount() === 0
     const paintOrder = [...regions].sort((a, b) => a.zIndex - b.zIndex)
+    const excelChrome = snapshot.rowHeaderWidth > 0
 
     // 2) 无数据：正文区插画 + 列头（跳过单元格与网格线）
     if (isEmpty) {
       const bodyTop = snapshot.headerHeight
       const bodyHeight = contentRect.height - bodyTop
+      const gutter = snapshot.rowHeaderWidth
       if (bodyHeight > 0) {
         this.emptyStatePainter.paint(this.ctx, {
-          rect: { x: 0, y: bodyTop, width: contentRect.width, height: bodyHeight },
+          rect: { x: gutter, y: bodyTop, width: contentRect.width - gutter, height: bodyHeight },
         })
       }
-      this.paintHeaders(paintOrder, data, colsAxis)
+      this.paintHeaders(paintOrder, data, colsAxis, excelChrome)
+      this.paintRowHeaders(regions, rowsAxis, snapshot)
+      this.gridLinesPainter.paintOuterFrame(this.ctx, {
+        x: 0,
+        y: 0,
+        width: contentRect.width,
+        height: contentRect.height,
+      })
       return
     }
 
@@ -281,16 +295,26 @@ export class Canvas2DRenderer {
     for (const region of paintOrder) this.paintRegion(region, data, rowsAxis, colsAxis)
 
     // 6) 列头始终在最顶层；按列 band 分段绘制，左右冻结列不会跟随横向滚动。
-    this.paintHeaders(paintOrder, data, colsAxis)
+    this.paintHeaders(paintOrder, data, colsAxis, excelChrome)
+    this.paintRowHeaders(regions, rowsAxis, snapshot)
 
     // 7) 冻结边界最后覆盖一层强分隔线，让裁剪边缘表达为“冻结层边界”。
     this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
+
+    // 8) 视口外框：单元格网格线不覆盖 canvas 右/底边，内容不足一屏时需单独描边。
+    this.gridLinesPainter.paintOuterFrame(this.ctx, {
+      x: 0,
+      y: 0,
+      width: contentRect.width,
+      height: contentRect.height,
+    })
   }
 
   private paintHeaders(
     paintOrder: RenderRegion[],
     data: DataSource,
     colsAxis: Axis,
+    columnLetters: boolean,
   ): void {
     for (const region of paintOrder.filter((r) => r.rowBand === 'middle')) {
       if (region.colRange[1] < region.colRange[0]) continue
@@ -301,6 +325,38 @@ export class Canvas2DRenderer {
         x: region.rect.x,
         width: region.rect.width,
         scrollOffsetX: region.scrollOffsetX,
+        columnLetters,
+      })
+    }
+  }
+
+  private paintRowHeaders(
+    regions: RenderRegion[],
+    rowsAxis: Axis,
+    snapshot: RenderFrame['viewport'],
+  ): void {
+    const gutter = snapshot.rowHeaderWidth
+    if (gutter <= 0) return
+
+    this.rowHeaderPainter.paintCorner(this.ctx, gutter)
+
+    const topRegion = regions.find((r) => r.id === 'topCenter')
+    if (topRegion && topRegion.rowRange[1] >= topRegion.rowRange[0]) {
+      this.rowHeaderPainter.paint(this.ctx, {
+        rowsAxis,
+        rowRange: topRegion.rowRange,
+        rect: { x: 0, y: topRegion.rect.y, width: gutter, height: topRegion.rect.height },
+        scrollOffsetY: topRegion.scrollOffsetY,
+      })
+    }
+
+    const main = regions.find((r) => r.id === 'main')
+    if (main && main.rowRange[1] >= main.rowRange[0]) {
+      this.rowHeaderPainter.paint(this.ctx, {
+        rowsAxis,
+        rowRange: main.rowRange,
+        rect: { x: 0, y: main.rect.y, width: gutter, height: main.rect.height },
+        scrollOffsetY: main.scrollOffsetY,
       })
     }
   }

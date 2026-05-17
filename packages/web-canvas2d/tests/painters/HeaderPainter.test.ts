@@ -87,6 +87,34 @@ describe('HeaderPainter — 列头', () => {
     expect(ageTxt!.args[1]).toBe(8)
   })
 
+  it('绘制列头单元格竖线与底边', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA,
+      colsAxis,
+      colRange: [0, 2],
+      width: 400,
+    })
+    expect(ops.some((o) => o.op === 'stroke')).toBe(true)
+    const strokeStyle = ops.find((o) => o.op === 'set:strokeStyle' && o.value === denseGridTheme.colors.gridLine)
+    expect(strokeStyle).toBeDefined()
+  })
+
+  it('columnLetters 绘制 Excel 列标', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA,
+      colsAxis,
+      colRange: [0, 2],
+      width: 400,
+      columnLetters: true,
+    })
+    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    expect(texts).toEqual(['A', 'B', 'C'])
+  })
+
   it('省略 scrollOffsetX 时默认为 0', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })

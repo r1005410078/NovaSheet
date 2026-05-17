@@ -13,6 +13,7 @@
  */
 
 import type { Axis, QuadrantRect, Theme } from '@novasheet/core'
+import { snapLineInside } from '../paint/line-snap'
 
 /** 网格线绘制所需参数 */
 export interface GridLinesPaintParams {
@@ -80,10 +81,19 @@ export class GridLinesPainter {
 
     ctx.stroke()
   }
-}
 
-function snapLineInside(raw: number, start: number, end: number): number | undefined {
-  if (raw < start || raw > end) return undefined
-  if (raw === end) return Math.ceil(raw) - 0.5
-  return Math.floor(raw) + 0.5
+  /** 视口最外一圈边框（内容未铺满时补齐右/底边，避免“缺一块”）。 */
+  paintOuterFrame(
+    ctx: CanvasRenderingContext2D,
+    rect: { x: number; y: number; width: number; height: number },
+  ): void {
+    if (rect.width <= 0 || rect.height <= 0) return
+    const border = this.theme.metrics.borderWidth
+    ctx.strokeStyle = this.theme.colors.gridLineStrong
+    ctx.lineWidth = border
+    const inset = border / 2
+    ctx.beginPath()
+    ctx.rect(rect.x + inset, rect.y + inset, rect.width - border, rect.height - border)
+    ctx.stroke()
+  }
 }

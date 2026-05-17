@@ -1,6 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck — storybook docs display snippet; references
-import { Grid } from '@novasheet/web'
 import type { Field, Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
@@ -20,18 +19,20 @@ const schema: Schema = {
   ],
 }
 
-const data = new GeneratedDataSource(1_000, schema, (row, fieldId) => {
+const rowCount = 16
+const hostHeight = 32 + 28 * rowCount
+
+const data = new GeneratedDataSource(rowCount, schema, (row, fieldId) => {
   if (fieldId === 'employee') return `员工 ${row}`
   if (fieldId === 'summary') return `第 ${(row % 4) + 1} 季度汇总`
   return `指标-${row}`
 })
 
-const host = createGridHost({
-  data,
-  frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
-})
-
-requestAnimationFrame(() => {
-  const grid = (host as HTMLElement & { __grid: Grid }).__grid
-  grid.scrollToCell(24, 'metric_10')
-})
+createGridHost(
+  {
+    data,
+    frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
+  },
+  860,
+  hostHeight,
+)

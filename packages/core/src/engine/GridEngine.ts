@@ -22,6 +22,8 @@ export interface GridEngineOptions {
   /** 兼容旧 API：等价于 `frozen.leftCols`。新代码优先使用 `frozen`。 */
   frozenCols?: number
   defaultRowHeight?: number
+  /** Excel 风格：列头显示 A/B/…、左侧显示 1-based 行号。 */
+  excelHeaders?: boolean
 }
 
 export interface GridEngine {

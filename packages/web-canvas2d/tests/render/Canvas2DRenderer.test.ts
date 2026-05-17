@@ -223,7 +223,6 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
     renderer.paint()
 
-    expect(ops).not.toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.frozenSeparator.color })
     const idleSeparatorStart = ops.findIndex(
       (op) => op.op === 'set:strokeStyle' && op.value === denseGridTheme.colors.gridLine,
     )

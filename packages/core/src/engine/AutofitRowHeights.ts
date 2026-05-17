@@ -125,7 +125,7 @@ export function autofitRowHeights(params: AutofitRowsParams): AutofitRowsResult 
       skippedRows++
       continue
     }
-    const finalHeight = Math.min(maxHeight, Math.max(minHeight, tallest))
+    const finalHeight = Math.ceil(Math.min(maxHeight, Math.max(minHeight, tallest)))
     applyHeight(rowIndex, finalHeight)
     changedRows++
   }

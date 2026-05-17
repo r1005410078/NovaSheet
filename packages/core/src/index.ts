@@ -38,6 +38,7 @@ export type {
 export { ChunkedAxis, CHUNK_SIZE } from './layout/ChunkedAxis'
 export { Viewport } from './layout/Viewport'
 export { FrozenRegions } from './layout/FrozenRegions'
+export { columnIndexToLetter } from './layout/columnLetter'
 export type { Axis, MutableAxis } from './layout/ChunkedAxis'
 export type {
   ColBand,

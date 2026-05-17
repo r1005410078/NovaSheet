@@ -73,6 +73,8 @@ export interface ViewportSnapshot {
   contentRect: { width: number; height: number }
   /** 表头高度（px） */
   headerHeight: number
+  /** 行号列宽（px） */
+  rowHeaderWidth: number
   /** 水平滚动偏移（px） */
   scrollX: number
   /** 垂直滚动偏移（px） */
@@ -109,6 +111,8 @@ export class Viewport {
   private scrollY = 0
   /** 表头高度（px），由主题驱动 */
   private headerHeight = 0
+  /** 行号列宽（px）；Excel 门面启用时 > 0 */
+  private rowHeaderWidth = 0
   /** 视口自身的变更版本号 */
   private _version = 0
 
@@ -176,6 +180,11 @@ export class Viewport {
     this._version++
   }
 
+  setRowHeaderWidth(width: number): void {
+    this.rowHeaderWidth = Math.max(0, width)
+    this._version++
+  }
+
   /**
  * 不可变快照。每帧绘制开始时调用一次；FrozenRegions 内部根据 viewport 状态实时切分绘制区域。
    * version 取 viewport 自身 + 两个 axis 的最大值——
@@ -199,6 +208,7 @@ export class Viewport {
       scrollX: this.scrollX,
       scrollY: this.scrollY,
       headerHeight: this.headerHeight,
+      rowHeaderWidth: this.rowHeaderWidth,
     }
     const regions = this.frozen.getRegions(rect)
     const quadrants = this.frozen.getQuadrants(rect)
@@ -207,6 +217,7 @@ export class Viewport {
       quadrants,
       contentRect: { width: this.width, height: this.height },
       headerHeight: this.headerHeight,
+      rowHeaderWidth: this.rowHeaderWidth,
       scrollX: this.scrollX,
       scrollY: this.scrollY,
       version: Math.max(this._version, this.rowsAxis.version, this.colsAxis.version),

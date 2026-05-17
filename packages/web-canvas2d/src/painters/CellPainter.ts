@@ -133,7 +133,8 @@ export class CellPainter {
     const maxWidth = rect.width - padX * 2
     const availableHeight = rect.height - padY * 2
     if (maxWidth <= 0 || availableHeight <= 0) return
-    const maxLines = Math.max(1, Math.floor(availableHeight / lineHeight))
+    // 与 autofit 的 `lines × lineHeight + padY×2` 互逆；微量补偿浮点误差，避免少算一行而出现 `…`
+    const maxLines = Math.max(1, Math.floor((availableHeight + lineHeight * 0.01) / lineHeight))
 
     const wrapped = wrapText(
       text,

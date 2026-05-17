@@ -14,6 +14,11 @@ export interface GridOptions extends GridEngineOptions {
   renderer?: GridRendererBackend
 }
 
+/** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
+export function withExcelHeaders<T extends GridOptions>(options: T): T {
+  return { ...options, excelHeaders: true }
+}
+
 /** 从门面选项中剥离 `renderer`，只把引擎参数传给 `DefaultGridEngine`。 */
 function engineOptionsFrom(options: GridOptions): GridEngineOptions {
   const { renderer: _backend, ...engineOptions } = options

@@ -142,6 +142,8 @@ export interface ViewportRect {
   scrollY: number
   /** 表头高度（px） */
   headerHeight: number
+  /** 行号列宽（px）；0 表示无行头 */
+  rowHeaderWidth: number
 }
 
 type LegacyOrConfig = number | Partial<FrozenConfig>
@@ -214,9 +216,10 @@ export class FrozenRegions {
 
     const middleY = vp.headerHeight + topHeight
     const middleHeight = Math.max(0, contentHeight - topHeight)
-    const centerX = leftWidth
-    const centerWidth = Math.max(0, vp.width - leftWidth - rightWidth)
-    const rightX = Math.max(leftWidth, vp.width - rightWidth)
+    const gutter = Math.max(0, vp.rowHeaderWidth)
+    const centerX = gutter + leftWidth
+    const centerWidth = Math.max(0, vp.width - gutter - leftWidth - rightWidth)
+    const rightX = Math.max(gutter + leftWidth, vp.width - rightWidth)
     // scrollX 表示中间可滚动区域已经横向滚动了多少，而不是整张表的内容坐标。
     // 有左冻结列时，中心区域的内容基准需要从左冻结列之后开始，再叠加 scrollX。
     // 例如左冻结宽 100px、scrollX=50px，则中心区域应从内容坐标 150px 开始；
@@ -247,7 +250,7 @@ export class FrozenRegions {
         colBand: 'left',
         rowRange: this.visibleRange(this.rowsAxis, middleScrollY, middleHeight),
         colRange: [0, leftCols - 1],
-        rect: { x: 0, y: middleY, width: leftWidth, height: middleHeight },
+        rect: { x: gutter, y: middleY, width: leftWidth, height: middleHeight },
         scrollOffsetX: 0,
         scrollOffsetY: middleScrollY,
         zIndex: 20,
@@ -289,7 +292,7 @@ export class FrozenRegions {
         colBand: 'left',
         rowRange: [0, topRows - 1],
         colRange: [0, leftCols - 1],
-        rect: { x: 0, y: vp.headerHeight, width: leftWidth, height: topHeight },
+        rect: { x: gutter, y: vp.headerHeight, width: leftWidth, height: topHeight },
         scrollOffsetX: 0,
         scrollOffsetY: 0,
         zIndex: 40,

@@ -13,9 +13,12 @@ import type { GridEngine, GridEngineOptions } from './GridEngine'
  * 管理 `ChunkedAxis`、`FrozenRegions`、`Viewport` 与 `DataSource` 绑定。
  * `setData` 会重建轴与 viewport（字段/行数变化时）；`getFrame()` 产出不可变快照供渲染。
  */
+const DEFAULT_EXCEL_ROW_HEADER_WIDTH = 44
+
 export class DefaultGridEngine implements GridEngine {
   private data: DataSource
   private theme: Theme
+  private readonly excelHeaders: boolean
   private explicitDefaultRowHeight: number | undefined
   private rowsAxis: ChunkedAxis
   private colsAxis: ChunkedAxis
@@ -25,6 +28,7 @@ export class DefaultGridEngine implements GridEngine {
   constructor(options: GridEngineOptions) {
     this.data = options.data
     this.theme = options.theme ?? denseGridTheme
+    this.excelHeaders = options.excelHeaders === true
     this.explicitDefaultRowHeight = options.defaultRowHeight
     this.rowsAxis = new ChunkedAxis({
       count: this.data.getRowCount(),
@@ -41,6 +45,7 @@ export class DefaultGridEngine implements GridEngine {
     )
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
+    this.applySheetChrome()
     this.applyFieldWidths()
   }
 
@@ -61,12 +66,14 @@ export class DefaultGridEngine implements GridEngine {
     )
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
+    this.applySheetChrome()
     this.applyFieldWidths()
   }
 
   setTheme(theme: Theme): void {
     this.theme = theme
     this.viewport.setHeaderHeight(theme.metrics.headerHeight)
+    this.applySheetChrome()
     if (this.explicitDefaultRowHeight === undefined) {
       this.rowsAxis.setDefaultSize(theme.metrics.rowHeight)
     }
@@ -166,6 +173,13 @@ export class DefaultGridEngine implements GridEngine {
     if (fields.length === 0) return 100
     const sum = fields.reduce((acc, f) => acc + f.width, 0)
     return Math.max(1, Math.round(sum / fields.length))
+  }
+
+  private applySheetChrome(): void {
+    const gutter = this.excelHeaders
+      ? Math.max(this.theme.metrics.rowHeaderWidth, DEFAULT_EXCEL_ROW_HEADER_WIDTH)
+      : 0
+    this.viewport.setRowHeaderWidth(gutter)
   }
 
   private applyFieldWidths(): void {

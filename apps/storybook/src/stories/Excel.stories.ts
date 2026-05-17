@@ -1,0 +1,35 @@
+import type { Meta, StoryObj } from '@storybook/html'
+import { InMemoryDataSource } from '@novasheet/core'
+import { createGridHost } from '../grid-host'
+import { basicTextSchema, generateRows } from '../mock-data'
+import { docsMeta, docsStory } from '../story-docs'
+import { withExcelHeaders } from '@novasheet/web'
+
+const meta: Meta = {
+  title: '表格/Excel 门面',
+  parameters: { layout: 'centered' },
+  ...docsMeta('`excelHeaders: true` 时列头显示 A/B/…、左侧显示 1-based 行号，左上角为交汇格。'),
+}
+export default meta
+
+type Story = StoryObj
+
+export const WithRowAndColumnHeaders: Story = {
+  name: '列标 + 行号',
+  ...docsStory(`import { InMemoryDataSource } from '@novasheet/core'
+import { withExcelHeaders } from '@novasheet/web'
+import { createGridHost } from '../grid-host'
+import { basicTextSchema, generateRows } from '../mock-data'
+
+const data = new InMemoryDataSource({
+  schema: basicTextSchema(),
+  rows: generateRows(basicTextSchema(), 50),
+})
+
+createGridHost(withExcelHeaders({ data }), 720, 400)`),
+  render: () => {
+    const schema = basicTextSchema()
+    const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 50) })
+    return createGridHost(withExcelHeaders({ data }), 720, 400)
+  },
+}

@@ -20,6 +20,8 @@ export interface ThemeMetrics {
   readonly rowHeight: number
   /** 表头高度（px） */
   readonly headerHeight: number
+  /** 行号列宽（px）；0 表示不绘制行头 */
+  readonly rowHeaderWidth: number
   /** 单元格水平内边距（px） */
   readonly cellPaddingX: number
   /** 单元格垂直内边距（px） */

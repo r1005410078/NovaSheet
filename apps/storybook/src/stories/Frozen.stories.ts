@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { Grid } from '@novasheet/web'
 import type { Field, Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
@@ -16,6 +15,10 @@ export default meta
 type Story = StoryObj
 
 const METRIC_COUNT = 18
+/** 可视区内完整展示、无纵向滚动条（header 32 + rowHeight 28 × N） */
+const STORY_ROW_COUNT = 16
+const STORY_HOST_WIDTH = 860
+const STORY_HOST_HEIGHT = 32 + 28 * STORY_ROW_COUNT
 
 const metricFields: Field[] = Array.from({ length: METRIC_COUNT }, (_, i) => {
   const n = i + 1
@@ -41,9 +44,9 @@ const regions = ['华北', '华东', '华南', '西南']
 
 export const FrozenTopLeftAndRight: Story = {
   name: '顶行 + 左右列冻结（20 列）',
-  ...docsStory(frozenTopLeftRightSrc, '初始滚到 `metric_10`，观察左右冻结列。'),
+  ...docsStory(frozenTopLeftRightSrc, '固定视口尺寸，16 行数据无纵向滚动；中间列仍可横向滚动。'),
   render: () => {
-    const data = new GeneratedDataSource(1_000, schema, (row, fieldId) => {
+    const data = new GeneratedDataSource(STORY_ROW_COUNT, schema, (row, fieldId) => {
       if (fieldId === 'employee') return `员工 ${row}`
       if (fieldId === 'summary') return `第 ${(row % 4) + 1} 季度汇总 · 第 ${row} 行`
       if (fieldId.startsWith('metric_')) {
@@ -53,14 +56,13 @@ export const FrozenTopLeftAndRight: Story = {
       return ''
     })
 
-    const host = createGridHost({
-      data,
-      frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
-    })
-    requestAnimationFrame(() => {
-      const grid = (host as HTMLElement & { __grid: Grid }).__grid
-      grid.scrollToCell(24, 'metric_10')
-    })
-    return host
+    return createGridHost(
+      {
+        data,
+        frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
+      },
+      STORY_HOST_WIDTH,
+      STORY_HOST_HEIGHT,
+    )
   },
 }

@@ -102,6 +102,16 @@ describe('GridLinesPainter — 网格线', () => {
     expect(lineYs).toContain(84.5)
   })
 
+  it('paintOuterFrame 绘制视口外框', () => {
+    const { ctx, ops } = createRecordingContext(400, 300)
+    new GridLinesPainter(denseGridTheme).paintOuterFrame(ctx, { x: 0, y: 0, width: 400, height: 300 })
+    expect(ops.some((o) => o.op === 'stroke')).toBe(true)
+    expect(ops).toContainEqual({
+      op: 'set:strokeStyle',
+      value: denseGridTheme.colors.gridLineStrong,
+    })
+  })
+
   it('绘制冻结区域右边界与底边界线', () => {
     const { ctx, ops } = createRecordingContext()
     const rowsAxis = new ChunkedAxis({ count: 1, defaultSize: 28 })

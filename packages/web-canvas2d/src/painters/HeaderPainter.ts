@@ -9,7 +9,8 @@
  * 主 header 之后再绘一次（M3 才会启用，因为 M1 没有冻结列）。
  */
 
-import type { Axis, Schema, Theme } from '@novasheet/core'
+import { columnIndexToLetter, type Axis, type Schema, type Theme } from '@novasheet/core'
+import { snapLineInside } from '../paint/line-snap'
 
 /** 表头绘制所需参数 */
 export interface HeaderPaintParams {
@@ -29,6 +30,8 @@ export interface HeaderPaintParams {
    * 由 Renderer 单独传 scrollOffsetX=0 再绘一次覆盖。
    */
   scrollOffsetX?: number
+  /** true 时绘制 A/B/… 列标（Excel 门面） */
+  columnLetters?: boolean
 }
 
 /**
@@ -68,17 +71,60 @@ export class HeaderPainter {
     ctx.textBaseline = 'middle'
     ctx.textAlign = 'left'
 
+    const columnLetters = params.columnLetters === true
     const padX = this.theme.metrics.cellPaddingX
     for (let c = colRange[0]; c <= colRange[1]; c++) {
-      const field = schema.fields[c]
-      if (!field) continue
-      // 减去 scrollOffsetX：header 跟随主区横向滚动；M3 冻结列段会被 Renderer 用
-      // scrollOffsetX=0 再绘一次覆盖到固定位置。
-      const textX = x + colsAxis.indexToPosition(c) - scrollOffsetX + padX
+      if (!columnLetters && !schema.fields[c]) continue
+      const colLeft = x + colsAxis.indexToPosition(c) - scrollOffsetX
+      const colWidth = colsAxis.getSize(c)
       const y = headerHeight / 2
-      ctx.fillText(field.name, textX, y)
+      if (columnLetters) {
+        ctx.textAlign = 'center'
+        ctx.fillText(columnIndexToLetter(c), colLeft + colWidth / 2, y)
+        ctx.textAlign = 'left'
+      } else {
+        const field = schema.fields[c]!
+        const textX = colLeft + padX
+        ctx.fillText(field.name, textX, y)
+      }
     }
 
+    this.paintHeaderGridLines(ctx, { colsAxis, colRange, x, width, scrollOffsetX, headerHeight })
+
     ctx.restore()
+  }
+
+  private paintHeaderGridLines(
+    ctx: CanvasRenderingContext2D,
+    params: {
+      colsAxis: Axis
+      colRange: [number, number]
+      x: number
+      width: number
+      scrollOffsetX: number
+      headerHeight: number
+    },
+  ): void {
+    const { colsAxis, colRange, x, width, scrollOffsetX, headerHeight } = params
+    ctx.strokeStyle = this.theme.colors.gridLine
+    ctx.lineWidth = this.theme.metrics.borderWidth
+    ctx.beginPath()
+
+    for (let c = colRange[0]; c <= colRange[1]; c++) {
+      const xBase = colsAxis.indexToPosition(c) + colsAxis.getSize(c)
+      const xRaw = x + xBase - scrollOffsetX
+      const lineX = snapLineInside(xRaw, x, x + width)
+      if (lineX === undefined) continue
+      ctx.moveTo(lineX, 0)
+      ctx.lineTo(lineX, headerHeight)
+    }
+
+    const bottom = snapLineInside(headerHeight, 0, headerHeight)
+    if (bottom !== undefined) {
+      ctx.moveTo(x, bottom)
+      ctx.lineTo(x + width, bottom)
+    }
+
+    ctx.stroke()
   }
 }

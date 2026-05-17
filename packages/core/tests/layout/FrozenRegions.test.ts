@@ -18,6 +18,7 @@ describe('FrozenRegions — M3 冻结区域', () => {
       scrollX: 100,
       scrollY: 84,
       headerHeight: 32,
+      rowHeaderWidth: 0,
     })
 
     expect(regions.map((r) => r.id)).toEqual([
@@ -107,6 +108,7 @@ describe('FrozenRegions — M3 冻结区域', () => {
       scrollX: 100,
       scrollY: 84,
       headerHeight: 32,
+      rowHeaderWidth: 0,
     })
 
     expect(quadrants.topLeft?.id).toBe('topLeft')
@@ -131,6 +133,7 @@ describe('FrozenRegions — M3 冻结区域', () => {
         scrollX: 50,
         scrollY: 0,
         headerHeight: 32,
+      rowHeaderWidth: 0,
       })
       .find((region) => region.id === 'main')!
 
@@ -138,6 +141,24 @@ describe('FrozenRegions — M3 冻结区域', () => {
     // 左冻结列宽 100px，所以中心区域的内容坐标基准应为 100 + 50 = 150。
     // 如果写成 max(scrollX, leftWidth)，0..100px 这段滚动会被左冻结宽度吞掉，画面要拖一段才动。
     expect(main.scrollOffsetX).toBe(150)
+  })
+
+  it('rowHeaderWidth 为内容区整体右移并收窄中间列', () => {
+    const rowsAxis = new ChunkedAxis({ count: 20, defaultSize: 28 })
+    const colsAxis = new ChunkedAxis({ count: 8, defaultSize: 100 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const main = frozen
+      .getRegions({
+        width: 400,
+        height: 200,
+        scrollX: 0,
+        scrollY: 0,
+        headerHeight: 32,
+        rowHeaderWidth: 44,
+      })
+      .find((r) => r.id === 'main')!
+
+    expect(main.rect).toEqual({ x: 44, y: 32, width: 356, height: 168 })
   })
 
   it('无冻结配置时保持单 main 区域兼容旧路径', () => {
@@ -151,6 +172,7 @@ describe('FrozenRegions — M3 冻结区域', () => {
       scrollX: 100,
       scrollY: 84,
       headerHeight: 32,
+      rowHeaderWidth: 0,
     })
 
     expect(quadrants.topLeft).toBeUndefined()
