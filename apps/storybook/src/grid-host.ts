@@ -1,4 +1,4 @@
-import { Grid, type GridOptions } from '@novasheet/web-canvas2d'
+import { Grid, type GridOptions } from '@novasheet/web'
 
 /**
  * Creates a Grid-hosting div, instantiates a Grid inside it, returns the div with the

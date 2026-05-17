@@ -15,7 +15,7 @@ M2 能力保留；`@novasheet/core` 拆成三包，公共 `Grid` 从 `@novasheet
 | 包 | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d` |
 | 测试 | 132 passing（bun:test，跨三包） |
 | Lint / Typecheck / Build | 全部 clean |
-| 公共 API | `import { Grid } from '@novasheet/web-canvas2d'`；数据/主题类型来自 `@novasheet/core` |
+| 公共 API | `import { Grid } from '@novasheet/web'`（默认 Canvas2D）；数据/主题类型来自 `@novasheet/core` |
 
 ### M1 能力
 
@@ -50,7 +50,7 @@ bun run --filter @novasheet/core build
 ```
 
 ```ts
-import { Grid } from '@novasheet/web-canvas2d'
+import { Grid } from '@novasheet/web'
 import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
 
 const data = new InMemoryDataSource({

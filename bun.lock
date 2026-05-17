@@ -17,7 +17,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@novasheet/core": "workspace:*",
-        "@novasheet/web-canvas2d": "workspace:*",
+        "@novasheet/web": "workspace:*",
       },
       "devDependencies": {
         "@storybook/html": "^10.4.0",
@@ -42,6 +42,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@novasheet/core": "workspace:*",
+        "@novasheet/web-canvas2d": "workspace:*",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.9.0",
@@ -55,7 +56,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@novasheet/core": "workspace:*",
-        "@novasheet/web": "workspace:*",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.9.0",

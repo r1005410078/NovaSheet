@@ -8,7 +8,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "bun run --filter '*' build",
+    "build": "bun run typecheck && bun run --filter '*' build",
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "eslint packages",

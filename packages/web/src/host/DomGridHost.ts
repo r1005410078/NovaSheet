@@ -2,6 +2,13 @@ import type { FrameScheduler } from '@novasheet/core'
 import { NativeScroller } from '../scroll/NativeScroller'
 import type { WebHost, WebHostOptions } from './WebHost'
 
+/**
+ * `WebHost` 的 DOM 实现：原生滚动容器 + 占位 spacer。
+ *
+ * - 创建 `scrollHost` / `scrollSpacer`，监听 scroll、resize、DPR
+ * - 若 container 为 `position: static`，临时改为 `relative` 并在 `destroy` 还原
+ * - 程序化滚动委托给 `NativeScroller`
+ */
 export class DomGridHost implements WebHost {
   private container: HTMLElement
   private scheduler: FrameScheduler
@@ -13,6 +20,7 @@ export class DomGridHost implements WebHost {
   private nativeScroller!: NativeScroller
   private resizeObserver: ResizeObserver | null = null
   private dprMedia: MediaQueryList | null = null
+  private dprHandler: (() => void) | null = null
   private originalPosition = ''
   private destroyed = false
   private attached = false
@@ -130,18 +138,21 @@ export class DomGridHost implements WebHost {
     if (!this.onDprChange || typeof window.matchMedia !== 'function') return
     const query = `(resolution: ${window.devicePixelRatio}dppx)`
     this.dprMedia = window.matchMedia(query)
-    const handler = (): void => {
+    this.dprHandler = (): void => {
       if (this.destroyed) return
       this.unwatchDpr()
       this.currentDpr = window.devicePixelRatio || 1
       this.onDprChange?.(this.currentDpr)
       this.watchDpr()
     }
-    this.dprMedia.addEventListener('change', handler)
+    this.dprMedia.addEventListener('change', this.dprHandler)
   }
 
   private unwatchDpr(): void {
-    if (!this.dprMedia) return
+    if (this.dprMedia && this.dprHandler) {
+      this.dprMedia.removeEventListener('change', this.dprHandler)
+    }
     this.dprMedia = null
+    this.dprHandler = null
   }
 }

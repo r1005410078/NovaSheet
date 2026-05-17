@@ -5,13 +5,23 @@ import {
   type GridEngineOptions,
   type Theme,
 } from '@novasheet/core'
-import { DomGridHost, WebGridRuntime } from '@novasheet/web'
-import { Canvas2DRenderer } from './render/Canvas2DRenderer'
-import { HighDPI } from './surface/HighDPI'
+import { Canvas2DRenderer, HighDPI } from '@novasheet/web-canvas2d'
+import type { GridController } from '../grid/GridController'
+import { DomGridHost } from '../host/DomGridHost'
+import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
-export interface GridOptions extends GridEngineOptions {}
-
-export class Grid {
+/**
+ * Canvas2D 渲染后端装配（`Grid` 在 `renderer: 'canvas2d'` 时使用）。
+ *
+ * 职责划分：
+ *   - 本类：创建 canvas / HighDPI / `Canvas2DRenderer`，并交给 `WebGridRuntime` 编排
+ *   - `DomGridHost`：scrollHost、spacer、ResizeObserver、DPR 监听
+ *   - `WebGridRuntime`：滚动映射、spacer 尺寸、RAF、`setData` 换 renderer
+ *   - `DefaultGridEngine`（core）：数据、轴、viewport 逻辑状态
+ *
+ * Host 回调在 `attach()` 之后才触发，故可在 `this.runtime` 赋值后安全闭包引用。
+ */
+export class Canvas2DBackend implements GridController {
   private container: HTMLElement
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
@@ -19,10 +29,10 @@ export class Grid {
   private highDpi: HighDPI
   private renderer: Canvas2DRenderer
   private host: DomGridHost
-  private runtime: WebGridRuntime
+  private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
 
-  constructor(container: HTMLElement, options: GridOptions) {
+  constructor(container: HTMLElement, options: GridEngineOptions) {
     this.container = container
     this.engine = new DefaultGridEngine(options)
 
@@ -43,14 +53,13 @@ export class Grid {
     this.highDpi = new HighDPI(this.canvas, this.ctx)
     this.renderer = this.createRenderer()
 
-    const runtimeRef: { current: WebGridRuntime | null } = { current: null }
     this.host = new DomGridHost({
       container: this.container,
       scheduler: this.scheduler,
       onScroll: (scrollTop, scrollLeft) =>
-        runtimeRef.current!.handleHostScroll(scrollTop, scrollLeft),
-      onResize: (w, h, dpr) => runtimeRef.current!.handleHostResize(w, h, dpr),
-      onDprChange: (dpr) => runtimeRef.current!.handleHostDprChange(dpr),
+        this.runtime.handleHostScroll(scrollTop, scrollLeft),
+      onResize: (w, h, dpr) => this.runtime.handleHostResize(w, h, dpr),
+      onDprChange: (dpr) => this.runtime.handleHostDprChange(dpr),
     })
 
     this.runtime = new WebGridRuntime({
@@ -60,33 +69,26 @@ export class Grid {
       scheduler: this.scheduler,
       onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
     })
-    runtimeRef.current = this.runtime
 
     this.runtime.attach()
   }
 
   setData(data: DataSource): void {
-    this.engine.setData(data)
-    this.renderer.destroy()
-    this.renderer = this.createRenderer()
-    this.runtime.setRenderer(this.renderer)
-    this.runtime.afterEngineMutation()
+    this.renderer = this.runtime.setData(data, () => this.createRenderer()) as Canvas2DRenderer
   }
 
   setTheme(theme: Theme): void {
-    this.engine.setTheme(theme)
-    this.renderer.setTheme(theme)
-    this.runtime.afterEngineMutation()
+    this.runtime.setTheme(theme, (renderer) => {
+      (renderer as Canvas2DRenderer).setTheme(theme)
+    })
   }
 
   setRowHeight(rowIndex: number, height: number): void {
-    this.engine.setRowHeight(rowIndex, height)
-    this.runtime.afterEngineMutation()
+    this.runtime.setRowHeight(rowIndex, height)
   }
 
   setColumnWidth(fieldId: string, width: number): void {
-    this.engine.setColumnWidth(fieldId, width)
-    this.runtime.afterEngineMutation()
+    this.runtime.setColumnWidth(fieldId, width)
   }
 
   refresh(): void {
@@ -108,11 +110,11 @@ export class Grid {
     }
   }
 
-  /** @internal ResizeObserver path — used by Grid.test.ts */
   _onContainerResize(): void {
     this.runtime.onContainerResize()
   }
 
+  /** 用当前 engine 状态构造新的 `Canvas2DRenderer`（`setData` 后轴/viewport 会重建）。 */
   private createRenderer(): Canvas2DRenderer {
     return new Canvas2DRenderer({
       ctx: this.ctx,

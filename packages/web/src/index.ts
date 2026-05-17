@@ -1,4 +1,7 @@
-// @novasheet/web — browser host & web-specific platform code.
+// @novasheet/web — 浏览器宿主、运行时编排与对外 Grid 门面。
+export { Grid } from './Grid'
+export type { GridOptions, GridRendererBackend } from './Grid'
+
 export { ScrollMapper, SAFE_MAX } from './scroll/ScrollMapper'
 export { NativeScroller } from './scroll/NativeScroller'
 export type { ScrollListener } from './scroll/NativeScroller'

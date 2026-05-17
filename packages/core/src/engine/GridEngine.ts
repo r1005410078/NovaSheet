@@ -1,9 +1,16 @@
+/**
+ * 平台无关引擎契约（spec §5 `GridEngine`）。
+ *
+ * 持有数据、主题、行列轴、冻结区、viewport 与逻辑滚动；不含 DOM / canvas。
+ */
+
 import type { DataSource } from '../data/DataSource'
 import type { Axis } from '../layout/ChunkedAxis'
 import type { Viewport } from '../layout/Viewport'
 import type { RenderFrame } from '../render/RenderFrame'
 import type { Theme } from '../theme/Theme'
 
+/** `DefaultGridEngine` 构造参数。 */
 export interface GridEngineOptions {
   data: DataSource
   theme?: Theme

@@ -7,6 +7,12 @@ import { denseGridTheme } from '../theme/denseGridTheme'
 import type { Theme } from '../theme/Theme'
 import type { GridEngine, GridEngineOptions } from './GridEngine'
 
+/**
+ * `GridEngine` 默认实现。
+ *
+ * 管理 `ChunkedAxis`、`FrozenRegions`、`Viewport` 与 `DataSource` 绑定。
+ * `setData` 会重建轴与 viewport（字段/行数变化时）；`getFrame()` 产出不可变快照供渲染。
+ */
 export class DefaultGridEngine implements GridEngine {
   private data: DataSource
   private theme: Theme

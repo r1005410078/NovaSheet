@@ -16,8 +16,26 @@ function makeData() {
   })
 }
 
+/** Reach Canvas2DBackend internals (facade hides delegate). */
+function canvas2dDelegate(grid: Grid) {
+  return (
+    grid as unknown as {
+      delegate: {
+        runtime: { refresh: () => void }
+        engine: {
+          getViewport: () => {
+            setScroll: (x: number, y: number) => void
+            setSize: (w: number, h: number) => void
+          }
+        }
+        highDpi: { resize: (w: number, h: number) => void }
+      }
+    }
+  ).delegate
+}
+
 function runtimeRefreshSpy(grid: Grid) {
-  return spyOn((grid as unknown as { runtime: { refresh: () => void } }).runtime, 'refresh')
+  return spyOn(canvas2dDelegate(grid).runtime, 'refresh')
 }
 
 describe('Grid', () => {
@@ -229,9 +247,7 @@ describe('Grid', () => {
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     while (rafs.length) rafs.shift()!()
 
-    const viewport = (
-      grid as unknown as { engine: { getViewport: () => { setScroll: (x: number, y: number) => void } } }
-    ).engine.getViewport()
+    const viewport = canvas2dDelegate(grid).engine.getViewport()
     const setScrollSpy = spyOn(viewport, 'setScroll')
 
     Object.defineProperty(host, 'scrollTop', { value: 56, writable: true, configurable: true })
@@ -310,11 +326,9 @@ describe('Grid', () => {
     const grid = new Grid(el, { data: makeData() })
 
     const invalidateSpy = runtimeRefreshSpy(grid)
-    const viewport = (
-      grid as unknown as { engine: { getViewport: () => { setSize: (w: number, h: number) => void } } }
-    ).engine.getViewport()
+    const viewport = canvas2dDelegate(grid).engine.getViewport()
     const setSizeSpy = spyOn(viewport, 'setSize')
-    const highDpi = (grid as unknown as { highDpi: { resize: (w: number, h: number) => void } }).highDpi
+    const highDpi = canvas2dDelegate(grid).highDpi
     const resizeSpy = spyOn(highDpi, 'resize')
 
     Object.defineProperty(el, 'clientWidth', { value: 500, configurable: true })

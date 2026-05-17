@@ -48,8 +48,7 @@
  */
 
 import type { DataSource, Quadrant, RenderFrame, Theme } from '@novasheet/core'
-import { FrameScheduler, type ChunkedAxis, type Viewport } from '@novasheet/core'
-import type { WebRenderer } from '@novasheet/web'
+import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { CellPainter } from '../painters/CellPainter'
 import { GridLinesPainter } from '../painters/GridLinesPainter'
 import { HeaderPainter } from '../painters/HeaderPainter'
@@ -63,9 +62,9 @@ export interface Canvas2DRendererOptions {
   /** 视口状态 */
   viewport: Viewport
   /** 行轴 */
-  rowsAxis: ChunkedAxis
+  rowsAxis: Axis
   /** 列轴 */
-  colsAxis: ChunkedAxis
+  colsAxis: Axis
   /** 当前主题 */
   theme: Theme
   /** 共享同一个 scheduler，让 scroll / resize / render 合并到同一帧 RAF（见 CLAUDE.md 不变量 5） */
@@ -83,7 +82,7 @@ const RENDERER_KEY = 'renderer:flush'
  * M1 只画 `main` 象限（无滚动、无冻结）。管线骨架已为 M2/M3 留好——
  * paint() 入口与 Viewport 契约都不需要变。
  */
-export class Canvas2DRenderer implements WebRenderer {
+export class Canvas2DRenderer {
   /** canvas 2D 绘图上下文 */
   private ctx: CanvasRenderingContext2D
   /** 当前数据源 */
@@ -91,9 +90,9 @@ export class Canvas2DRenderer implements WebRenderer {
   /** 视口状态 */
   private viewport: Viewport
   /** 行轴 */
-  private rowsAxis: ChunkedAxis
+  private rowsAxis: Axis
   /** 列轴 */
-  private colsAxis: ChunkedAxis
+  private colsAxis: Axis
   /** 当前主题 */
   private theme: Theme
   /** 帧调度器（与 Grid 共享同一实例） */
@@ -151,19 +150,17 @@ export class Canvas2DRenderer implements WebRenderer {
     this.headerPainter = new HeaderPainter(this.theme)
   }
 
-  /** 切换主题并同步所有 Painter，触发重绘 */
+  /** 切换主题并同步 Painter；重绘由 `WebGridRuntime` 调度 `render(frame)`。 */
   setTheme(theme: Theme): void {
     this.theme = theme
     this.cellPainter.setTheme(theme)
     this.gridLinesPainter.setTheme(theme)
     this.headerPainter.setTheme(theme)
-    this.invalidate()
   }
 
-  /** 替换数据源并触发重绘 */
+  /** 替换数据源；重绘由 runtime 负责。 */
   setData(data: DataSource): void {
     this.data = data
-    this.invalidate()
   }
 
   /**
@@ -179,66 +176,81 @@ export class Canvas2DRenderer implements WebRenderer {
     this.scheduler.cancel(RENDERER_KEY)
   }
 
+  /** `WebRenderer` 过渡 stub：canvas 由 `Canvas2DBackend` 创建，尚未迁到 mount。 */
   mount(container: HTMLElement): void {
     void container
   }
 
+  /** `WebRenderer` 过渡 stub：位图缩放由 `HighDPI` + `onSurfaceResize` 处理。 */
   resize(width: number, height: number, dpr: number): void {
     void width
     void height
     void dpr
   }
 
+  /** `WebRenderer` 入口：只读 `RenderFrame`（spec 不变量 #1）。 */
   render(frame: RenderFrame): void {
-    void frame
-    this.paint()
+    this.syncFromFrame(frame)
+    this.paintFrame(frame)
   }
 
   /**
-   * 同步绘制一帧。直接调用会绕开 RAF 调度——仅用于 Grid 构造期的首帧同步绘制
-   * 以及测试。生产路径走 invalidate() → scheduler → paint()。
-   *
-   * 为什么首帧不统一走 RAF：
-   *   - 构造期只有一次初始化，不存在高频重复 invalidate，直接画不会浪费合帧机会。
-   *   - `new Grid(container, options)` 返回后容器里应立即有画面，避免短暂空白。
-   *   - 测试可以同步断言首帧绘制结果，不必额外等待 requestAnimationFrame。
-   *
-   * 后续 scroll / resize / setTheme / refresh 仍必须走 invalidate()，让频繁变化合并到下一帧。
+   * 同步绘制一帧（测试 / `invalidate()` 兜底）。
+   * 从构造期 `viewport` 合成 frame；生产路径由 `WebGridRuntime` 传 `engine.getFrame()`。
    */
   paint(): void {
-    const snapshot = this.viewport.snapshot()
+    this.render({
+      data: this.data,
+      theme: this.theme,
+      rowsAxis: this.rowsAxis,
+      colsAxis: this.colsAxis,
+      viewport: this.viewport.snapshot(),
+    })
+  }
+
+  /** 将 frame 中的可变输入同步到实例，便于 `setTheme` patch 与 `paint()` 兜底一致。 */
+  private syncFromFrame(frame: RenderFrame): void {
+    this.data = frame.data
+    if (frame.theme !== this.theme) {
+      this.setTheme(frame.theme)
+    } else {
+      this.theme = frame.theme
+    }
+    this.rowsAxis = frame.rowsAxis
+    this.colsAxis = frame.colsAxis
+  }
+
+  private paintFrame(frame: RenderFrame): void {
+    const { viewport: snapshot, data, theme, rowsAxis, colsAxis } = frame
     const { contentRect, headerHeight, quadrants, scrollX, scrollY } = snapshot
 
     // 1) 清屏 + 背景色
-    this.ctx.fillStyle = this.theme.colors.background
+    this.ctx.fillStyle = theme.colors.background
     this.ctx.fillRect(0, 0, contentRect.width, contentRect.height)
 
     // 2) 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
-    this.ctx.font = `${this.theme.metrics.fontSize}px ${this.theme.metrics.fontFamily}`
+    this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
 
     // 3) 区间预热：把可见行范围打给 DataSource（同步源直接返回，异步源借此触发 IO）
     const main = quadrants.main
     if (main.rowRange[1] >= main.rowRange[0]) {
-      const maybe = this.data.getRows(main.rowRange[0], main.rowRange[1])
+      const maybe = data.getRows(main.rowRange[0], main.rowRange[1])
       // M1 仅同步源；M2+ 接异步源时这里要加 `if (maybe instanceof Promise) maybe.then(invalidate)`
       void maybe
     }
 
     // 4) 绘主区——main 象限两轴都跟随滚动
-    this.paintQuadrant(main, scrollX, scrollY)
+    this.paintQuadrant(main, scrollX, scrollY, data, rowsAxis, colsAxis)
 
     // 5) 列头（始终在最顶层，M3 加冻结象限后仍最后绘以覆盖滚动列头）。
-    //    跟随主区横向滚动 scrollX——否则横向滚后字段名被画到 viewport 左侧外。
     this.headerPainter.paint(this.ctx, {
-      schema: this.data.getSchema(),
-      colsAxis: this.colsAxis,
+      schema: data.getSchema(),
+      colsAxis,
       colRange: main.colRange,
       width: contentRect.width,
       scrollOffsetX: scrollX,
     })
 
-    // 备注：M1 不画冻结象限（FrozenRegions stub 只返回 main）。
-    // M3 会把 paint() 扩展为遍历 quadrants 中所有非空象限。
     void headerHeight
   }
 
@@ -248,25 +260,30 @@ export class Canvas2DRenderer implements WebRenderer {
    *
    * 单元格尺寸用 ChunkedAxis.getSize 而非 indexToPosition 差分——CLAUDE.md 不变量 #7。
    */
-  private paintQuadrant(quadrant: Quadrant, scrollX: number, scrollY: number): void {
+  private paintQuadrant(
+    quadrant: Quadrant,
+    scrollX: number,
+    scrollY: number,
+    data: DataSource,
+    rowsAxis: Axis,
+    colsAxis: Axis,
+  ): void {
     const { rowRange, colRange, rect } = quadrant
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
 
-    const schema = this.data.getSchema()
+    const schema = data.getSchema()
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
-      const yTop = this.rowsAxis.indexToPosition(r)
-      const rowHeight = this.rowsAxis.getSize(r)
+      const yTop = rowsAxis.indexToPosition(r)
+      const rowHeight = rowsAxis.getSize(r)
       const cellY = rect.y + yTop - scrollY
 
       for (let c = colRange[0]; c <= colRange[1]; c++) {
         const field = schema.fields[c]
         if (!field) continue
-        const xLeft = this.colsAxis.indexToPosition(c)
-        const colWidth = this.colsAxis.getSize(c)
+        const xLeft = colsAxis.indexToPosition(c)
+        const colWidth = colsAxis.getSize(c)
         const cellX = rect.x + xLeft - scrollX
-        // 异步 DataSource 范围未加载时 getCell 返回 undefined；CellPainter 直接 noop
-        // （未来 M2+ 加占位骨架时改为绘灰色占位条）
-        const value = this.data.getCell(r, field.id)
+        const value = data.getCell(r, field.id)
         this.cellPainter.paint(this.ctx, {
           value,
           rect: { x: cellX, y: cellY, width: colWidth, height: rowHeight },
@@ -275,11 +292,9 @@ export class Canvas2DRenderer implements WebRenderer {
       }
     }
 
-    // 网格线最后绘——覆盖在单元格之上（与 Excel / Numbers 一致）。
-    // GridLinesPainter 内部把所有线合并到一次 stroke 调用，避免重复 strokeStyle/beginPath。
     this.gridLinesPainter.paint(this.ctx, {
-      rowsAxis: this.rowsAxis,
-      colsAxis: this.colsAxis,
+      rowsAxis,
+      colsAxis,
       rowRange,
       colRange,
       rect,

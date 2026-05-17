@@ -20,8 +20,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@novasheet/core": "workspace:*",
-    "@novasheet/web": "workspace:*"
+    "@novasheet/core": "workspace:*"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.9.0",

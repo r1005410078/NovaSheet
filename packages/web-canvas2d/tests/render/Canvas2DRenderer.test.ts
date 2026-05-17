@@ -36,7 +36,7 @@ describe('Canvas2DRenderer (M1 single quadrant)', () => {
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setScroll(0, 0)
     const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
-    return { ctx, ops, data, viewport, renderer }
+    return { ctx, ops, data, viewport, rowsAxis, colsAxis, renderer }
   }
 
   it('paint clears background then draws header and visible cells', () => {
@@ -81,6 +81,27 @@ describe('Canvas2DRenderer (M1 single quadrant)', () => {
     // Carol is row 2. With M2 subtraction: cellY = rect.y(32) + yTop(56) - scrollY(56) = 32.
     // text rendering uses textBaseline=middle, fillText y = cellY + rowHeight/2 = 32 + 14 = 46.
     // Without subtraction: cellY = 88, fillText y = 102. So 46 is the discriminator.
+    const carol = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Carol',
+    )
+    expect(carol).toBeDefined()
+    expect(carol!.args[2]).toBe(46)
+  })
+
+  it('render uses frame.viewport scroll, not only the constructor viewport ref', () => {
+    const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
+    viewport.setScroll(0, 56)
+    const scrolledFrame = {
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+    }
+    viewport.setScroll(0, 0)
+    ops.length = 0
+    renderer.render(scrolledFrame)
     const carol = ops.find(
       (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
         o.op === 'fillText' && o.args[0] === 'Carol',

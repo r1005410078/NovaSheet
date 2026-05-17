@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@novasheet/core": "workspace:*",
-    "@novasheet/web-canvas2d": "workspace:*"
+    "@novasheet/web": "workspace:*"
   },
   "devDependencies": {
     "@storybook/html": "^10.4.0",

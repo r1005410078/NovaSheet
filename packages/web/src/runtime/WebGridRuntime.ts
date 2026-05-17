@@ -1,4 +1,4 @@
-import type { GridEngine } from '@novasheet/core'
+import type { DataSource, GridEngine, Theme } from '@novasheet/core'
 import { FrameScheduler } from '@novasheet/core'
 import type { WebHost } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -9,10 +9,19 @@ export interface WebGridRuntimeOptions {
   host: WebHost
   renderer: WebRenderer
   scheduler?: FrameScheduler
-  /** Resize canvas bitmap (HighDPI etc.) — renderer.resize is still a stub for Canvas2D. */
+  /** 调整绘制表面位图（如 HighDPI）；Canvas2D 目前走此回调，`WebRenderer.resize` 仍为过渡 stub。 */
   onSurfaceResize?: (width: number, height: number, dpr: number) => void
 }
 
+/**
+ * Web 端表格编排器（spec §6 `WebGridRuntime`）。
+ *
+ * 连接 `GridEngine` + `WebHost` + `WebRenderer` + `ScrollMapper`，不持有 canvas DOM。
+ * 数据流：scrollHost 滚动 → `ScrollMapper` → `engine.setScroll` → `renderer.render(frame)`。
+ *
+ * 引擎变更（`setData` 等）后的通用收尾在 `afterEngineMutation()`：
+ * 同步 viewport 尺寸、重算 spacer、remap 滚动、触发重绘。
+ */
 export class WebGridRuntime {
   private engine: GridEngine
   private host: WebHost
@@ -41,8 +50,37 @@ export class WebGridRuntime {
     this.paintSync()
   }
 
-  setRenderer(renderer: WebRenderer): void {
-    this.renderer = renderer
+  /** 更换渲染器实现（Canvas2D / 未来 WebGL）；销毁旧实例并取消 pending flush。 */
+  replaceRenderer(factory: () => WebRenderer): WebRenderer {
+    if (!this.destroyed) {
+      this.scheduler.cancel('renderer:flush')
+      this.renderer.destroy()
+    }
+    this.renderer = factory()
+    return this.renderer
+  }
+
+  setData(data: DataSource, factory: () => WebRenderer): WebRenderer {
+    this.engine.setData(data)
+    this.replaceRenderer(factory)
+    this.afterEngineMutation()
+    return this.renderer
+  }
+
+  setTheme(theme: Theme, patchRenderer?: (renderer: WebRenderer) => void): void {
+    this.engine.setTheme(theme)
+    patchRenderer?.(this.renderer)
+    this.afterEngineMutation()
+  }
+
+  setRowHeight(rowIndex: number, height: number): void {
+    this.engine.setRowHeight(rowIndex, height)
+    this.afterEngineMutation()
+  }
+
+  setColumnWidth(fieldId: string, width: number): void {
+    this.engine.setColumnWidth(fieldId, width)
+    this.afterEngineMutation()
   }
 
   refresh(): void {
@@ -119,7 +157,7 @@ export class WebGridRuntime {
     this.invalidate()
   }
 
-  /** Exposed for Grid integration tests (ResizeObserver wiring). */
+  /** @internal 供集成测试模拟 ResizeObserver 回调 */
   onContainerResize(): void {
     const { width, height } = this.host.getContainerSize()
     this.handleHostResize(width, height, this.host.getDpr())

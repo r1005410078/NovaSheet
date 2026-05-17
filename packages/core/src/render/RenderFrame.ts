@@ -1,7 +1,8 @@
 /**
- * RenderFrame — engine state snapshot consumed by web renderers (Canvas2D,
- * WebGL, ...). NOT a renderer-agnostic command stream — each renderer still
- * iterates visible cells and translates to its own draw primitives (spec §5).
+ * 引擎状态快照，供 Web 渲染器消费（spec §5 `RenderFrame`）。
+ *
+ * 不是 renderer 无关的绘制指令流——各 renderer 仍需自行遍历可见单元格。
+ * 作用是把 DOM/Canvas 类型挡在 core 之外，并统一每帧输入形状。
  */
 
 import type { DataSource } from '../data/DataSource'
