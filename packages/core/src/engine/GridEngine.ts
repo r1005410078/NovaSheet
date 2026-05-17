@@ -5,6 +5,11 @@
  */
 
 import type { DataSource } from '../data/DataSource'
+import type {
+  CellAddress,
+  GridSelection,
+  SelectCellOptions,
+} from '../interaction/SelectionModel'
 import type { Axis } from '../layout/ChunkedAxis'
 import type { FrozenConfig } from '../layout/FrozenRegions'
 import type { Viewport } from '../layout/Viewport'
@@ -36,7 +41,10 @@ export interface GridEngine {
   setScroll(logicalX: number, logicalY: number): void
   setRowHeight(rowIndex: number, height: number): void
   setColumnWidth(fieldId: string, width: number): void
+  selectCell(cell: CellAddress, options?: SelectCellOptions): void
+  clearSelection(): void
   getFrame(): RenderFrame
+  getSelection(): GridSelection
   getRowsTotalSize(): number
   getColsTotalSize(): number
   getColumnIndex(fieldId: string): number

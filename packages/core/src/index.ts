@@ -55,6 +55,17 @@ export type { GridEngine, GridEngineOptions } from './engine/GridEngine'
 export type { RenderFrame } from './render/RenderFrame'
 export type { ViewportSnapshot } from './layout/Viewport'
 
+// 交互层（Phase 3）
+export { SelectionModel } from './interaction/SelectionModel'
+export type {
+  CellAddress,
+  CellRange,
+  GridSelection,
+  SelectCellOptions,
+} from './interaction/SelectionModel'
+export { hitTestCell } from './interaction/HitTest'
+export type { HitTestPoint } from './interaction/HitTest'
+
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
 

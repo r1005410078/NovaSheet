@@ -1,5 +1,13 @@
 import type { FrameScheduler, ThemeScrollbar } from '@novasheet/core'
 
+export interface WebPointerEvent {
+  /** scrollHost 本地坐标，单位 CSS px。 */
+  readonly x: number
+  /** scrollHost 本地坐标，单位 CSS px。 */
+  readonly y: number
+  readonly shiftKey: boolean
+}
+
 /** `DomGridHost` 等实现的构造参数。 */
 export interface WebHostOptions {
   container: HTMLElement
@@ -11,6 +19,12 @@ export interface WebHostOptions {
   onResize: (cssWidth: number, cssHeight: number, dpr: number) => void
   /** DPR 变化（窗口拖到另一块屏幕等）。 */
   onDprChange?: (dpr: number) => void
+  /** pointer down 命中入口；runtime 负责把坐标转成单元格。 */
+  onPointerDown?: (event: WebPointerEvent) => void
+  /** pointer move 命中入口；用于拖拽框选。 */
+  onPointerMove?: (event: WebPointerEvent) => void
+  /** pointer up/end 入口；用于结束拖拽框选。 */
+  onPointerUp?: () => void
 }
 
 /**

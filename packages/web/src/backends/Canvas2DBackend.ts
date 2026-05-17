@@ -81,6 +81,9 @@ export class Canvas2DBackend implements GridController {
         this.runtime.handleHostScroll(scrollTop, scrollLeft),
       onResize: (w, h, dpr) => this.runtime.handleHostResize(w, h, dpr),
       onDprChange: (dpr) => this.runtime.handleHostDprChange(dpr),
+      onPointerDown: (event) => this.runtime.handleHostPointerDown(event),
+      onPointerMove: (event) => this.runtime.handleHostPointerMove(event),
+      onPointerUp: () => this.runtime.handleHostPointerUp(),
     })
 
     this.runtime = new WebGridRuntime({

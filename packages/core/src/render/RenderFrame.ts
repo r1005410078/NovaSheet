@@ -6,6 +6,7 @@
  */
 
 import type { DataSource } from '../data/DataSource'
+import type { GridSelection } from '../interaction/SelectionModel'
 import type { Axis } from '../layout/ChunkedAxis'
 import type { ViewportSnapshot } from '../layout/Viewport'
 import type { Theme } from '../theme/Theme'
@@ -16,4 +17,5 @@ export interface RenderFrame {
   rowsAxis: Axis
   colsAxis: Axis
   viewport: ViewportSnapshot
+  selection?: GridSelection
 }

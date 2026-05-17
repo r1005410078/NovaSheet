@@ -1,4 +1,10 @@
 import type { DataSource } from '../data/DataSource'
+import {
+  SelectionModel,
+  type CellAddress,
+  type GridSelection,
+  type SelectCellOptions,
+} from '../interaction/SelectionModel'
 import { ChunkedAxis } from '../layout/ChunkedAxis'
 import { FrozenRegions, type FrozenConfig } from '../layout/FrozenRegions'
 import { Viewport } from '../layout/Viewport'
@@ -24,6 +30,7 @@ export class DefaultGridEngine implements GridEngine {
   private colsAxis: ChunkedAxis
   private frozen: FrozenRegions
   private viewport: Viewport
+  private selection = new SelectionModel()
 
   constructor(options: GridEngineOptions) {
     this.data = options.data
@@ -107,6 +114,14 @@ export class DefaultGridEngine implements GridEngine {
     this.colsAxis.setSize(index, width)
   }
 
+  selectCell(cell: CellAddress, options?: SelectCellOptions): void {
+    this.selection.selectCell(cell, options)
+  }
+
+  clearSelection(): void {
+    this.selection.clear()
+  }
+
   getFrame(): RenderFrame {
     return {
       data: this.data,
@@ -114,7 +129,12 @@ export class DefaultGridEngine implements GridEngine {
       rowsAxis: this.rowsAxis,
       colsAxis: this.colsAxis,
       viewport: this.viewport.snapshot(),
+      selection: this.selection.getSelection(),
     }
+  }
+
+  getSelection(): GridSelection {
+    return this.selection.getSelection()
   }
 
   getRowsTotalSize(): number {

@@ -348,4 +348,121 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(texts).toContain(denseGridTheme.emptyState.title)
     expect(texts).not.toContain('Alice')
   })
+
+  it('overlay 层根据 frame.selection 绘制选区填充与 active cell 边框', () => {
+    const { renderer, ops, data, viewport, rowsAxis, colsAxis } = setup()
+    ops.length = 0
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      selection: {
+        activeCell: { rowIndex: 1, colIndex: 1 },
+        anchorCell: { rowIndex: 1, colIndex: 1 },
+        extentCell: { rowIndex: 1, colIndex: 1 },
+        selectedRange: {
+          startRow: 1,
+          endRow: 1,
+          startCol: 1,
+          endCol: 1,
+        },
+      },
+    })
+
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBg })
+    expect(ops).toContainEqual({ op: 'fillRect', args: [100, 60, 100, 28] })
+    expect(ops).toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.colors.selectionBorder })
+    expect(ops).toContainEqual({ op: 'moveTo', args: [100.5, 60.5] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 60.5] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 87.5] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [100.5, 87.5] })
+  })
+
+  it('overlay 层绘制多格 selectedRange，active cell 边框仍留在 anchor 起点', () => {
+    const { renderer, ops, data, viewport, rowsAxis, colsAxis } = setup()
+    ops.length = 0
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      selection: {
+        activeCell: { rowIndex: 1, colIndex: 0 },
+        anchorCell: { rowIndex: 1, colIndex: 0 },
+        extentCell: { rowIndex: 2, colIndex: 1 },
+        selectedRange: {
+          startRow: 1,
+          endRow: 2,
+          startCol: 0,
+          endCol: 1,
+        },
+      },
+    })
+
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 60, 100, 28] })
+    expect(ops).toContainEqual({ op: 'fillRect', args: [100, 60, 100, 28] })
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 88, 100, 28] })
+    expect(ops).toContainEqual({ op: 'fillRect', args: [100, 88, 100, 28] })
+    expect(ops).toContainEqual({ op: 'moveTo', args: [0.5, 60.5] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [99.5, 87.5] })
+  })
+
+  it('Excel 模式下选区同步高亮列头与左侧行号', () => {
+    const { ctx, ops } = createRecordingContext()
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'name', name: 'Name', type: 'text', width: 100 },
+          { id: 'role', name: 'Role', type: 'text', width: 100 },
+          { id: 'team', name: 'Team', type: 'text', width: 100 },
+        ],
+      },
+      rows: [
+        { name: 'Alice', role: 'Engineer', team: 'Platform' },
+        { name: 'Bob', role: 'Designer', team: 'Growth' },
+        { name: 'Carol', role: 'PM', team: 'Data' },
+        { name: 'Dave', role: 'Researcher', team: 'Infra' },
+        { name: 'Eve', role: 'Analyst', team: 'Brand' },
+      ],
+    })
+    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+    viewport.setSize(400, 200)
+    viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+    viewport.setRowHeaderWidth(44)
+
+    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      selection: {
+        activeCell: { rowIndex: 1, colIndex: 1 },
+        anchorCell: { rowIndex: 1, colIndex: 1 },
+        extentCell: { rowIndex: 3, colIndex: 2 },
+        selectedRange: {
+          startRow: 1,
+          endRow: 3,
+          startCol: 1,
+          endCol: 2,
+        },
+      },
+    })
+
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBg })
+    expect(ops).toContainEqual({ op: 'fillRect', args: [144, 0, 100, 32] }) // column B
+    expect(ops).toContainEqual({ op: 'fillRect', args: [244, 0, 100, 32] }) // column C
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 60, 44, 28] }) // row 2
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 88, 44, 28] }) // row 3
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 116, 44, 28] }) // row 4
+  })
 })

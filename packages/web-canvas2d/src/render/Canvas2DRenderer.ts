@@ -3,7 +3,7 @@
  *
  * 职责：
  *   - 从 Viewport.snapshot() 取「该绘什么」的不可变快照
- *   - 按 region.zIndex 顺序合成各 painter：清屏 → body regions → header regions
+ *   - 按固定 layer 顺序合成各 painter：background → content → grid → overlay
  *   - 通过共享 frameScheduler 调度 RAF；同帧多次 invalidate() 合并为一次 flush（key 去重）
  *   - destroy() 时取消 pending RAF，避免组件销毁后还有一次延迟 paint（M1 hardening 修复）
  *
@@ -24,24 +24,30 @@
  *                 ├─ 1. Viewport.snapshot()
  *                 │     └─ regions / scrollX/Y / contentRect
  *                 │
- *                 ├─ 2. clear canvas background
+ *                 ├─ 2. background layer
+ *                 │     └─ canvas background / future hover & selection fill
  *                 │
- *                 ├─ 3. DataSource.getRows() 预热可见行
- *                 │
- *                 ├─ 4. paintRegion(main / frozen regions)
+ *                 ├─ 3. content layer
+ *                 │     ├─ DataSource.getRows() 预热可见行
+ *                 │     ├─ paintCellContentRegion(main / frozen regions)
  *                 │     ├─ DataSource.getCell()
  *                 │     ├─ CellPainter.paint()
- *                 │     └─ GridLinesPainter.paint()
+ *                 │     ├─ HeaderPainter.paint()
+ *                 │     └─ RowHeaderPainter.paint()
  *                 │
- *                 ├─ 5. HeaderPainter.paint()
+ *                 ├─ 4. grid layer
+ *                 │     ├─ GridLinesPainter.paint()
+ *                 │     ├─ paintFrozenSeparators()
+ *                 │     └─ paintOuterFrame()
  *                 │
- *                 └─ 6. paintFrozenSeparators()
- *                       └─ 强化冻结边界线，避免裁剪边缘看起来像文字被切坏
+ *                 └─ 5. overlay layer
+ *                       └─ Phase 3 接入 selection / active cell / resize handle
  * ```
  *
  * 当前实现：
  *   - 无冻结时只画 `main`；配置冻结行列后按 region.zIndex 绘制。
- *   - paintRegion 按 region.scrollOffsetX/Y 偏移单元格与网格线；冻结区域自己的
+ *   - paintCellContentRegion / paintGridLinesRegion 按 region.scrollOffsetX/Y 偏移；
+ *     冻结区域自己的
  *     offset 由 FrozenRegions 统一计算。
  *   - 不做局部脏区——全帧整片重绘（spec §5.2，预算 < 5ms 内绰绰有余）
  *
@@ -53,6 +59,8 @@ import type {
   DataSource,
   RenderFrame,
   RenderRegion,
+  CellAddress,
+  CellRange,
   TextMeasurer,
   Theme,
 } from '@novasheet/core'
@@ -62,6 +70,7 @@ import { EmptyStatePainter } from '../painters/EmptyStatePainter'
 import { GridLinesPainter } from '../painters/GridLinesPainter'
 import { HeaderPainter } from '../painters/HeaderPainter'
 import { RowHeaderPainter } from '../painters/RowHeaderPainter'
+import { CANVAS2D_PAINT_LAYERS, type Canvas2DPaintLayer } from './PaintLayer'
 
 /** Canvas2DRenderer 构造选项 */
 export interface Canvas2DRendererOptions {
@@ -89,10 +98,24 @@ export interface Canvas2DRendererOptions {
 /** scheduler key——每个 Renderer 实例同一时间最多一个待执行 flush */
 const RENDERER_KEY = 'renderer:flush'
 
+interface Canvas2DPaintFrameContext {
+  frame: RenderFrame
+  snapshot: RenderFrame['viewport']
+  contentRect: { width: number; height: number }
+  regions: RenderRegion[]
+  paintOrder: RenderRegion[]
+  data: DataSource
+  theme: Theme
+  rowsAxis: Axis
+  colsAxis: Axis
+  isEmpty: boolean
+  excelChrome: boolean
+}
+
 /**
  * 拥有每帧绘制管线。除 painter 实例外，Renderer 本身基本无状态：
  * 每次 paint() 都从 Viewport.snapshot() 取最新快照（spec §4 单一数据源），
- * 通过 DataSource 取数（由 DataSource 自行决定同步/异步），把像素绘制委托给三个 painter。
+ * 通过 DataSource 取数（由 DataSource 自行决定同步/异步），再按 Phase 2 的四层管线绘制。
  *
  * 无冻结时只画 `main` 区域；冻结行列开启后同一管线迭代额外区域。
  */
@@ -158,11 +181,12 @@ export class Canvas2DRenderer {
     // fallback new FrameScheduler() 只用于直接单测 Renderer 或独立使用时的兜底。
     this.scheduler = opts.scheduler ?? new FrameScheduler()
 
-    // 三个 painter 分别负责不同绘制职责：
+    // painter 分别负责不同绘制职责：
     //   - CellPainter：单元格内容、文本截断、类型分派
     //   - GridLinesPainter：批量绘制水平/垂直网格线
     //   - HeaderPainter：顶部列头背景和字段名
-    // Renderer 通过固定顺序调用它们，保证层级稳定：cell -> grid lines -> header。
+    // Renderer 通过固定 layer 顺序调用它们，保证层级稳定：
+    // background -> content -> grid -> overlay。
     this.cellPainter = new CellPainter(this.theme, { measurer: opts.measurer })
     this.gridLinesPainter = new GridLinesPainter(this.theme)
     this.headerPainter = new HeaderPainter(this.theme)
@@ -250,17 +274,49 @@ export class Canvas2DRenderer {
   private paintFrame(frame: RenderFrame): void {
     const { viewport: snapshot, data, theme, rowsAxis, colsAxis } = frame
     const { contentRect, regions } = snapshot
+    const ctx: Canvas2DPaintFrameContext = {
+      frame,
+      snapshot,
+      contentRect,
+      regions,
+      paintOrder: [...regions].sort((a, b) => a.zIndex - b.zIndex),
+      data,
+      theme,
+      rowsAxis,
+      colsAxis,
+      isEmpty: data.getRowCount() === 0,
+      excelChrome: snapshot.rowHeaderWidth > 0,
+    }
 
-    // 1) 清屏 + 背景色
+    for (const layer of CANVAS2D_PAINT_LAYERS) this.paintLayer(layer, ctx)
+  }
+
+  private paintLayer(layer: Canvas2DPaintLayer, ctx: Canvas2DPaintFrameContext): void {
+    if (layer === 'background') {
+      this.paintBackgroundLayer(ctx)
+      return
+    }
+    if (layer === 'content') {
+      this.paintContentLayer(ctx)
+      return
+    }
+    if (layer === 'grid') {
+      this.paintGridLayer(ctx)
+      return
+    }
+    this.paintOverlayLayer(ctx)
+  }
+
+  private paintBackgroundLayer(ctx: Canvas2DPaintFrameContext): void {
+    const { contentRect, theme } = ctx
     this.ctx.fillStyle = theme.colors.background
     this.ctx.fillRect(0, 0, contentRect.width, contentRect.height)
+  }
 
-    const isEmpty = data.getRowCount() === 0
-    const paintOrder = [...regions].sort((a, b) => a.zIndex - b.zIndex)
-    const excelChrome = snapshot.rowHeaderWidth > 0
+  private paintContentLayer(ctx: Canvas2DPaintFrameContext): void {
+    const { contentRect, data, theme, rowsAxis, colsAxis, snapshot, regions, paintOrder, excelChrome } = ctx
 
-    // 2) 无数据：正文区插画 + 列头（跳过单元格与网格线）
-    if (isEmpty) {
+    if (ctx.isEmpty) {
       const bodyTop = snapshot.headerHeight
       const bodyHeight = contentRect.height - bodyTop
       const gutter = snapshot.rowHeaderWidth
@@ -271,43 +327,114 @@ export class Canvas2DRenderer {
       }
       this.paintHeaders(paintOrder, data, colsAxis, excelChrome)
       this.paintRowHeaders(regions, rowsAxis, snapshot)
-      this.gridLinesPainter.paintOuterFrame(this.ctx, {
-        x: 0,
-        y: 0,
-        width: contentRect.width,
-        height: contentRect.height,
-      })
       return
     }
 
-    // 3) 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
+    // 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
     this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
-
-    // 4) 区间预热：把可见行范围打给 DataSource（同步源直接返回，异步源借此触发 IO）
-    const main = regions.find((region) => region.id === 'main')!
-    if (main.rowRange[1] >= main.rowRange[0]) {
-      const maybe = data.getRows(main.rowRange[0], main.rowRange[1])
-      // M1 仅同步源；M2+ 接异步源时这里要加 `if (maybe instanceof Promise) maybe.then(invalidate)`
-      void maybe
-    }
-
-    // 5) 按层级绘制区域：主滚动区先画，冻结区后画覆盖在上层。
-    for (const region of paintOrder) this.paintRegion(region, data, rowsAxis, colsAxis)
-
-    // 6) 列头始终在最顶层；按列 band 分段绘制，左右冻结列不会跟随横向滚动。
+    this.preloadVisibleRows(ctx)
+    for (const region of paintOrder) this.paintCellContentRegion(region, data, rowsAxis, colsAxis)
     this.paintHeaders(paintOrder, data, colsAxis, excelChrome)
     this.paintRowHeaders(regions, rowsAxis, snapshot)
+  }
 
-    // 7) 冻结边界最后覆盖一层强分隔线，让裁剪边缘表达为“冻结层边界”。
-    this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
+  private paintGridLayer(ctx: Canvas2DPaintFrameContext): void {
+    const { contentRect, regions, paintOrder, rowsAxis, colsAxis, snapshot, theme } = ctx
 
-    // 8) 视口外框：单元格网格线不覆盖 canvas 右/底边，内容不足一屏时需单独描边。
+    if (!ctx.isEmpty) {
+      for (const region of paintOrder) this.paintGridLinesRegion(region, rowsAxis, colsAxis)
+      this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
+    }
+
+    // 视口外框：单元格网格线不覆盖 canvas 右/底边，内容不足一屏时需单独描边。
     this.gridLinesPainter.paintOuterFrame(this.ctx, {
       x: 0,
       y: 0,
       width: contentRect.width,
       height: contentRect.height,
     })
+  }
+
+  private paintOverlayLayer(ctx: Canvas2DPaintFrameContext): void {
+    const selection = ctx.frame.selection
+    if (!selection?.selectedRange) return
+
+    if (ctx.excelChrome) {
+      this.paintSelectedColumnHeaders(ctx, selection.selectedRange)
+      this.paintSelectedRowHeaders(ctx, selection.selectedRange)
+    }
+
+    for (const region of ctx.paintOrder) {
+      this.paintSelectionRangeInRegion(region, selection.selectedRange, ctx.rowsAxis, ctx.colsAxis, ctx.theme)
+    }
+
+    if (selection.activeCell) {
+      for (const region of [...ctx.paintOrder].reverse()) {
+        if (this.paintActiveCellInRegion(region, selection.activeCell, ctx.rowsAxis, ctx.colsAxis, ctx.theme)) break
+      }
+    }
+  }
+
+  private paintSelectedColumnHeaders(ctx: Canvas2DPaintFrameContext, range: CellRange): void {
+    const { colsAxis, snapshot, theme } = ctx
+    const headerHeight = snapshot.headerHeight
+    if (headerHeight <= 0) return
+
+    const headerRegions = ctx.paintOrder.filter((region) => region.rowBand === 'middle')
+    this.ctx.fillStyle = theme.colors.selectionBg
+
+    for (const region of headerRegions) {
+      const startCol = Math.max(range.startCol, region.colRange[0])
+      const endCol = Math.min(range.endCol, region.colRange[1])
+      if (endCol < startCol) continue
+
+      ctxClipRect(this.ctx, {
+        x: region.rect.x,
+        y: 0,
+        width: region.rect.width,
+        height: headerHeight,
+      })
+      for (let c = startCol; c <= endCol; c++) {
+        const x = region.rect.x + colsAxis.indexToPosition(c) - region.scrollOffsetX
+        this.ctx.fillRect(x, 0, colsAxis.getSize(c), headerHeight)
+      }
+      this.ctx.restore()
+    }
+  }
+
+  private paintSelectedRowHeaders(ctx: Canvas2DPaintFrameContext, range: CellRange): void {
+    const { rowsAxis, snapshot, theme } = ctx
+    const gutter = snapshot.rowHeaderWidth
+    if (gutter <= 0) return
+
+    const rowRegions = ctx.paintOrder.filter((region) => region.colBand === 'center')
+    this.ctx.fillStyle = theme.colors.selectionBg
+
+    for (const region of rowRegions) {
+      const startRow = Math.max(range.startRow, region.rowRange[0])
+      const endRow = Math.min(range.endRow, region.rowRange[1])
+      if (endRow < startRow) continue
+
+      ctxClipRect(this.ctx, {
+        x: 0,
+        y: region.rect.y,
+        width: gutter,
+        height: region.rect.height,
+      })
+      for (let r = startRow; r <= endRow; r++) {
+        const y = region.rect.y + rowsAxis.indexToPosition(r) - region.scrollOffsetY
+        this.ctx.fillRect(0, y, gutter, rowsAxis.getSize(r))
+      }
+      this.ctx.restore()
+    }
+  }
+
+  private preloadVisibleRows(ctx: Canvas2DPaintFrameContext): void {
+    const main = ctx.regions.find((region) => region.id === 'main')!
+    if (main.rowRange[1] < main.rowRange[0]) return
+    const maybe = ctx.data.getRows(main.rowRange[0], main.rowRange[1])
+    // M1 仅同步源；M2+ 接异步源时这里要加 `if (maybe instanceof Promise) maybe.then(invalidate)`
+    void maybe
   }
 
   private paintHeaders(
@@ -367,7 +494,7 @@ export class Canvas2DRenderer {
    *
    * 单元格尺寸用 ChunkedAxis.getSize 而非 indexToPosition 差分——CLAUDE.md 不变量 #7。
    */
-  private paintRegion(
+  private paintCellContentRegion(
     region: RenderRegion,
     data: DataSource,
     rowsAxis: Axis,
@@ -399,6 +526,13 @@ export class Canvas2DRenderer {
       }
     }
 
+    this.ctx.restore()
+  }
+
+  private paintGridLinesRegion(region: RenderRegion, rowsAxis: Axis, colsAxis: Axis): void {
+    const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
+    if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
+
     this.gridLinesPainter.paint(this.ctx, {
       rowsAxis,
       colsAxis,
@@ -408,8 +542,68 @@ export class Canvas2DRenderer {
       scrollOffsetX,
       scrollOffsetY,
     })
+  }
 
+  private paintSelectionRangeInRegion(
+    region: RenderRegion,
+    range: CellRange,
+    rowsAxis: Axis,
+    colsAxis: Axis,
+    theme: Theme,
+  ): void {
+    const startRow = Math.max(range.startRow, region.rowRange[0])
+    const endRow = Math.min(range.endRow, region.rowRange[1])
+    const startCol = Math.max(range.startCol, region.colRange[0])
+    const endCol = Math.min(range.endCol, region.colRange[1])
+    if (endRow < startRow || endCol < startCol) return
+
+    ctxClipRect(this.ctx, region.rect)
+    this.ctx.fillStyle = theme.colors.selectionBg
+    for (let r = startRow; r <= endRow; r++) {
+      const y = region.rect.y + rowsAxis.indexToPosition(r) - region.scrollOffsetY
+      const height = rowsAxis.getSize(r)
+      for (let c = startCol; c <= endCol; c++) {
+        const x = region.rect.x + colsAxis.indexToPosition(c) - region.scrollOffsetX
+        const width = colsAxis.getSize(c)
+        this.ctx.fillRect(x, y, width, height)
+      }
+    }
     this.ctx.restore()
+  }
+
+  private paintActiveCellInRegion(
+    region: RenderRegion,
+    cell: CellAddress,
+    rowsAxis: Axis,
+    colsAxis: Axis,
+    theme: Theme,
+  ): boolean {
+    if (
+      cell.rowIndex < region.rowRange[0] ||
+      cell.rowIndex > region.rowRange[1] ||
+      cell.colIndex < region.colRange[0] ||
+      cell.colIndex > region.colRange[1]
+    ) {
+      return false
+    }
+
+    const x = region.rect.x + colsAxis.indexToPosition(cell.colIndex) - region.scrollOffsetX
+    const y = region.rect.y + rowsAxis.indexToPosition(cell.rowIndex) - region.scrollOffsetY
+    const width = colsAxis.getSize(cell.colIndex)
+    const height = rowsAxis.getSize(cell.rowIndex)
+
+    ctxClipRect(this.ctx, region.rect)
+    this.ctx.strokeStyle = theme.colors.selectionBorder
+    this.ctx.lineWidth = 2
+    this.ctx.beginPath()
+    this.ctx.moveTo(x + 0.5, y + 0.5)
+    this.ctx.lineTo(x + width - 0.5, y + 0.5)
+    this.ctx.lineTo(x + width - 0.5, y + height - 0.5)
+    this.ctx.lineTo(x + 0.5, y + height - 0.5)
+    this.ctx.lineTo(x + 0.5, y + 0.5)
+    this.ctx.stroke()
+    this.ctx.restore()
+    return true
   }
 
   /**

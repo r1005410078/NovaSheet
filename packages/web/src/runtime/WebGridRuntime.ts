@@ -25,8 +25,8 @@ import type {
   TextMeasurer,
   Theme,
 } from '@novasheet/core'
-import { autofitRowHeights, FrameScheduler } from '@novasheet/core'
-import type { WebHost } from '../host/WebHost'
+import { autofitRowHeights, FrameScheduler, hitTestCell } from '@novasheet/core'
+import type { WebHost, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
 import { ScrollMapper } from '../scroll/ScrollMapper'
 
@@ -54,6 +54,9 @@ export interface WebGridRuntimeOptions {
 
 /** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
 const HOST_RESIZE_KEY = 'host:resize'
+const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
+const DRAG_AUTO_SCROLL_EDGE_PX = 32
+const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
 
 /**
  * Web 端表格编排器（spec §6 `WebGridRuntime`）。
@@ -73,6 +76,8 @@ export class WebGridRuntime {
   private onSurfaceResize?: WebGridRuntimeOptions['onSurfaceResize']
   private measurer?: TextMeasurer
   private destroyed = false
+  private draggingSelection = false
+  private lastDragPointer: WebPointerEvent | null = null
 
   constructor(opts: WebGridRuntimeOptions) {
     this.engine = opts.engine
@@ -214,6 +219,7 @@ export class WebGridRuntime {
     this.destroyed = true
     this.scheduler.cancel('renderer:flush')
     this.scheduler.cancel(HOST_RESIZE_KEY)
+    this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
     this.renderer.destroy()
     this.host.destroy()
   }
@@ -234,6 +240,35 @@ export class WebGridRuntime {
   handleHostDprChange(_dpr: number): void {
     void _dpr
     this.scheduleHostResize()
+  }
+
+  handleHostPointerDown(event: WebPointerEvent): void {
+    if (this.destroyed) return
+    const hit = hitTestCell(this.engine.getFrame(), event)
+    if (!hit) return
+    if (event.shiftKey) this.engine.selectCell(hit, { extend: true })
+    else this.engine.selectCell(hit)
+    this.draggingSelection = true
+    this.lastDragPointer = event
+    this.updateDragAutoScroll(event)
+    this.refresh()
+  }
+
+  handleHostPointerMove(event: WebPointerEvent): void {
+    if (this.destroyed || !this.draggingSelection) return
+    this.lastDragPointer = event
+    const hit = hitTestCell(this.engine.getFrame(), event)
+    if (hit) {
+      this.engine.selectCell(hit, { extend: true })
+      this.refresh()
+    }
+    this.updateDragAutoScroll(event)
+  }
+
+  handleHostPointerUp(): void {
+    this.draggingSelection = false
+    this.lastDragPointer = null
+    this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
   }
 
   /**
@@ -272,6 +307,57 @@ export class WebGridRuntime {
   private paintSync(): void {
     const frame = this.engine.getFrame()
     this.renderer.render(frame)
+  }
+
+  private updateDragAutoScroll(pointer: WebPointerEvent): void {
+    const step = this.computeDragAutoScrollStep(pointer)
+    if (step.x === 0 && step.y === 0) {
+      this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
+      return
+    }
+    this.scheduler.schedule(DRAG_AUTO_SCROLL_KEY, () => this.tickDragAutoScroll())
+  }
+
+  private tickDragAutoScroll(): void {
+    if (this.destroyed || !this.draggingSelection || !this.lastDragPointer) return
+    const step = this.computeDragAutoScrollStep(this.lastDragPointer)
+    if (step.x === 0 && step.y === 0) return
+
+    const { scrollTop, scrollLeft } = this.host.getScrollPosition()
+    const limits = this.getScrollLimits()
+    const nextTop = clamp(scrollTop + step.y, 0, limits.maxTop)
+    const nextLeft = clamp(scrollLeft + step.x, 0, limits.maxLeft)
+    if (nextTop === scrollTop && nextLeft === scrollLeft) return
+
+    this.host.scrollTo(nextTop, nextLeft)
+    this.handleHostScroll(nextTop, nextLeft)
+    const hit = hitTestCell(this.engine.getFrame(), this.lastDragPointer)
+    if (hit) this.engine.selectCell(hit, { extend: true })
+
+    this.updateDragAutoScroll(this.lastDragPointer)
+  }
+
+  private computeDragAutoScrollStep(pointer: WebPointerEvent): { x: number; y: number } {
+    const { width, height } = this.host.getContainerSize()
+    return {
+      x: edgeVelocity(pointer.x, width),
+      y: edgeVelocity(pointer.y, height),
+    }
+  }
+
+  private getScrollLimits(): { maxTop: number; maxLeft: number } {
+    const headerH = this.engine.getTheme().metrics.headerHeight
+    const { width, height } = this.host.getContainerSize()
+    return {
+      maxTop: Math.max(
+        0,
+        this.scrollMapper.computeSpacerSize(this.engine.getRowsTotalSize() + headerH) - height,
+      ),
+      maxLeft: Math.max(
+        0,
+        this.scrollMapper.computeSpacerSize(this.engine.getColsTotalSize()) - width,
+      ),
+    }
   }
 
   private mapScrollToLogical(
@@ -321,4 +407,23 @@ export class WebGridRuntime {
   private syncScrollbarTheme(): void {
     this.host.applyScrollbarTheme(this.engine.getTheme().scrollbar)
   }
+}
+
+function edgeVelocity(position: number, size: number): number {
+  if (size <= 0) return 0
+  if (position < DRAG_AUTO_SCROLL_EDGE_PX) {
+    return -scaleEdgeDistance(DRAG_AUTO_SCROLL_EDGE_PX - position)
+  }
+  const farEdgeDistance = position - (size - DRAG_AUTO_SCROLL_EDGE_PX)
+  if (farEdgeDistance > 0) return scaleEdgeDistance(farEdgeDistance)
+  return 0
+}
+
+function scaleEdgeDistance(distance: number): number {
+  const ratio = Math.min(1, Math.max(0, distance / DRAG_AUTO_SCROLL_EDGE_PX))
+  return Math.max(1, Math.ceil(ratio * DRAG_AUTO_SCROLL_MAX_STEP_PX))
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
 }

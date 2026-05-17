@@ -56,4 +56,23 @@ describe('DefaultGridEngine — 默认引擎', () => {
     expect(frame.rowsAxis.getCount()).toBe(10)
     expect(frame.viewport.contentRect.width).toBe(400)
   })
+
+  it('把 selection 放进 RenderFrame，供 renderer overlay 绘制', () => {
+    const engine = new DefaultGridEngine({ data: makeData(5) })
+
+    engine.selectCell({ rowIndex: 2, colIndex: 1 })
+
+    expect(engine.getSelection()).toEqual({
+      activeCell: { rowIndex: 2, colIndex: 1 },
+      anchorCell: { rowIndex: 2, colIndex: 1 },
+      extentCell: { rowIndex: 2, colIndex: 1 },
+      selectedRange: {
+        startRow: 2,
+        endRow: 2,
+        startCol: 1,
+        endCol: 1,
+      },
+    })
+    expect(engine.getFrame().selection).toEqual(engine.getSelection())
+  })
 })

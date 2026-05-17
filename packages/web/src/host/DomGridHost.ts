@@ -16,6 +16,9 @@ export class DomGridHost implements WebHost {
   private onScroll: WebHostOptions['onScroll']
   private onResize: WebHostOptions['onResize']
   private onDprChange?: WebHostOptions['onDprChange']
+  private onPointerDown?: WebHostOptions['onPointerDown']
+  private onPointerMove?: WebHostOptions['onPointerMove']
+  private onPointerUp?: WebHostOptions['onPointerUp']
   private scrollHost!: HTMLDivElement
   private scrollSpacer!: HTMLDivElement
   private nativeScroller!: NativeScroller
@@ -34,6 +37,9 @@ export class DomGridHost implements WebHost {
     this.onScroll = options.onScroll
     this.onResize = options.onResize
     this.onDprChange = options.onDprChange
+    this.onPointerDown = options.onPointerDown
+    this.onPointerMove = options.onPointerMove
+    this.onPointerUp = options.onPointerUp
   }
 
   attach(): void {
@@ -71,6 +77,10 @@ export class DomGridHost implements WebHost {
 
     this.nativeScroller = new NativeScroller(this.scrollHost, this.scheduler, this.onScroll)
     this.nativeScroller.attach()
+    this.scrollHost.addEventListener('pointerdown', this.handlePointerDown)
+    this.scrollHost.addEventListener('pointermove', this.handlePointerMove)
+    this.scrollHost.addEventListener('pointerup', this.handlePointerUp)
+    this.scrollHost.addEventListener('pointercancel', this.handlePointerUp)
 
     if (this.pendingScrollbar) {
       applyScrollbarTheme(this.scrollHost, this.pendingScrollbar)
@@ -130,6 +140,10 @@ export class DomGridHost implements WebHost {
     }
 
     this.unwatchDpr()
+    this.scrollHost?.removeEventListener('pointerdown', this.handlePointerDown)
+    this.scrollHost?.removeEventListener('pointermove', this.handlePointerMove)
+    this.scrollHost?.removeEventListener('pointerup', this.handlePointerUp)
+    this.scrollHost?.removeEventListener('pointercancel', this.handlePointerUp)
     this.nativeScroller?.destroy()
 
     if (this.scrollHost?.parentNode === this.container) {
@@ -145,6 +159,43 @@ export class DomGridHost implements WebHost {
     const { width, height } = this.getContainerSize()
     this.currentDpr = window.devicePixelRatio || 1
     this.onResize(width, height, this.currentDpr)
+  }
+
+  private handlePointerDown = (event: PointerEvent): void => {
+    if (!this.onPointerDown) return
+    const local = this.toLocalPointerEvent(event)
+    if (this.isScrollbarPointer(local)) return
+    this.scrollHost.setPointerCapture?.(event.pointerId)
+    this.onPointerDown(local)
+  }
+
+  private handlePointerMove = (event: PointerEvent): void => {
+    const local = this.toLocalPointerEvent(event)
+    if (this.isScrollbarPointer(local)) return
+    this.onPointerMove?.(local)
+  }
+
+  private handlePointerUp = (event: PointerEvent): void => {
+    this.scrollHost.releasePointerCapture?.(event.pointerId)
+    this.onPointerUp?.()
+  }
+
+  private toLocalPointerEvent(event: PointerEvent): { x: number; y: number; shiftKey: boolean } {
+    const rect = this.scrollHost.getBoundingClientRect()
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      shiftKey: event.shiftKey,
+    }
+  }
+
+  private isScrollbarPointer(point: { x: number; y: number }): boolean {
+    const clientWidth = this.scrollHost.clientWidth
+    const clientHeight = this.scrollHost.clientHeight
+    return (
+      (clientWidth > 0 && point.x >= clientWidth) ||
+      (clientHeight > 0 && point.y >= clientHeight)
+    )
   }
 
   private watchDpr(): void {
