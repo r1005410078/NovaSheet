@@ -164,10 +164,21 @@ describe('Grid', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
-    // makeData has 50 rows × 2 cols × default theme rowHeight=28; widths come from SCHEMA
-    // contentH = 50 × 28 = 1400; contentW = 200 + 80 = 280 (both well under SAFE_MAX)
-    expect(spacer.style.height).toBe('1400px')
+    // makeData: 50 rows × 2 cols × default theme rowHeight=28; widths come from SCHEMA
+    // contentH = 50 × 28 = 1400; spacerH = contentH + headerHeight(32) = 1432
+    //   (the +headerH ensures DOM scroll range matches logical scroll range — see resizeSpacer doc)
+    // contentW = 200 + 80 = 280 (no header on X axis)
+    expect(spacer.style.height).toBe('1432px')
     expect(spacer.style.width).toBe('280px')
+    grid.destroy()
+  })
+
+  it('setColumnWidth re-sizes the spacer width', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    grid.setColumnWidth('name', 500) // delta = 500 - 200 = 300
+    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
+    expect(spacer.style.width).toBe(`${280 + 300}px`) // 580
     grid.destroy()
   })
 
@@ -188,7 +199,7 @@ describe('Grid', () => {
     })
     grid.setData(newData)
     const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
-    expect(spacer.style.height).toBe(`${200 * 28}px`)
+    expect(spacer.style.height).toBe(`${200 * 28 + 32}px`) // contentH + headerHeight
     grid.destroy()
   })
 
@@ -197,7 +208,7 @@ describe('Grid', () => {
     const grid = new Grid(el, { data: makeData() })
     grid.setRowHeight(0, 100) // delta = 100 - 28 = 72
     const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
-    expect(spacer.style.height).toBe(`${50 * 28 + 72}px`)
+    expect(spacer.style.height).toBe(`${50 * 28 + 72 + 32}px`) // contentH + headerHeight
     grid.destroy()
   })
 
@@ -217,6 +228,11 @@ describe('Grid', () => {
     // Drain initial paint frames
     while (rafs.length) rafs.shift()!()
 
+    // Spy on viewport.setScroll so we can assert the callback actually wired up.
+    // Reach in via `unknown` cast (private field).
+    const viewport = (grid as unknown as { viewport: { setScroll: (x: number, y: number) => void } }).viewport
+    const setScrollSpy = vi.spyOn(viewport, 'setScroll')
+
     // Fake a scroll event with new scrollTop
     Object.defineProperty(host, 'scrollTop', { value: 56, writable: true, configurable: true })
     Object.defineProperty(host, 'scrollLeft', { value: 0, writable: true, configurable: true })
@@ -224,11 +240,11 @@ describe('Grid', () => {
     expect(rafs).toHaveLength(1)
     while (rafs.length) rafs.shift()!()
 
-    // After the scroll, viewport scrollY should be ~56 (content 1400 ≤ spacer 1400 → identity)
-    // Indirect verification: refresh and check the canvas got paint instructions referencing
-    // the scrolled state. A direct assertion would require exposing viewport state, but the
-    // RAF being scheduled + drained without throwing is sufficient as a smoke test here.
-    expect(() => grid.refresh()).not.toThrow()
+    // viewport.setScroll must have been called with the mapped logical coords.
+    // content 1400 + headerH 32 = 1432; spacer 1432; vpSize = clientH = 300
+    // identity branch (content ≤ spacer): logicalY = scrollTop = 56; logicalX = 0
+    expect(setScrollSpy).toHaveBeenCalledTimes(1)
+    expect(setScrollSpy).toHaveBeenCalledWith(0, 56)
 
     grid.destroy()
     document.body.removeChild(el)
@@ -298,7 +314,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('ResizeObserver-style container resize triggers paint invalidate', () => {
+  it('ResizeObserver-style container resize propagates new size to viewport, HighDPI, and triggers invalidate', () => {
     // happy-dom may or may not implement ResizeObserver. The test verifies our wiring
     // by manually calling the internal resize handler (exposed via _onContainerResize for tests).
     const el = document.createElement('div')
@@ -306,13 +322,20 @@ describe('Grid', () => {
     document.body.appendChild(el)
     const grid = new Grid(el, { data: makeData() })
 
-    const spy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
-    // Simulate a container resize by setting different bounding rect and dispatching the internal handler
+    const invalidateSpy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
+    const viewport = (grid as unknown as { viewport: { setSize: (w: number, h: number) => void } }).viewport
+    const setSizeSpy = vi.spyOn(viewport, 'setSize')
+    const highDpi = (grid as unknown as { highDpi: { resize: (w: number, h: number) => void } }).highDpi
+    const resizeSpy = vi.spyOn(highDpi, 'resize')
+
+    // Simulate a container resize and dispatch the internal handler
     Object.defineProperty(el, 'clientWidth', { value: 500, configurable: true })
     Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true })
     ;(grid as unknown as { _onContainerResize: () => void })._onContainerResize()
 
-    expect(spy).toHaveBeenCalled()
+    expect(invalidateSpy).toHaveBeenCalled()
+    expect(setSizeSpy).toHaveBeenCalledWith(500, 400)
+    expect(resizeSpy).toHaveBeenCalledWith(500, 400)
     grid.destroy()
     document.body.removeChild(el)
   })

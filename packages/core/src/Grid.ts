@@ -238,6 +238,7 @@ export class Grid {
       theme: this.theme,
       scheduler: this.scheduler,
     })
+    this.remapScroll()
     this.invalidate()
   }
 
@@ -252,6 +253,7 @@ export class Grid {
       this.rowsAxis.setDefaultSize(theme.metrics.rowHeight)
     }
     this.resizeSpacer()
+    this.remapScroll()
     this.renderer.setTheme(theme)
     this.invalidate()
   }
@@ -260,6 +262,7 @@ export class Grid {
   setRowHeight(rowIndex: number, height: number): void {
     this.rowsAxis.setSize(rowIndex, height)
     this.resizeSpacer()
+    this.remapScroll()
     this.invalidate()
   }
 
@@ -273,6 +276,7 @@ export class Grid {
     if (index < 0) return
     this.colsAxis.setSize(index, width)
     this.resizeSpacer()
+    this.remapScroll()
     this.invalidate()
   }
 
@@ -315,15 +319,16 @@ export class Grid {
     if (rowIndex < 0 || rowIndex >= this.rowsAxis.getCount()) return
     const top = this.rowsAxis.indexToPosition(rowIndex)
     const size = this.rowsAxis.getSize(rowIndex)
-    const vpH =
-      (this.container.clientHeight || this.container.getBoundingClientRect().height || 300) -
-      this.theme.metrics.headerHeight
+    // align math uses 内容区高度（vpContentH = clientH - headerH），因为 logicalY 的语义是
+    // 「content area top 的偏移」（不包括 header）。
+    const { clientH } = this.getClientSize()
+    const vpContentH = clientH - this.theme.metrics.headerHeight
     let logicalY: number
     if (align === 'start') logicalY = top
-    else if (align === 'end') logicalY = top + size - vpH
-    else logicalY = top + size / 2 - vpH / 2
+    else if (align === 'end') logicalY = top + size - vpContentH
+    else logicalY = top + size / 2 - vpContentH / 2
 
-    const scrollTop = this.logicalToScrollY(logicalY, vpH)
+    const scrollTop = this.logicalToScrollY(logicalY)
     this.nativeScroller.scrollTo(scrollTop, this.scrollHost.scrollLeft)
   }
 
@@ -338,13 +343,8 @@ export class Grid {
 
     const top = this.rowsAxis.indexToPosition(rowIndex)
     const left = this.colsAxis.indexToPosition(colIndex)
-    const vpW = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
-    const vpH =
-      (this.container.clientHeight || this.container.getBoundingClientRect().height || 300) -
-      this.theme.metrics.headerHeight
-
-    const scrollTop = this.logicalToScrollY(top, vpH)
-    const scrollLeft = this.logicalToScrollX(left, vpW)
+    const scrollTop = this.logicalToScrollY(top)
+    const scrollLeft = this.logicalToScrollX(left)
     this.nativeScroller.scrollTo(scrollTop, scrollLeft)
   }
 
@@ -384,54 +384,87 @@ export class Grid {
     }
   }
 
-  /** Maps DOM scrollTop/scrollLeft to logical scroll coordinates via ScrollMapper. */
+  /**
+   * 当前容器尺寸（CSS px）。统一走 clientWidth/Height（scroll geometry 的常规来源），
+   * 退化为 getBoundingClientRect / 默认值仅是 happy-dom 兜底。
+   */
+  private getClientSize(): { clientW: number; clientH: number } {
+    const clientW = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
+    const clientH = this.container.clientHeight || this.container.getBoundingClientRect().height || 300
+    return { clientW, clientH }
+  }
+
+  /**
+   * 把 DOM scrollTop/scrollLeft 映射成 logical content-area 坐标。
+   *
+   * 关键：垂直轴 spacer 高度 = `contentH + headerH`（header 占据视口顶部 headerH px，必须
+   * 计入 DOM 可滚动总量），mapper 的 viewportSize 传 `clientH`（DOM 视口全高），contentSize
+   * 传 `contentH + headerH`。两边对齐后 DOM_maxScroll === mapper_maxLogical，最后一行可达。
+   *
+   * 水平轴没有 header 等价物，直接用 (contentW, clientW)。
+   */
   private mapScrollToLogical(scrollTop: number, scrollLeft: number): { logicalX: number; logicalY: number } {
+    const headerH = this.theme.metrics.headerHeight
     const contentH = this.rowsAxis.getTotalSize()
     const contentW = this.colsAxis.getTotalSize()
-    const spacerH = this.scrollMapper.computeSpacerSize(contentH)
+    const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
-    const vpW = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
-    const vpH =
-      (this.container.clientHeight || this.container.getBoundingClientRect().height || 300) -
-      this.theme.metrics.headerHeight
+    const { clientW, clientH } = this.getClientSize()
     return {
-      logicalX: this.scrollMapper.scrollToLogical(scrollLeft, spacerW, contentW, vpW),
-      logicalY: this.scrollMapper.scrollToLogical(scrollTop, spacerH, contentH, vpH),
+      logicalX: this.scrollMapper.scrollToLogical(scrollLeft, spacerW, contentW, clientW),
+      logicalY: this.scrollMapper.scrollToLogical(scrollTop, spacerH, contentH + headerH, clientH),
     }
   }
 
   /**
-   * 把 logical Y 转成 DOM scrollTop——直通 ScrollMapper。
-   * content ≤ viewport 时 ScrollMapper 返回 0（与真实浏览器行为一致：内容塞得下时
-   * `scrollTo({ top: N })` 会被自动 clamp）。callers 必须接受这一约定。
+   * 把 logical Y 转成 DOM scrollTop。content + headerH ≤ clientH 时 ScrollMapper 返回 0
+   * （与真实浏览器一致：内容塞得下时 `scrollTo({ top: N })` 会被自动 clamp）。
    */
-  private logicalToScrollY(logicalY: number, vpH: number): number {
+  private logicalToScrollY(logicalY: number): number {
+    const headerH = this.theme.metrics.headerHeight
     const contentH = this.rowsAxis.getTotalSize()
-    const spacerH = this.scrollMapper.computeSpacerSize(contentH)
-    return this.scrollMapper.logicalToScroll(logicalY, spacerH, contentH, vpH)
+    const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
+    const { clientH } = this.getClientSize()
+    return this.scrollMapper.logicalToScroll(logicalY, spacerH, contentH + headerH, clientH)
   }
 
-  /** logicalToScrollY 的水平版本。 */
-  private logicalToScrollX(logicalX: number, vpW: number): number {
+  /** logicalToScrollY 的水平版本（X 轴无 header 偏移）。 */
+  private logicalToScrollX(logicalX: number): number {
     const contentW = this.colsAxis.getTotalSize()
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
-    return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, vpW)
+    const { clientW } = this.getClientSize()
+    return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, clientW)
+  }
+
+  /**
+   * 在 axis 总尺寸 / 容器尺寸变化后重新读 DOM scrollTop 并同步到 viewport——
+   * 防止下一帧用过期的 logical 坐标绘制（非线性映射下旧 scrollTop 会被解读到错误位置）。
+   */
+  private remapScroll(): void {
+    const { logicalX, logicalY } = this.mapScrollToLogical(this.scrollHost.scrollTop, this.scrollHost.scrollLeft)
+    this.viewport.setScroll(logicalX, logicalY)
   }
 
   /** Called by ResizeObserver and exposed for tests. */
   private _onContainerResize(): void {
     if (this.destroyed) return
-    const w = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
-    const h = this.container.clientHeight || this.container.getBoundingClientRect().height || 300
-    this.highDpi.resize(w, h)
-    this.viewport.setSize(w, h)
+    const { clientW, clientH } = this.getClientSize()
+    this.highDpi.resize(clientW, clientH)
+    this.viewport.setSize(clientW, clientH)
+    this.remapScroll()
     this.invalidate()
   }
 
-  /** Updates scroll-spacer width/height so the native scrollbar reflects current content extent. */
+  /**
+   * 重算 scroll-spacer 尺寸。
+   * 垂直 spacer = `contentH + headerH`：把 header 占据的 headerH 也计入 DOM 可滚动总量，
+   * 这样 DOM `scrollTop ∈ [0, spacerH - clientH]` 与 mapper `logicalY ∈ [0, contentH - vpContentH]`
+   * 端点对齐，最后一行可被滚到完全可见。水平没有 header 偏移。
+   */
   private resizeSpacer(): void {
+    const headerH = this.theme.metrics.headerHeight
     const w = this.scrollMapper.computeSpacerSize(this.colsAxis.getTotalSize())
-    const h = this.scrollMapper.computeSpacerSize(this.rowsAxis.getTotalSize())
+    const h = this.scrollMapper.computeSpacerSize(this.rowsAxis.getTotalSize() + headerH)
     this.scrollSpacer.style.width = `${w}px`
     this.scrollSpacer.style.height = `${h}px`
   }

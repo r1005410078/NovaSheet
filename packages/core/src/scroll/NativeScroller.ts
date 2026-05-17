@@ -34,6 +34,9 @@ export class NativeScroller {
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
+    // 取消任何已入队但未执行的 scroll:read，避免 destroy 后多余的 RAF 唤醒
+    // （destroyed 标志兜底也行，但提前 cancel 更干净）
+    this.scheduler.cancel('scroll:read')
     if (this.listenerAttached) {
       this.scrollHost.removeEventListener('scroll', this.handler)
       this.listenerAttached = false

@@ -40,7 +40,13 @@ export class FrameScheduler {
 }
 
 /**
- * 进程级单例。M1 里 Renderer 默认 new 一个独立实例（通过 RendererOptions.scheduler 注入），
- * 也可以使用这个全局单例让 scroll / renderer / resize 强制共用一个 RAF。
+ * 进程级单例 —— **legacy 逃生通道**。
+ *
+ * 当前架构是「per-Grid scheduler」（CLAUDE.md 不变量 #5）：每个 Grid 实例自己 `new FrameScheduler()`，
+ * 在该实例的 Renderer / NativeScroller 之间共享。**不要**把这个单例当成跨 Grid 共享的
+ * 总调度器——所有 Renderer 都用 `'renderer:flush'` 作 key，跨实例会互相吞掉对方的 flush；
+ * 测试也会因为 RAF stub 在 worker 内污染而互相干扰。
+ *
+ * 保留它仅为 backward-compat（如有外部代码直接 import 它）；新代码不要消费。
  */
 export const frameScheduler = new FrameScheduler()
