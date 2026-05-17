@@ -1,0 +1,39 @@
+import type { DataSource, DataSourceListener } from './DataSource';
+import type { CellValue, Row, Schema } from './Schema';
+/**
+ * 全内存 DataSource——M1 的默认实现，所有方法同步。
+ * 推荐容量上限：~30 万行 × 50 列（视行内字段数量而定，参考 spec §3）。
+ * 超过此规模应使用 M4 提供的分页 DataSource。
+ */
+export declare class InMemoryDataSource implements DataSource {
+    /** 当前 Schema */
+    private schema;
+    /** 行数据数组 */
+    private rows;
+    /** 事件监听器集合 */
+    private listeners;
+    constructor(opts: {
+        schema: Schema;
+        rows: Row[];
+    });
+    /** 返回当前行数 */
+    getRowCount(): number;
+    /** 返回当前 Schema */
+    getSchema(): Schema;
+    /** endIndex 包含——与 ChunkedAxis.getVisibleRange 保持一致。 */
+    getRows(startIndex: number, endIndex: number): Row[];
+    /** 同步读取单元格值（热路径） */
+    getCell(rowIndex: number, fieldId: string): CellValue | undefined;
+    /** 订阅数据源事件，返回取消订阅函数 */
+    subscribe(listener: DataSourceListener): () => void;
+    /** 更新单个单元格并 emit `rowsChanged` 事件 */
+    updateCell(rowIndex: number, fieldId: string, value: CellValue): void;
+    /**
+     * 整体替换数据。先发 rowCountChanged 让 Grid 重建 axis（行数变了），
+     * 再发 reset 触发完整 invalidate。
+     */
+    setRows(rows: Row[]): void;
+    /** 向所有监听器广播事件 */
+    private emit;
+}
+//# sourceMappingURL=InMemoryDataSource.d.ts.map

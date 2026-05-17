@@ -47,18 +47,14 @@
  * 通过 DataSource.subscribe 发 rowsChanged 触发重绘）。
  */
 
-import type { DataSource } from '../data/DataSource'
-import type { ChunkedAxis } from '../layout/ChunkedAxis'
-import type { Quadrant } from '../layout/FrozenRegions'
-import type { Viewport } from '../layout/Viewport'
-import type { Theme } from '../theme/Theme'
-import { FrameScheduler } from '../util/raf'
-import { CellPainter } from './CellPainter'
-import { GridLinesPainter } from './GridLinesPainter'
-import { HeaderPainter } from './HeaderPainter'
+import type { DataSource, Quadrant, Theme } from '@novasheet/core'
+import { FrameScheduler, type ChunkedAxis, type Viewport } from '@novasheet/core'
+import { CellPainter } from '../painters/CellPainter'
+import { GridLinesPainter } from '../painters/GridLinesPainter'
+import { HeaderPainter } from '../painters/HeaderPainter'
 
-/** Renderer 构造选项 */
-export interface RendererOptions {
+/** Canvas2DRenderer 构造选项 */
+export interface Canvas2DRendererOptions {
   /** canvas 2D 绘图上下文 */
   ctx: CanvasRenderingContext2D
   /** 数据源 */
@@ -86,7 +82,7 @@ const RENDERER_KEY = 'renderer:flush'
  * M1 只画 `main` 象限（无滚动、无冻结）。管线骨架已为 M2/M3 留好——
  * paint() 入口与 Viewport 契约都不需要变。
  */
-export class Renderer {
+export class Canvas2DRenderer {
   /** canvas 2D 绘图上下文 */
   private ctx: CanvasRenderingContext2D
   /** 当前数据源 */
@@ -120,7 +116,7 @@ export class Renderer {
    * 这里不复制数据、不缓存可见单元格，也不直接做 DOM 操作；Grid 负责生命周期和 DOM，
    * Renderer 只负责“给定当前状态，画出这一帧”。
    */
-  constructor(opts: RendererOptions) {
+  constructor(opts: Canvas2DRendererOptions) {
     // Canvas 2D context 是所有 painter 最终写入的目标。
     // HighDPI 已经在 Grid 中配置好 transform，所以这里继续使用 CSS px 坐标。
     this.ctx = opts.ctx

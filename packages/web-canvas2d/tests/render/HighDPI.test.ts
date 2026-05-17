@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { stubGlobal, unstubAllGlobals } from '../helpers/global-stub'
-import { HighDPI } from '../../src/render/HighDPI'
+import { HighDPI } from '../../src/surface/HighDPI'
 import { createRecordingContext } from '../helpers/recording-context'
 
 function mockCanvas(): HTMLCanvasElement {

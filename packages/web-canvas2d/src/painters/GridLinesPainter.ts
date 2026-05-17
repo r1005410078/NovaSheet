@@ -11,17 +11,15 @@
  * scrollOffsetX/Y 由 Renderer 从 viewport.snapshot() 取出后传入；冻结象限传 0 即可。
  */
 
-import type { ChunkedAxis } from '../layout/ChunkedAxis'
-import type { QuadrantRect } from '../layout/FrozenRegions'
-import type { Theme } from '../theme/Theme'
+import type { Axis, QuadrantRect, Theme } from '@novasheet/core'
 
 /** 网格线绘制所需参数 */
 export interface GridLinesPaintParams {
   /** 行轴（提供行高与位置查询） */
-  rowsAxis: ChunkedAxis
+  rowsAxis: Axis
   /** 列轴（提供列宽与位置查询） */
-  colsAxis: ChunkedAxis
-  /** 可见行索引区间（两端均闭，来自 ChunkedAxis.getVisibleRange） */
+  colsAxis: Axis
+  /** 可见行索引区间（两端均闭，来自 Axis.getVisibleRange） */
   rowRange: [number, number]
   /** 可见列索引区间（两端均闭） */
   colRange: [number, number]

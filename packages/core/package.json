@@ -7,14 +7,15 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
       "require": "./dist/index.cjs"
     }
   },
   "files": ["dist"],
   "dependencies": {
-    "@novasheet/web": "workspace:*"
+    "@novasheet/web": "workspace:*",
+    "@novasheet/web-canvas2d": "workspace:*"
   },
   "scripts": {
     "build": "bun run build.ts",

@@ -24,6 +24,13 @@ export type {
 export { denseGridTheme } from './theme/denseGridTheme'
 export type { Theme } from './theme/Theme'
 
+// 布局层
+export { ChunkedAxis, CHUNK_SIZE } from './layout/ChunkedAxis'
+export { Viewport } from './layout/Viewport'
+export { FrozenRegions } from './layout/FrozenRegions'
+export type { Axis, MutableAxis } from './layout/ChunkedAxis'
+export type { QuadrantRect, Quadrant, Quadrants } from './layout/FrozenRegions'
+
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
 

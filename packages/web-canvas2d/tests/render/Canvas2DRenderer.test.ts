@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
-import type { Schema } from '../../src/data/Schema'
-import { ChunkedAxis } from '../../src/layout/ChunkedAxis'
-import { FrozenRegions } from '../../src/layout/FrozenRegions'
-import { Viewport } from '../../src/layout/Viewport'
-import { Renderer } from '../../src/render/Renderer'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import {
+  ChunkedAxis,
+  FrozenRegions,
+  InMemoryDataSource,
+  Viewport,
+  denseGridTheme,
+  type Schema,
+} from '@novasheet/core'
+import { Canvas2DRenderer } from '../../src/render/Canvas2DRenderer'
 import { createRecordingContext } from '../helpers/recording-context'
 
 const SCHEMA: Schema = {
@@ -15,7 +17,7 @@ const SCHEMA: Schema = {
   ],
 }
 
-describe('Renderer (M1 single quadrant)', () => {
+describe('Canvas2DRenderer (M1 single quadrant)', () => {
   function setup() {
     const { ctx, ops } = createRecordingContext()
     const data = new InMemoryDataSource({
@@ -33,7 +35,7 @@ describe('Renderer (M1 single quadrant)', () => {
     viewport.setSize(400, 200)
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setScroll(0, 0)
-    const renderer = new Renderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
     return { ctx, ops, data, viewport, renderer }
   }
 

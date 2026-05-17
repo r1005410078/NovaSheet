@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import type { Field } from '../../src/data/Schema'
-import { CellPainter } from '../../src/render/CellPainter'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import type { Field } from '@novasheet/core'
+import { CellPainter } from '../../src/painters/CellPainter'
+import { denseGridTheme } from '@novasheet/core'
 import { createRecordingContext } from '../helpers/recording-context'
 
 function makeField(overrides: Partial<Field> = {}): Field {

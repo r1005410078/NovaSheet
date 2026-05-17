@@ -9,16 +9,14 @@
  * 主 header 之后再绘一次（M3 才会启用，因为 M1 没有冻结列）。
  */
 
-import type { ChunkedAxis } from '../layout/ChunkedAxis'
-import type { Schema } from '../data/Schema'
-import type { Theme } from '../theme/Theme'
+import type { Axis, Schema, Theme } from '@novasheet/core'
 
 /** 表头绘制所需参数 */
 export interface HeaderPaintParams {
   /** 数据 Schema（提供字段名称） */
   schema: Schema
   /** 列轴（提供列宽与位置查询） */
-  colsAxis: ChunkedAxis
+  colsAxis: Axis
   /** 可见列索引区间（两端均闭） */
   colRange: [number, number]
   /** 整个 viewport 宽度，用于 header 背景占满 */

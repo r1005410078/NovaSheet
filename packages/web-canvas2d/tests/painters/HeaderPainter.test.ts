@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis } from '../../src/layout/ChunkedAxis'
-import type { Schema } from '../../src/data/Schema'
-import { HeaderPainter } from '../../src/render/HeaderPainter'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import { ChunkedAxis, denseGridTheme, type Schema } from '@novasheet/core'
+import { HeaderPainter } from '../../src/painters/HeaderPainter'
 import { createRecordingContext } from '../helpers/recording-context'
 
 const SCHEMA: Schema = {

@@ -8,12 +8,15 @@ const ROOT = new URL('.', import.meta.url).pathname
 
 await rm(`${ROOT}dist`, { recursive: true, force: true })
 
+const EXTERNALS = ['@novasheet/core'] as const
+
 const common = {
   entrypoints: [`${ROOT}src/index.ts`],
   outdir: `${ROOT}dist`,
   target: 'browser' as const,
   sourcemap: 'linked' as const,
   minify: false,
+  external: [...EXTERNALS],
 } satisfies Parameters<typeof Bun.build>[0]
 
 const esmResult = await Bun.build({ ...common, format: 'esm' })

@@ -16,10 +16,13 @@ const ROOT = new URL('.', import.meta.url).pathname
 
 await rm(`${ROOT}dist`, { recursive: true, force: true })
 
+const EXTERNALS = ['@novasheet/web', '@novasheet/web-canvas2d'] as const
+
 const common = {
   entrypoints: [`${ROOT}src/index.ts`],
   outdir: `${ROOT}dist`,
   target: 'browser' as const,
+  external: [...EXTERNALS],
   // 'linked' writes a //# sourceMappingURL= comment at the bottom of the bundle so
   // browser devtools auto-load the .map file. 'external' emits the .map but no URL
   // comment — Bun-runtime debug only. Library consumers debug in browsers, so we

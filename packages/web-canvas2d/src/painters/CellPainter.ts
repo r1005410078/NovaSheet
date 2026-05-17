@@ -17,9 +17,7 @@
  * 实测 600 个 cell × save/clip/restore < 3 ms，可接受。
  */
 
-import type { CellValue, Field } from '../data/Schema'
-import type { QuadrantRect } from '../layout/FrozenRegions'
-import type { Theme } from '../theme/Theme'
+import type { CellValue, Field, QuadrantRect, Theme } from '@novasheet/core'
 
 /** 单次单元格绘制所需参数 */
 export interface CellPaintParams {
