@@ -43,8 +43,8 @@ M1 交付一个可独立挂载的渲染地基。
 > M1 仅完成单帧静态渲染。滚动 / 选区 / 编辑等仍在路线图上。
 
 ```bash
-pnpm install
-pnpm --filter @novasheet/core build
+bun install
+bun run --filter @novasheet/core build
 ```
 
 ```ts
@@ -118,7 +118,8 @@ novasheet/
 │   └── superpowers/
 │       ├── specs/           设计 spec
 │       └── plans/           实现 plan + 里程碑追踪
-├── pnpm-workspace.yaml
+├── bunfig.toml
+├── bun.lock
 └── package.json
 ```
 
@@ -131,21 +132,21 @@ novasheet/
 ## 开发脚本
 
 ```bash
-pnpm install              # 安装依赖
-pnpm test                 # 跑全部包测试
-pnpm build                # 构建全部包
-pnpm lint                 # ESLint
-pnpm format               # Prettier 全量格式化
-pnpm storybook            # 启动组件变体玩具间（localhost:6006）
-pnpm build-storybook      # 构建静态 storybook 站点
+bun install                # 安装依赖
+bun test                   # 跑全部包测试
+bun run --filter @novasheet/core build           # 构建 core 包
+bun run lint               # ESLint
+bun run format             # Prettier 全量格式化
+bun run storybook          # 启动组件变体玩具间（localhost:6006）
+bun run build-storybook    # 构建静态 storybook 站点
 ```
 
 针对单包：
 
 ```bash
-pnpm --filter @novasheet/core test
-pnpm --filter @novasheet/core typecheck
-pnpm --filter @novasheet/core build
+bun run --filter @novasheet/core test
+bun run --filter @novasheet/core typecheck
+bun run --filter @novasheet/core build
 ```
 
 ---

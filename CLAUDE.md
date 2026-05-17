@@ -7,7 +7,7 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 ## Project shape
 
 - High-performance Canvas-based table engine, eventual AI-Native data workbench
-- Greenfield TS monorepo (pnpm workspaces); single shipped package today: `@novasheet/core`
+- Greenfield TS monorepo (bun workspaces); single shipped package today: `@novasheet/core`
 - See `README.md` for product framing and Quick Start
 - See `docs/superpowers/specs/` for the design specs that drive plans
 - See `docs/superpowers/plans/` for milestone implementation plans (M1 done; M2-M5 outlined)
@@ -58,13 +58,14 @@ Built up over the M1 cycle. Apply to all sessions, not just M1:
 
 ## Toolchain (NON-NEGOTIABLE)
 
-- **Package manager:** `pnpm` (>= 9). **NEVER** use `npm` or `yarn` — they will desync the lockfile and break CI.
-- **Node:** >= 20
-- **Test:** Vitest (`pnpm --filter @novasheet/core test`). No watch mode in plan steps — use `--run` (default in `pnpm test`).
-- **Typecheck:** `pnpm --filter @novasheet/core typecheck` — TypeScript is strict + `noUncheckedIndexedAccess` + `verbatimModuleSyntax`.
-- **Lint:** `pnpm lint` — must be clean (0 errors, 0 warnings).
-- **Build:** `pnpm --filter @novasheet/core build` (tsup → ESM + CJS + d.ts).
-- **All four must pass** before any commit lands on `main` (CI enforces).
+- **Package manager + runtime:** `bun` (≥ 1.2). **NEVER** use `npm`, `yarn`, or `pnpm` — they will desync the lockfile and break CI.
+- **Test:** `bun test` (top-level). Tests live in `packages/core/tests/`. Setup is preloaded via `bunfig.toml` (`[test] preload = ["./packages/core/tests/setup.ts"]`).
+- **Typecheck:** `bun run --filter @novasheet/core typecheck` — TypeScript is strict + `noUncheckedIndexedAccess` + `verbatimModuleSyntax`.
+- **Lint:** `bun run lint` — must be clean (0 errors, 0 warnings).
+- **Build:** `bun run --filter @novasheet/core build` (custom `build.ts` invoking `Bun.build` for ESM + CJS + `tsc --emitDeclarationOnly` for .d.ts).
+- **Storybook:** `bun run storybook` (or `bun run --filter @novasheet/storybook storybook`).
+- **All four (lint, typecheck, test, build) must pass** before any commit lands on `main` (CI enforces).
+- **Mock APIs in tests:** `bun:test` exports `mock` and `spyOn` (replaces Vitest's `vi.fn` / `vi.spyOn`). For global stubbing (no `vi.stubGlobal` in bun:test), use `packages/core/tests/helpers/global-stub.ts` (`stubGlobal` / `unstubAllGlobals`).
 
 ---
 
@@ -93,8 +94,10 @@ Built up over the M1 cycle. Apply to all sessions, not just M1:
 
 - **TDD strict.** Write the failing test first, see it fail, implement, see it pass, commit. Plan steps follow this exact rhythm.
 - **Canvas tests use `RecordingContext2D`** (`tests/helpers/recording-context.ts`) — captures ctx instruction sequences as `{ op, args }` objects. Assert on instruction sequences, not on pixels.
-- **`tests/setup.ts`** installs the RecordingContext globally onto `HTMLCanvasElement.prototype.getContext('2d')` — happy-dom does not implement Canvas 2D natively.
-- **Type-only failing tests** (Schema, DataSource interface) won't fail at runtime in Vitest because TS imports erase. Use `tsc --noEmit` to verify the "test fails before implementation" gate for type-only modules.
+- **`tests/setup.ts`** is preloaded by Bun (via `bunfig.toml [test] preload`). It registers happy-dom globally and installs the `RecordingContext` onto `HTMLCanvasElement.prototype.getContext('2d')` — Bun runtime alone has no DOM.
+- **`bun:test` import**: `import { describe, expect, it, mock, spyOn } from 'bun:test'`. NOT `from 'vitest'`.
+- **Global stubbing**: `import { stubGlobal, unstubAllGlobals } from '../helpers/global-stub'` (bun:test has no built-in equivalent of `vi.stubGlobal`).
+- **Type-only failing tests** (Schema, DataSource interface) won't fail at runtime in `bun test` because TS imports erase. Use `tsc --noEmit` to verify the "test fails before implementation" gate for type-only modules.
 
 ---
 
