@@ -20,7 +20,11 @@ const common = {
   entrypoints: [`${ROOT}src/index.ts`],
   outdir: `${ROOT}dist`,
   target: 'browser' as const,
-  sourcemap: 'external' as const,
+  // 'linked' writes a //# sourceMappingURL= comment at the bottom of the bundle so
+  // browser devtools auto-load the .map file. 'external' emits the .map but no URL
+  // comment — Bun-runtime debug only. Library consumers debug in browsers, so we
+  // need 'linked' for usable source maps in the published artifact.
+  sourcemap: 'linked' as const,
   minify: false,
 } satisfies Parameters<typeof Bun.build>[0]
 
@@ -59,7 +63,7 @@ if (dtsExitCode !== 0) {
 // tsc only emits .d.ts; copy to .d.cts so require() callers get types.
 await copyFile(`${ROOT}dist/index.d.ts`, `${ROOT}dist/index.d.cts`)
 
-console.log('✓ Build complete')
+console.log('Build complete')
 console.log('  ESM:', esmResult.outputs.map((o) => o.path).join(', '))
 console.log('  CJS:', cjsResult.outputs.map((o) => o.path).join(', '))
 console.log('  DTS: index.d.ts, index.d.cts')

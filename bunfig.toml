@@ -2,7 +2,10 @@
 # Tests preload happy-dom and the canvas stub before any test runs.
 
 [install]
-# Lockfile pinning behavior (default exact = false is fine for libraries)
+# Pin npmjs.org registry — avoids leaking a contributor's `~/.npmrc` mirror
+# (e.g. registry.npmmirror.com) into bun.lock, which would route every CI
+# install through a mirror that may not be reachable from GitHub runners.
+registry = "https://registry.npmjs.org/"
 
 [test]
 preload = ["./packages/core/tests/setup.ts"]

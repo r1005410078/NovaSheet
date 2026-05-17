@@ -6,16 +6,17 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ---
 
-## 当前状态：Phase 1 · M1 Foundation ✅
+## 当前状态：Phase 1 · M2 Virtualization & Scroll ✅（含 Bun 迁移）
 
-M1 交付一个可独立挂载的渲染地基。
+M2 在 M1 渲染地基之上加入了原生滚动、ResizeObserver、scrollToRow/Cell API。
+工具链已从 pnpm + Node + Vitest + tsup 切换到 Bun 单一运行时。
 
 | 维度 | 数值 |
 |---|---|
 | 包 | `@novasheet/core`（TS，框架无关，零运行时依赖） |
-| 测试 | 87 passing（14 文件） |
+| 测试 | 126 passing（16 文件，bun:test） |
 | Lint / Typecheck / Build | 全部 clean |
-| 公共 API | `Grid` · `InMemoryDataSource` · `denseGridTheme` |
+| 公共 API | `Grid` · `InMemoryDataSource` · `denseGridTheme` · `ScrollMapper` · `SAFE_MAX` |
 
 ### M1 能力
 

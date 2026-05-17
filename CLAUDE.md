@@ -16,7 +16,7 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 ## Current state (read first on a fresh session)
 
-**Last shipped:** **M2 Virtualization & Scroll** — tag `m2-virtualization` at the HEAD of `main`. 122 tests, lint/typecheck/build all clean. 1M+ rows scroll smoothly with non-linear `scrollTop` mapping. Visible in Storybook → Grid/Scroll (10k / 1M / scrollToRow).
+**Last shipped:** **M2 Virtualization & Scroll** (+ Bun migration) — tag `bun-migration` at the HEAD of `main`. 126 tests, lint/typecheck/build all clean. 1M+ rows scroll smoothly with non-linear `scrollTop` mapping. Visible in Storybook → Grid/Scroll (10k / 1M / scrollToRow / BothAxisScroll / ScrollToCellFar). Toolchain is now Bun-only (no Node / pnpm / Vitest / tsup).
 
 **Next milestone:** **M3 Frozen + Dynamic sizing** — not yet planned. Scope (per spec §4 + §5.3 + §5.7):
 - `FrozenRegions` returning 4 quadrants (topLeft / topRight / bottomLeft / main) when `frozenRows > 0` or `frozenCols > 0`
