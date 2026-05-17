@@ -1,4 +1,11 @@
-import type { DataSource, FrozenConfig, GridEngineOptions, Theme } from '@novasheet/core'
+import type {
+  ContextMenuAction,
+  ContextMenuContext,
+  DataSource,
+  FrozenConfig,
+  GridEngineOptions,
+  Theme,
+} from '@novasheet/core'
 import { Canvas2DBackend } from './backends/Canvas2DBackend'
 import type {
   AutofitRowsOptions,
@@ -12,6 +19,8 @@ export type GridRendererBackend = 'canvas2d'
 export interface GridOptions extends GridEngineOptions {
   /** 渲染后端，默认 `'canvas2d'`。 */
   renderer?: GridRendererBackend
+  /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后默认接剪贴板引擎。 */
+  onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -19,10 +28,11 @@ export function withExcelHeaders<T extends GridOptions>(options: T): T {
   return { ...options, excelHeaders: true }
 }
 
-/** 从门面选项中剥离 `renderer`，只把引擎参数传给 `DefaultGridEngine`。 */
+/** 从门面选项中剥离 `renderer` 和 `onContextMenuAction`，只把引擎参数传给 `DefaultGridEngine`。 */
 function engineOptionsFrom(options: GridOptions): GridEngineOptions {
-  const { renderer: _backend, ...engineOptions } = options
+  const { renderer: _backend, onContextMenuAction: _cb, ...engineOptions } = options
   void _backend
+  void _cb
   return engineOptions
 }
 
@@ -42,7 +52,9 @@ export class Grid {
 
     switch (backend) {
       case 'canvas2d':
-        this.delegate = new Canvas2DBackend(container, engineOptions)
+        this.delegate = new Canvas2DBackend(container, engineOptions, {
+          onContextMenuAction: options.onContextMenuAction,
+        })
         break
       default:
         throw new Error(`NovaSheet: renderer "${backend as string}" is not implemented`)
@@ -99,6 +111,18 @@ export class Grid {
    */
   autofitRows(options?: AutofitRowsOptions): AutofitRowsResult {
     return this.delegate.autofitRows(options)
+  }
+
+  setClipboardReady(ready: boolean): void {
+    this.delegate.setClipboardReady(ready)
+  }
+
+  openContextMenuAt(rowIndex: number, fieldId: string): void {
+    this.delegate.openContextMenuAt(rowIndex, fieldId)
+  }
+
+  closeContextMenu(): void {
+    this.delegate.closeContextMenu()
   }
 
   destroy(): void {

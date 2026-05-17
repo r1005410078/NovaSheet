@@ -12,3 +12,5 @@ export type { WebHost, WebHostOptions, WebHostFactory } from './host/WebHost'
 export { DomGridHost } from './host/DomGridHost'
 export { WebGridRuntime } from './runtime/WebGridRuntime'
 export type { WebGridRuntimeOptions } from './runtime/WebGridRuntime'
+
+export type { ContextMenuAction, ContextMenuContext, ContextMenuItem } from '@novasheet/core'

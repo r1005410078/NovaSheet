@@ -37,6 +37,9 @@ export interface GridController {
    * 手动触发；后续若改了列宽 / 数据 / 主题需要再次调用。
    */
   autofitRows(options?: AutofitRowsOptions): AutofitRowsResult
+  setClipboardReady(ready: boolean): void
+  openContextMenuAt(rowIndex: number, fieldId: string): void
+  closeContextMenu(): void
   destroy(): void
   /** @internal ResizeObserver 集成测试入口 */
   _onContainerResize(): void

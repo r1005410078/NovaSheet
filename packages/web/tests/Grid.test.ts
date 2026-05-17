@@ -1,4 +1,4 @@
-import { describe, expect, it, spyOn } from 'bun:test'
+import { describe, expect, it, mock, spyOn } from 'bun:test'
 import { InMemoryDataSource, denseGridTheme, type Schema } from '@novasheet/core'
 import { Grid } from '../src/Grid'
 
@@ -446,5 +446,83 @@ describe('Grid — 浏览器门面', () => {
     globalThis.requestAnimationFrame = originalRaf
     grid.destroy()
     document.body.removeChild(el)
+  })
+})
+
+describe('Grid — Phase 4.0 context menu facade', () => {
+  it('contextmenu on body cell opens menu; Cut click invokes onContextMenuAction', () => {
+    const container = document.createElement('div')
+    Object.assign(container.style, { width: '400px', height: '300px', position: 'relative' })
+    document.body.appendChild(container)
+    const onAction = mock((_a: string, _c: never) => {})
+    const grid = new Grid(container, {
+      data: new InMemoryDataSource({
+        schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] },
+        rows: [{ a: '1' }, { a: '2' }, { a: '3' }],
+      }),
+      onContextMenuAction: onAction as never,
+    })
+
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+    scrollHost.dispatchEvent(
+      new MouseEvent('contextmenu', { clientX: 50, clientY: 100, bubbles: true, cancelable: true }),
+    )
+
+    const cutBtn = container.querySelector('[data-ns-action="cut"]') as HTMLButtonElement
+    expect(cutBtn).toBeTruthy()
+    cutBtn.click()
+
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(onAction.mock.calls[0]![0]).toBe('cut')
+
+    grid.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('setClipboardReady(true) makes Paste enabled on next open', () => {
+    const container = document.createElement('div')
+    Object.assign(container.style, { width: '400px', height: '300px', position: 'relative' })
+    document.body.appendChild(container)
+    const grid = new Grid(container, {
+      data: new InMemoryDataSource({
+        schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] },
+        rows: [{ a: '1' }],
+      }),
+    })
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+
+    // first open — Paste disabled
+    scrollHost.dispatchEvent(
+      new MouseEvent('contextmenu', { clientX: 30, clientY: 80, bubbles: true, cancelable: true }),
+    )
+    let pasteBtn = container.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
+    expect(pasteBtn.getAttribute('aria-disabled')).toBe('true')
+    grid.closeContextMenu()
+
+    // setClipboardReady → reopen → enabled
+    grid.setClipboardReady(true)
+    scrollHost.dispatchEvent(
+      new MouseEvent('contextmenu', { clientX: 30, clientY: 80, bubbles: true, cancelable: true }),
+    )
+    pasteBtn = container.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
+    expect(pasteBtn.getAttribute('aria-disabled')).toBeNull()
+
+    grid.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('Grid.destroy() removes menu layer DOM', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const grid = new Grid(container, {
+      data: new InMemoryDataSource({
+        schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] },
+        rows: [],
+      }),
+    })
+    expect(container.querySelector('[data-novasheet-context-menu-layer]')).toBeTruthy()
+    grid.destroy()
+    expect(container.querySelector('[data-novasheet-context-menu-layer]')).toBeNull()
+    document.body.removeChild(container)
   })
 })

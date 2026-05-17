@@ -14,6 +14,8 @@
 import {
   DefaultGridEngine,
   FrameScheduler,
+  type ContextMenuAction,
+  type ContextMenuContext,
   type DataSource,
   type FrozenConfig,
   type GridEngineOptions,
@@ -27,6 +29,7 @@ import type {
 } from '../grid/GridController'
 import { DomGridHost } from '../host/DomGridHost'
 import { DomCellEditor } from '../interaction/DomCellEditor'
+import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import { DomHandleLayer } from '../interaction/DomHandleLayer'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
@@ -51,13 +54,20 @@ export class Canvas2DBackend implements GridController {
   private host: DomGridHost
   private handleLayer: DomHandleLayer
   private cellEditor: DomCellEditor
+  private contextMenuLayer!: DomContextMenuLayer
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
   /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
    *  让 LRU 缓存跨绘制 / 度量复用。 */
   private measurer = new Canvas2DTextMeasurer()
 
-  constructor(container: HTMLElement, options: GridEngineOptions) {
+  constructor(
+    container: HTMLElement,
+    options: GridEngineOptions,
+    gridOptions?: {
+      onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+    },
+  ) {
     this.container = container
     this.engine = new DefaultGridEngine(options)
 
@@ -100,6 +110,7 @@ export class Canvas2DBackend implements GridController {
       onPointerUp: () => this.runtime.handleHostPointerUp(),
       onKeyDown: (event) => this.runtime.handleHostKeyDown(event),
       onDoubleClick: (event) => this.runtime.handleHostDoubleClick(event),
+      onContextMenu: (event) => this.runtime.handleHostContextMenu(event),
     })
 
     this.runtime = new WebGridRuntime({
@@ -120,6 +131,15 @@ export class Canvas2DBackend implements GridController {
     })
     this.cellEditor.attach()
     this.runtime.setCellEditor(this.cellEditor)
+
+    this.contextMenuLayer = new DomContextMenuLayer(this.container, {
+      onSelect: (id) => this.runtime.handleContextMenuSelected(id),
+    })
+    this.contextMenuLayer.attach()
+    this.runtime.setContextMenuLayer(this.contextMenuLayer)
+    if (gridOptions?.onContextMenuAction) {
+      this.runtime.setOnContextMenuAction(gridOptions.onContextMenuAction)
+    }
 
     this.runtime.attach()
   }
@@ -167,7 +187,20 @@ export class Canvas2DBackend implements GridController {
     return this.runtime.autofitRows(options)
   }
 
+  setClipboardReady(ready: boolean): void {
+    this.runtime.setClipboardReady(ready)
+  }
+
+  openContextMenuAt(rowIndex: number, fieldId: string): void {
+    this.runtime.openContextMenuAt(rowIndex, fieldId)
+  }
+
+  closeContextMenu(): void {
+    this.runtime.closeContextMenu()
+  }
+
   destroy(): void {
+    this.contextMenuLayer.destroy()
     this.runtime.destroy()
     this.handleLayer.destroy()
     this.cellEditor.destroy()
