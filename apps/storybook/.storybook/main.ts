@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 const config: StorybookConfig = {
   stories: ['../src/stories/**/*.stories.@(ts|tsx)'],
+  staticDirs: ['./public'],
   addons: ['@storybook/addon-docs'],
   docs: {
     defaultName: 'README',
@@ -14,9 +15,17 @@ const config: StorybookConfig = {
   typescript: {
     check: false,
   },
-  async viteFinal(config) {
+  async viteFinal(config, { configType }) {
     config.resolve ??= {}
     config.resolve.alias ??= {}
+
+    // GitHub Pages project site: https://<user>.github.io/<repo>/
+    // CI sets STORYBOOK_BASE_PATH=/<repo>/ ; local `build-storybook` defaults to /.
+    if (configType === 'PRODUCTION') {
+      const raw = process.env.STORYBOOK_BASE_PATH?.trim()
+      config.base = raw ? (raw.endsWith('/') ? raw : `${raw}/`) : '/'
+    }
+
     return {
       ...config,
       resolve: {

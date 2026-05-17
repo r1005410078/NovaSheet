@@ -2,6 +2,8 @@
 
 > 高性能、AI-Native 数据工作台的 Spreadsheet Engine。
 
+**[Live demo（Storybook）](https://r1005410078.github.io/NovaSheet/)** — 在线查看表格变体（冻结、滚动、autofit、Excel 表头等）。
+
 NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canvas 的高性能现代表格渲染引擎，目标支撑 **1,000,000+ 行 × 500+ 列** 的数据规模，支持海量数据、实时更新、多视图与 Workbench 化扩展。
 
 ---
@@ -94,6 +96,8 @@ grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 
 本地查看变体：`bun run storybook` → 选 **表格 / 冻结** 等分组下的 **README**，可看到说明文字、各 story 预览与默认展开的 TypeScript 示例。
 
+在线 demo 由 GitHub Pages 托管（push `main` 后自动部署）。首次启用需在仓库 **Settings → Pages → Build and deployment → Source** 选 **GitHub Actions**。
+
 ---
 
 ## 架构概览
@@ -165,6 +169,9 @@ bun run lint               # ESLint
 bun run format             # Prettier 全量格式化
 bun run storybook          # 启动组件变体玩具间（localhost:6006）
 bun run build-storybook    # 构建静态 storybook 站点
+# 本地预览 GitHub Pages 路径（与 CI 一致）：
+STORYBOOK_BASE_PATH=/NovaSheet/ bun run build-storybook
+bunx serve apps/storybook/storybook-static
 ```
 
 针对单包：
