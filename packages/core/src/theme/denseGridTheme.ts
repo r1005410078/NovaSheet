@@ -25,6 +25,9 @@ export const denseGridTheme: Theme = {
     fontSize: 12,
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     borderWidth: 1,
+    menuShadow: '0 4px 12px rgba(15, 23, 42, 0.12)',
+    menuPaddingX: 8,
+    menuPaddingY: 4,
   },
   colors: {
     background: '#ffffff',
@@ -37,6 +40,7 @@ export const denseGridTheme: Theme = {
     hoverRowBg: '#f6f8fa',
     selectionBg: 'rgba(9,105,218,0.10)',
     selectionBorder: '#0969da',
+    menuItemHover: '#f6f8fa',
   },
   cell: {
     textAlignByType: {
