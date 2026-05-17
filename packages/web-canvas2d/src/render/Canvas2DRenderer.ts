@@ -49,7 +49,13 @@
  * 通过 DataSource.subscribe 发 rowsChanged 触发重绘）。
  */
 
-import type { DataSource, RenderFrame, RenderRegion, Theme } from '@novasheet/core'
+import type {
+  DataSource,
+  RenderFrame,
+  RenderRegion,
+  TextMeasurer,
+  Theme,
+} from '@novasheet/core'
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { CellPainter } from '../painters/CellPainter'
 import { EmptyStatePainter } from '../painters/EmptyStatePainter'
@@ -72,6 +78,11 @@ export interface Canvas2DRendererOptions {
   theme: Theme
   /** 共享同一个 scheduler，让 scroll / resize / render 合并到同一帧 RAF（见 CLAUDE.md 不变量 5） */
   scheduler?: FrameScheduler
+  /**
+   * 文本量度器（M3 autofit）。`field.wrap === true` 的单元格在绘制时调它做行宽度量。
+   * 未提供时 wrap 字段静默退化为单行截断。
+   */
+  measurer?: TextMeasurer
 }
 
 /** scheduler key——每个 Renderer 实例同一时间最多一个待执行 flush */
@@ -149,10 +160,15 @@ export class Canvas2DRenderer {
     //   - GridLinesPainter：批量绘制水平/垂直网格线
     //   - HeaderPainter：顶部列头背景和字段名
     // Renderer 通过固定顺序调用它们，保证层级稳定：cell -> grid lines -> header。
-    this.cellPainter = new CellPainter(this.theme)
+    this.cellPainter = new CellPainter(this.theme, { measurer: opts.measurer })
     this.gridLinesPainter = new GridLinesPainter(this.theme)
     this.headerPainter = new HeaderPainter(this.theme)
     this.emptyStatePainter = new EmptyStatePainter(this.theme)
+  }
+
+  /** 注入或替换 TextMeasurer。autofit 触发或 backend 切换 measurer 时调用。 */
+  setMeasurer(measurer: TextMeasurer): void {
+    this.cellPainter.setMeasurer(measurer)
   }
 
   /** 切换主题并同步 Painter；重绘由 `WebGridRuntime` 调度 `render(frame)`。 */

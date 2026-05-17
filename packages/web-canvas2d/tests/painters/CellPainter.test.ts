@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'bun:test'
-import type { Field } from '@novasheet/core'
+import type { Field, TextMeasurer } from '@novasheet/core'
 import { CellPainter } from '../../src/painters/CellPainter'
 import { denseGridTheme } from '@novasheet/core'
 import { createRecordingContext } from '../helpers/recording-context'
 
 function makeField(overrides: Partial<Field> = {}): Field {
   return { id: 'f1', name: 'F', type: 'text', width: 100, ...overrides }
+}
+
+/** 固定宽度 measurer：每字符 7px，便于精确推算 wrap 结果。 */
+const fixedWidthMeasurer: TextMeasurer = {
+  measureWidth: (text) => text.length * 7,
 }
 
 describe('CellPainter — 单元格', () => {
@@ -117,5 +122,74 @@ describe('CellPainter — 单元格', () => {
     if (fillTextOp?.op === 'fillText') {
       expect(fillTextOp.args[0]).toBe('a, b, c')
     }
+  })
+
+  describe('M3 wrap 模式', () => {
+    it('wrap=true + 高度够时多行绘制', () => {
+      // 单元格宽 100，padX=8 → maxWidth=84；fixedWidth measurer 7px/char → 12 char/行
+      // 'hello world foo bar baz qux' tokens: 'hello '(6×7=42) 'world '(42) 'foo '(28) 'bar '(28) 'baz '(28) 'qux'(21)
+      // 行 1：'hello '(42) + 'world '(42) = 84 OK；+ 'foo '(28) = 112 超 → flush 'hello world'
+      // 行 2：'foo '(28) + 'bar '(28) + 'baz '(28) = 84 OK；+ 'qux'(21) 超 → flush 'foo bar baz'
+      // 行 3：'qux'
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme, { measurer: fixedWidthMeasurer }).paint(ctx, {
+        value: 'hello world foo bar baz qux',
+        rect: { x: 0, y: 0, width: 100, height: 100 },
+        field: makeField({ type: 'text', wrap: true }),
+      })
+      const lines = ops
+        .filter((o): o is { op: 'fillText'; args: [string, number, number, number?] } => o.op === 'fillText')
+        .map((o) => o.args[0])
+      expect(lines.length).toBeGreaterThanOrEqual(2)
+      expect(lines.join('')).toContain('hello')
+      expect(lines.join('')).toContain('qux')
+    })
+
+    it('wrap=true 但 measurer 缺席时退化为单行截断', () => {
+      const { ctx, ops } = createRecordingContext()
+      // 不传 measurer：wrap 字段被忽略，走原来的单行 paintText
+      new CellPainter(denseGridTheme).paint(ctx, {
+        value: 'hello world foo bar baz qux',
+        rect: { x: 0, y: 0, width: 50, height: 28 },
+        field: makeField({ type: 'text', width: 50, wrap: true }),
+      })
+      const fillTexts = ops.filter((o) => o.op === 'fillText')
+      expect(fillTexts.length).toBe(1) // 单行
+      const txt = fillTexts[0]
+      if (txt?.op === 'fillText') {
+        expect(typeof txt.args[0]).toBe('string')
+        expect(txt.args[0].endsWith('…')).toBe(true)
+      }
+    })
+
+    it('wrap=true 且高度不够时末行 `…` 截断', () => {
+      // 高度 = padY*2 + lineHeight*N。fontSize=12，lineHeight=12×1.4=16.8
+      // 单元格高 50，padY=4 → 可用 42 → maxLines = floor(42/16.8) = 2
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme, { measurer: fixedWidthMeasurer }).paint(ctx, {
+        value: '一二三四五六七八九十十一十二',
+        rect: { x: 0, y: 0, width: 50, height: 50 },
+        field: makeField({ type: 'text', wrap: true }),
+      })
+      const lines = ops
+        .filter((o): o is { op: 'fillText'; args: [string, number, number, number?] } => o.op === 'fillText')
+        .map((o) => o.args[0])
+      expect(lines.length).toBeLessThanOrEqual(2)
+      expect(lines[lines.length - 1]!.endsWith('…')).toBe(true)
+    })
+
+    it('number 字段即使 wrap=true 仍单行右对齐', () => {
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme, { measurer: fixedWidthMeasurer }).paint(ctx, {
+        value: 1234567,
+        rect: { x: 0, y: 0, width: 100, height: 100 },
+        field: makeField({ type: 'number', wrap: true }),
+      })
+      const fillTexts = ops.filter((o) => o.op === 'fillText')
+      expect(fillTexts.length).toBe(1)
+      if (fillTexts[0]?.op === 'fillText') {
+        expect(fillTexts[0].args[0]).toBe('1,234,567')
+      }
+    })
   })
 })

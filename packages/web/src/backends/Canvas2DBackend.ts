@@ -19,8 +19,12 @@ import {
   type GridEngineOptions,
   type Theme,
 } from '@novasheet/core'
-import { Canvas2DRenderer, HighDPI } from '@novasheet/web-canvas2d'
-import type { GridController } from '../grid/GridController'
+import { Canvas2DRenderer, Canvas2DTextMeasurer, HighDPI } from '@novasheet/web-canvas2d'
+import type {
+  AutofitRowsOptions,
+  AutofitRowsResult,
+  GridController,
+} from '../grid/GridController'
 import { DomGridHost } from '../host/DomGridHost'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
@@ -45,6 +49,9 @@ export class Canvas2DBackend implements GridController {
   private host: DomGridHost
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
+  /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
+   *  让 LRU 缓存跨绘制 / 度量复用。 */
+  private measurer = new Canvas2DTextMeasurer()
 
   constructor(container: HTMLElement, options: GridEngineOptions) {
     this.container = container
@@ -81,6 +88,7 @@ export class Canvas2DBackend implements GridController {
       host: this.host,
       renderer: this.renderer,
       scheduler: this.scheduler,
+      measurer: this.measurer,
       onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
     })
 
@@ -95,6 +103,8 @@ export class Canvas2DBackend implements GridController {
     this.runtime.setTheme(theme, (renderer) => {
       (renderer as Canvas2DRenderer).setTheme(theme)
     })
+    // 字体可能随主题变；清空 measurer 缓存避免过期宽度
+    this.measurer.clearCache()
   }
 
   setRowHeight(rowIndex: number, height: number): void {
@@ -124,6 +134,10 @@ export class Canvas2DBackend implements GridController {
     this.runtime.scrollToCell(rowIndex, fieldId)
   }
 
+  autofitRows(options: AutofitRowsOptions = {}): AutofitRowsResult {
+    return this.runtime.autofitRows(options)
+  }
+
   destroy(): void {
     this.runtime.destroy()
     if (this.canvas.parentNode === this.container) {
@@ -145,6 +159,7 @@ export class Canvas2DBackend implements GridController {
       colsAxis: this.engine.getColsAxis(),
       theme: this.engine.getTheme(),
       scheduler: this.scheduler,
+      measurer: this.measurer,
     })
   }
 }

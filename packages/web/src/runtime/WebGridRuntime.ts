@@ -17,11 +17,25 @@
  *   - 公开 API 面（由 `@novasheet/web` 的 `Grid` facade 包一层暴露）
  */
 
-import type { DataSource, FrozenConfig, GridEngine, Theme } from '@novasheet/core'
-import { FrameScheduler } from '@novasheet/core'
+import type {
+  AutofitRowsResult,
+  DataSource,
+  FrozenConfig,
+  GridEngine,
+  TextMeasurer,
+  Theme,
+} from '@novasheet/core'
+import { autofitRowHeights, FrameScheduler } from '@novasheet/core'
 import type { WebHost } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
 import { ScrollMapper } from '../scroll/ScrollMapper'
+
+/** WebGridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
+export interface AutofitRowsRuntimeOptions {
+  rows?: readonly number[]
+  minHeight?: number
+  maxHeight?: number
+}
 
 export interface WebGridRuntimeOptions {
   engine: GridEngine
@@ -30,6 +44,12 @@ export interface WebGridRuntimeOptions {
   scheduler?: FrameScheduler
   /** 调整绘制表面位图（如 HighDPI）；Canvas2D 目前走此回调，`WebRenderer.resize` 仍为过渡 stub。 */
   onSurfaceResize?: (width: number, height: number, dpr: number) => void
+  /**
+   * 文本量度器（M3 autofit）。`autofitRows()` 调用时必须可用——backend 装配阶段注入。
+   * 未注入时 `autofitRows` 直接返回 `{ changedRows: 0, skippedRows: 0 }` 而非抛错，
+   * 方便测试场景与未来 backend 选择性禁用 autofit。
+   */
+  measurer?: TextMeasurer
 }
 
 /** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
@@ -51,6 +71,7 @@ export class WebGridRuntime {
   private scheduler: FrameScheduler
   private scrollMapper: ScrollMapper
   private onSurfaceResize?: WebGridRuntimeOptions['onSurfaceResize']
+  private measurer?: TextMeasurer
   private destroyed = false
 
   constructor(opts: WebGridRuntimeOptions) {
@@ -59,7 +80,13 @@ export class WebGridRuntime {
     this.renderer = opts.renderer
     this.scheduler = opts.scheduler ?? new FrameScheduler()
     this.onSurfaceResize = opts.onSurfaceResize
+    this.measurer = opts.measurer
     this.scrollMapper = new ScrollMapper()
+  }
+
+  /** 注入或替换 TextMeasurer；backend 切换 measurer（如主题字体变更）时调用。 */
+  setMeasurer(measurer: TextMeasurer): void {
+    this.measurer = measurer
   }
 
   attach(): void {
@@ -117,6 +144,30 @@ export class WebGridRuntime {
 
   refresh(): void {
     this.invalidate()
+  }
+
+  /**
+   * 按当前列宽 + 文本内容批量重算 `field.wrap === true` 字段的行高（M3 autofit）。
+   *
+   * - 必须先注入 `measurer`，否则返回 `{ changedRows: 0, skippedRows: 0 }`（不抛错）
+   * - 复用 core 的 `autofitRowHeights`，把写回路径通过 `engine.setRowHeight` 接入轴
+   * - 完成后走 `afterEngineMutation` 同步 spacer + remap 滚动 + 重绘
+   * - 不订阅后续 mutation——用户改了列宽 / 数据 / 主题需要重新调用
+   */
+  autofitRows(options: AutofitRowsRuntimeOptions = {}): AutofitRowsResult {
+    if (!this.measurer) return { changedRows: 0, skippedRows: 0 }
+    const frame = this.engine.getFrame()
+    const result = autofitRowHeights({
+      data: frame.data,
+      theme: frame.theme,
+      measurer: this.measurer,
+      applyHeight: (row, h) => this.engine.setRowHeight(row, h),
+      rows: options.rows,
+      minHeight: options.minHeight,
+      maxHeight: options.maxHeight,
+    })
+    if (result.changedRows > 0) this.afterEngineMutation()
+    return result
   }
 
   afterEngineMutation(): void {

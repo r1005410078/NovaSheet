@@ -1,6 +1,10 @@
 import type { DataSource, FrozenConfig, GridEngineOptions, Theme } from '@novasheet/core'
 import { Canvas2DBackend } from './backends/Canvas2DBackend'
-import type { GridController } from './grid/GridController'
+import type {
+  AutofitRowsOptions,
+  AutofitRowsResult,
+  GridController,
+} from './grid/GridController'
 
 /** 已支持的渲染后端；WebGL 待 `@novasheet/web-webgl` 接入后扩展。 */
 export type GridRendererBackend = 'canvas2d'
@@ -73,6 +77,23 @@ export class Grid {
 
   scrollToCell(rowIndex: number, fieldId: string): void {
     this.delegate.scrollToCell(rowIndex, fieldId)
+  }
+
+  /**
+   * 按当前列宽 + 文本内容批量重算 `field.wrap === true` 字段的行高（M3 autofit）。
+   *
+   * 手动 API——后续若改了列宽 / 数据 / 主题需要再次调用。性能：N 行 × K 个 wrap 列
+   * × measurer 缓存命中的 wrapText 计算，典型 500 行 × 3 列 < 10ms。
+   *
+   * @example
+   * ```ts
+   * grid.autofitRows()                              // 全表
+   * grid.autofitRows({ rows: [0, 1, 2, 3, 4] })     // 仅前 5 行
+   * grid.autofitRows({ maxHeight: 200 })            // 限制单行最高 200px
+   * ```
+   */
+  autofitRows(options?: AutofitRowsOptions): AutofitRowsResult {
+    return this.delegate.autofitRows(options)
   }
 
   destroy(): void {

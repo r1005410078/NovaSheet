@@ -17,7 +17,11 @@
  * 实测 600 个 cell × save/clip/restore < 3 ms，可接受。
  */
 
-import type { CellValue, Field, QuadrantRect, Theme } from '@novasheet/core'
+import type { CellValue, Field, QuadrantRect, TextMeasurer, Theme } from '@novasheet/core'
+import { wrapText } from '@novasheet/core'
+
+/** 行高倍数（默认 1.4 倍 fontSize）。可在 theme 里加 token 让它可配。 */
+const LINE_HEIGHT_MULTIPLIER = 1.4
 
 /** 单次单元格绘制所需参数 */
 export interface CellPaintParams {
@@ -27,6 +31,15 @@ export interface CellPaintParams {
   rect: QuadrantRect
   /** 字段定义（决定类型与对齐） */
   field: Field
+}
+
+/** CellPainter 构造选项 */
+export interface CellPainterOptions {
+  /**
+   * 文本量度器，wrap 模式下用来度量每行宽度。未提供时 `field.wrap` 退化为单行截断。
+   * Canvas2DBackend 会注入 `Canvas2DTextMeasurer` 实例。
+   */
+  measurer?: TextMeasurer
 }
 
 /**
@@ -44,13 +57,21 @@ export class CellPainter {
    * setTheme 时清空，避免字体变化后残留过期截断。
    */
   private truncationCache = new Map<string, string>()
+  private measurer: TextMeasurer | undefined
 
-  constructor(private theme: Theme) {}
+  constructor(private theme: Theme, options: CellPainterOptions = {}) {
+    this.measurer = options.measurer
+  }
 
   /** 切换主题并清空截断缓存（字体变更后缓存失效） */
   setTheme(theme: Theme): void {
     this.theme = theme
     this.truncationCache.clear()
+  }
+
+  /** 注入或替换 TextMeasurer。autofit 触发时由 backend 调用确保 measurer 可用。 */
+  setMeasurer(measurer: TextMeasurer): void {
+    this.measurer = measurer
   }
 
   /** 绘制单个单元格：裁剪至矩形区域，按字段类型分发到对应绘制方法 */
@@ -71,8 +92,13 @@ export class CellPainter {
     ctx.textAlign = this.theme.cell.textAlignByType[field.type]
 
     // 先 dispatch 专用路径；其他走 fallback 字符串化。
+    // wrap 模式只对 text-likely 路径生效（number 仍单行右对齐）；measurer 缺席时退化单行。
+    const wantWrap = field.wrap === true && field.type !== 'number' && this.measurer
     if (field.type === 'number' && typeof value === 'number') {
       this.paintNumber(ctx, value, rect)
+    } else if (wantWrap) {
+      const str = this.toDisplayString(value)
+      this.paintWrapped(ctx, str, rect)
     } else if (field.type === 'text' && typeof value === 'string') {
       this.paintText(ctx, value, rect)
     } else {
@@ -80,6 +106,48 @@ export class CellPainter {
     }
 
     ctx.restore()
+  }
+
+  /** 把任意 CellValue 标准化为可绘文本（与 paintFallback 的逻辑保持一致）。 */
+  private toDisplayString(value: CellValue): string {
+    if (value instanceof Date) return value.toISOString()
+    if (Array.isArray(value)) return value.join(', ')
+    return String(value)
+  }
+
+  /**
+   * 多行换行绘制（wrap=true 时启用）。
+   *
+   * 行高 = fontSize × 1.4。可用高度不够展示全部行时，最后一行末尾用 `…` 截断。
+   * 垂直起点：cell.y + padY + lineHeight/2（与 `textBaseline='middle'` 对齐）。
+   *
+   * 性能：单元格内 wrapText 调用 measurer.measureWidth 若干次，受 Canvas2DTextMeasurer
+   * LRU 缓存命中率影响——typical 同一列同字体 + 重复值时命中率高。
+   */
+  private paintWrapped(ctx: CanvasRenderingContext2D, text: string, rect: QuadrantRect): void {
+    if (!this.measurer || text.length === 0) return
+    const padX = this.theme.metrics.cellPaddingX
+    const padY = this.theme.metrics.cellPaddingY
+    const fontSize = this.theme.metrics.fontSize
+    const lineHeight = fontSize * LINE_HEIGHT_MULTIPLIER
+    const maxWidth = rect.width - padX * 2
+    const availableHeight = rect.height - padY * 2
+    if (maxWidth <= 0 || availableHeight <= 0) return
+    const maxLines = Math.max(1, Math.floor(availableHeight / lineHeight))
+
+    const wrapped = wrapText(
+      text,
+      { font: ctx.font, maxWidth, lineHeight, maxLines },
+      this.measurer,
+    )
+    if (wrapped.lines.length === 0) return
+
+    const baseX = rect.x + padX
+    const firstY = rect.y + padY + lineHeight / 2
+    for (let i = 0; i < wrapped.lines.length; i++) {
+      const line = wrapped.lines[i]!
+      ctx.fillText(line, baseX, firstY + i * lineHeight)
+    }
   }
 
   /** 绘制文本类型单元格（左对齐，超长截断加省略号） */

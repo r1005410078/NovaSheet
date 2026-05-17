@@ -24,6 +24,15 @@ export interface Field {
   width: number
   /** 列隐藏（M3+）；M1 不处理 */
   hidden?: boolean
+  /**
+   * 文本是否换行（M3 autofit）。
+   * - `false` / undefined（默认）：单行，超长用 `…` 截断（与 M2 之前行为一致）
+   * - `true`：CellPainter 按 `rect.width` 词/CJK 字符边界换行；`Grid.autofitRows()` 会
+   *   按当前列宽量出每行需要的总高度并写入 `rowsAxis.setSize`。
+   *
+   * 只有 `text` 类型（含 fallback 走 text 路径的类型）会响应 wrap；`number` 仍单行右对齐。
+   */
+  wrap?: boolean
   /** type-specific 配置，如 singleSelect 的 choices——M2+ 启用 */
   options?: Record<string, unknown>
 }

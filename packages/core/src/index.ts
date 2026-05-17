@@ -56,3 +56,9 @@ export type { ViewportSnapshot } from './layout/Viewport'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
+
+// 度量层（M3 autofit）
+export { tokenize, wrapText } from './measure/TextMeasurer'
+export type { TextMeasurer, WrapOptions, WrappedText } from './measure/TextMeasurer'
+export { autofitRowHeights } from './engine/AutofitRowHeights'
+export type { AutofitRowsParams, AutofitRowsResult } from './engine/AutofitRowHeights'
