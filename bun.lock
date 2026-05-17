@@ -17,6 +17,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@novasheet/core": "workspace:*",
+        "@novasheet/web-canvas2d": "workspace:*",
       },
       "devDependencies": {
         "@storybook/html": "^10.4.0",
@@ -29,10 +30,6 @@
     "packages/core": {
       "name": "@novasheet/core",
       "version": "0.0.0",
-      "dependencies": {
-        "@novasheet/web": "workspace:*",
-        "@novasheet/web-canvas2d": "workspace:*",
-      },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.9.0",
         "@types/bun": "^1.3.14",

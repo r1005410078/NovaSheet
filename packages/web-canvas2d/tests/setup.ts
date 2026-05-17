@@ -4,6 +4,8 @@
  * so painter/renderer tests get 2d without double-registering happy-dom.
  */
 
+export {}
+
 const { createRecordingContext } = await import('./helpers/recording-context')
 
 HTMLCanvasElement.prototype.getContext = function getContext(this: HTMLCanvasElement, type: string) {

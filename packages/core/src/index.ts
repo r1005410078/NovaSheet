@@ -1,9 +1,8 @@
 // @novasheet/core 的公开 API barrel。
 // 任何不在这里 export 的符号视为内部实现，不属于半稳定契约——CLAUDE.md「What goes where」。
 
-// 主入口
-export { Grid } from './Grid'
-export type { GridOptions } from './Grid'
+// Note: Grid is exported by @novasheet/web-canvas2d (consumer-facing facade).
+// Programmatic engine access: use DefaultGridEngine here.
 
 // 数据层
 export { InMemoryDataSource } from './data/InMemoryDataSource'
