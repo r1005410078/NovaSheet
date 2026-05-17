@@ -29,6 +29,9 @@
     "packages/core": {
       "name": "@novasheet/core",
       "version": "0.0.0",
+      "dependencies": {
+        "@novasheet/web": "workspace:*",
+      },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.9.0",
         "@types/bun": "^1.3.14",

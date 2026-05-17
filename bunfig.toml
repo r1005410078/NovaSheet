@@ -8,4 +8,7 @@
 registry = "https://registry.npmjs.org/"
 
 [test]
-preload = ["./packages/core/tests/setup.ts"]
+preload = [
+  "./packages/core/tests/setup.ts",
+  "./packages/web/tests/setup.ts",
+]

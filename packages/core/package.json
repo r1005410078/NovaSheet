@@ -13,6 +13,9 @@
     }
   },
   "files": ["dist"],
+  "dependencies": {
+    "@novasheet/web": "workspace:*"
+  },
   "scripts": {
     "build": "bun run build.ts",
     "test": "bun test",

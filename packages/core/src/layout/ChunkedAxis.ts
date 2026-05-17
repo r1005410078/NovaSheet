@@ -95,6 +95,34 @@ export interface ChunkedAxisOptions {
  * rows.indexToPosition(4) // 140：第 4 行顶部会跟着后移
  * ```
  */
+
+/**
+ * Read-only axis contract — what painters / engine consumers need.
+ *
+ * Implementations: `ChunkedAxis` (default, this file). Future implementations
+ * (e.g. small-dataset flat array) implement the same interface. Mutation
+ * capability is on `MutableAxis` so consumers that only read can't mutate.
+ */
+export interface Axis {
+  readonly version: number
+  getTotalSize(): number
+  getCount(): number
+  getDefaultSize(): number
+  getSize(index: number): number
+  indexToPosition(index: number): number
+  positionToIndex(position: number): number
+  getVisibleRange(startPos: number, endPos: number): [number, number]
+}
+
+/**
+ * Mutable axis — for engine state holders. Painters should depend on `Axis`,
+ * not `MutableAxis`, so they can't accidentally mutate during render.
+ */
+export interface MutableAxis extends Axis {
+  setSize(index: number, size: number): void
+  setDefaultSize(size: number): void
+}
+
 export class ChunkedAxis {
   /** 未显式设置时的默认行高/列宽 */
   private defaultSize: number
@@ -442,3 +470,7 @@ export class ChunkedAxis {
     this._version++
   }
 }
+
+// Compile-time assertion: ChunkedAxis must satisfy MutableAxis.
+const _typecheck: MutableAxis = null as unknown as ChunkedAxis
+void _typecheck

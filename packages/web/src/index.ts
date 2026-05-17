@@ -1,2 +1,2 @@
-// @novasheet/web — placeholder. Real exports added by later tasks.
-export {}
+// @novasheet/web — browser host & web-specific platform code.
+export { ScrollMapper, SAFE_MAX } from './scroll/ScrollMapper'
