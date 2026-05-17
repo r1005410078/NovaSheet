@@ -7,4 +7,5 @@ coverage
 .idea
 *.log
 .superpowers/
+.claude/
 storybook-static/
