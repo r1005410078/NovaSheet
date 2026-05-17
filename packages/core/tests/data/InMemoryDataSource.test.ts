@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, mock } from 'bun:test'
 import type { Schema } from '../../src/data/Schema'
 import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
 
@@ -52,7 +52,7 @@ describe('InMemoryDataSource', () => {
       schema: SCHEMA,
       rows: [{ name: 'A', age: 1 }],
     })
-    const listener = vi.fn()
+    const listener = mock(() => {})
     ds.subscribe(listener)
     ds.updateCell(0, 'age', 42)
     expect(ds.getCell(0, 'age')).toBe(42)
@@ -65,7 +65,7 @@ describe('InMemoryDataSource', () => {
 
   it('setRows emits reset + rowCountChanged', () => {
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows: [{ name: 'A', age: 1 }] })
-    const listener = vi.fn()
+    const listener = mock(() => {})
     ds.subscribe(listener)
     ds.setRows([{ name: 'X', age: 9 }, { name: 'Y', age: 8 }])
     expect(ds.getRowCount()).toBe(2)
@@ -75,7 +75,7 @@ describe('InMemoryDataSource', () => {
 
   it('subscribe returns an unsubscribe function', () => {
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows: [] })
-    const listener = vi.fn()
+    const listener = mock(() => {})
     const unsub = ds.subscribe(listener)
     unsub()
     ds.setRows([{ name: 'A', age: 1 }])

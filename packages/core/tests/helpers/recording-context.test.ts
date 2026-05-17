@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { createRecordingContext } from './recording-context'
 
 describe('RecordingContext2D', () => {

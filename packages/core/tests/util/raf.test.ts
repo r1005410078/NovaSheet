@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
+import { stubGlobal, unstubAllGlobals } from '../helpers/global-stub'
 import { FrameScheduler } from '../../src/util/raf'
 
 describe('FrameScheduler', () => {
@@ -6,14 +7,14 @@ describe('FrameScheduler', () => {
 
   beforeEach(() => {
     rafs = []
-    vi.stubGlobal('requestAnimationFrame', (cb: () => void) => {
+    stubGlobal('requestAnimationFrame', (cb: () => void) => {
       rafs.push(cb)
       return rafs.length
     })
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
+    unstubAllGlobals()
   })
 
   function flushFrame() {
@@ -24,7 +25,7 @@ describe('FrameScheduler', () => {
 
   it('schedules a single RAF for one task', () => {
     const scheduler = new FrameScheduler()
-    const fn = vi.fn()
+    const fn = mock(() => {})
     scheduler.schedule('a', fn)
     expect(rafs).toHaveLength(1)
     flushFrame()
@@ -33,16 +34,16 @@ describe('FrameScheduler', () => {
 
   it('coalesces multiple schedule calls into one RAF', () => {
     const scheduler = new FrameScheduler()
-    scheduler.schedule('a', vi.fn())
-    scheduler.schedule('b', vi.fn())
-    scheduler.schedule('c', vi.fn())
+    scheduler.schedule('a', mock(() => {}))
+    scheduler.schedule('b', mock(() => {}))
+    scheduler.schedule('c', mock(() => {}))
     expect(rafs).toHaveLength(1)
   })
 
   it('same key collapses to last task', () => {
     const scheduler = new FrameScheduler()
-    const first = vi.fn()
-    const second = vi.fn()
+    const first = mock(() => {})
+    const second = mock(() => {})
     scheduler.schedule('a', first)
     scheduler.schedule('a', second)
     flushFrame()
@@ -62,7 +63,7 @@ describe('FrameScheduler', () => {
 
   it('cancel removes a pending task', () => {
     const scheduler = new FrameScheduler()
-    const fn = vi.fn()
+    const fn = mock(() => {})
     scheduler.schedule('a', fn)
     scheduler.cancel('a')
     flushFrame()
@@ -71,9 +72,9 @@ describe('FrameScheduler', () => {
 
   it('schedules a new frame after flush', () => {
     const scheduler = new FrameScheduler()
-    scheduler.schedule('a', vi.fn())
+    scheduler.schedule('a', mock(() => {}))
     flushFrame()
-    scheduler.schedule('b', vi.fn())
+    scheduler.schedule('b', mock(() => {}))
     expect(rafs).toHaveLength(1)
   })
 })

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { ChunkedAxis } from '../../src/layout/ChunkedAxis'
 import type { Schema } from '../../src/data/Schema'
 import { HeaderPainter } from '../../src/render/HeaderPainter'

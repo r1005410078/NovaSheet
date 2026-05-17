@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, spyOn } from 'bun:test'
 import { Grid } from '../src/Grid'
 import { InMemoryDataSource } from '../src/data/InMemoryDataSource'
 import type { Schema } from '../src/data/Schema'
@@ -50,7 +50,7 @@ describe('Grid', () => {
   it('setTheme triggers re-paint', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
-    const spy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
+    const spy = spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
     grid.setTheme(denseGridTheme)
     expect(spy).toHaveBeenCalled()
     grid.destroy()
@@ -69,7 +69,7 @@ describe('Grid', () => {
   it('setRowHeight changes a row height and triggers paint', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
-    const spy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
+    const spy = spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
     grid.setRowHeight(5, 60)
     expect(spy).toHaveBeenCalled()
     grid.destroy()
@@ -78,7 +78,7 @@ describe('Grid', () => {
   it('setColumnWidth changes a column width and triggers paint', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
-    const spy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
+    const spy = spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
     grid.setColumnWidth('age', 200)
     expect(spy).toHaveBeenCalled()
     grid.destroy()
@@ -241,7 +241,7 @@ describe('Grid', () => {
     // Spy on viewport.setScroll so we can assert the callback actually wired up.
     // Reach in via `unknown` cast (private field).
     const viewport = (grid as unknown as { viewport: { setScroll: (x: number, y: number) => void } }).viewport
-    const setScrollSpy = vi.spyOn(viewport, 'setScroll')
+    const setScrollSpy = spyOn(viewport, 'setScroll')
 
     // Fake a scroll event with new scrollTop
     Object.defineProperty(host, 'scrollTop', { value: 56, writable: true, configurable: true })
@@ -332,11 +332,11 @@ describe('Grid', () => {
     document.body.appendChild(el)
     const grid = new Grid(el, { data: makeData() })
 
-    const invalidateSpy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
+    const invalidateSpy = spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
     const viewport = (grid as unknown as { viewport: { setSize: (w: number, h: number) => void } }).viewport
-    const setSizeSpy = vi.spyOn(viewport, 'setSize')
+    const setSizeSpy = spyOn(viewport, 'setSize')
     const highDpi = (grid as unknown as { highDpi: { resize: (w: number, h: number) => void } }).highDpi
-    const resizeSpy = vi.spyOn(highDpi, 'resize')
+    const resizeSpy = spyOn(highDpi, 'resize')
 
     // Simulate a container resize and dispatch the internal handler
     Object.defineProperty(el, 'clientWidth', { value: 500, configurable: true })

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { ChunkedAxis } from '../../src/layout/ChunkedAxis'
 import { FrozenRegions } from '../../src/layout/FrozenRegions'
 import { Viewport } from '../../src/layout/Viewport'

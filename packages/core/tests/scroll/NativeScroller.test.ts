@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
 import { NativeScroller } from '../../src/scroll/NativeScroller'
 import { FrameScheduler } from '../../src/util/raf'
 
@@ -38,10 +38,10 @@ describe('NativeScroller', () => {
 
   it('attach() registers a scroll listener; destroy() removes it', () => {
     const host = makeScrollHost()
-    const onScroll = vi.fn()
+    const onScroll = mock(() => {})
     const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
-    const addSpy = vi.spyOn(host, 'addEventListener')
-    const removeSpy = vi.spyOn(host, 'removeEventListener')
+    const addSpy = spyOn(host, 'addEventListener')
+    const removeSpy = spyOn(host, 'removeEventListener')
     scroller.attach()
     expect(addSpy).toHaveBeenCalledWith('scroll', expect.any(Function), { passive: true })
     scroller.destroy()
@@ -50,7 +50,7 @@ describe('NativeScroller', () => {
 
   it('scroll event schedules a frame via FrameScheduler', () => {
     const host = makeScrollHost(0, 0)
-    const onScroll = vi.fn()
+    const onScroll = mock(() => {})
     const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
     scroller.attach()
     ;(host as unknown as { scrollTop: number }).scrollTop = 200
@@ -64,7 +64,7 @@ describe('NativeScroller', () => {
 
   it('multiple scroll events in one frame collapse to a single callback (key dedup)', () => {
     const host = makeScrollHost(0, 0)
-    const onScroll = vi.fn()
+    const onScroll = mock(() => {})
     const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
     scroller.attach()
     ;(host as unknown as { scrollTop: number }).scrollTop = 100
@@ -81,7 +81,7 @@ describe('NativeScroller', () => {
 
   it('scrollTo() sets scrollHost.scrollTop and scrollLeft', () => {
     const host = makeScrollHost(0, 0)
-    const scroller = new NativeScroller(host, new FrameScheduler(), vi.fn())
+    const scroller = new NativeScroller(host, new FrameScheduler(), mock(() => {}))
     scroller.scrollTo(150, 75)
     expect(host.scrollTop).toBe(150)
     expect(host.scrollLeft).toBe(75)
@@ -89,13 +89,13 @@ describe('NativeScroller', () => {
 
   it('destroy() before attach() does not throw', () => {
     const host = makeScrollHost()
-    const scroller = new NativeScroller(host, new FrameScheduler(), vi.fn())
+    const scroller = new NativeScroller(host, new FrameScheduler(), mock(() => {}))
     expect(() => scroller.destroy()).not.toThrow()
   })
 
   it('callbacks after destroy() are silently ignored', () => {
     const host = makeScrollHost()
-    const onScroll = vi.fn()
+    const onScroll = mock(() => {})
     const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
     scroller.attach()
     ;(host as unknown as { scrollTop: number }).scrollTop = 100

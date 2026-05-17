@@ -3,7 +3,7 @@
  *
  * Save → set → restore on `unstubAllGlobals()`. Tracks stubs in module-scope
  * Map so multiple calls in one test all roll back together — matches the
- * `vi.stubGlobal` + `vi.unstubAllGlobals` ergonomics tests were written against.
+ * Vitest stubGlobal/unstubAllGlobals ergonomics that the tests were written against.
  *
  * Usage:
  *   import { stubGlobal, unstubAllGlobals } from '../helpers/global-stub'
@@ -22,7 +22,7 @@ export function stubGlobal(name: string, value: unknown): void {
   if (!stubs.has(name)) {
     stubs.set(name, (globalThis as unknown as GlobalLike)[name])
   }
-  ;(globalThis as unknown as GlobalLike)[name] = value
+  (globalThis as unknown as GlobalLike)[name] = value
 }
 
 export function unstubAllGlobals(): void {
@@ -30,7 +30,7 @@ export function unstubAllGlobals(): void {
     if (original === undefined) {
       delete (globalThis as unknown as GlobalLike)[name]
     } else {
-      ;(globalThis as unknown as GlobalLike)[name] = original
+      (globalThis as unknown as GlobalLike)[name] = original
     }
   }
   stubs.clear()

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'bun:test'
 import { ChunkedAxis, CHUNK_SIZE } from '../src/layout/ChunkedAxis'
 
 describe('probe', () => {

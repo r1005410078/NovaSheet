@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { ChunkedAxis } from '../../src/layout/ChunkedAxis'
 import { GridLinesPainter } from '../../src/render/GridLinesPainter'
 import { denseGridTheme } from '../../src/theme/denseGridTheme'

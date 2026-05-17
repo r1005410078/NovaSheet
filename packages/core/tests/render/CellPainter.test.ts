@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import type { Field } from '../../src/data/Schema'
 import { CellPainter } from '../../src/render/CellPainter'
 import { denseGridTheme } from '../../src/theme/denseGridTheme'
