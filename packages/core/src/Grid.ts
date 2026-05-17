@@ -111,7 +111,11 @@ export class Grid {
       this.container.style.position = 'relative'
     }
 
-    // Scroll-host: native scrollbar provider; absolutely fills container
+    // Scroll-host: native scrollbar provider; absolutely fills container.
+    // z-index: 1 puts it visually ABOVE the canvas so the browser-painted scrollbar
+    // (which lives at the scroll-host's edge) isn't hidden by canvas. Events still
+    // route to scroll-host correctly because canvas has pointer-events: none.
+    // M4 handle-layer will use z-index: 2 to sit above scroll-host for resize hits.
     this.scrollHost = document.createElement('div')
     this.scrollHost.setAttribute('data-novasheet-scroll-host', '')
     Object.assign(this.scrollHost.style, {
@@ -121,6 +125,7 @@ export class Grid {
       right: '0',
       bottom: '0',
       overflow: 'auto',
+      zIndex: '1',
     })
     // Spacer: sized to ScrollMapper.computeSpacerSize, gives the scrollbar its range
     this.scrollSpacer = document.createElement('div')
@@ -133,13 +138,15 @@ export class Grid {
     this.scrollHost.appendChild(this.scrollSpacer)
     this.container.appendChild(this.scrollHost)
 
-    // Canvas: sits on top, pointer-events: none so wheel/touch scroll passes through
+    // Canvas: paints below scroll-host so the scrollbar shows through; pointer-events: none
+    // lets wheel/touch events pass through to scroll-host (which is now on top via z-index: 1).
     this.canvas = document.createElement('canvas')
     Object.assign(this.canvas.style, {
       position: 'absolute',
       top: '0',
       left: '0',
       pointerEvents: 'none',
+      zIndex: '0',
     })
     this.container.appendChild(this.canvas)
 

@@ -160,6 +160,16 @@ describe('Grid', () => {
     grid.destroy()
   })
 
+  it('scroll-host paints above canvas via z-index so native scrollbar stays visible', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+    const canvas = el.querySelector('canvas') as HTMLCanvasElement
+    // scroll-host z-index must be > canvas z-index — otherwise canvas covers the scrollbar.
+    expect(Number(host.style.zIndex)).toBeGreaterThan(Number(canvas.style.zIndex))
+    grid.destroy()
+  })
+
   it('scroll-spacer is sized via ScrollMapper.computeSpacerSize for both axes', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
