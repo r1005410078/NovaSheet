@@ -81,3 +81,61 @@ export const ScrollToRow500: Story = {
     return host
   },
 }
+
+/**
+ * Wide schema (30 columns × 140 px = 4200 px content width) in a 780 px host —
+ * triggers the **horizontal** native scrollbar in addition to vertical.
+ * Wheel / shift+wheel / trackpad two-finger swipe all work via the same NativeScroller.
+ */
+export const BothAxisScroll: Story = {
+  render: () => {
+    const colCount = 30
+    const wideSchema: Schema = {
+      fields: Array.from({ length: colCount }, (_, c) => ({
+        id: `c${c}`,
+        name: `Column ${c}`,
+        type: c % 3 === 0 ? ('number' as const) : ('text' as const),
+        width: 140,
+      })),
+    }
+    const rows = Array.from({ length: 500 }, (_, r) => {
+      const row: Record<string, string | number> = {}
+      for (let c = 0; c < colCount; c++) {
+        row[`c${c}`] = c % 3 === 0 ? r * 100 + c : `r${r}-c${c}`
+      }
+      return row
+    })
+    const data = new InMemoryDataSource({ schema: wideSchema, rows })
+    return createGridHost({ data })
+  },
+}
+
+/**
+ * Programmatic horizontal scroll demo — scrolls to column 20 on mount via scrollToCell.
+ * Pairs with BothAxisScroll for the X axis what ScrollToRow500 does for Y.
+ */
+export const ScrollToCellFar: Story = {
+  render: () => {
+    const colCount = 30
+    const wideSchema: Schema = {
+      fields: Array.from({ length: colCount }, (_, c) => ({
+        id: `c${c}`,
+        name: `Column ${c}`,
+        type: 'text' as const,
+        width: 140,
+      })),
+    }
+    const rows = Array.from({ length: 500 }, (_, r) => {
+      const row: Record<string, string> = {}
+      for (let c = 0; c < colCount; c++) row[`c${c}`] = `r${r}-c${c}`
+      return row
+    })
+    const data = new InMemoryDataSource({ schema: wideSchema, rows })
+    const host = createGridHost({ data })
+    requestAnimationFrame(() => {
+      const grid = (host as HTMLElement & { __grid: Grid }).__grid
+      grid.scrollToCell(100, 'c20')
+    })
+    return host
+  },
+}
