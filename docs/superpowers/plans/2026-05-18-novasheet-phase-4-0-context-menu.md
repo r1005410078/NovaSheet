@@ -953,7 +953,7 @@ it('contextmenu on scroll-host invokes onContextMenu with local coords', () => {
     onContextMenu,
   })
   host.attach()
-  const scrollHost = container.querySelector('[data-novasheet-scrollhost]') as HTMLElement
+  const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
   // contextmenu 不冒到 document（spec：菜单层来 close）；这里只测 host 回调
   const evt = new MouseEvent('contextmenu', { clientX: 40, clientY: 30, bubbles: true, cancelable: true })
   // 让 scroll-host getBoundingClientRect 返回 (10, 5) 偏移
@@ -1357,7 +1357,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     })
 
     // 触发 contextmenu 在 body cell
-    const scrollHost = container.querySelector('[data-novasheet-scrollhost]') as HTMLElement
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     scrollHost.dispatchEvent(
       new MouseEvent('contextmenu', { clientX: 50, clientY: 50, bubbles: true, cancelable: true }),
     )
@@ -1390,7 +1390,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
       }),
       onContextMenuAction: onAction,
     })
-    const scrollHost = container.querySelector('[data-novasheet-scrollhost]') as HTMLElement
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     scrollHost.dispatchEvent(
       new MouseEvent('contextmenu', { clientX: 30, clientY: 50, bubbles: true, cancelable: true }),
     )
