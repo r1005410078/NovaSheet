@@ -15,28 +15,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          version: 9
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
+          bun-version: latest
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Lint
-        run: pnpm lint
+        run: bun run lint
 
       - name: Typecheck
-        run: pnpm --filter @novasheet/core typecheck
+        run: bun run --filter @novasheet/core typecheck
 
       - name: Test
-        run: pnpm --filter @novasheet/core test
+        run: bun test
 
       - name: Build
-        run: pnpm --filter @novasheet/core build
+        run: bun run --filter @novasheet/core build
