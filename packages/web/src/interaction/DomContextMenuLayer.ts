@@ -43,6 +43,8 @@ export class DomContextMenuLayer {
     this.menu.setAttribute('role', 'menu')
     this.menu.setAttribute('aria-label', 'Cell actions')
     this.menu.addEventListener('contextmenu', this.onMenuContextMenu)
+    this.menu.addEventListener('keydown', this.onMenuKeyDown)
+    document.addEventListener('pointerdown', this.onDocumentPointerDown, true)
     this.layer.appendChild(this.menu)
     this.container.appendChild(this.layer)
     ensureContextMenuStylesheet(this.container.ownerDocument)
@@ -64,6 +66,7 @@ export class DomContextMenuLayer {
     this.menu.style.top = `${options.clientY}px`
     this.menu.setAttribute('data-open', '')
     this.opened = true
+    this.focusFirstEnabled()
   }
 
   close(): void {
@@ -77,6 +80,8 @@ export class DomContextMenuLayer {
     this.destroyed = true
     if (this.attached) {
       this.menu.removeEventListener('contextmenu', this.onMenuContextMenu)
+      this.menu.removeEventListener('keydown', this.onMenuKeyDown)
+      document.removeEventListener('pointerdown', this.onDocumentPointerDown, true)
       if (this.layer.parentNode === this.container) {
         this.container.removeChild(this.layer)
       }
@@ -115,5 +120,78 @@ export class DomContextMenuLayer {
 
   private onMenuContextMenu = (event: Event): void => {
     event.preventDefault()
+  }
+
+  private onDocumentPointerDown = (event: Event): void => {
+    if (!this.opened) return
+    const target = event.target as Node | null
+    if (target && this.menu.contains(target)) return
+    this.close()
+  }
+
+  private onMenuKeyDown = (event: KeyboardEvent): void => {
+    switch (event.key) {
+      case 'Escape':
+      case 'Tab':
+        event.preventDefault()
+        this.close()
+        return
+      case 'Enter':
+      case ' ':
+        event.preventDefault()
+        this.activateFocused()
+        return
+      case 'ArrowDown':
+        event.preventDefault()
+        this.focusMove(1)
+        return
+      case 'ArrowUp':
+        event.preventDefault()
+        this.focusMove(-1)
+        return
+      case 'Home':
+        event.preventDefault()
+        this.focusFirstEnabled()
+        return
+      case 'End':
+        event.preventDefault()
+        this.focusLastEnabled()
+        return
+    }
+  }
+
+  private getItemButtons(): HTMLButtonElement[] {
+    return Array.from(this.menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+  }
+
+  private enabledButtons(): HTMLButtonElement[] {
+    return this.getItemButtons().filter((b) => b.getAttribute('aria-disabled') !== 'true')
+  }
+
+  private focusFirstEnabled(): void {
+    this.enabledButtons()[0]?.focus()
+  }
+
+  private focusLastEnabled(): void {
+    const list = this.enabledButtons()
+    list[list.length - 1]?.focus()
+  }
+
+  private focusMove(delta: 1 | -1): void {
+    const list = this.enabledButtons()
+    if (list.length === 0) return
+    const current = list.findIndex((b) => b === document.activeElement)
+    const next = (current + delta + list.length) % list.length
+    list[next]?.focus()
+  }
+
+  private activateFocused(): void {
+    const active = document.activeElement
+    if (!(active instanceof HTMLButtonElement)) return
+    const id = active.getAttribute('data-ns-action') as ContextMenuAction | null
+    if (!id) return
+    if (active.getAttribute('aria-disabled') === 'true') return
+    this.callbacks.onSelect(id)
+    this.close()
   }
 }
