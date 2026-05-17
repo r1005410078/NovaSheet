@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
 import { Grid } from '@novasheet/web'
-import type { FieldDef, Schema } from '@novasheet/core'
+import type { Field, Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
 import { docsMeta, docsStory } from '../story-docs'
@@ -17,7 +17,7 @@ type Story = StoryObj
 
 const METRIC_COUNT = 18
 
-const metricFields: FieldDef[] = Array.from({ length: METRIC_COUNT }, (_, i) => {
+const metricFields: Field[] = Array.from({ length: METRIC_COUNT }, (_, i) => {
   const n = i + 1
   const id = `metric_${String(n).padStart(2, '0')}`
   return {

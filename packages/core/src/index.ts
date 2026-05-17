@@ -21,7 +21,18 @@ export type {
 
 // 主题层
 export { denseGridTheme } from './theme/denseGridTheme'
-export type { Theme } from './theme/Theme'
+export type {
+  IconDef,
+  Theme,
+  ThemeCell,
+  ThemeColors,
+  ThemeEmptyState,
+  ThemeEmptyStateLayer,
+  ThemeFrozenSeparator,
+  ThemeIcons,
+  ThemeMetrics,
+  ThemeScrollbar,
+} from './theme/Theme'
 
 // 布局层
 export { ChunkedAxis, CHUNK_SIZE } from './layout/ChunkedAxis'
