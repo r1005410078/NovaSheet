@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck — storybook docs display snippet; references
 import { Grid } from '@novasheet/web'
 import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
 

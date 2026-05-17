@@ -11,6 +11,11 @@ export function docsMeta(description: string): Pick<Meta, 'parameters'> {
   }
 }
 
+/** Snippet 文件首行的 `// @ts-nocheck` 是给 IDE 用的，展示时剥掉。 */
+function stripSnippetPragma(code: string): string {
+  return code.replace(/^\s*\/\/\s*@ts-nocheck.*\r?\n/, '')
+}
+
 /** Story 级 TypeScript 源码示例（HTML renderer 无法从 render 自动提取 TS）。 */
 export function docsStory(
   code: string,
@@ -23,7 +28,7 @@ export function docsStory(
         source: {
           type: 'code',
           language: 'typescript',
-          code,
+          code: stripSnippetPragma(code),
           state: 'open',
         },
         canvas: {

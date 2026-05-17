@@ -1,5 +1,6 @@
-import { Grid } from '@novasheet/web'
-import { InMemoryDataSource } from '@novasheet/core'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck — storybook docs display snippet; references
+import type { Grid } from '@novasheet/web'
 import { createGridHost } from '../grid-host'
 
 const host = createGridHost({ data /* 2000 行 */ })

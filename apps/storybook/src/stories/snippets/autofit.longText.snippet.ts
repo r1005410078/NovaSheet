@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck — storybook docs display snippet; references
 import { Grid } from '@novasheet/web'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
 
@@ -12,4 +14,4 @@ const schema: Schema = {
 
 const data = new InMemoryDataSource({ schema, rows })
 const grid = new Grid(container, { data })
-grid.autofitRows()  // 按列宽与文本内容批量重算 wrap 字段所在行的行高
+grid.autofitRows() // 按列宽与文本内容批量重算 wrap 字段所在行的行高
