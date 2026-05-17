@@ -54,7 +54,7 @@ The refactor should make package boundaries match the intended product boundary.
 
 6. Move architectural comments and examples to interfaces/contracts.
 7. Keep implementation comments focused on implementation details only.
-8. Complete the refactor in one implementation pass because current feature surface is still small.
+8. Complete the refactor on a single branch via sequential commits, one per Step in §9. Each Step ends with green tests + commit before the next Step begins. ("One-pass" here means "one branch" — NOT "one giant commit". 18+ src files + 16+ test files move; commit boundaries protect against half-working intermediate states.)
 
 ---
 
@@ -159,7 +159,7 @@ export class DefaultGridEngine implements GridEngine {
 
 ### `RenderFrame`
 
-For the first refactor, `RenderFrame` should stay close to current behavior rather than introducing full command rendering.
+`RenderFrame` is an **engine state snapshot** — not a renderer-agnostic command stream.
 
 Draft shape:
 
@@ -173,23 +173,32 @@ export interface RenderFrame {
 }
 ```
 
-Rationale:
+**Honest framing (read this before assuming what RenderFrame buys you)**:
 
-- This preserves the current Canvas2D renderer logic.
-- It avoids designing a full cross-platform `RenderCommand[]` before WebGL/Flutter requirements are proven.
-- It still removes DOM/Canvas dependencies from core.
+This contract removes DOM/Canvas types from core but **does not eliminate per-renderer iteration logic**. A future `WebGLRenderer` still has to:
 
-Future phase:
+- iterate `for (r in rowRange) for (c in colRange)` over the visible quadrants
+- call `data.getCell(r, fieldId)` per cell
+- read `theme.colors.*` / `theme.metrics.*`
+- handle text measurement, clipping, alpha, etc.
 
-```ts
-export type RenderCommand = FillRectCommand | TextCommand | LineCommand | ClipCommand
-```
+i.e. each new renderer re-implements roughly the same `paintQuadrant` loop. The only reuse RenderFrame gives is the **input shape** (which axes are visible, where scroll currently is), not the **drawing logic**.
 
-That command layer should be designed later, when a second renderer target is being prototyped.
+This is a deliberate YAGNI choice. Two alternatives were considered:
+
+| Alternative | What it would do | Why not now |
+|---|---|---|
+| (A) Full `RenderCommand[]` precomputed in core | core emits `{type:'fillText', x, y, str, color}[]`; renderer only translates primitives | premature; second renderer hasn't surfaced its real needs (alpha? batching? text-shaping?) — designing the language now risks getting it wrong |
+| (B) **Engine snapshot only (this spec)** | each renderer iterates its own paintQuadrant | per-renderer code duplication for the iteration loop, accepted |
+| (C) Shared iteration helpers | core exposes `iterateVisibleCells(frame, callback)`; renderers pass per-cell draw callbacks | could be added later if (B) duplication actually becomes painful |
+
+Decision: go with (B). Re-evaluate after a second renderer (WebGL or Flutter) actually exists. (A) and (C) can be layered on later without breaking (B)'s contracts.
 
 ### `Axis`
 
 `ChunkedAxis` should be hidden behind an interface where consumers do not need the concrete class.
+
+**File layout**: put `Axis` and `MutableAxis` interfaces in the same file as `ChunkedAxis` class (i.e. `packages/core/src/layout/ChunkedAxis.ts` exports both). Avoid creating an adjacent `layout/Axis.ts` next to `layout/ChunkedAxis.ts` — adjacent files with same root word are a known anti-pattern. If a second axis implementation later appears (e.g. `FlatAxis` for tiny datasets), extract the interface to `layout/Axis.ts` then; not before.
 
 Draft interface:
 
@@ -248,23 +257,44 @@ This avoids maintaining two sets of architectural docs.
 Draft interface:
 
 ```ts
+export interface WebHostOptions {
+  container: HTMLElement
+  /** Called every native scroll event (RAF-throttled by the host). */
+  onScroll: (scrollTop: number, scrollLeft: number) => void
+  /** Called when container size changes (via ResizeObserver). */
+  onResize: (cssWidth: number, cssHeight: number, dpr: number) => void
+  /** Called when DPR changes (window moved between displays). */
+  onDprChange?: (dpr: number) => void
+}
+
 export interface WebHost {
+  /** Mount scrollHost + scrollSpacer into the container; attach scroll/resize/DPR listeners. */
   attach(): void
+  /** Resize the scroll-spacer so the native scrollbar reflects current content extent. */
   setScrollSize(width: number, height: number): void
+  /** Programmatically scroll. */
   scrollTo(scrollTop: number, scrollLeft: number): void
+  /** Read current DPR (cached; updated by onDprChange). */
+  getDpr(): number
+  /** Read current container CSS size. */
+  getContainerSize(): { width: number; height: number }
+  /** Detach all listeners, remove scrollHost + scrollSpacer, restore container styles. */
   destroy(): void
+}
+
+export interface WebHostFactory {
+  (options: WebHostOptions): WebHost
 }
 ```
 
-Responsibilities:
+Ownership rules:
 
-- create/manage `scrollHost`
-- create/manage `scrollSpacer`
-- attach native scroll listener
-- expose scroll callbacks
-- observe container resize
-- read device pixel ratio
-- restore container styles on destroy
+- `WebHost` **creates** `scrollHost` and `scrollSpacer` (the runtime never touches DOM directly).
+- `WebHost` **owns** the lifecycle of scroll/resize/DPR listeners — `destroy()` is the only path to detach.
+- The renderer's `<canvas>` is **NOT** owned by `WebHost` — it's owned by the platform-specific renderer (so a WebGPU swap doesn't require touching `WebHost`).
+- Container styles touched by `WebHost`: only `position` (if computed style was `static`, set to `relative` on attach, restored on destroy). Nothing else.
+
+Default implementation: `DomGridHost implements WebHost`, takes `WebHostOptions` in the constructor, defers DOM creation until `attach()`.
 
 ### `WebGridRuntime`
 
@@ -316,6 +346,16 @@ export class Grid {
 ```
 
 This preserves current Storybook/web usage while moving it out of `@novasheet/core`.
+
+**Why a thin Grid wrapper instead of `export { WebGridRuntime as Grid }`?**
+
+The wrapper exists to keep a **stable consumer-facing surface** independent of internal refactors:
+
+- Internal `WebGridRuntime` may grow methods (`setOverscroll`, `attachDebugger`, ...) that aren't part of the public contract — `Grid` only re-exports what users should rely on.
+- Methods naturally split between `engine` (data/theme/sizing) and `runtime` (scroll/lifecycle); `Grid` is the single forwarder so consumers don't reach into `grid.engine.setData(...)`.
+- If a future v2 wants `Grid` to accept additional constructor options (e.g. `theme: 'dark'`) without touching internal contracts, the wrapper is where that lands.
+
+If the wrapper truly becomes pure pass-through and stays that way for ≥ 6 months, drop it then.
 
 ### `WebRenderer`
 
@@ -440,14 +480,17 @@ Remove from core:
 Move to `@novasheet/web`:
 
 - `NativeScroller`
-- `ScrollMapper` if it remains web scroll-specific
-- DOM host setup
+- **`ScrollMapper`** (see decision below)
+- DOM host setup (`DomGridHost implements WebHost`)
 - scrollHost / scrollSpacer sizing
 - resize observer wiring
 - DPR reading
 
-If `ScrollMapper` remains purely mathematical, it may stay in `core`.
-Decision: keep `ScrollMapper` in `core` for now because it maps logical content size to capped scroll coordinates and has no DOM dependency.
+**`ScrollMapper` placement decision: `@novasheet/web`** (NOT core).
+
+Rationale: `SAFE_MAX = 6_000_000` is derived from the lowest-common-denominator of Firefox / iOS Safari maximum element height (Firefox ~17.9M px, iOS Safari ~16.7M px). This is a **browser-specific constraint baked into a numeric constant**. Flutter / Swift / Android renderers don't have this limit — they shouldn't have to import and ignore ScrollMapper.
+
+Keep core's "knows nothing about browsers" invariant clean. `@novasheet/web` is the right home for any Web-platform constant.
 
 ### Step 5: Move Canvas2D Renderer
 
@@ -514,7 +557,7 @@ Detailed test migration:
 | `tests/layout/ChunkedAxis.test.ts`        | `packages/core/tests`   | Keep as pure layout tests. Update imports if `Axis` interface is introduced.                                                    |
 | `tests/layout/Viewport.test.ts`           | `packages/core/tests`   | Keep in core. It should test `ViewportSnapshot` + `FrozenRegions` interaction without DOM.                                      |
 | `tests/theme/denseGridTheme.test.ts`      | `packages/core/tests`   | Keep in core if `denseGridTheme` remains platform-independent. Remove any Canvas DOM type assumptions from assertions.          |
-| `tests/scroll/ScrollMapper.test.ts`       | `packages/core/tests`   | Keep in core because `ScrollMapper` remains pure math.                                                                          |
+| `tests/scroll/ScrollMapper.test.ts`       | `packages/web/tests`    | Moved with `ScrollMapper` — SAFE_MAX is a Web-platform constant.                                                                |
 | `tests/util/raf.test.ts`                  | `packages/core/tests`   | Keep only if scheduler remains core. If scheduler moves to web runtime, move test to `packages/web/tests`.                      |
 | `tests/Grid.test.ts`                      | split                   | Move engine-only state tests to `packages/core/tests/engine/DefaultGridEngine.test.ts`; move DOM facade lifecycle tests to web. |
 | `tests/scroll/NativeScroller.test.ts`     | `packages/web/tests`    | Update imports to `@novasheet/web`; keep happy-dom/global stubbing helpers here.                                                |
@@ -587,7 +630,7 @@ It should export:
 - `Theme`
 - `denseGridTheme`
 - layout contracts and implementations as appropriate
-- `ScrollMapper` if kept in core
+- (NOT `ScrollMapper` — moved to `@novasheet/web` per Step 4)
 
 ---
 
@@ -628,14 +671,16 @@ Important behavior to preserve:
 
 ## 11. Risks
 
-| Risk                      | Mitigation                                                                              |
-| ------------------------- | --------------------------------------------------------------------------------------- |
-| Refactor is large         | Keep behavior-preserving commits and run tests after each package move                  |
-| Public API break          | Move browser `Grid` to `@novasheet/web-canvas2d` intentionally; update README/Storybook |
-| Too many interfaces       | Only add interfaces at package boundaries, not for every private helper                 |
-| Comments become stale     | Put architectural comments on interfaces; keep implementation comments short            |
-| Storybook HMR breaks      | Alias Storybook to `packages/web-canvas2d/src/index.ts`                                 |
-| Build config gets complex | Keep each package build script close to current `packages/core/build.ts` pattern        |
+| Risk                                | Mitigation                                                                              |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| Refactor is large                   | Keep behavior-preserving commits and run tests after each package move                  |
+| Public API break                    | Move browser `Grid` to `@novasheet/web-canvas2d` intentionally; update README/Storybook |
+| Too many interfaces                 | Only add interfaces at package boundaries, not for every private helper                 |
+| Comments become stale               | Put architectural comments on interfaces; keep implementation comments short            |
+| Storybook HMR breaks                | Alias Storybook to `packages/web-canvas2d/src/index.ts`                                 |
+| Build config gets complex           | Each package needs its own `build.ts` + `tsconfig.build.json` (mirroring `packages/core/`'s Bun-migration pattern). core may skip `build.ts` if it ships pure types — re-evaluate during Step 1. |
+| **Inter-package version drift** when published | Use `workspace:*` in dev. On publish, replace with exact pins (`=x.y.z`); `@novasheet/web-canvas2d@1.2.0` peers `=@novasheet/web@1.2.0` peers `=@novasheet/core@1.2.0`. Mismatch will silently break consumers; CI must verify three-way version alignment before publish. |
+| Three packages bloat consumer install | Acceptable trade-off — npm dedupes the shared tree. If it becomes a real problem, ship a meta-package `@novasheet/web-canvas2d-all` that re-exports the public surface. |
 
 ---
 
@@ -649,12 +694,14 @@ This refactor is complete when:
    - `CanvasRenderingContext2D`
    - `document.createElement`
    - `ResizeObserver`
-2. `@novasheet/web` owns browser host and scroll behavior.
+   - `window.devicePixelRatio`
+2. `@novasheet/web` owns browser host, scroll behavior, AND `ScrollMapper` (with its Web-specific `SAFE_MAX`).
 3. `@novasheet/web-canvas2d` owns Canvas2D rendering and exports browser `Grid`.
-4. Storybook renders all existing stories through `@novasheet/web-canvas2d`.
-5. Existing tests pass after being moved to their package owners.
-6. Format, lint, typecheck, tests, package builds, and Storybook build pass.
+4. Storybook renders **all 11 existing stories** through `@novasheet/web-canvas2d`. `bun run storybook` boots cleanly; `bun run build-storybook` produces static output without errors.
+5. **All 126 existing tests pass after relocation**. No test silently dropped. Test files redistributed per §9 Step 8 table.
+6. Format, lint, typecheck (all three packages), tests, all three package builds, and Storybook build pass.
 7. Long architectural comments live on contracts/interfaces, not duplicated across implementations.
+8. Inter-package dependencies use exact version specifiers in published `package.json` (`workspace:*` for monorepo dev; `=x.y.z` for npm publish). See §11 versioning risk.
 
 ---
 
@@ -662,9 +709,11 @@ This refactor is complete when:
 
 After this refactor, future work can add:
 
-- `@novasheet/web-webgl`
-- `@novasheet/web-webgpu`
-- a Dart/Flutter implementation following the same architecture
-- `RenderCommand[]` if a second renderer proves the need
+- `@novasheet/web-webgl` — sibling to `web-canvas2d`, same `WebRenderer` contract
+- `@novasheet/web-webgpu` — same
+- `RenderCommand[]` if (B)→(A) migration from §5 RenderFrame becomes warranted
+- a Dart/Flutter implementation **following the same architectural principles** (engine ↔ host ↔ renderer split) — NOT a literal port
+
+**Cross-platform honesty**: the TypeScript interfaces in this spec do **not** translate to Dart/Swift/Kotlin. Each language has its own module/widget/state conventions; the abstractions would be redesigned in the target language. What carries across is the **design principle**: separate platform-independent state from platform-specific host from renderer-specific drawing. Don't over-promise "one architecture for all platforms" — promise "consistent architectural boundary in each platform".
 
 The next renderer target should drive the exact command model. Do not design the full command language before a real second renderer exists.
