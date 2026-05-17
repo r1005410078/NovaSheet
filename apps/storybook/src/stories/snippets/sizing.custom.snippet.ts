@@ -1,7 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck — storybook docs display snippet; references
-import { Grid } from '@novasheet/web'
+import type { Grid } from '@novasheet/web'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
+import { createGridHost } from '../grid-host'
 import { generateRows } from '../mock-data'
 
 const schema: Schema = {
@@ -14,9 +15,8 @@ const schema: Schema = {
 }
 const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 60) })
 
-const el = document.createElement('div')
-el.style.cssText = 'width:780px;height:480px;position:relative'
-const grid = new Grid(el, { data })
+const host = createGridHost({ data })
+const grid = (host as HTMLElement & { __grid: Grid }).__grid
 grid.setRowHeight(0, 56)
 grid.setRowHeight(1, 40)
 grid.setRowHeight(2, 20)

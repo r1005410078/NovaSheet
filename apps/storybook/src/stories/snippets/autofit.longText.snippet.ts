@@ -9,7 +9,7 @@ const data = new InMemoryDataSource({
   schema: wrapAutofitSchema(),
   rows: wrapAutofitSampleRows(),
 })
-const host = createGridHost({ data }, 720, 420)
+const host = createGridHost({ data })
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
     ;(host as HTMLElement & { __grid: Grid }).__grid.autofitRows()

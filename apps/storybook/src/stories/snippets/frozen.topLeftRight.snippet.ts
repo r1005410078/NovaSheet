@@ -19,20 +19,13 @@ const schema: Schema = {
   ],
 }
 
-const rowCount = 16
-const hostHeight = 32 + 28 * rowCount
-
-const data = new GeneratedDataSource(rowCount, schema, (row, fieldId) => {
+const data = new GeneratedDataSource(16, schema, (row, fieldId) => {
   if (fieldId === 'employee') return `员工 ${row}`
   if (fieldId === 'summary') return `第 ${(row % 4) + 1} 季度汇总`
   return `指标-${row}`
 })
 
-createGridHost(
-  {
-    data,
-    frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
-  },
-  860,
-  hostHeight,
-)
+createGridHost({
+  data,
+  frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
+})

@@ -5,7 +5,7 @@ import { createWrapAutofitBigDataSource } from '../mock-data'
 import { createGridHost } from '../grid-host'
 
 const rowCount = 10_000
-const host = createGridHost({ data: createWrapAutofitBigDataSource(rowCount) }, 860, 520)
+const host = createGridHost({ data: createWrapAutofitBigDataSource(rowCount) })
 
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {

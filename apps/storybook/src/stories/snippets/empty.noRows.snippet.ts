@@ -9,4 +9,4 @@ const data = new InMemoryDataSource({
   rows: [],
 })
 
-createGridHost({ data }, 720, 280)
+createGridHost({ data })

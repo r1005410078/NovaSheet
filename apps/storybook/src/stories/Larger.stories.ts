@@ -7,7 +7,6 @@ import thousandRowsSrc from './snippets/larger.thousandRows.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/大数据',
-  parameters: { layout: 'centered' },
   ...docsMeta('1000 行 × 5 列，配合原生滚动查看视口外内容。'),
 }
 export default meta

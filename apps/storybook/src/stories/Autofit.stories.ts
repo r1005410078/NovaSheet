@@ -16,12 +16,8 @@ import autofitTenThousandSrc from './snippets/autofit.tenThousand.snippet.ts?raw
 const schema = wrapAutofitSchema()
 const sampleRows = wrapAutofitSampleRows()
 
-const WRAP_DEMO_HOST = { width: 720, height: 420 } as const
-const BIG_DATA_HOST = { width: 860, height: 520 } as const
-
 const meta: Meta = {
   title: '表格/行高自适应',
-  parameters: { layout: 'centered' },
   ...docsMeta(
     'M3 autofit：`field.wrap = true` 时支持多行换行；`grid.autofitRows()` 按当前列宽与文本内容批量重算行高。',
   ),
@@ -48,7 +44,7 @@ export const LongTextAutofit: Story = {
   ...docsStory(autofitLongTextSrc, '10 行多样本；加载后自动 `autofitRows()` 撑开行高。'),
   render: () => {
     const data = new InMemoryDataSource({ schema, rows: sampleRows })
-    const host = createGridHost({ data }, WRAP_DEMO_HOST.width, WRAP_DEMO_HOST.height)
+    const host = createGridHost({ data })
     mountAutofit(host)
     return host
   },
@@ -65,7 +61,7 @@ export const WrapWithoutAutofit: Story = {
   ),
   render: () => {
     const data = new InMemoryDataSource({ schema, rows: sampleRows })
-    return createGridHost({ data }, WRAP_DEMO_HOST.width, WRAP_DEMO_HOST.height)
+    return createGridHost({ data })
   },
 }
 
@@ -80,7 +76,7 @@ export const AfterColumnResize: Story = {
   ),
   render: () => {
     const data = new InMemoryDataSource({ schema, rows: sampleRows })
-    const host = createGridHost({ data }, WRAP_DEMO_HOST.width, WRAP_DEMO_HOST.height)
+    const host = createGridHost({ data })
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const grid = (host as HTMLElement & { __grid: Grid }).__grid
@@ -126,7 +122,7 @@ export const TenThousandWrapScroll: Story = {
   ),
   render: () => {
     const data = createWrapAutofitBigDataSource(BIG_DATA_ROW_COUNT)
-    const host = createGridHost({ data }, BIG_DATA_HOST.width, BIG_DATA_HOST.height)
+    const host = createGridHost({ data })
     mountBigDataAutofit(host, BIG_DATA_ROW_COUNT, () => {
       const grid = (host as HTMLElement & { __grid: Grid }).__grid
       grid.scrollToRow(5000, 'center')

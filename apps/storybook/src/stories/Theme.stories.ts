@@ -8,7 +8,6 @@ import themeCompactSrc from './snippets/theme.compact.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/主题',
-  parameters: { layout: 'centered' },
   ...docsMeta('通过 `theme` 选项或 `setTheme` 切换 Theme Token。'),
 }
 export default meta

@@ -21,7 +21,6 @@ const schema: Schema = {
 
 const meta: Meta = {
   title: '表格/滚动',
-  parameters: { layout: 'centered' },
   ...docsMeta('M2 原生滚动 + `ScrollMapper` 非线性 `scrollTop` 映射。'),
 }
 export default meta

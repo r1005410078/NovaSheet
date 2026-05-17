@@ -7,7 +7,6 @@ import allSevenSrc from './snippets/fieldTypes.allSeven.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/字段类型',
-  parameters: { layout: 'centered' },
   ...docsMeta('7 种 `FieldType` 各一列；`text` / `number` 有专门绘制路径，其余走文本 fallback。'),
 }
 export default meta

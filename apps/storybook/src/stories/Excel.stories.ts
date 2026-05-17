@@ -7,7 +7,6 @@ import { withExcelHeaders } from '@novasheet/web'
 
 const meta: Meta = {
   title: '表格/Excel 门面',
-  parameters: { layout: 'centered' },
   ...docsMeta('`excelHeaders: true` 时列头显示 A/B/…、左侧显示 1-based 行号，左上角为交汇格。'),
 }
 export default meta
@@ -26,10 +25,10 @@ const data = new InMemoryDataSource({
   rows: generateRows(basicTextSchema(), 50),
 })
 
-createGridHost(withExcelHeaders({ data }), 720, 400)`),
+createGridHost(withExcelHeaders({ data }))`),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 50) })
-    return createGridHost(withExcelHeaders({ data }), 720, 400)
+    return createGridHost(withExcelHeaders({ data }))
   },
 }

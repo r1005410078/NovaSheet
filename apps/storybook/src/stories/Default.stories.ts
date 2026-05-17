@@ -7,7 +7,6 @@ import hundredRowsSrc from './snippets/default.hundredRows.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/默认',
-  parameters: { layout: 'centered' },
   ...docsMeta('100 行 × 3 列纯文本，验证默认 `denseGridTheme`、列头与单元格对齐。'),
 }
 export default meta

@@ -5,8 +5,8 @@ import { Grid, type GridOptions } from '@novasheet/web'
  * Grid instance attached as `__grid` so stories can call imperative APIs (scrollToRow,
  * setTheme, etc.) and devtools can inspect it.
  *
- * 默认填满父容器（width/height = '100%'）——配合 preview.ts 的 fullscreen wrapper，
- * story 占据整个 iframe。若要固定尺寸（构造期 size 测试等），传 number 走 px。
+ * 默认填满 Storybook 画布（width/height = 100%）。容器尺寸变化时 Grid 的 ResizeObserver 会重算视口。
+ * 仅在单测或需要固定 px 视口时传 number。
  */
 export function createGridHost(
   opts: GridOptions,
@@ -17,6 +17,10 @@ export function createGridHost(
   el.style.width = typeof width === 'number' ? `${width}px` : width
   el.style.height = typeof height === 'number' ? `${height}px` : height
   el.style.position = 'relative'
+  el.style.boxSizing = 'border-box'
+  if (width === '100%' || height === '100%') {
+    el.style.minHeight = '0'
+  }
   const grid = new Grid(el, opts)
   ;(el as unknown as HTMLElement & { __grid: Grid }).__grid = grid
   return el

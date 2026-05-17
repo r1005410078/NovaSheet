@@ -4,13 +4,9 @@ import { InMemoryDataSource } from '@novasheet/core'
 import { wrapAutofitSampleRows, wrapAutofitSchema } from '../mock-data'
 import { createGridHost } from '../grid-host'
 
-createGridHost(
-  {
-    data: new InMemoryDataSource({
-      schema: wrapAutofitSchema(),
-      rows: wrapAutofitSampleRows(),
-    }),
-  },
-  720,
-  420,
-)
+createGridHost({
+  data: new InMemoryDataSource({
+    schema: wrapAutofitSchema(),
+    rows: wrapAutofitSampleRows(),
+  }),
+})

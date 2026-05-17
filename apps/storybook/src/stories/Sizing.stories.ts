@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { Grid } from '@novasheet/web'
+import type { Grid } from '@novasheet/web'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
+import { createGridHost } from '../grid-host'
 import { generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
 import sizingCustomSrc from './snippets/sizing.custom.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/尺寸',
-  parameters: { layout: 'centered' },
   ...docsMeta('Schema 非均匀列宽 + `setRowHeight` 覆盖单行高度。'),
 }
 export default meta
@@ -28,14 +28,11 @@ export const CustomColumnWidthsAndRowHeights: Story = {
     }
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 60) })
 
-    const el = document.createElement('div')
-    el.style.width = '780px'
-    el.style.height = '480px'
-    el.style.position = 'relative'
-    const grid = new Grid(el, { data })
+    const host = createGridHost({ data })
+    const grid = (host as HTMLElement & { __grid: Grid }).__grid
     grid.setRowHeight(0, 56)
     grid.setRowHeight(1, 40)
     grid.setRowHeight(2, 20)
-    return el
+    return host
   },
 }

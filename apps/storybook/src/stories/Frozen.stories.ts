@@ -7,8 +7,7 @@ import frozenTopLeftRightSrc from './snippets/frozen.topLeftRight.snippet.ts?raw
 
 const meta: Meta = {
   title: '表格/冻结',
-  parameters: { layout: 'centered' },
-  ...docsMeta('顶行 + 左列 + 右列冻结（20 列）；中间列可横向滚动。'),
+  ...docsMeta('顶行 + 左列 + 右列冻结（20 列）；中间列可横向滚动。画布尺寸随 Storybook 视口变化。'),
 }
 export default meta
 
@@ -17,9 +16,6 @@ type Story = StoryObj
 const METRIC_COUNT = 18
 /** 可视区内完整展示、无纵向滚动条（header 32 + rowHeight 28 × N） */
 const STORY_ROW_COUNT = 16
-const STORY_HOST_WIDTH = 860
-const STORY_HOST_HEIGHT = 32 + 28 * STORY_ROW_COUNT
-
 const metricFields: Field[] = Array.from({ length: METRIC_COUNT }, (_, i) => {
   const n = i + 1
   const id = `metric_${String(n).padStart(2, '0')}`
@@ -44,7 +40,7 @@ const regions = ['华北', '华东', '华南', '西南']
 
 export const FrozenTopLeftAndRight: Story = {
   name: '顶行 + 左右列冻结（20 列）',
-  ...docsStory(frozenTopLeftRightSrc, '固定视口尺寸，16 行数据无纵向滚动；中间列仍可横向滚动。'),
+  ...docsStory(frozenTopLeftRightSrc, '16 行数据；视口随画布高度变化，行数超出时出现纵向滚动。'),
   render: () => {
     const data = new GeneratedDataSource(STORY_ROW_COUNT, schema, (row, fieldId) => {
       if (fieldId === 'employee') return `员工 ${row}`
@@ -56,13 +52,9 @@ export const FrozenTopLeftAndRight: Story = {
       return ''
     })
 
-    return createGridHost(
-      {
-        data,
-        frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
-      },
-      STORY_HOST_WIDTH,
-      STORY_HOST_HEIGHT,
-    )
+    return createGridHost({
+      data,
+      frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
+    })
   },
 }

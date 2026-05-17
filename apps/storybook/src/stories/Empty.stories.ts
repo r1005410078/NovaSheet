@@ -7,7 +7,6 @@ import noRowsSrc from './snippets/empty.noRows.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/空数据',
-  parameters: { layout: 'centered' },
   ...docsMeta('`rowCount = 0` 时仍绘制列头；正文区显示 SVG 空状态插画与提示文案。'),
 }
 export default meta
@@ -20,6 +19,6 @@ export const NoRows: Story = {
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: [] })
-    return createGridHost({ data }, 720, 280)
+    return createGridHost({ data })
   },
 }
