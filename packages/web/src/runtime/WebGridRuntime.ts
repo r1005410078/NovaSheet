@@ -31,13 +31,17 @@ import {
   computeResizeHandles,
   computeScrollReveal,
   FrameScheduler,
+  getCellContextMenuItems,
   hitTestCell,
   MIN_RESIZE_SIZE,
   isTypableEditKey,
   type CellAddress,
+  type ContextMenuAction,
+  type ContextMenuContext,
   type ResizeHandleRect,
 } from '@novasheet/core'
 import type { DomCellEditor } from '../interaction/DomCellEditor'
+import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -95,6 +99,10 @@ export class WebGridRuntime {
   private lastDragPointer: WebPointerEvent | null = null
   private handleLayer?: DomHandleLayer
   private cellEditor?: DomCellEditor
+  private contextMenuLayer?: DomContextMenuLayer
+  private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+  private clipboardReady = false
+  private lastContextMenuContext: ContextMenuContext | null = null
   /**
    * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
    * 非 multiline 编辑置 null。
@@ -127,6 +135,91 @@ export class WebGridRuntime {
   setCellEditor(editor: DomCellEditor): void {
     this.cellEditor = editor
     this.syncCellEditorTheme()
+  }
+
+  /** Phase 4.0 — 注入右键菜单层。 */
+  setContextMenuLayer(layer: DomContextMenuLayer): void {
+    this.contextMenuLayer = layer
+    this.syncContextMenuTheme()
+  }
+
+  setOnContextMenuAction(cb: (action: ContextMenuAction, ctx: ContextMenuContext) => void): void {
+    this.onContextMenuAction = cb
+  }
+
+  setClipboardReady(ready: boolean): void {
+    this.clipboardReady = ready
+  }
+
+  closeContextMenu(): void {
+    this.contextMenuLayer?.close()
+  }
+
+  handleHostContextMenu(event: WebPointerEvent): void {
+    if (this.destroyed) return
+    if (!this.contextMenuLayer) return
+    if (this.resizeDrag || this.draggingSelection) return
+
+    if (this.engine.isCellEditing()) {
+      this.commitCellEdit(false)
+    }
+
+    const frame = this.engine.getFrame()
+    const headerHeight = frame.theme.metrics.headerHeight
+    if (event.y < headerHeight) return
+
+    const hit = hitTestCell(frame, event)
+    if (!hit) return
+    if (hit.colIndex < 0 || hit.rowIndex < 0) return
+
+    const selection = this.engine.getSelection()
+    const range = selection.selectedRange
+    const inRange =
+      range !== null &&
+      hit.rowIndex >= range.startRow &&
+      hit.rowIndex <= range.endRow &&
+      hit.colIndex >= range.startCol &&
+      hit.colIndex <= range.endCol
+    if (!inRange) {
+      this.engine.selectCell(hit)
+      this.afterEngineMutation()
+    }
+
+    const newSelection = this.engine.getSelection()
+    const ctx: ContextMenuContext = {
+      cell: hit,
+      selectedRange: newSelection.selectedRange,
+      hasSelection: newSelection.activeCell !== null,
+      clipboardReady: this.clipboardReady,
+    }
+    this.lastContextMenuContext = ctx
+    const items = getCellContextMenuItems(ctx)
+    this.contextMenuLayer.open({
+      clientX: event.clientX ?? event.x,
+      clientY: event.clientY ?? event.y,
+      items,
+    })
+  }
+
+  handleContextMenuSelected(id: ContextMenuAction): void {
+    if (!this.lastContextMenuContext) return
+    this.onContextMenuAction?.(id, this.lastContextMenuContext)
+  }
+
+  openContextMenuAt(rowIndex: number, fieldId: string): void {
+    if (this.destroyed || !this.contextMenuLayer) return
+    const colIndex = this.engine.getColumnIndex(fieldId)
+    if (colIndex < 0) return
+    const frame = this.engine.getFrame()
+    const rect = computeCellRect(frame, { rowIndex, colIndex })
+    if (!rect) return
+    this.handleHostContextMenu({
+      x: rect.x + rect.width,
+      y: rect.y + rect.height,
+      clientX: rect.x + rect.width,
+      clientY: rect.y + rect.height,
+      shiftKey: false,
+    })
   }
 
   /** 注入或替换 TextMeasurer；backend 切换 measurer（如主题字体变更）时调用。 */
@@ -225,6 +318,7 @@ export class WebGridRuntime {
     this.resizeSpacer()
     this.remapScroll()
     this.refresh()
+    this.contextMenuLayer?.close()
   }
 
   scrollToRow(rowIndex: number, align: 'start' | 'center' | 'end' = 'start'): void {
@@ -348,6 +442,7 @@ export class WebGridRuntime {
     const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
     this.engine.setScroll(logicalX, logicalY)
     this.syncCellEditorPosition()
+    this.contextMenuLayer?.close()
     this.invalidate()
   }
 
@@ -587,6 +682,10 @@ export class WebGridRuntime {
 
   private syncCellEditorTheme(): void {
     this.cellEditor?.applyTheme(this.engine.getTheme())
+  }
+
+  private syncContextMenuTheme(): void {
+    this.contextMenuLayer?.applyTheme(this.engine.getTheme())
   }
 
   private openCellEditor(

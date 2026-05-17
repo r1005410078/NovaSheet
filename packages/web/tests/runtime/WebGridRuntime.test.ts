@@ -486,6 +486,144 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
   })
 })
 
+describe('WebGridRuntime contextmenu — Phase 4.0', () => {
+  function makeContextMenu() {
+    return {
+      open: mock(() => {}),
+      close: mock(() => {}),
+      isOpen: mock(() => false),
+      applyTheme: mock(() => {}),
+      destroy: mock(() => {}),
+      attach: mock(() => {}),
+    }
+  }
+
+  it('drag-select 进行中不开菜单', () => {
+    const engine = makeEngine()
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const menu = makeContextMenu()
+    runtime.setContextMenuLayer(menu as never)
+    ;(runtime as unknown as { draggingSelection: boolean }).draggingSelection = true
+    runtime.handleHostContextMenu({ x: 100, y: 100, shiftKey: false, clientX: 100, clientY: 100 })
+    expect(menu.open).not.toHaveBeenCalled()
+  })
+
+  it('cell 编辑中先 commit 再开菜单', () => {
+    const engine = makeEngine()
+    engine.isCellEditing = mock(() => true)
+    engine.commitCellEdit = mock(() => true)
+    engine.getFrame = mock(() => ({
+      data: {} as never,
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: { indexToPosition: () => 0, getSize: () => 28, positionToIndex: (pos: number) => Math.floor(pos / 28) } as never,
+      colsAxis: { indexToPosition: () => 0, getSize: () => 100, positionToIndex: (pos: number) => Math.floor(pos / 100) } as never,
+      viewport: {
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            rowRange: [0, 9],
+            colRange: [0, 2],
+            rect: { x: 0, y: 32, width: 300, height: 200 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+    }))
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const editor = {
+      open: mock(() => {}),
+      close: mock(() => {}),
+      isOpen: mock(() => true),
+      applyTheme: mock(() => {}),
+      destroy: mock(() => {}),
+    }
+    runtime.setCellEditor(editor as never)
+    const menu = makeContextMenu()
+    runtime.setContextMenuLayer(menu as never)
+    runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
+    expect(engine.commitCellEdit).toHaveBeenCalled()
+    expect(menu.open).toHaveBeenCalled()
+  })
+
+  it('命中 header band 不开菜单', () => {
+    const engine = makeEngine()
+    engine.getFrame = mock(() => ({
+      data: {} as never,
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: { indexToPosition: () => 0, getSize: () => 28, positionToIndex: (pos: number) => Math.floor(pos / 28) } as never,
+      colsAxis: { indexToPosition: () => 0, getSize: () => 100, positionToIndex: (pos: number) => Math.floor(pos / 100) } as never,
+      viewport: { regions: [] } as never,
+    }))
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const menu = makeContextMenu()
+    runtime.setContextMenuLayer(menu as never)
+    // y < headerHeight (32) means header band
+    runtime.handleHostContextMenu({ x: 50, y: 10, shiftKey: false, clientX: 50, clientY: 10 })
+    expect(menu.open).not.toHaveBeenCalled()
+  })
+
+  it('range 外右键调 selectCell；range 内不动 selection', () => {
+    const engine = makeEngine()
+    const selectCell = mock(() => {})
+    engine.selectCell = selectCell
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+    }))
+    engine.getFrame = mock(() => ({
+      data: {} as never,
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: { indexToPosition: () => 0, getSize: () => 28, positionToIndex: (pos: number) => Math.floor(pos / 28) } as never,
+      colsAxis: { indexToPosition: () => 0, getSize: () => 100, positionToIndex: (pos: number) => Math.floor(pos / 100) } as never,
+      viewport: {
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            rowRange: [0, 9],
+            colRange: [0, 2],
+            rect: { x: 0, y: 32, width: 300, height: 200 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+    }))
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setContextMenuLayer(makeContextMenu() as never)
+
+    // 命中 (rowIndex=2, colIndex=1) — 在 range (0,0,0,0) 外
+    runtime.handleHostContextMenu({ x: 150, y: 100, shiftKey: false, clientX: 150, clientY: 100 })
+    expect(selectCell).toHaveBeenCalledWith({ rowIndex: 2, colIndex: 1 })
+
+    selectCell.mockClear()
+    // 命中 (0, 0) — 在 range 内
+    runtime.handleHostContextMenu({ x: 50, y: 40, shiftKey: false, clientX: 50, clientY: 40 })
+    expect(selectCell).not.toHaveBeenCalled()
+  })
+
+  it('setData / scroll 自动关闭菜单（via afterEngineMutation）', () => {
+    const engine = makeEngine()
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const menu = makeContextMenu()
+    menu.isOpen = mock(() => true)
+    runtime.setContextMenuLayer(menu as never)
+
+    runtime.setData({} as never, () => makeRenderer())
+    expect(menu.close).toHaveBeenCalled()
+
+    menu.close.mockClear()
+    runtime.handleHostScroll(100, 0)
+    expect(menu.close).toHaveBeenCalled()
+  })
+})
+
 describe('WebGridRuntime column resize — Phase 3.4', () => {
   const columnHandle: ResizeHandleRect = {
     kind: 'column',
