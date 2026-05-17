@@ -133,6 +133,11 @@ export class DomGridHost implements WebHost {
     return this.currentDpr
   }
 
+  getContainerBoundingRect(): { left: number; top: number } {
+    const rect = this.scrollHost.getBoundingClientRect()
+    return { left: rect.left, top: rect.top }
+  }
+
   getContainerSize(): { width: number; height: number } {
     const width =
       this.container.clientWidth || this.container.getBoundingClientRect().width || 400

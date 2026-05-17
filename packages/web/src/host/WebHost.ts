@@ -63,6 +63,8 @@ export interface WebHost {
   getScrollPosition(): { scrollTop: number; scrollLeft: number }
   getDpr(): number
   getContainerSize(): { width: number; height: number }
+  /** Return scroll-host's viewport-relative bounding rect (left/top in CSS px). Used for translating local coords to viewport coords. */
+  getContainerBoundingRect(): { left: number; top: number }
   destroy(): void
 }
 

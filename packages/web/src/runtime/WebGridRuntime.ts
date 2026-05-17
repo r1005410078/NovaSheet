@@ -153,6 +153,7 @@ export class WebGridRuntime {
 
   closeContextMenu(): void {
     this.contextMenuLayer?.close()
+    this.lastContextMenuContext = null
   }
 
   handleHostContextMenu(event: WebPointerEvent): void {
@@ -213,11 +214,13 @@ export class WebGridRuntime {
     const frame = this.engine.getFrame()
     const rect = computeCellRect(frame, { rowIndex, colIndex })
     if (!rect) return
+    const hostRect = this.host.getContainerBoundingRect()
+    // anchor at cell bottom-right corner; client coords add the host's viewport offset
     this.handleHostContextMenu({
       x: rect.x + rect.width,
       y: rect.y + rect.height,
-      clientX: rect.x + rect.width,
-      clientY: rect.y + rect.height,
+      clientX: hostRect.left + rect.x + rect.width,
+      clientY: hostRect.top + rect.y + rect.height,
       shiftKey: false,
     })
   }
