@@ -37,7 +37,7 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 | 阶段                 | 内容                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------- |
-| Phase 4+             | 单元格右键菜单 · 复制粘贴 · Undo / Redo · 填充柄 · 排序筛选 · 行列结构操作 |
+| Phase 4+             | 单元格右键菜单 · 复制粘贴 · Undo / Redo · 填充柄（序列填充）· 排序筛选 · 行列结构操作 |
 | 低优先级验证项       | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机验证             |
 
 架构细节见 [docs/architecture.md](docs/architecture.md)。
@@ -215,7 +215,7 @@ bun run --filter @novasheet/core build
 - **Phase 1**（已完成）：M1 Foundation ✅ → M2 滚动 ✅ → M3 冻结 / 尺寸自适应 ✅
 - **Phase 2**：Canvas 交互绘制分层 ✅
 - **Phase 3**：基础交互（3.1–3.5 ✅：选择 · 键盘导航 · resize · 基础编辑）
-- **Phase 4**：4.0 单元格右键菜单 · 4.1 复制 / 粘贴 / 剪切 · 4.2 Undo / Redo · 4.3 填充柄 · 4.4 排序 / 筛选 · 4.5 插入 / 删除 / 隐藏行列（含列头 / 行头右键菜单）
+- **Phase 4**：4.0 单元格右键菜单 · 4.1 复制 / 粘贴 / 剪切 · 4.2 Undo / Redo · 4.3 填充柄（序列填充）· 4.4 排序 / 筛选 · 4.5 插入 / 删除 / 隐藏行列（含列头 / 行头右键菜单）
 - **Phase 5**：单元格合并 / 取消合并 · 对齐方式 · 数字 / 日期 / 百分比 / 货币格式化 · 条件格式
 - **Phase 6**：字段类型专属编辑器 · Schema 校验 · 单元格校验规则 · 关联记录 / lookup / rollup · 分组 / 聚合 / 统计行
 - **Phase 7**：公式引擎 · 跨 sheet 引用 · 命名区域 · 数据透视表 · 图表 · 导入导出 xlsx/csv
@@ -255,7 +255,7 @@ Phase 3 聚焦“用户能像表格一样操作当前画布”，不承载复杂
 | Phase 4.0 | 单元格右键菜单               | DOM `ContextMenuLayer`；Cut / Copy / Paste 条目（4.1 前可 disabled）；仅 body 单元格命中。 |
 | Phase 4.1 | 剪贴板                       | `cut` / `copy` / `paste` 引擎 + Ctrl+X/C/V；与菜单共用命令。                                |
 | Phase 4.2 | Undo / Redo                  | 命令栈；与编辑 / 剪贴板操作挂钩。                                                           |
-| Phase 4.3 | 填充柄                       | 选区右下角 drag fill（overlay 层）。                                                        |
+| Phase 4.3 | 填充柄                       | 选区右下角 drag fill（overlay 层）——序列 / 公式外推，**不是**填充颜色（颜色属 Phase 5 cell formatting）。 |
 | Phase 4.4 | 排序 / 筛选                  | 列头排序指示；筛选 UI（视 DataSource 能力）。                                               |
 | Phase 4.5 | 行列结构 + 头区右键菜单      | 插入 / 删除 / 隐藏行列；**列头 / 行头** context menu（依赖本阶段 API）。                  |
 
