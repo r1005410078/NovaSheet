@@ -24,3 +24,6 @@ export type {
 export { denseGridTheme } from './theme/denseGridTheme'
 export type { Theme } from './theme/Theme'
 
+// Utility — exported so @novasheet/web can share RAF scheduling
+export { FrameScheduler, frameScheduler } from './util/raf'
+
