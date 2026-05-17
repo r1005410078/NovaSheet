@@ -6,6 +6,12 @@ export interface WebPointerEvent {
   /** scrollHost 本地坐标，单位 CSS px。 */
   readonly y: number
   readonly shiftKey: boolean
+  /**
+   * 视口坐标（仅 `contextmenu` 路径填充）。Phase 4.0 上下文菜单 DOM 用 position: fixed，
+   * 直接拿 viewport 锚点更省一次坐标换算。其它 pointer 入口可省略。
+   */
+  readonly clientX?: number
+  readonly clientY?: number
 }
 
 /** scrollHost 上的键盘事件（Phase 3.3）。 */
@@ -38,6 +44,8 @@ export interface WebHostOptions {
   onKeyDown?: (event: WebKeyboardEvent) => boolean
   /** dblclick 入口；runtime 进入单元格编辑。 */
   onDoubleClick?: (event: WebPointerEvent) => void
+  /** contextmenu 入口；host 内部已 preventDefault，runtime 决定是否打开菜单。 */
+  onContextMenu?: (event: WebPointerEvent) => void
 }
 
 /**

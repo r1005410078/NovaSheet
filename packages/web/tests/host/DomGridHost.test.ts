@@ -1,6 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { FrameScheduler } from '@novasheet/core'
 import { DomGridHost } from '../../src/host/DomGridHost'
+import type { WebPointerEvent } from '../../src/host/WebHost'
 
 describe('DomGridHost — DPR 监听', () => {
   it('destroy 时 removeEventListener，销毁后 handler 不再触发', () => {
@@ -112,6 +113,48 @@ describe('DomGridHost — pointer events', () => {
     expect(onPointerDown).not.toHaveBeenCalled()
     expect(onPointerMove).not.toHaveBeenCalled()
 
+    host.destroy()
+    document.body.removeChild(container)
+  })
+})
+
+describe('DomGridHost — contextmenu', () => {
+  it('contextmenu on scroll-host invokes onContextMenu with local coords + clientX/Y', () => {
+    const container = document.createElement('div')
+    Object.assign(container.style, { width: '300px', height: '200px', position: 'relative' })
+    document.body.appendChild(container)
+    const onContextMenu = mock((_e: WebPointerEvent) => {})
+    const scheduler = new FrameScheduler()
+    const host = new DomGridHost({
+      container,
+      scheduler,
+      onScroll: () => {},
+      onResize: () => {},
+      onContextMenu,
+    })
+    host.attach()
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+    // pin scroll-host bounding rect: (10, 5)
+    scrollHost.getBoundingClientRect = () =>
+      ({
+        x: 10, y: 5, left: 10, top: 5, width: 300, height: 200, right: 310, bottom: 205,
+        toJSON: () => ({}),
+      }) as DOMRect
+    const evt = new MouseEvent('contextmenu', {
+      clientX: 40,
+      clientY: 30,
+      bubbles: true,
+      cancelable: true,
+    })
+    scrollHost.dispatchEvent(evt)
+    expect(onContextMenu).toHaveBeenCalledWith({
+      x: 30,
+      y: 25,
+      shiftKey: false,
+      clientX: 40,
+      clientY: 30,
+    })
+    expect(evt.defaultPrevented).toBe(true)
     host.destroy()
     document.body.removeChild(container)
   })

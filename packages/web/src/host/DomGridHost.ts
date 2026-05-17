@@ -21,6 +21,7 @@ export class DomGridHost implements WebHost {
   private onPointerUp?: WebHostOptions['onPointerUp']
   private onKeyDown?: WebHostOptions['onKeyDown']
   private onDoubleClick?: WebHostOptions['onDoubleClick']
+  private onContextMenu?: WebHostOptions['onContextMenu']
   private scrollHost!: HTMLDivElement
   private scrollSpacer!: HTMLDivElement
   private nativeScroller!: NativeScroller
@@ -44,6 +45,7 @@ export class DomGridHost implements WebHost {
     this.onPointerUp = options.onPointerUp
     this.onKeyDown = options.onKeyDown
     this.onDoubleClick = options.onDoubleClick
+    this.onContextMenu = options.onContextMenu
   }
 
   attach(): void {
@@ -89,6 +91,7 @@ export class DomGridHost implements WebHost {
     this.scrollHost.addEventListener('pointercancel', this.handlePointerUp)
     this.scrollHost.addEventListener('keydown', this.handleKeyDown)
     this.scrollHost.addEventListener('dblclick', this.handleDoubleClick)
+    this.scrollHost.addEventListener('contextmenu', this.handleContextMenu)
 
     if (this.pendingScrollbar) {
       applyScrollbarTheme(this.scrollHost, this.pendingScrollbar)
@@ -154,6 +157,7 @@ export class DomGridHost implements WebHost {
     this.scrollHost?.removeEventListener('pointercancel', this.handlePointerUp)
     this.scrollHost?.removeEventListener('keydown', this.handleKeyDown)
     this.scrollHost?.removeEventListener('dblclick', this.handleDoubleClick)
+    this.scrollHost?.removeEventListener('contextmenu', this.handleContextMenu)
     this.nativeScroller?.destroy()
 
     if (this.scrollHost?.parentNode === this.container) {
@@ -190,6 +194,19 @@ export class DomGridHost implements WebHost {
       altKey: event.altKey,
     })
     if (handled) event.preventDefault()
+  }
+
+  private handleContextMenu = (event: MouseEvent): void => {
+    event.preventDefault()
+    if (!this.onContextMenu) return
+    const rect = this.scrollHost.getBoundingClientRect()
+    this.onContextMenu({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      shiftKey: event.shiftKey,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    })
   }
 
   private handleDoubleClick = (event: MouseEvent): void => {
