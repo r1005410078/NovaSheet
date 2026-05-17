@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/html'
 import { Grid, InMemoryDataSource, type Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
+import { GeneratedDataSource } from '../generated-data-source'
 
 const schema: Schema = {
   fields: [
@@ -33,17 +34,19 @@ export const TenThousandRows: Story = {
 }
 
 /**
- * 1,000,000 rows × 30 columns — the canonical stress test, covering both
- * non-linear vertical scroll (28M px content capped at 6M spacer) AND
- * horizontal scroll (4200 px content vs 780 px host).
+ * 1,000,000 rows × 30 columns via **GeneratedDataSource** — full Phase 1
+ * stress test, **0ms mount** (no preallocation).
  *
- * Allocation note: ~30M JS values across 1M Row objects ≈ 600-900MB heap
- * depending on V8 overhead. First render is slow (3-8s on a typical laptop)
- * — it's V8 building the dataset, not NovaSheet rendering. The M5 column-typed
- * TypedArray generator will replace this with O(1) lazy materialization.
+ * Covers both:
+ *   - non-linear vertical scroll (28M px content capped at 6M spacer)
+ *   - horizontal scroll (4200 px content vs 780 px host)
  *
- * After construction, scrolling stays smooth: ChunkedAxis is O(log n_chunks),
- * Renderer paints only the visible ~30 rows × ~6 cols = 180 cells per frame.
+ * Why no allocation lag: GeneratedDataSource computes cell values on demand
+ * via `cellFn(row, fieldId)`. Renderer only ever asks for ~30 × ~6 = 180
+ * visible cells per frame, each ~1μs to compute. Memory stays O(1).
+ *
+ * Constrast: the equivalent InMemoryDataSource version would allocate ~30M
+ * JS values upfront (3-8s, 600-900MB heap) before the first paint.
  */
 export const OneMillionRows: Story = {
   render: () => {
@@ -56,15 +59,10 @@ export const OneMillionRows: Story = {
         width: 140,
       })),
     }
-    const rows = new Array<Record<string, string | number>>(1_000_000)
-    for (let i = 0; i < rows.length; i++) {
-      const row: Record<string, string | number> = {}
-      for (let c = 0; c < colCount; c++) {
-        row[`c${c}`] = c % 3 === 0 ? i * 100 + c : `r${i}-c${c}`
-      }
-      rows[i] = row
-    }
-    const data = new InMemoryDataSource({ schema: wideSchema, rows })
+    const data = new GeneratedDataSource(1_000_000, wideSchema, (r, fieldId) => {
+      const c = Number(fieldId.slice(1))
+      return c % 3 === 0 ? r * 100 + c : `r${r}-c${c}`
+    })
     return createGridHost({ data })
   },
 }
