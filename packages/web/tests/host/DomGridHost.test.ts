@@ -116,3 +116,32 @@ describe('DomGridHost — pointer events', () => {
     document.body.removeChild(container)
   })
 })
+
+describe('DomGridHost — keyboard events', () => {
+  it('转发 keydown 并在 handled 时 preventDefault', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', { value: 400 })
+    Object.defineProperty(container, 'clientHeight', { value: 300 })
+    document.body.appendChild(container)
+
+    const onKeyDown = mock(() => true)
+    const host = new DomGridHost({
+      container,
+      scheduler: new FrameScheduler(),
+      onScroll: () => {},
+      onResize: () => {},
+      onKeyDown,
+    })
+    host.attach()
+
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLDivElement
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+    const prevented = !scrollHost.dispatchEvent(event)
+
+    expect(onKeyDown).toHaveBeenCalledWith({ key: 'ArrowDown', shiftKey: false })
+    expect(prevented).toBe(true)
+
+    host.destroy()
+    document.body.removeChild(container)
+  })
+})

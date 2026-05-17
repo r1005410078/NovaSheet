@@ -15,7 +15,7 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 | 维度                     | 数值                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d`                                                     |
-| 测试                     | 217 passing（bun:test，跨三包）                                                                                      |
+| 测试                     | 235 passing（bun:test，跨三包）                                                                                      |
 | Lint / Typecheck / Build | 全部 clean                                                                                                           |
 | 公共 API                 | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
 
@@ -29,12 +29,14 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 | Phase 2    | Canvas 交互绘制分层：background / content / grid / overlay · overlay 层入口预留                                      |
 | Phase 3.1  | `SelectionModel` · `hitTestCell` · 点击单元格选中 · overlay 层绘制选区填充与 active cell 边框                    |
 | Phase 3.2  | Shift + 点击扩展选区 · pointer 拖拽框选 · 拖选边缘自动滚动 · Excel 行列头联动高亮 · 多格 selectedRange overlay 绘制 |
+| Phase 3.3  | 方向键 / Tab / Enter 移动 active cell · Shift + 方向键扩展选区 · 滚动跟随焦点格                         |
+| Phase 3.4  | DOM resize handle：列头拖列宽、行号列拖行高（最小 20px）· 冻结区与普通区同步                           |
 
 ### 暂未交付
 
 | 阶段                 | 内容                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------- |
-| Phase 3.3+           | 键盘导航 · 行列 resize handles · 基础编辑                                          |
+| Phase 3.5+           | 基础单元格编辑                                                                     |
 | Phase 4+             | 复制粘贴 · Undo / Redo · 单元格合并 · 字段类型编辑器 · 公式 / 导入导出 · 框架适配层 |
 | 低优先级验证项       | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机验证             |
 
@@ -94,7 +96,29 @@ grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 // grid.destroy()
 ```
 
-本地查看变体：`bun run storybook` → 选 **表格 / 冻结** 等分组下的 **README**，可看到说明文字、各 story 预览与默认展开的 TypeScript 示例。
+本地查看变体：`bun run storybook` → 选 **表格 /** 分组下的 **README**（如 **表格/选择与键盘**）查看说明与快捷键表；各 story 画布可交互，**Show code** 可复制源码。
+
+### 选择与键盘（Phase 3）
+
+无需额外 API：挂载 `Grid` 后，**先点击表格**获得焦点，即可使用：
+
+| 操作 | 效果 |
+|------|------|
+| 单击 / Shift+单击 / 拖拽 | 单选、扩展选区、框选（3.1 / 3.2） |
+| ↑↓←→ | 移动 active cell |
+| Shift + ↑↓←→ | 扩展选区 |
+| Tab / Shift+Tab | 右移 / 左移（末列换行） |
+| Enter / Shift+Enter | 下移 / 上移 |
+
+焦点格滚出视口时会自动滚入可见区域。完整说明见 Storybook **表格/选择与键盘**。
+
+### 行列 resize（Phase 3.4）
+
+- **列宽**：列头底边 8px 命中区，`col-resize` 拖拽（拖中竖线预览，松手提交列宽）
+- **行高**：需 `excelHeaders: true`（或 `withExcelHeaders()`），行号列右缘 `row-resize` 拖拽（同上）
+- 最小 20px；handle 聚焦后可用方向键微调（Shift 加大步长）
+
+详见 Storybook **表格/行列 resize**。
 
 在线 demo 由 GitHub Pages 托管（push `main` 后自动部署）。首次启用需在仓库 **Settings → Pages → Build and deployment → Source** 选 **GitHub Actions**。
 
@@ -190,7 +214,7 @@ bun run --filter @novasheet/core build
 
 - **Phase 1**（已完成）：M1 Foundation ✅ → M2 滚动 ✅ → M3 冻结 / 尺寸自适应 ✅
 - **Phase 2**：Canvas 交互绘制分层 ✅
-- **Phase 3**：基础交互（3.1 选择模型 / 高亮 ✅ → 3.2 Shift / 拖拽扩展选择 ✅ → 3.3 键盘导航 → 3.4 resize handles → 3.5 基础编辑）
+- **Phase 3**：基础交互（3.1 选择模型 / 高亮 ✅ → 3.2 Shift / 拖拽扩展选择 ✅ → 3.3 键盘导航 ✅ → 3.4 resize ✅ → 3.5 基础编辑）
 - **Phase 4**：复制 / 粘贴 / 剪切 · Undo / Redo · 填充柄 · 排序 / 筛选 · 插入 / 删除 / 隐藏行列
 - **Phase 5**：单元格合并 / 取消合并 · 对齐方式 · 数字 / 日期 / 百分比 / 货币格式化 · 条件格式
 - **Phase 6**：字段类型专属编辑器 · Schema 校验 · 单元格校验规则 · 关联记录 / lookup / rollup · 分组 / 聚合 / 统计行
@@ -218,8 +242,8 @@ Phase 3 聚焦“用户能像表格一样操作当前画布”，不承载复杂
 | --------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Phase 3.1 | 选择模型 / 点击高亮      | 引入 `SelectionModel` / active cell / selected range；点击单元格后 overlay 层绘制选区填充与活动单元格边框。                                  |
 | Phase 3.2 | Shift / 拖拽扩展选择 ✅  | 基于 3.1 的 anchor / extent 扩展区域选择；支持 Shift + 点击、Shift + 方向键的数据状态、鼠标拖拽框选、拖选边缘自动滚动，以及 Excel 行列头联动高亮。 |
-| Phase 3.3 | 键盘导航                 | 方向键、Tab、Enter 移动 active cell；Shift + 方向键扩展 selected range；滚动跟随 active cell。                                                |
-| Phase 3.4 | 行高 / 列宽 resize       | 增加 header / row header 命中区、resize handle 绘制、拖拽调整行高列宽；冻结区域与普通滚动区域保持一致。                                      |
+| Phase 3.3 | 键盘导航 ✅              | 方向键、Tab、Enter 移动 active cell；Shift + 方向键扩展 selected range；滚动跟随 active cell。                                                |
+| Phase 3.4 | 行高 / 列宽 resize ✅    | DOM handle 层（列头 / 行号列命中区）；拖拽调整行高列宽；冻结与普通区每帧 sync。                                      |
 | Phase 3.5 | 基础编辑                 | 双击 / Enter 进入编辑，Esc 取消，Enter 提交；先支持文本 / 数字的基础输入，不在本阶段引入字段类型专属编辑器。                                 |
 
 Phase 3.1 会先把“后续 Shift 扩展选择、拖拽选择的基础状态”建好，但不会一次性交付全部选择手势。这个基础状态主要包括：

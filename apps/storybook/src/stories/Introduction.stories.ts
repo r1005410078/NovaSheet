@@ -35,7 +35,8 @@ export const Welcome: Story = {
       <h2 style="margin: 20px 0 6px; font-size: 16px;">当前能力</h2>
       <ul style="margin: 0 0 16px 20px; padding: 0; font-size: 13px;">
         <li><strong>M2</strong> — 虚拟滚动、原生滚动条</li>
-        <li><strong>M3</strong> — 顶 / 左 / 右冻结区域</li>
+        <li><strong>M3</strong> — 冻结、行高 autofit、wrap 换行</li>
+        <li><strong>Phase 3</strong> — 选区 + 键盘导航（<strong>表格/选择与键盘</strong>）；行列 resize（<strong>表格/行列 resize</strong>）</li>
       </ul>
       <p style="margin: 20px 0 0; color: #656d76; font-size: 12px;">
         设计文档：<code>docs/superpowers/specs/</code>

@@ -25,8 +25,18 @@ import type {
   TextMeasurer,
   Theme,
 } from '@novasheet/core'
-import { autofitRowHeights, FrameScheduler, hitTestCell } from '@novasheet/core'
-import type { WebHost, WebPointerEvent } from '../host/WebHost'
+import {
+  autofitRowHeights,
+  computeResizeHandles,
+  computeScrollReveal,
+  FrameScheduler,
+  hitTestCell,
+  MIN_RESIZE_SIZE,
+  type CellAddress,
+  type ResizeHandleRect,
+} from '@novasheet/core'
+import type { DomHandleLayer } from '../interaction/DomHandleLayer'
+import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
 import { ScrollMapper } from '../scroll/ScrollMapper'
 
@@ -50,6 +60,8 @@ export interface WebGridRuntimeOptions {
    * 方便测试场景与未来 backend 选择性禁用 autofit。
    */
   measurer?: TextMeasurer
+  /** Phase 3.4 — DOM resize handles；每帧 render 后 sync 位置。 */
+  handleLayer?: DomHandleLayer
 }
 
 /** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
@@ -78,6 +90,18 @@ export class WebGridRuntime {
   private destroyed = false
   private draggingSelection = false
   private lastDragPointer: WebPointerEvent | null = null
+  private handleLayer?: DomHandleLayer
+  private resizeDrag: {
+    handle: ResizeHandleRect
+    pointerId: number
+    startClientX: number
+    startClientY: number
+    startSize: number
+    /** 列：左缘 x；行：顶缘 y — 拖拽中固定，尺寸从该边向外扩 */
+    anchorStart: number
+    /** 拖拽预览尺寸；pointerup 时一次性 commit（spec §6.5.2） */
+    previewSize: number
+  } | null = null
 
   constructor(opts: WebGridRuntimeOptions) {
     this.engine = opts.engine
@@ -86,6 +110,7 @@ export class WebGridRuntime {
     this.scheduler = opts.scheduler ?? new FrameScheduler()
     this.onSurfaceResize = opts.onSurfaceResize
     this.measurer = opts.measurer
+    this.handleLayer = opts.handleLayer
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -102,6 +127,7 @@ export class WebGridRuntime {
     this.onSurfaceResize?.(width, height, dpr)
     this.resizeSpacer()
     this.syncScrollbarTheme()
+    this.syncResizeHandleTheme()
     this.paintSync()
   }
 
@@ -126,6 +152,7 @@ export class WebGridRuntime {
     this.engine.setTheme(theme)
     patchRenderer?.(this.renderer)
     this.syncScrollbarTheme()
+    this.syncResizeHandleTheme()
     this.afterEngineMutation()
   }
 
@@ -214,9 +241,65 @@ export class WebGridRuntime {
     this.host.scrollTo(scrollTop, scrollLeft)
   }
 
+  handleResizePointerDown(
+    handle: ResizeHandleRect,
+    pointerId: number,
+    clientX: number,
+    clientY: number,
+  ): void {
+    if (this.destroyed) return
+    const startSize = this.readResizeSize(handle)
+    if (startSize === null) return
+
+    const edge =
+      handle.kind === 'column'
+        ? handle.x + handle.width / 2
+        : handle.y + handle.height / 2
+    this.resizeDrag = {
+      handle,
+      pointerId,
+      startClientX: clientX,
+      startClientY: clientY,
+      startSize,
+      anchorStart: edge - startSize,
+      previewSize: startSize,
+    }
+    this.draggingSelection = false
+    this.showResizeIndicator(startSize)
+  }
+
+  handleResizePointerMove(pointerId: number, clientX: number, clientY: number): void {
+    if (this.destroyed || !this.resizeDrag || this.resizeDrag.pointerId !== pointerId) return
+    const nextSize = this.computeResizeSize(this.resizeDrag, clientX, clientY)
+    this.resizeDrag.previewSize = nextSize
+    this.showResizeIndicator(nextSize)
+  }
+
+  handleResizePointerUp(pointerId: number): void {
+    if (!this.resizeDrag || this.resizeDrag.pointerId !== pointerId) return
+    const { handle, startSize, previewSize } = this.resizeDrag
+    this.resizeDrag = null
+    this.handleLayer?.hideIndicator()
+    if (previewSize !== startSize) {
+      this.applyResizeSize(handle, previewSize)
+      this.afterEngineMutation()
+    }
+  }
+
+  handleResizeKeyboard(handle: ResizeHandleRect, delta: number): void {
+    if (this.destroyed) return
+    const current = this.readResizeSize(handle)
+    if (current === null) return
+    const next = Math.max(MIN_RESIZE_SIZE, current + delta)
+    this.applyResizeSize(handle, next)
+    this.syncResizeHandles()
+    this.refresh()
+  }
+
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
+    this.resizeDrag = null
     this.scheduler.cancel('renderer:flush')
     this.scheduler.cancel(HOST_RESIZE_KEY)
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
@@ -271,6 +354,17 @@ export class WebGridRuntime {
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
   }
 
+  /** Phase 3.3 — 方向键 / Tab / Enter 导航；返回 true 表示已消费按键。 */
+  handleHostKeyDown(event: WebKeyboardEvent): boolean {
+    if (this.destroyed) return false
+    if (!this.engine.navigateSelection(event.key, event.shiftKey)) return false
+
+    const focus = this.getSelectionScrollTarget()
+    if (focus) this.ensureCellVisible(focus)
+    this.refresh()
+    return true
+  }
+
   /**
    * 合并 ResizeObserver / DPR 变更：在同一 RAF 内完成 viewport、位图缩放与同步绘制。
    * 避免 HighDPI.resize 清空 canvas 后等到 `renderer:flush` 才画（中间空白帧会闪烁）。
@@ -301,12 +395,20 @@ export class WebGridRuntime {
       if (this.destroyed) return
       const frame = this.engine.getFrame()
       this.renderer.render(frame)
+      this.syncResizeHandles()
     })
   }
 
   private paintSync(): void {
     const frame = this.engine.getFrame()
     this.renderer.render(frame)
+    this.syncResizeHandles()
+  }
+
+  private syncResizeHandles(): void {
+    if (!this.handleLayer || this.resizeDrag) return
+    const frame = this.engine.getFrame()
+    this.handleLayer.sync(computeResizeHandles(frame))
   }
 
   private updateDragAutoScroll(pointer: WebPointerEvent): void {
@@ -406,6 +508,90 @@ export class WebGridRuntime {
 
   private syncScrollbarTheme(): void {
     this.host.applyScrollbarTheme(this.engine.getTheme().scrollbar)
+  }
+
+  private syncResizeHandleTheme(): void {
+    const theme = this.engine.getTheme()
+    this.handleLayer?.applyTheme(theme.colors, theme.metrics)
+  }
+
+  private getSelectionScrollTarget(): CellAddress | null {
+    const selection = this.engine.getSelection()
+    return selection.extentCell ?? selection.activeCell
+  }
+
+  private readResizeSize(handle: ResizeHandleRect): number | null {
+    if (handle.kind === 'column' && handle.fieldId) {
+      const colIndex = this.engine.getColumnIndex(handle.fieldId)
+      if (colIndex < 0) return null
+      return this.engine.getColsAxis().getSize(colIndex)
+    }
+    if (handle.kind === 'row' && handle.rowIndex !== undefined) {
+      const { rowIndex } = handle
+      if (rowIndex < 0 || rowIndex >= this.engine.getRowsAxis().getCount()) return null
+      return this.engine.getRowsAxis().getSize(rowIndex)
+    }
+    return null
+  }
+
+  private computeResizeSize(
+    drag: NonNullable<WebGridRuntime['resizeDrag']>,
+    clientX: number,
+    clientY: number,
+  ): number {
+    const delta =
+      drag.handle.kind === 'column' ? clientX - drag.startClientX : clientY - drag.startClientY
+    return Math.max(MIN_RESIZE_SIZE, drag.startSize + delta)
+  }
+
+  private applyResizeSize(handle: ResizeHandleRect, size: number): void {
+    if (handle.kind === 'column' && handle.fieldId) {
+      this.engine.setColumnWidth(handle.fieldId, size)
+      this.resizeSpacer()
+      this.invalidate()
+      return
+    }
+    if (handle.kind === 'row' && handle.rowIndex !== undefined) {
+      this.engine.setRowHeight(handle.rowIndex, size)
+      this.resizeSpacer()
+      this.invalidate()
+    }
+  }
+
+  private showResizeIndicator(size: number): void {
+    if (!this.handleLayer || !this.resizeDrag) return
+    const { handle, anchorStart } = this.resizeDrag
+    if (handle.kind === 'column') {
+      this.handleLayer.showIndicator({ kind: 'column', x: anchorStart + size })
+      return
+    }
+    this.handleLayer.showIndicator({ kind: 'row', y: anchorStart + size })
+  }
+
+  private ensureCellVisible(cell: CellAddress): void {
+    const frame = this.engine.getFrame()
+    const { width, height } = this.host.getContainerSize()
+    const { scrollTop, scrollLeft } = this.host.getScrollPosition()
+    const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
+
+    const reveal = computeScrollReveal({
+      rowIndex: cell.rowIndex,
+      colIndex: cell.colIndex,
+      rowsAxis: frame.rowsAxis,
+      colsAxis: frame.colsAxis,
+      scrollX: logicalX,
+      scrollY: logicalY,
+      viewportWidth: width,
+      viewportHeight: height,
+      headerHeight: frame.theme.metrics.headerHeight,
+      rowHeaderWidth: frame.viewport.rowHeaderWidth,
+    })
+    if (!reveal) return
+
+    const nextTop = this.logicalToScrollY(reveal.logicalY)
+    const nextLeft = this.logicalToScrollX(reveal.logicalX)
+    this.host.scrollTo(nextTop, nextLeft)
+    this.handleHostScroll(nextTop, nextLeft)
   }
 }
 

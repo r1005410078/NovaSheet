@@ -5,6 +5,9 @@
  * 键盘导航都复用同一份状态，不让 web / renderer 各自维护一套选择概念。
  */
 
+import type { GridIndexBounds, SelectionNavigationIntent } from './SelectionNavigation'
+import { applySelectionNavigation } from './SelectionNavigation'
+
 export interface CellAddress {
   readonly rowIndex: number
   readonly colIndex: number
@@ -61,6 +64,11 @@ export class SelectionModel {
 
   clear(): void {
     this.selection = EMPTY_SELECTION
+  }
+
+  /** Phase 3.3 — 键盘导航；返回移动后的焦点格（用于滚动跟随）。 */
+  navigate(intent: SelectionNavigationIntent, bounds: GridIndexBounds): CellAddress | null {
+    return applySelectionNavigation(this, intent, bounds)
   }
 }
 

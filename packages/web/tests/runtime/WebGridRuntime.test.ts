@@ -1,5 +1,12 @@
 import { describe, expect, it, mock, spyOn } from 'bun:test'
-import type { CellAddress, DataSource, GridEngine, GridSelection, Theme } from '@novasheet/core'
+import type {
+  CellAddress,
+  DataSource,
+  GridEngine,
+  GridSelection,
+  ResizeHandleRect,
+  Theme,
+} from '@novasheet/core'
 import type { WebHost } from '../../src/host/WebHost'
 import type { WebRenderer } from '../../src/render/WebRenderer'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
@@ -15,6 +22,7 @@ function makeEngine(): GridEngine {
     setRowHeight: mock(() => {}),
     setColumnWidth: mock(() => {}),
     selectCell: mock(() => {}),
+    navigateSelection: mock(() => false),
     clearSelection: mock(() => {}),
     getSelection: mock(
       () =>
@@ -305,5 +313,122 @@ describe('WebGridRuntime drag auto-scroll — 拖选带动滚动', () => {
     expect(host.scrollTo).not.toHaveBeenCalled()
 
     globalThis.requestAnimationFrame = originalRaf
+  })
+})
+
+describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
+  it('消费方向键后更新选区、滚动跟随并重绘', () => {
+    const engine = makeEngine()
+    engine.navigateSelection = mock(() => true)
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 2, colIndex: 1 },
+      anchorCell: { rowIndex: 2, colIndex: 1 },
+      extentCell: { rowIndex: 2, colIndex: 1 },
+      selectedRange: { startRow: 2, endRow: 2, startCol: 1, endCol: 1 },
+    }))
+    const rowsAxis = {
+      indexToPosition: (i: number) => i * 28,
+      getSize: () => 28,
+    }
+    const colsAxis = {
+      indexToPosition: (i: number) => i * 100,
+      getSize: () => 100,
+    }
+    engine.getFrame = mock(() => ({
+      data: {} as DataSource,
+      theme: { metrics: { headerHeight: 32 } } as Theme,
+      rowsAxis: rowsAxis as never,
+      colsAxis: colsAxis as never,
+      viewport: {
+        contentRect: { width: 400, height: 300 },
+        rowHeaderWidth: 0,
+        scrollX: 0,
+        scrollY: 0,
+      } as never,
+    }))
+
+    const host = makeHost()
+    const runtime = new WebGridRuntime({ engine, host, renderer: makeRenderer() })
+
+    const handled = runtime.handleHostKeyDown({ key: 'ArrowDown', shiftKey: false })
+
+    expect(handled).toBe(true)
+    expect(engine.navigateSelection).toHaveBeenCalledWith('ArrowDown', false)
+  })
+
+  it('未识别按键返回 false', () => {
+    const engine = makeEngine()
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+
+    expect(runtime.handleHostKeyDown({ key: 'Escape', shiftKey: false })).toBe(false)
+    expect(engine.navigateSelection).toHaveBeenCalledWith('Escape', false)
+  })
+})
+
+describe('WebGridRuntime column resize — Phase 3.4', () => {
+  const columnHandle: ResizeHandleRect = {
+    kind: 'column',
+    id: 'name',
+    fieldId: 'name',
+    colIndex: 0,
+    x: 92,
+    y: 0,
+    width: 8,
+    height: 32,
+  }
+
+  it('拖拽中只更新预览，松手才 setColumnWidth', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = () => 0
+    engine.getColsAxis = () =>
+      ({
+        getSize: () => 100,
+      }) as never
+
+    const showIndicator = mock(() => {})
+    const hideIndicator = mock(() => {})
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      handleLayer: { showIndicator, hideIndicator, sync: mock(() => {}) } as never,
+    })
+
+    runtime.handleResizePointerDown(columnHandle, 1, 100, 0)
+    expect(engine.setColumnWidth).not.toHaveBeenCalled()
+    expect(showIndicator).toHaveBeenCalled()
+
+    runtime.handleResizePointerMove(1, 130, 0)
+    expect(engine.setColumnWidth).not.toHaveBeenCalled()
+    expect(showIndicator).toHaveBeenCalledTimes(2)
+
+    runtime.handleResizePointerUp(1)
+    expect(engine.setColumnWidth).toHaveBeenCalledTimes(1)
+    expect(engine.setColumnWidth).toHaveBeenCalledWith('name', 130)
+    expect(hideIndicator).toHaveBeenCalled()
+  })
+
+  it('无位移松手不提交', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = () => 0
+    engine.getColsAxis = () =>
+      ({
+        getSize: () => 100,
+      }) as never
+
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      handleLayer: {
+        showIndicator: mock(() => {}),
+        hideIndicator: mock(() => {}),
+      } as never,
+    })
+
+    runtime.handleResizePointerDown(columnHandle, 1, 100, 0)
+    runtime.handleResizePointerUp(1)
+
+    expect(engine.setColumnWidth).not.toHaveBeenCalled()
   })
 })

@@ -1,4 +1,5 @@
 import type { DataSource } from '../data/DataSource'
+import { parseSelectionNavigationKey } from '../interaction/SelectionNavigation'
 import {
   SelectionModel,
   type CellAddress,
@@ -120,6 +121,18 @@ export class DefaultGridEngine implements GridEngine {
 
   clearSelection(): void {
     this.selection.clear()
+  }
+
+  navigateSelection(key: string, shiftKey: boolean): boolean {
+    const intent = parseSelectionNavigationKey(key, shiftKey)
+    if (!intent) return false
+
+    const rowCount = this.data.getRowCount()
+    const colCount = this.data.getSchema().fields.length
+    if (rowCount <= 0 || colCount <= 0) return true
+
+    this.selection.navigate(intent, { rowCount, colCount })
+    return true
   }
 
   getFrame(): RenderFrame {

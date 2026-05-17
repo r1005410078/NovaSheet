@@ -65,6 +65,25 @@ export type {
 } from './interaction/SelectionModel'
 export { hitTestCell } from './interaction/HitTest'
 export type { HitTestPoint } from './interaction/HitTest'
+export {
+  applySelectionNavigation,
+  parseSelectionNavigationKey,
+} from './interaction/SelectionNavigation'
+export type {
+  GridIndexBounds,
+  SelectionNavigationIntent,
+  SelectionNavigationTarget,
+} from './interaction/SelectionNavigation'
+export { computeScrollReveal } from './interaction/scrollCellIntoView'
+export type { ScrollRevealInput, ScrollRevealResult } from './interaction/scrollCellIntoView'
+export {
+  computeResizeHandles,
+  MIN_RESIZE_SIZE,
+  RESIZE_HANDLE_HIT_SIZE,
+  RESIZE_KEYBOARD_STEP,
+  RESIZE_KEYBOARD_STEP_LARGE,
+} from './interaction/HandleLayout'
+export type { ResizeHandleKind, ResizeHandleRect } from './interaction/HandleLayout'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'

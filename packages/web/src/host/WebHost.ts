@@ -8,6 +8,12 @@ export interface WebPointerEvent {
   readonly shiftKey: boolean
 }
 
+/** scrollHost 上的键盘事件（Phase 3.3）。 */
+export interface WebKeyboardEvent {
+  readonly key: string
+  readonly shiftKey: boolean
+}
+
 /** `DomGridHost` 等实现的构造参数。 */
 export interface WebHostOptions {
   container: HTMLElement
@@ -25,6 +31,8 @@ export interface WebHostOptions {
   onPointerMove?: (event: WebPointerEvent) => void
   /** pointer up/end 入口；用于结束拖拽框选。 */
   onPointerUp?: () => void
+  /** keydown 入口；runtime 处理表格导航键。 */
+  onKeyDown?: (event: WebKeyboardEvent) => boolean
 }
 
 /**

@@ -26,6 +26,7 @@ import type {
   GridController,
 } from '../grid/GridController'
 import { DomGridHost } from '../host/DomGridHost'
+import { DomHandleLayer } from '../interaction/DomHandleLayer'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
 /**
@@ -47,6 +48,7 @@ export class Canvas2DBackend implements GridController {
   private highDpi: HighDPI
   private renderer: Canvas2DRenderer
   private host: DomGridHost
+  private handleLayer: DomHandleLayer
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
   /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
@@ -74,6 +76,16 @@ export class Canvas2DBackend implements GridController {
     this.highDpi = new HighDPI(this.canvas, this.ctx)
     this.renderer = this.createRenderer()
 
+    this.handleLayer = new DomHandleLayer(this.container, {
+      onResizePointerDown: (handle, pointerId, x, y) =>
+        this.runtime.handleResizePointerDown(handle, pointerId, x, y),
+      onResizePointerMove: (pointerId, x, y) =>
+        this.runtime.handleResizePointerMove(pointerId, x, y),
+      onResizePointerUp: (pointerId) => this.runtime.handleResizePointerUp(pointerId),
+      onResizeKeyboard: (handle, delta) => this.runtime.handleResizeKeyboard(handle, delta),
+    })
+    this.handleLayer.attach()
+
     this.host = new DomGridHost({
       container: this.container,
       scheduler: this.scheduler,
@@ -84,6 +96,7 @@ export class Canvas2DBackend implements GridController {
       onPointerDown: (event) => this.runtime.handleHostPointerDown(event),
       onPointerMove: (event) => this.runtime.handleHostPointerMove(event),
       onPointerUp: () => this.runtime.handleHostPointerUp(),
+      onKeyDown: (event) => this.runtime.handleHostKeyDown(event),
     })
 
     this.runtime = new WebGridRuntime({
@@ -92,6 +105,7 @@ export class Canvas2DBackend implements GridController {
       renderer: this.renderer,
       scheduler: this.scheduler,
       measurer: this.measurer,
+      handleLayer: this.handleLayer,
       onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
     })
 
@@ -143,6 +157,7 @@ export class Canvas2DBackend implements GridController {
 
   destroy(): void {
     this.runtime.destroy()
+    this.handleLayer.destroy()
     if (this.canvas.parentNode === this.container) {
       this.container.removeChild(this.canvas)
     }

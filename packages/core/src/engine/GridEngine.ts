@@ -42,6 +42,8 @@ export interface GridEngine {
   setRowHeight(rowIndex: number, height: number): void
   setColumnWidth(fieldId: string, width: number): void
   selectCell(cell: CellAddress, options?: SelectCellOptions): void
+  /** Phase 3.3 — 键盘导航；识别按键则更新选区并返回 true。 */
+  navigateSelection(key: string, shiftKey: boolean): boolean
   clearSelection(): void
   getFrame(): RenderFrame
   getSelection(): GridSelection
