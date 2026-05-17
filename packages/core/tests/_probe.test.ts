@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'bun:test'
 import { ChunkedAxis, CHUNK_SIZE } from '../src/layout/ChunkedAxis'
 
-describe('probe', () => {
-  it('CHUNK_SIZE invariant is 1024 (used by partial-chunk tests below)', () => {
+describe('probe — 轴算法探针（非契约）', () => {
+  it('CHUNK_SIZE 恒为 1024', () => {
     expect(CHUNK_SIZE).toBe(1024)
   })
 
-  it('positionToIndex at exact boundary y = i*defaultSize lands on i', () => {
+  it('positionToIndex：y=i×defaultSize 落在行 i', () => {
     const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     // At y=28 should land on row 1
     expect(axis.positionToIndex(28)).toBe(1)
@@ -14,14 +14,14 @@ describe('probe', () => {
     expect(axis.positionToIndex(27.999)).toBe(0)
   })
 
-  it('positionToIndex at chunkPrefixSum boundary handles upperBound correctly', () => {
+  it('positionToIndex 在 chunk 边界 upperBound 正确', () => {
     const axis = new ChunkedAxis({ count: 3000, defaultSize: 28 })
     // chunkPrefixSum[1] = 1024*28 = 28672
     expect(axis.positionToIndex(28672)).toBe(1024) // first row of chunk 1
     expect(axis.positionToIndex(28671)).toBe(1023) // last row of chunk 0
   })
 
-  it('indexToPosition for index BEYOND count clamps', () => {
+  it('indexToPosition 超 count 时钳制', () => {
     const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
     // Renderer code: rowsAxis.indexToPosition(r + 1) when r = count-1 = 9
     // This will pass index=10, which should clamp to 9. The implementation clamps to count-1=9,
@@ -33,7 +33,7 @@ describe('probe', () => {
     expect(beyond).toBe(lastIdx)
   })
 
-  it('indexToPosition with override chunk: end-of-chunk semantics', () => {
+  it('覆盖 chunk 时 indexToPosition 的 chunk 末端语义', () => {
     const axis = new ChunkedAxis({ count: 2048, defaultSize: 28 })
     axis.setSize(1023, 100) // last row of chunk 0
     // chunk 0 totalSize: 1023*28 + 100 = 28744
@@ -43,14 +43,14 @@ describe('probe', () => {
     // base = chunkPrefixSum[1] = chunk0.totalSize = 28744. ✓
   })
 
-  it('indexToPosition for index inside override chunk at offset 0 still sums [0..offset)', () => {
+  it('覆盖 chunk 内 offset=0 的 indexToPosition', () => {
     const axis = new ChunkedAxis({ count: 3000, defaultSize: 28 })
     axis.setSize(50, 100) // chunk 0 materialized
     // indexToPosition(0) in chunk 0 with sizes array: should return base (0) + sum of [0..0) = 0
     expect(axis.indexToPosition(0)).toBe(0)
   })
 
-  it('count=1 edge case', () => {
+  it('count=1 边界情况', () => {
     const axis = new ChunkedAxis({ count: 1, defaultSize: 28 })
     expect(axis.getTotalSize()).toBe(28)
     expect(axis.indexToPosition(0)).toBe(0)
@@ -59,7 +59,7 @@ describe('probe', () => {
     expect(axis.positionToIndex(28)).toBe(0)
   })
 
-  it('setSize on last partial chunk: Float32Array pad with zeros must NOT affect totalSize', () => {
+  it('末 chunk setSize：Float32 填充不影响 totalSize', () => {
     const axis = new ChunkedAxis({ count: 1025, defaultSize: 28 })
     // chunk 1 has 1 row, but Float32Array is size CHUNK_SIZE=1024
     // After setSize(1024, 100): expect totalSize = 1024*28 + 100
@@ -69,7 +69,7 @@ describe('probe', () => {
     expect(axis.positionToIndex(1024 * 28 + 99)).toBe(1024)
   })
 
-  it('positionToIndex in materialized partial chunk: iteration uses chunk.length (not padded array length)', () => {
+  it('部分物化 chunk：positionToIndex 用 chunk.length', () => {
     const axis = new ChunkedAxis({ count: 1025, defaultSize: 28 })
     axis.setSize(1024, 100) // chunk 1 materialized; chunk 1 has length=1
     // Iteration uses chunk.length=1, never reaches Float32Array padding zeros.
@@ -78,14 +78,14 @@ describe('probe', () => {
     expect(axis.positionToIndex(28771)).toBe(1024) // last position of chunk 1
   })
 
-  it('setSize last partial chunk: writing to a PAST-rowsInChunk index is silently allowed', () => {
+  it('末 chunk 越界 setSize 静默 no-op', () => {
     const axis = new ChunkedAxis({ count: 1025, defaultSize: 28 })
     // setSize(1025, ...) — index >= count, no-op ✓
     axis.setSize(1025, 100)
     expect(axis.getTotalSize()).toBe(1025 * 28)
   })
 
-  it('Renderer.paintQuadrant computes row height for last row using totalSize fallback', () => {
+  it('末行高度用 totalSize 回退（非 indexToPosition 差分）', () => {
     // Validate the implementation in Renderer: for r = count-1, indexToPosition(r+1) returns
     // the SAME as indexToPosition(r) (because index r+1 clamps to count-1). So rowHeight needs
     // the special case (r + 1 >= count) ? getTotalSize() - yTop : yBottom - yTop. ✓ has it.

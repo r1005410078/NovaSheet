@@ -2,8 +2,8 @@ import { describe, expect, it, mock } from 'bun:test'
 import { FrameScheduler } from '@novasheet/core'
 import { DomGridHost } from '../../src/host/DomGridHost'
 
-describe('DomGridHost DPR watcher', () => {
-  it('removeEventListener on destroy so handler does not fire after teardown', () => {
+describe('DomGridHost — DPR 监听', () => {
+  it('destroy 时 removeEventListener，销毁后 handler 不再触发', () => {
     const removeSpy = mock(() => {})
     const handlerRef: { current: (() => void) | null } = { current: null }
     const mql = {

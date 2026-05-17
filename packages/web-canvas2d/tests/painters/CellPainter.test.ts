@@ -8,8 +8,8 @@ function makeField(overrides: Partial<Field> = {}): Field {
   return { id: 'f1', name: 'F', type: 'text', width: 100, ...overrides }
 }
 
-describe('CellPainter', () => {
-  it('clips per cell with save/restore', () => {
+describe('CellPainter — 单元格', () => {
+  it('每格 save/clip/restore', () => {
     const { ctx, ops } = createRecordingContext()
     new CellPainter(denseGridTheme).paint(ctx, {
       value: 'hello',
@@ -20,7 +20,7 @@ describe('CellPainter', () => {
     expect(sequence).toEqual(['save', 'beginPath', 'rect', 'clip', 'restore'])
   })
 
-  it('paints text left-aligned with theme text color', () => {
+  it('文本左对齐并使用主题文字色', () => {
     const { ctx, ops } = createRecordingContext()
     new CellPainter(denseGridTheme).paint(ctx, {
       value: 'hello',
@@ -38,7 +38,7 @@ describe('CellPainter', () => {
     }
   })
 
-  it('paints number right-aligned with thousands separator', () => {
+  it('数字右对齐并千分位', () => {
     const { ctx, ops } = createRecordingContext()
     new CellPainter(denseGridTheme).paint(ctx, {
       value: 1234567,
@@ -53,7 +53,7 @@ describe('CellPainter', () => {
     }
   })
 
-  it('truncates long text with ellipsis based on available width', () => {
+  it('长文本按可用宽度截断加省略号', () => {
     const { ctx, ops } = createRecordingContext()
     // RecordingContext.measureText returns length * 7 px
     // Field width 50, padX*2 = 16, available width = 34 → ~4 chars + …
@@ -69,7 +69,7 @@ describe('CellPainter', () => {
     }
   })
 
-  it('fallback path renders non-text/number types via String()', () => {
+  it('非 text/number 类型走 String() 回退', () => {
     const { ctx, ops } = createRecordingContext()
     new CellPainter(denseGridTheme).paint(ctx, {
       value: true,
@@ -82,7 +82,7 @@ describe('CellPainter', () => {
     }
   })
 
-  it('null/undefined values render as empty (no fillText)', () => {
+  it('null/undefined 不绘制 fillText', () => {
     const { ctx, ops } = createRecordingContext()
     new CellPainter(denseGridTheme).paint(ctx, {
       value: null,
@@ -92,7 +92,7 @@ describe('CellPainter', () => {
     expect(ops.filter((o) => o.op === 'fillText')).toHaveLength(0)
   })
 
-  it('Date values use ISO string', () => {
+  it('Date 用 ISO 字符串', () => {
     const { ctx, ops } = createRecordingContext()
     const d = new Date('2026-05-13T00:00:00Z')
     new CellPainter(denseGridTheme).paint(ctx, {
@@ -106,7 +106,7 @@ describe('CellPainter', () => {
     }
   })
 
-  it('array values for multiSelect join with comma', () => {
+  it('multiSelect 数组逗号拼接', () => {
     const { ctx, ops } = createRecordingContext()
     new CellPainter(denseGridTheme).paint(ctx, {
       value: ['a', 'b', 'c'],

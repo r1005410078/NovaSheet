@@ -3,8 +3,8 @@ import { ChunkedAxis, denseGridTheme } from '@novasheet/core'
 import { GridLinesPainter } from '../../src/painters/GridLinesPainter'
 import { createRecordingContext } from '../helpers/recording-context'
 
-describe('GridLinesPainter', () => {
-  it('emits moveTo/lineTo per row + col then a single stroke', () => {
+describe('GridLinesPainter — 网格线', () => {
+  it('行列 moveTo/lineTo 后单次 stroke', () => {
     const { ctx, ops } = createRecordingContext()
     const rowsAxis = new ChunkedAxis({ count: 10, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
@@ -23,7 +23,7 @@ describe('GridLinesPainter', () => {
     expect(ops.some((o) => o.op === 'lineTo')).toBe(true)
   })
 
-  it('skips drawing when range is empty', () => {
+  it('空范围不绘制', () => {
     const { ctx, ops } = createRecordingContext()
     const rowsAxis = new ChunkedAxis({ count: 0, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 0, defaultSize: 100 })
@@ -37,7 +37,7 @@ describe('GridLinesPainter', () => {
     expect(ops.filter((o) => o.op === 'stroke')).toHaveLength(0)
   })
 
-  it('draws the last row bottom boundary at the correct position (not 0)', () => {
+  it('末行底边位置正确（非 0）', () => {
     const { ctx, ops } = createRecordingContext()
     const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
@@ -57,7 +57,7 @@ describe('GridLinesPainter', () => {
     expect(lineYs).toContain(84.5) // last row bottom (after floor + 0.5 alignment)
   })
 
-  it('shifts line positions by scrollOffset when provided', () => {
+  it('提供 scrollOffset 时线条随滚动偏移', () => {
     const { ctx, ops } = createRecordingContext()
     const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
@@ -83,7 +83,7 @@ describe('GridLinesPainter', () => {
     expect(lineYs).toContain(0.5)
   })
 
-  it('keeps backward-compatible default (no scroll offset = no shift)', () => {
+  it('默认无 scrollOffset 时不偏移（向后兼容）', () => {
     const { ctx, ops } = createRecordingContext()
     const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })

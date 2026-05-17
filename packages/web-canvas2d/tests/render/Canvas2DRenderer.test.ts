@@ -17,7 +17,7 @@ const SCHEMA: Schema = {
   ],
 }
 
-describe('Canvas2DRenderer (M1 single quadrant)', () => {
+describe('Canvas2DRenderer — M1 单象限', () => {
   function setup() {
     const { ctx, ops } = createRecordingContext()
     const data = new InMemoryDataSource({
@@ -39,7 +39,7 @@ describe('Canvas2DRenderer (M1 single quadrant)', () => {
     return { ctx, ops, data, viewport, rowsAxis, colsAxis, renderer }
   }
 
-  it('paint clears background then draws header and visible cells', () => {
+  it('paint 清背景并绘制列头与可见单元格', () => {
     const { renderer, ops } = setup()
     renderer.paint()
     // background fill at the start
@@ -54,7 +54,7 @@ describe('Canvas2DRenderer (M1 single quadrant)', () => {
     expect(texts).toContain('Carol')
   })
 
-  it('invalidate schedules a paint via FrameScheduler', () => {
+  it('invalidate 经 FrameScheduler 调度 paint', () => {
     // Use mocked RAF
     const rafs: Array<() => void> = []
     const originalRaf = globalThis.requestAnimationFrame
@@ -73,7 +73,7 @@ describe('Canvas2DRenderer (M1 single quadrant)', () => {
     globalThis.requestAnimationFrame = originalRaf
   })
 
-  it('paintQuadrant subtracts viewport.scrollY from cellY for vertical scroll', () => {
+  it('纵向滚动时 cellY 减去 scrollY', () => {
     const { ops, viewport, renderer } = setup()
     viewport.setScroll(0, 56) // scroll down by 2 rows (28px each)
     ops.length = 0
@@ -89,7 +89,7 @@ describe('Canvas2DRenderer (M1 single quadrant)', () => {
     expect(carol!.args[2]).toBe(46)
   })
 
-  it('render uses frame.viewport scroll, not only the constructor viewport ref', () => {
+  it('render 使用 frame.viewport 滚动而非构造期 viewport', () => {
     const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
     viewport.setScroll(0, 56)
     const scrolledFrame = {
@@ -110,7 +110,7 @@ describe('Canvas2DRenderer (M1 single quadrant)', () => {
     expect(carol!.args[2]).toBe(46)
   })
 
-  it('paintQuadrant subtracts viewport.scrollX from cellX for horizontal scroll', () => {
+  it('横向滚动时 cellX 减去 scrollX', () => {
     const { ops, viewport, renderer } = setup()
     viewport.setScroll(100, 0) // scroll right by 100px = 1 col
     ops.length = 0

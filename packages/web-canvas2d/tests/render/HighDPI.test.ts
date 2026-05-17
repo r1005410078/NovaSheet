@@ -7,8 +7,8 @@ function mockCanvas(): HTMLCanvasElement {
   return { width: 0, height: 0, style: { width: '', height: '' } } as unknown as HTMLCanvasElement
 }
 
-describe('HighDPI', () => {
-  it('sets canvas dimensions to css * dpr and applies transform', () => {
+describe('HighDPI — 高 DPR 位图', () => {
+  it('canvas 物理尺寸为 css×dpr 并设置 transform', () => {
     stubGlobal('devicePixelRatio', 2)
     const canvas = mockCanvas()
     const { ctx, ops } = createRecordingContext()
@@ -22,7 +22,7 @@ describe('HighDPI', () => {
     unstubAllGlobals()
   })
 
-  it('handles dpr = 1', () => {
+  it('dpr=1 时尺寸与 CSS 一致', () => {
     stubGlobal('devicePixelRatio', 1)
     const canvas = mockCanvas()
     const { ctx } = createRecordingContext()
@@ -32,7 +32,7 @@ describe('HighDPI', () => {
     unstubAllGlobals()
   })
 
-  it('rounds fractional css dimensions', () => {
+  it('对小数 CSS 尺寸取整', () => {
     stubGlobal('devicePixelRatio', 1.5)
     const canvas = mockCanvas()
     const { ctx } = createRecordingContext()
@@ -42,7 +42,7 @@ describe('HighDPI', () => {
     unstubAllGlobals()
   })
 
-  it('reports current dpr after resize', () => {
+  it('resize 后 getDpr 返回当前 dpr', () => {
     stubGlobal('devicePixelRatio', 2)
     const canvas = mockCanvas()
     const { ctx } = createRecordingContext()

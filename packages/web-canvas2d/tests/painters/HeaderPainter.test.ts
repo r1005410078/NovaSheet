@@ -11,8 +11,8 @@ const SCHEMA: Schema = {
   ],
 }
 
-describe('HeaderPainter', () => {
-  it('fills header background spanning full width with headerHeight', () => {
+describe('HeaderPainter — 列头', () => {
+  it('按 headerHeight 铺满列头背景', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     new HeaderPainter(denseGridTheme).paint(ctx, {
@@ -31,7 +31,7 @@ describe('HeaderPainter', () => {
     expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.headerBackground })
   })
 
-  it('renders each visible field name', () => {
+  it('绘制可见列名字段名', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     new HeaderPainter(denseGridTheme).paint(ctx, {
@@ -46,7 +46,7 @@ describe('HeaderPainter', () => {
     expect(texts).toContain('Active')
   })
 
-  it('uses theme headerText color for field names', () => {
+  it('列头文字使用 headerText 色', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     new HeaderPainter(denseGridTheme).paint(ctx, {
@@ -58,7 +58,7 @@ describe('HeaderPainter', () => {
     expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.headerText })
   })
 
-  it('shifts field name X by scrollOffsetX so header tracks horizontal scroll', () => {
+  it('scrollOffsetX 使列头随横向滚动', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     new HeaderPainter(denseGridTheme).paint(ctx, {
@@ -87,7 +87,7 @@ describe('HeaderPainter', () => {
     expect(ageTxt!.args[1]).toBe(8)
   })
 
-  it('defaults scrollOffsetX to 0 when omitted (backward-compat for M3 frozen header strip)', () => {
+  it('省略 scrollOffsetX 时默认为 0', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     new HeaderPainter(denseGridTheme).paint(ctx, {

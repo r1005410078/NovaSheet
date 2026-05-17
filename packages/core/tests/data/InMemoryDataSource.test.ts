@@ -9,8 +9,8 @@ const SCHEMA: Schema = {
   ],
 }
 
-describe('InMemoryDataSource', () => {
-  it('reports row count and schema', () => {
+describe('InMemoryDataSource — 内存数据源', () => {
+  it('返回行数与 schema', () => {
     const ds = new InMemoryDataSource({
       schema: SCHEMA,
       rows: [{ name: 'A', age: 1 }, { name: 'B', age: 2 }],
@@ -19,7 +19,7 @@ describe('InMemoryDataSource', () => {
     expect(ds.getSchema()).toBe(SCHEMA)
   })
 
-  it('getRows returns the requested inclusive slice', () => {
+  it('getRows 返回闭区间切片（endIndex 含端）', () => {
     // endIndex is INCLUSIVE — matches ChunkedAxis.getVisibleRange [first, last] semantics
     const rows = Array.from({ length: 10 }, (_, i) => ({ name: `n${i}`, age: i }))
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows })
@@ -31,13 +31,13 @@ describe('InMemoryDataSource', () => {
     ])
   })
 
-  it('getRows clamps to valid range', () => {
+  it('getRows 钳制到合法范围', () => {
     const rows = [{ name: 'a', age: 1 }]
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows })
     expect(ds.getRows(-5, 10)).toEqual([{ name: 'a', age: 1 }])
   })
 
-  it('getCell returns the cell value or undefined for missing row', () => {
+  it('getCell 返回值或 undefined', () => {
     const ds = new InMemoryDataSource({
       schema: SCHEMA,
       rows: [{ name: 'A', age: 1 }],
@@ -47,7 +47,7 @@ describe('InMemoryDataSource', () => {
     expect(ds.getCell(99, 'name')).toBeUndefined()
   })
 
-  it('updateCell emits rowsChanged for affected row', () => {
+  it('updateCell 发出 rowsChanged', () => {
     const ds = new InMemoryDataSource({
       schema: SCHEMA,
       rows: [{ name: 'A', age: 1 }],
@@ -63,7 +63,7 @@ describe('InMemoryDataSource', () => {
     })
   })
 
-  it('setRows emits reset + rowCountChanged', () => {
+  it('setRows 发出 reset 与 rowCountChanged', () => {
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows: [{ name: 'A', age: 1 }] })
     const listener = mock(() => {})
     ds.subscribe(listener)
@@ -73,7 +73,7 @@ describe('InMemoryDataSource', () => {
     expect(listener).toHaveBeenCalledWith({ type: 'reset' })
   })
 
-  it('subscribe returns an unsubscribe function', () => {
+  it('subscribe 返回取消订阅函数', () => {
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows: [] })
     const listener = mock(() => {})
     const unsub = ds.subscribe(listener)

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:te
 import { NativeScroller } from '../../src/scroll/NativeScroller'
 import { FrameScheduler } from '@novasheet/core'
 
-describe('NativeScroller', () => {
+describe('NativeScroller — 原生滚动', () => {
   let rafs: Array<() => void> = []
   let originalRaf: typeof requestAnimationFrame
 
@@ -36,7 +36,7 @@ describe('NativeScroller', () => {
     return el
   }
 
-  it('attach() registers a scroll listener; destroy() removes it', () => {
+  it('attach 注册 scroll 监听，destroy 移除', () => {
     const host = makeScrollHost()
     const onScroll = mock(() => {})
     const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
@@ -48,7 +48,7 @@ describe('NativeScroller', () => {
     expect(removeSpy).toHaveBeenCalledWith('scroll', expect.any(Function))
   })
 
-  it('scroll event schedules a frame via FrameScheduler', () => {
+  it('scroll 事件经 FrameScheduler 调度到下一帧', () => {
     const host = makeScrollHost(0, 0)
     const onScroll = mock(() => {})
     const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
@@ -62,7 +62,7 @@ describe('NativeScroller', () => {
     expect(onScroll).toHaveBeenCalledWith(200, 50)
   })
 
-  it('multiple scroll events in one frame collapse to a single callback (key dedup)', () => {
+  it('同帧多次 scroll 合并为一次回调', () => {
     const host = makeScrollHost(0, 0)
     const onScroll = mock(() => {})
     const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
@@ -79,7 +79,7 @@ describe('NativeScroller', () => {
     expect(onScroll).toHaveBeenCalledWith(300, 0) // last write wins via host's current state
   })
 
-  it('scrollTo() sets scrollHost.scrollTop and scrollLeft', () => {
+  it('scrollTo 设置 scrollTop/scrollLeft', () => {
     const host = makeScrollHost(0, 0)
     const scroller = new NativeScroller(host, new FrameScheduler(), mock(() => {}))
     scroller.scrollTo(150, 75)
@@ -87,13 +87,13 @@ describe('NativeScroller', () => {
     expect(host.scrollLeft).toBe(75)
   })
 
-  it('destroy() before attach() does not throw', () => {
+  it('未 attach 就 destroy 不抛错', () => {
     const host = makeScrollHost()
     const scroller = new NativeScroller(host, new FrameScheduler(), mock(() => {}))
     expect(() => scroller.destroy()).not.toThrow()
   })
 
-  it('callbacks after destroy() are silently ignored', () => {
+  it('destroy 后的回调被忽略', () => {
     const host = makeScrollHost()
     const onScroll = mock(() => {})
     const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)

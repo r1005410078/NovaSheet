@@ -15,39 +15,39 @@ function makeData(rows = 10) {
   })
 }
 
-describe('DefaultGridEngine', () => {
-  it('initializes with default theme + schema-driven column widths', () => {
+describe('DefaultGridEngine — 默认引擎', () => {
+  it('用默认主题与 schema 列宽初始化', () => {
     const engine = new DefaultGridEngine({ data: makeData(5) })
     expect(engine.getRowsAxis().getCount()).toBe(5)
     expect(engine.getColsAxis().getCount()).toBe(2)
     expect(engine.getTheme()).toBe(denseGridTheme)
   })
 
-  it('setData rebuilds axes', () => {
+  it('setData 重建行列轴', () => {
     const engine = new DefaultGridEngine({ data: makeData(5) })
     engine.setData(makeData(100))
     expect(engine.getRowsAxis().getCount()).toBe(100)
   })
 
-  it('setRowHeight updates the axis', () => {
+  it('setRowHeight 更新行轴', () => {
     const engine = new DefaultGridEngine({ data: makeData(10) })
     const before = engine.getRowsAxis().getSize(3)
     engine.setRowHeight(3, before * 2)
     expect(engine.getRowsAxis().getSize(3)).toBe(before * 2)
   })
 
-  it('setColumnWidth updates the axis by fieldId', () => {
+  it('setColumnWidth 按 fieldId 更新列轴', () => {
     const engine = new DefaultGridEngine({ data: makeData(10) })
     engine.setColumnWidth('age', 250)
     expect(engine.getColsAxis().getSize(1)).toBe(250)
   })
 
-  it('setColumnWidth on unknown fieldId is a no-op', () => {
+  it('未知 fieldId 的 setColumnWidth 为 no-op', () => {
     const engine = new DefaultGridEngine({ data: makeData(10) })
     expect(() => engine.setColumnWidth('nope', 250)).not.toThrow()
   })
 
-  it('getFrame returns the engine snapshot', () => {
+  it('getFrame 返回引擎快照', () => {
     const engine = new DefaultGridEngine({ data: makeData(10) })
     engine.setViewportSize(400, 300)
     const frame = engine.getFrame()

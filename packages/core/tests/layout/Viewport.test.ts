@@ -3,7 +3,7 @@ import { ChunkedAxis } from '../../src/layout/ChunkedAxis'
 import { FrozenRegions } from '../../src/layout/FrozenRegions'
 import { Viewport } from '../../src/layout/Viewport'
 
-describe('Viewport (M1 single-quadrant)', () => {
+describe('Viewport — M1 单象限', () => {
   function setup() {
     const rowsAxis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 5, defaultSize: 100 })
@@ -15,7 +15,7 @@ describe('Viewport (M1 single-quadrant)', () => {
     return { rowsAxis, colsAxis, frozen, vp }
   }
 
-  it('snapshot exposes main quadrant covering visible rows × cols', () => {
+  it('snapshot 的 main 象限覆盖可见行列', () => {
     const { vp } = setup()
     const snap = vp.snapshot()
     expect(snap.quadrants.main).toBeDefined()
@@ -26,21 +26,21 @@ describe('Viewport (M1 single-quadrant)', () => {
     expect(snap.quadrants.main.colRange).toEqual([0, 3]) // 0..99, 100..199, 200..299, 300..399
   })
 
-  it('snapshot reflects current scroll position', () => {
+  it('snapshot 反映当前滚动位置', () => {
     const { vp } = setup()
     vp.setScroll(0, 140) // scroll down 5 rows (140/28)
     const snap = vp.snapshot()
     expect(snap.quadrants.main.rowRange[0]).toBe(5)
   })
 
-  it('version increments on mutation', () => {
+  it('变更后 version 递增', () => {
     const { vp } = setup()
     const v0 = vp.snapshot().version
     vp.setScroll(0, 100)
     expect(vp.snapshot().version).toBeGreaterThan(v0)
   })
 
-  it('returns empty range when count is 0', () => {
+  it('count=0 时返回空范围', () => {
     const rowsAxis = new ChunkedAxis({ count: 0, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 0, defaultSize: 100 })
     const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)

@@ -38,8 +38,8 @@ function runtimeRefreshSpy(grid: Grid) {
   return spyOn(canvas2dDelegate(grid).runtime, 'refresh')
 }
 
-describe('Grid', () => {
-  it('mounts a canvas into the container', () => {
+describe('Grid — 浏览器门面', () => {
+  it('在容器内挂载 canvas', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
@@ -49,7 +49,7 @@ describe('Grid', () => {
     document.body.removeChild(el)
   })
 
-  it('destroy is idempotent and removes canvas', () => {
+  it('destroy 幂等并移除 canvas', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     grid.destroy()
@@ -57,7 +57,7 @@ describe('Grid', () => {
     expect(el.querySelector('canvas')).toBeNull()
   })
 
-  it('mount → destroy → mount works (Strict Mode shape)', () => {
+  it('mount → destroy → mount 可重复（Strict Mode 形态）', () => {
     const el = document.createElement('div')
     const data = makeData()
     const g1 = new Grid(el, { data })
@@ -67,7 +67,7 @@ describe('Grid', () => {
     g2.destroy()
   })
 
-  it('setTheme triggers re-paint', () => {
+  it('setTheme 触发重绘', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const spy = runtimeRefreshSpy(grid)
@@ -76,7 +76,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('setData swaps data source and triggers paint', () => {
+  it('setData 替换数据源并触发重绘', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const newData = new InMemoryDataSource({ schema: SCHEMA, rows: [{ name: 'X', age: 0 }] })
@@ -85,7 +85,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('setRowHeight changes a row height and triggers paint', () => {
+  it('setRowHeight 改行高并触发重绘', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const spy = runtimeRefreshSpy(grid)
@@ -94,7 +94,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('setColumnWidth changes a column width and triggers paint', () => {
+  it('setColumnWidth 改列宽并触发重绘', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const spy = runtimeRefreshSpy(grid)
@@ -103,14 +103,14 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('setColumnWidth on unknown fieldId is a no-op', () => {
+  it('未知 fieldId 的 setColumnWidth 为 no-op', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     grid.setColumnWidth('does-not-exist', 200)
     grid.destroy()
   })
 
-  it('destroy cancels pending renderer flush', () => {
+  it('destroy 取消 pending 的 renderer flush', () => {
     const rafs: Array<() => void> = []
     const originalRaf = globalThis.requestAnimationFrame
     globalThis.requestAnimationFrame = ((cb: () => void) => {
@@ -129,7 +129,7 @@ describe('Grid', () => {
     globalThis.requestAnimationFrame = originalRaf
   })
 
-  it('destroy restores original container position', () => {
+  it('destroy 恢复容器原始 position', () => {
     const el = document.createElement('div')
     el.style.position = 'absolute'
     const grid = new Grid(el, { data: makeData() })
@@ -138,7 +138,7 @@ describe('Grid', () => {
     expect(el.style.position).toBe('absolute')
   })
 
-  it('mounts scroll-host, scroll-spacer, and canvas with correct DOM hierarchy', () => {
+  it('挂载 scroll-host、scroll-spacer 与 canvas，DOM 层级正确', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
@@ -159,7 +159,7 @@ describe('Grid', () => {
     document.body.removeChild(el)
   })
 
-  it('canvas has pointer-events: none so scroll events pass through', () => {
+  it('canvas 为 pointer-events:none，滚动事件穿透', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const canvas = el.querySelector('canvas') as HTMLCanvasElement
@@ -167,7 +167,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('scroll-host has overflow auto so it produces a native scrollbar', () => {
+  it('scroll-host 为 overflow:auto，产生原生滚动条', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
@@ -175,7 +175,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('scroll-host paints above canvas via z-index so native scrollbar stays visible', () => {
+  it('scroll-host z-index 高于 canvas，原生滚动条可见', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
@@ -184,7 +184,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('scroll-spacer is sized via ScrollMapper.computeSpacerSize for both axes', () => {
+  it('scroll-spacer 宽高由 ScrollMapper.computeSpacerSize 决定', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
@@ -193,7 +193,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('setColumnWidth re-sizes the spacer width', () => {
+  it('setColumnWidth 会更新 spacer 宽度', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     grid.setColumnWidth('name', 500)
@@ -202,7 +202,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('destroy removes scroll-host along with canvas', () => {
+  it('destroy 同时移除 scroll-host 与 canvas', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     grid.destroy()
@@ -210,7 +210,7 @@ describe('Grid', () => {
     expect(el.querySelector('canvas')).toBeNull()
   })
 
-  it('setData re-sizes the spacer to match the new dataset', () => {
+  it('setData 按新数据集重算 spacer 尺寸', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     const newData = new InMemoryDataSource({
@@ -223,7 +223,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('setRowHeight re-sizes the spacer', () => {
+  it('setRowHeight 会更新 spacer 高度', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     grid.setRowHeight(0, 100)
@@ -232,7 +232,7 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('forwards native scroll events to viewport via ScrollMapper', () => {
+  it('原生滚动经 ScrollMapper 映射到 viewport', () => {
     const rafs: Array<() => void> = []
     const originalRaf = globalThis.requestAnimationFrame
     globalThis.requestAnimationFrame = ((cb: () => void) => {
@@ -264,7 +264,7 @@ describe('Grid', () => {
     globalThis.requestAnimationFrame = originalRaf
   })
 
-  it('scrollToRow moves the scroll-host scrollTop to align the row', () => {
+  it('scrollToRow 设置 scrollTop 对齐目标行', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
@@ -281,7 +281,7 @@ describe('Grid', () => {
     document.body.removeChild(el)
   })
 
-  it('scrollToCell moves both scrollTop and scrollLeft', () => {
+  it('scrollToCell 同时设置 scrollTop 与 scrollLeft', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
@@ -297,7 +297,7 @@ describe('Grid', () => {
     document.body.removeChild(el)
   })
 
-  it('scrollToRow with align=end aligns the row bottom to viewport bottom', () => {
+  it('scrollToRow(align=end) 将行底对齐视口底', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
@@ -311,7 +311,7 @@ describe('Grid', () => {
     document.body.removeChild(el)
   })
 
-  it('scrollToRow with out-of-range index does not throw', () => {
+  it('scrollToRow 越界索引不抛错', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
     expect(() => grid.scrollToRow(99999, 'start')).not.toThrow()
@@ -319,13 +319,19 @@ describe('Grid', () => {
     grid.destroy()
   })
 
-  it('ResizeObserver-style container resize propagates new size to viewport, HighDPI, and triggers invalidate', () => {
+  it('ResizeObserver 式容器 resize 在 RAF 后更新 viewport 与 HighDPI', () => {
+    const rafs: Array<FrameRequestCallback> = []
+    const originalRaf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafs.push(cb)
+      return rafs.length
+    }) as typeof requestAnimationFrame
+
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
     const grid = new Grid(el, { data: makeData() })
 
-    const invalidateSpy = runtimeRefreshSpy(grid)
     const viewport = canvas2dDelegate(grid).engine.getViewport()
     const setSizeSpy = spyOn(viewport, 'setSize')
     const highDpi = canvas2dDelegate(grid).highDpi
@@ -334,10 +340,12 @@ describe('Grid', () => {
     Object.defineProperty(el, 'clientWidth', { value: 500, configurable: true })
     Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true })
     grid._onContainerResize()
-
-    expect(invalidateSpy).toHaveBeenCalled()
+    expect(resizeSpy).not.toHaveBeenCalled()
+    rafs[rafs.length - 1]!(performance.now())
     expect(setSizeSpy).toHaveBeenCalledWith(500, 400)
     expect(resizeSpy).toHaveBeenCalledWith(500, 400)
+
+    globalThis.requestAnimationFrame = originalRaf
     grid.destroy()
     document.body.removeChild(el)
   })

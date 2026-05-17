@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { denseGridTheme } from '../../src/theme/denseGridTheme'
 
-describe('denseGridTheme', () => {
-  it('exposes dense grid metrics', () => {
+describe('denseGridTheme — 默认主题', () => {
+  it('暴露紧凑表格 metrics', () => {
     expect(denseGridTheme.metrics.rowHeight).toBe(28)
     expect(denseGridTheme.metrics.headerHeight).toBe(32)
     expect(denseGridTheme.metrics.fontSize).toBeGreaterThanOrEqual(12)
@@ -10,19 +10,19 @@ describe('denseGridTheme', () => {
     expect(denseGridTheme.metrics.borderWidth).toBe(1)
   })
 
-  it('declares all 7 field-type icons', () => {
+  it('声明 7 种字段类型图标', () => {
     const types = ['text', 'number', 'singleSelect', 'multiSelect', 'date', 'checkbox', 'url'] as const
     for (const t of types) {
       expect(denseGridTheme.icons.byFieldType[t]).toBeDefined()
     }
   })
 
-  it('provides text alignment by field type', () => {
+  it('按字段类型提供文本对齐', () => {
     expect(denseGridTheme.cell.textAlignByType.text).toBe('left')
     expect(denseGridTheme.cell.textAlignByType.number).toBe('right')
   })
 
-  it('colors include grid line and background', () => {
+  it('颜色含网格线与背景', () => {
     expect(denseGridTheme.colors.background).toMatch(/^#|^rgb/)
     expect(denseGridTheme.colors.gridLine).toMatch(/^#|^rgb/)
   })

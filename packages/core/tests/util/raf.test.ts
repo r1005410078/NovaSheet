@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { stubGlobal, unstubAllGlobals } from '../helpers/global-stub'
 import { FrameScheduler } from '../../src/util/raf'
 
-describe('FrameScheduler', () => {
+describe('FrameScheduler — RAF 调度', () => {
   let rafs: Array<() => void> = []
 
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe('FrameScheduler', () => {
     for (const cb of pending) cb()
   }
 
-  it('schedules a single RAF for one task', () => {
+  it('单任务调度一次 RAF', () => {
     const scheduler = new FrameScheduler()
     const fn = mock(() => {})
     scheduler.schedule('a', fn)
@@ -32,7 +32,7 @@ describe('FrameScheduler', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  it('coalesces multiple schedule calls into one RAF', () => {
+  it('多次 schedule 合并为一次 RAF', () => {
     const scheduler = new FrameScheduler()
     scheduler.schedule('a', mock(() => {}))
     scheduler.schedule('b', mock(() => {}))
@@ -40,7 +40,7 @@ describe('FrameScheduler', () => {
     expect(rafs).toHaveLength(1)
   })
 
-  it('same key collapses to last task', () => {
+  it('同 key 只保留最后一次 task', () => {
     const scheduler = new FrameScheduler()
     const first = mock(() => {})
     const second = mock(() => {})
@@ -51,7 +51,7 @@ describe('FrameScheduler', () => {
     expect(second).toHaveBeenCalledTimes(1)
   })
 
-  it('executes tasks in insertion order', () => {
+  it('按插入顺序执行任务', () => {
     const scheduler = new FrameScheduler()
     const log: string[] = []
     scheduler.schedule('first', () => log.push('1'))
@@ -61,7 +61,7 @@ describe('FrameScheduler', () => {
     expect(log).toEqual(['1', '2', '3'])
   })
 
-  it('cancel removes a pending task', () => {
+  it('cancel 移除 pending 任务', () => {
     const scheduler = new FrameScheduler()
     const fn = mock(() => {})
     scheduler.schedule('a', fn)
@@ -70,7 +70,7 @@ describe('FrameScheduler', () => {
     expect(fn).not.toHaveBeenCalled()
   })
 
-  it('schedules a new frame after flush', () => {
+  it('flush 后可再调度新帧', () => {
     const scheduler = new FrameScheduler()
     scheduler.schedule('a', mock(() => {}))
     flushFrame()

@@ -13,6 +13,9 @@ export interface WebGridRuntimeOptions {
   onSurfaceResize?: (width: number, height: number, dpr: number) => void
 }
 
+/** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
+const HOST_RESIZE_KEY = 'host:resize'
+
 /**
  * Web 端表格编排器（spec §6 `WebGridRuntime`）。
  *
@@ -130,6 +133,7 @@ export class WebGridRuntime {
     if (this.destroyed) return
     this.destroyed = true
     this.scheduler.cancel('renderer:flush')
+    this.scheduler.cancel(HOST_RESIZE_KEY)
     this.renderer.destroy()
     this.host.destroy()
   }
@@ -140,21 +144,34 @@ export class WebGridRuntime {
     this.invalidate()
   }
 
-  handleHostResize(cssWidth: number, cssHeight: number, dpr: number): void {
-    if (this.destroyed) return
-    this.engine.setViewportSize(cssWidth, cssHeight)
-    this.onSurfaceResize?.(cssWidth, cssHeight, dpr)
-    this.renderer.resize(cssWidth, cssHeight, dpr)
-    this.remapScroll()
-    this.refresh()
+  handleHostResize(_cssWidth: number, _cssHeight: number, _dpr: number): void {
+    void _cssWidth
+    void _cssHeight
+    void _dpr
+    this.scheduleHostResize()
   }
 
-  handleHostDprChange(dpr: number): void {
+  handleHostDprChange(_dpr: number): void {
+    void _dpr
+    this.scheduleHostResize()
+  }
+
+  /**
+   * 合并 ResizeObserver / DPR 变更：在同一 RAF 内完成 viewport、位图缩放与同步绘制。
+   * 避免 HighDPI.resize 清空 canvas 后等到 `renderer:flush` 才画（中间空白帧会闪烁）。
+   */
+  private scheduleHostResize(): void {
     if (this.destroyed) return
-    const { width, height } = this.host.getContainerSize()
-    this.onSurfaceResize?.(width, height, dpr)
-    this.renderer.resize(width, height, dpr)
-    this.invalidate()
+    this.scheduler.schedule(HOST_RESIZE_KEY, () => {
+      if (this.destroyed) return
+      const { width, height } = this.host.getContainerSize()
+      const dpr = this.host.getDpr()
+      this.engine.setViewportSize(width, height)
+      this.onSurfaceResize?.(width, height, dpr)
+      this.renderer.resize(width, height, dpr)
+      this.remapScroll()
+      this.paintSync()
+    })
   }
 
   /** @internal 供集成测试模拟 ResizeObserver 回调 */

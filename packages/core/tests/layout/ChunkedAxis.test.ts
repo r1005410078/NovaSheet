@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'bun:test'
 import { ChunkedAxis, CHUNK_SIZE } from '../../src/layout/ChunkedAxis'
 
-describe('ChunkedAxis (all default)', () => {
+describe('ChunkedAxis — 全默认尺寸', () => {
   it('totalSize = count × defaultSize', () => {
     const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     expect(axis.getTotalSize()).toBe(100 * 28)
   })
 
-  it('indexToPosition uses O(1) fast path for null chunks', () => {
+  it('indexToPosition 对空 chunk 走 O(1) 快路径', () => {
     const axis = new ChunkedAxis({ count: 5000, defaultSize: 28 })
     expect(axis.indexToPosition(0)).toBe(0)
     expect(axis.indexToPosition(1)).toBe(28)
@@ -16,7 +16,7 @@ describe('ChunkedAxis (all default)', () => {
     expect(axis.indexToPosition(4999)).toBe(4999 * 28)
   })
 
-  it('positionToIndex inverts indexToPosition', () => {
+  it('positionToIndex 与 indexToPosition 互逆', () => {
     const axis = new ChunkedAxis({ count: 5000, defaultSize: 28 })
     expect(axis.positionToIndex(0)).toBe(0)
     expect(axis.positionToIndex(27)).toBe(0)
@@ -24,13 +24,13 @@ describe('ChunkedAxis (all default)', () => {
     expect(axis.positionToIndex(4999 * 28)).toBe(4999)
   })
 
-  it('positionToIndex clamps to valid index range', () => {
+  it('positionToIndex 钳制到合法索引', () => {
     const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
     expect(axis.positionToIndex(-100)).toBe(0)
     expect(axis.positionToIndex(99999)).toBe(9)
   })
 
-  it('chunk count = ceil(count / CHUNK_SIZE)', () => {
+  it('chunk 数 = ceil(count / CHUNK_SIZE)', () => {
     expect(CHUNK_SIZE).toBe(1024)
     const axis1 = new ChunkedAxis({ count: 1, defaultSize: 28 })
     const axis2 = new ChunkedAxis({ count: 1024, defaultSize: 28 })
@@ -40,15 +40,15 @@ describe('ChunkedAxis (all default)', () => {
     expect(axis3.getChunkCount()).toBe(2)
   })
 
-  it('count = 0 produces zero total size and no chunks', () => {
+  it('count=0 时 totalSize=0 且无 chunk', () => {
     const axis = new ChunkedAxis({ count: 0, defaultSize: 28 })
     expect(axis.getTotalSize()).toBe(0)
     expect(axis.getChunkCount()).toBe(0)
   })
 })
 
-describe('ChunkedAxis (mutation)', () => {
-  it('setSize materializes the chunk and updates total', () => {
+describe('ChunkedAxis — 变更尺寸', () => {
+  it('setSize 物化 chunk 并更新 total', () => {
     const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     const before = axis.version
     axis.setSize(5, 50)
@@ -58,7 +58,7 @@ describe('ChunkedAxis (mutation)', () => {
     expect(axis.version).toBeGreaterThan(before)
   })
 
-  it('setSize across multiple chunks updates the prefix sums', () => {
+  it('跨 chunk setSize 更新前缀和', () => {
     const axis = new ChunkedAxis({ count: 3000, defaultSize: 28 })
     axis.setSize(100, 100)
     axis.setSize(2000, 200)
@@ -68,7 +68,7 @@ describe('ChunkedAxis (mutation)', () => {
     expect(axis.getTotalSize()).toBe(3000 * 28 + (100 - 28) + (200 - 28))
   })
 
-  it('setSize to defaultSize on a null chunk is a no-op (no allocation)', () => {
+  it('空 chunk 上 setSize 为默认值时不分配', () => {
     const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     const before = axis.version
     axis.setSize(5, 28)
@@ -76,14 +76,14 @@ describe('ChunkedAxis (mutation)', () => {
     expect(axis.version).toBe(before)
   })
 
-  it('setSize on out-of-range index is a no-op', () => {
+  it('越界 setSize 为 no-op', () => {
     const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
     axis.setSize(-1, 100)
     axis.setSize(100, 100)
     expect(axis.getTotalSize()).toBe(10 * 28)
   })
 
-  it('positionToIndex still inverts after mutation', () => {
+  it('变更后 positionToIndex 仍可互逆', () => {
     const axis = new ChunkedAxis({ count: 1000, defaultSize: 28 })
     axis.setSize(10, 100)
     axis.setSize(11, 100)
@@ -93,24 +93,24 @@ describe('ChunkedAxis (mutation)', () => {
   })
 })
 
-describe('ChunkedAxis (range + default size)', () => {
-  it('getVisibleRange returns inclusive [first, last]', () => {
+describe('ChunkedAxis — 可见区间与默认行高', () => {
+  it('getVisibleRange 返回闭区间 [first, last]', () => {
     const axis = new ChunkedAxis({ count: 1000, defaultSize: 28 })
     expect(axis.getVisibleRange(0, 100)).toEqual([0, 3]) // 0..27, 28..55, 56..83, 84..111 (last covered)
     expect(axis.getVisibleRange(56, 84)).toEqual([2, 3])
   })
 
-  it('getVisibleRange clamps to 0..count-1', () => {
+  it('getVisibleRange 钳制到 0..count-1', () => {
     const axis = new ChunkedAxis({ count: 5, defaultSize: 28 })
     expect(axis.getVisibleRange(-100, 99999)).toEqual([0, 4])
   })
 
-  it('getVisibleRange with count=0 returns [0, -1] (empty)', () => {
+  it('count=0 时 getVisibleRange 为 [0,-1]', () => {
     const axis = new ChunkedAxis({ count: 0, defaultSize: 28 })
     expect(axis.getVisibleRange(0, 100)).toEqual([0, -1])
   })
 
-  it('setDefaultSize updates total but preserves overrides', () => {
+  it('setDefaultSize 更新 total 且保留覆盖', () => {
     const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     axis.setSize(5, 100)
     axis.setDefaultSize(40)
@@ -125,14 +125,14 @@ describe('ChunkedAxis (range + default size)', () => {
   })
 })
 
-describe('ChunkedAxis.getSize', () => {
-  it('returns default size for default chunks', () => {
+describe('ChunkedAxis.getSize — 行高读取', () => {
+  it('默认 chunk 返回 defaultSize', () => {
     const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     expect(axis.getSize(0)).toBe(28)
     expect(axis.getSize(99)).toBe(28)
   })
 
-  it('returns override size for materialized chunks', () => {
+  it('物化 chunk 返回覆盖尺寸', () => {
     const axis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     axis.setSize(5, 60)
     expect(axis.getSize(5)).toBe(60)
@@ -140,14 +140,14 @@ describe('ChunkedAxis.getSize', () => {
     expect(axis.getSize(6)).toBe(28)
   })
 
-  it('returns 0 for out-of-range indices', () => {
+  it('越界索引 getSize 返回 0', () => {
     const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
     expect(axis.getSize(-1)).toBe(0)
     expect(axis.getSize(10)).toBe(0)
     expect(axis.getSize(100)).toBe(0)
   })
 
-  it('returns the correct size at the LAST row (no zero-out-bug at boundary)', () => {
+  it('最后一行 getSize 正确（边界无零高 bug）', () => {
     const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
     axis.setSize(9, 50)
     expect(axis.getSize(9)).toBe(50)

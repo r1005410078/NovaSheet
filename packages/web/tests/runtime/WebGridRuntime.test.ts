@@ -61,8 +61,8 @@ function makeRenderer(): WebRenderer {
   }
 }
 
-describe('WebGridRuntime.replaceRenderer', () => {
-  it('destroys the previous renderer and installs the factory result', () => {
+describe('WebGridRuntime.replaceRenderer — 更换渲染器', () => {
+  it('销毁旧 renderer 并安装 factory 产物', () => {
     const engine = makeEngine()
     const host = makeHost()
     const first = makeRenderer()
@@ -77,8 +77,8 @@ describe('WebGridRuntime.replaceRenderer', () => {
   })
 })
 
-describe('WebGridRuntime.setData', () => {
-  it('updates engine, replaces renderer via factory, and runs post-mutation refresh', () => {
+describe('WebGridRuntime.setData — 换数据', () => {
+  it('更新 engine、经 factory 换 renderer 并 refresh', () => {
     const engine = makeEngine()
     const host = makeHost()
     const first = makeRenderer()
@@ -98,8 +98,38 @@ describe('WebGridRuntime.setData', () => {
   })
 })
 
-describe('WebGridRuntime.setTheme', () => {
-  it('updates engine, optional renderer patch, then refreshes', () => {
+describe('WebGridRuntime.scheduleHostResize — 合并 resize', () => {
+  it('合并 resize 回调，RAF 内 paintSync', () => {
+    const engine = makeEngine()
+    const host = makeHost()
+    const renderer = makeRenderer()
+    const onSurfaceResize = mock(() => {})
+    const runtime = new WebGridRuntime({ engine, host, renderer, onSurfaceResize })
+
+    const rafs: Array<FrameRequestCallback> = []
+    const originalRaf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafs.push(cb)
+      return rafs.length
+    }) as typeof requestAnimationFrame
+
+    runtime.handleHostResize(100, 100, 1)
+    runtime.handleHostResize(200, 200, 1)
+    expect(engine.setViewportSize).not.toHaveBeenCalled()
+    expect(renderer.render).not.toHaveBeenCalled()
+
+    rafs[rafs.length - 1]!(performance.now())
+    expect(engine.setViewportSize).toHaveBeenCalledTimes(1)
+    expect(engine.setViewportSize).toHaveBeenCalledWith(400, 300)
+    expect(onSurfaceResize).toHaveBeenCalledTimes(1)
+    expect(renderer.render).toHaveBeenCalledTimes(1)
+
+    globalThis.requestAnimationFrame = originalRaf
+  })
+})
+
+describe('WebGridRuntime.setTheme — 换主题', () => {
+  it('更新 engine、可选 patch renderer 后 refresh', () => {
     const engine = makeEngine()
     const host = makeHost()
     const renderer = makeRenderer()
