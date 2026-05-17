@@ -670,6 +670,23 @@ git commit -m "refactor(test): migrate 16 test files from vitest to bun:test"
 - Delete: `/Users/rongts/NovaSheet/packages/core/tsup.config.ts`
 - Modify: `/Users/rongts/NovaSheet/packages/core/package.json`
 
+- [ ] **Step 0 (added post-execution): Create `packages/core/tsconfig.build.json`**
+
+The main `tsconfig.json` has `include: ["src/**/*", "tests/**/*"]` which makes `tsc --emitDeclarationOnly`
+compute `rootDir = .` and emit `dist/src/index.d.ts` (plus test typings under `dist/tests/`). We want
+flat `dist/index.d.ts`. A build-specific tsconfig fixes this:
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["tests"]
+}
+```
+
 - [ ] **Step 1: Create `packages/core/build.ts`**
 
 ```ts
@@ -718,8 +735,11 @@ if (!cjsResult.success) {
 }
 
 // Generate .d.ts via tsc — Bun.build doesn't emit declarations.
+// IMPORTANT: use tsconfig.build.json (which sets rootDir=src and excludes tests).
+// Without it, the main tsconfig's include=["src","tests"] makes tsc compute rootDir=. and emit
+// dist/src/index.d.ts (plus dist/tests/...) — not the flat dist/index.d.ts we want.
 const dts = Bun.spawn(
-  ['bunx', 'tsc', '--emitDeclarationOnly', '--outDir', `${ROOT}dist`, '--declaration', '--declarationMap'],
+  ['bunx', 'tsc', '-p', 'tsconfig.build.json', '--emitDeclarationOnly', '--outDir', `${ROOT}dist`],
   { cwd: ROOT, stdout: 'inherit', stderr: 'inherit' },
 )
 const dtsExitCode = await dts.exited
