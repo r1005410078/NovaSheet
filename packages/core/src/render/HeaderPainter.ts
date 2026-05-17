@@ -23,6 +23,12 @@ export interface HeaderPaintParams {
   colRange: [number, number]
   /** 整个 viewport 宽度，用于 header 背景占满 */
   width: number
+  /**
+   * 横向滚动偏移。header 跟列内容左右联动（cell 减去 scrollX，header 也要减），
+   * 否则横向滚动后字段名会被画到 viewport 之外。M3 冻结列的 header 段
+   * 由 Renderer 单独传 scrollOffsetX=0 再绘一次覆盖。
+   */
+  scrollOffsetX?: number
 }
 
 /**
@@ -40,6 +46,7 @@ export class HeaderPainter {
   /** 绘制表头：先填充背景色，再逐列绘制字段名称文字 */
   paint(ctx: CanvasRenderingContext2D, params: HeaderPaintParams): void {
     const { schema, colsAxis, colRange, width } = params
+    const scrollOffsetX = params.scrollOffsetX ?? 0
     const headerHeight = this.theme.metrics.headerHeight
 
     // header 背景：占满整个 viewport 宽——M3 后冻结列 header 也由这一笔覆盖。
@@ -56,7 +63,9 @@ export class HeaderPainter {
     for (let c = colRange[0]; c <= colRange[1]; c++) {
       const field = schema.fields[c]
       if (!field) continue
-      const x = colsAxis.indexToPosition(c) + padX
+      // 减去 scrollOffsetX：header 跟随主区横向滚动；M3 冻结列段会被 Renderer 用
+      // scrollOffsetX=0 再绘一次覆盖到固定位置。
+      const x = colsAxis.indexToPosition(c) - scrollOffsetX + padX
       const y = headerHeight / 2
       ctx.fillText(field.name, x, y)
     }

@@ -145,12 +145,14 @@ export class Renderer {
     // 4) 绘主区——main 象限两轴都跟随滚动
     this.paintQuadrant(main, scrollX, scrollY)
 
-    // 5) 列头（始终在最顶层，M3 加冻结象限后仍最后绘以覆盖滚动列头）
+    // 5) 列头（始终在最顶层，M3 加冻结象限后仍最后绘以覆盖滚动列头）。
+    //    跟随主区横向滚动 scrollX——否则横向滚后字段名被画到 viewport 左侧外。
     this.headerPainter.paint(this.ctx, {
       schema: this.data.getSchema(),
       colsAxis: this.colsAxis,
       colRange: main.colRange,
       width: contentRect.width,
+      scrollOffsetX: scrollX,
     })
 
     // 备注：M1 不画冻结象限（FrozenRegions stub 只返回 main）。
