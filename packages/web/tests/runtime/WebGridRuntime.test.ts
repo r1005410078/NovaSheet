@@ -94,6 +94,7 @@ function makeHost(): WebHost {
     getContainerSize: () => ({ width: 400, height: 300 }),
     getContainerBoundingRect: () => ({ left: 0, top: 0 }),
     getScrollPosition: () => ({ scrollTop: 0, scrollLeft: 0 }),
+    focusScrollHost: mock(() => {}),
     destroy: mock(() => {}),
   }
 }

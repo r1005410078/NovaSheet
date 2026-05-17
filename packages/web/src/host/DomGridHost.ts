@@ -133,6 +133,10 @@ export class DomGridHost implements WebHost {
     return this.currentDpr
   }
 
+  focusScrollHost(): void {
+    this.scrollHost?.focus({ preventScroll: true })
+  }
+
   getContainerBoundingRect(): { left: number; top: number } {
     const rect = this.scrollHost.getBoundingClientRect()
     return { left: rect.left, top: rect.top }

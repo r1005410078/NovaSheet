@@ -134,6 +134,7 @@ export class Canvas2DBackend implements GridController {
 
     this.contextMenuLayer = new DomContextMenuLayer(this.container, {
       onSelect: (id) => this.runtime.handleContextMenuSelected(id),
+      onClose: () => this.host.focusScrollHost(),
     })
     this.contextMenuLayer.attach()
     this.runtime.setContextMenuLayer(this.contextMenuLayer)

@@ -11,6 +11,8 @@ import { applyContextMenuTheme, ensureContextMenuStylesheet } from '../host/cont
 
 export interface DomContextMenuLayerCallbacks {
   onSelect: (id: ContextMenuAction) => void
+  /** 菜单关闭时若焦点确实在菜单内，回调以恢复 grid 焦点（spec §4.5）。 */
+  onClose?: () => void
 }
 
 export interface OpenContextMenuOptions {
@@ -88,8 +90,10 @@ export class DomContextMenuLayer {
 
   close(): void {
     if (!this.attached || !this.opened) return
+    const wasFocusInMenu = this.menu.contains(document.activeElement)
     this.menu.removeAttribute('data-open')
     this.opened = false
+    if (wasFocusInMenu) this.callbacks.onClose?.()
   }
 
   destroy(): void {
@@ -117,7 +121,7 @@ export class DomContextMenuLayer {
       btn.textContent = item.label
       if (item.disabled) {
         btn.setAttribute('aria-disabled', 'true')
-        btn.disabled = true
+        // do NOT set btn.disabled — keep focusable per ARIA menu pattern (spec §4.7)
       }
       btn.addEventListener('click', () => this.onItemClick(item))
       this.menu.appendChild(btn)

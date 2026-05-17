@@ -168,6 +168,57 @@ describe('DomContextMenuLayer — keyboard navigation (spec §4.7)', () => {
   })
 })
 
+describe('DomContextMenuLayer — focus restoration on close (spec §4.5)', () => {
+  it('焦点在菜单内时关闭 → onClose 被调用', () => {
+    const container = makeContainer()
+    const onClose = mock(() => {})
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}), onClose })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    layer.open({ clientX: 0, clientY: 0, items: sampleItems })
+    // focus is now on the first enabled button (inside the menu)
+    expect(container.querySelector('[data-novasheet-context-menu]')!.contains(document.activeElement)).toBe(true)
+    layer.close()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('焦点不在菜单内时关闭 → onClose 不被调用', () => {
+    const container = makeContainer()
+    const onClose = mock(() => {})
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}), onClose })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    layer.open({ clientX: 0, clientY: 0, items: sampleItems })
+    // move focus away from menu
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    container.focus()
+    expect(container.querySelector('[data-novasheet-context-menu]')!.contains(document.activeElement)).toBe(false)
+    layer.close()
+    expect(onClose).not.toHaveBeenCalled()
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+})
+
+describe('DomContextMenuLayer — disabled 项 ARIA focusable (spec §4.7)', () => {
+  it('disabled 项保留 focusable（ARIA menu 模式）', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    layer.open({ clientX: 0, clientY: 0, items: sampleItems })
+    const pasteBtn = container.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
+    expect(pasteBtn.disabled).toBe(false)           // HTML disabled NOT set
+    expect(pasteBtn.getAttribute('aria-disabled')).toBe('true') // aria-only
+    pasteBtn.focus()
+    expect(document.activeElement).toBe(pasteBtn)   // can be programmatically focused
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+})
+
 describe('DomContextMenuLayer — viewport clamp (spec §4.4)', () => {
   it('right overflow: 贴右边 8px', () => {
     const container = makeContainer()

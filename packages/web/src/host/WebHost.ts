@@ -65,6 +65,8 @@ export interface WebHost {
   getContainerSize(): { width: number; height: number }
   /** Return scroll-host's viewport-relative bounding rect (left/top in CSS px). Used for translating local coords to viewport coords. */
   getContainerBoundingRect(): { left: number; top: number }
+  /** 将键盘焦点还原到 scroll-host（preventScroll 以防跳屏）。spec §4.5 菜单关闭后恢复焦点。 */
+  focusScrollHost(): void
   destroy(): void
 }
 
