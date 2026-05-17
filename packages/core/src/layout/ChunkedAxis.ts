@@ -1,6 +1,20 @@
 /**
  * ChunkedAxis——行轴 / 列轴共用的尺寸-偏移算法核心（spec §4）。
  *
+ * 它用来解决的问题：
+ *   - Renderer 要画第 N 行 / 第 M 列时，需要快速知道它的 x/y 位置和宽高。
+ *   - 滚动到某个像素位置时，需要快速反查“这个位置落在哪一行/哪一列”。
+ *   - 1,000,000+ 行不能为每一行都维护昂贵的完整偏移表，同时还要支持单行/单列改尺寸。
+ *
+ * 换句话说，ChunkedAxis 是一根“绘制坐标索引器”：
+ *
+ * ```
+ * 行轴：rowIndex <-> y position, rowHeight
+ * 列轴：colIndex <-> x position, colWidth
+ * ```
+ *
+ * Renderer / FrozenRegions / Viewport 不自己计算行列坐标，而是统一问 ChunkedAxis。
+ *
  * 设计动机：1,000,000+ 行的偏移数组若每行单独存储，仅 Float64 累计就要 8MB 且不利于
  * 局部失效。CHUNKED 设计把项切成长度 = `CHUNK_SIZE` 的 chunk，整 chunk 未偏离默认值时
  * `sizes = null`（O(1) 存储），任何一项偏离才懒分配 Float32Array(CHUNK_SIZE)。
@@ -43,6 +57,12 @@ export interface ChunkedAxisOptions {
 /**
  * 行 / 列轴的分块累计偏移索引——行轴与列轴共用同一实现。
  *
+ * 使用者把它当成一根可查询的“尺子”：
+ * - `indexToPosition(index)`：第 N 行/列从哪个像素开始？
+ * - `positionToIndex(position)`：这个像素位置落在哪一行/列？
+ * - `getVisibleRange(start, end)`：当前 viewport 覆盖哪些行/列？
+ * - `getSize(index)` / `setSize(index, size)`：读取或修改单项尺寸。
+ *
  * 为什么选「分块累加」而非 Fenwick/BIT 或扁平 prefix 数组：
  * - 内存基线 O(1)：只保留 chunk 级别的 prefix sum；per-item 数组按需分配。
  *   1M 行未做尺寸调整时只占 ~8KB。
@@ -58,6 +78,22 @@ export interface ChunkedAxisOptions {
  * - chunk.sizes 非空 iff 该 chunk 内至少有一项被写成了 !== defaultSize 的值
  * - 即使 chunk.sizes 分配成 Float32Array(CHUNK_SIZE)，也只有前 chunk.length 项是有效数据；
  *   遍历用 chunk.length 而非 sizes.length，以跳过末尾 chunk 的零填充
+ *
+ * @example
+ * ```ts
+ * // 10 行，每行默认 28px。
+ * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+ *
+ * rows.indexToPosition(0) // 0：第 0 行顶部
+ * rows.indexToPosition(3) // 84：第 3 行顶部 = 3 * 28
+ * rows.positionToIndex(90) // 3：y=90px 落在第 3 行内
+ * rows.getVisibleRange(56, 140) // [2, 5]：可见区域覆盖第 2~5 行
+ *
+ * // 单独把第 3 行改成 56px。只有命中的 chunk 会被懒物化。
+ * rows.setSize(3, 56)
+ * rows.getSize(3) // 56
+ * rows.indexToPosition(4) // 140：第 4 行顶部会跟着后移
+ * ```
  */
 export class ChunkedAxis {
   /** 未显式设置时的默认行高/列宽 */
@@ -73,33 +109,100 @@ export class ChunkedAxis {
   /** 每次 mutate 自增；Viewport.snapshot 把它作为 Renderer 的 invalidate 缓存键 */
   private _version = 0
 
+  /**
+   * 创建一根行轴或列轴：本质上是一把“index ↔ 像素位置”的尺子。
+   *
+   * 行轴示意（纵向）：
+   *
+   * ```
+   * y=0    ┌──────── row 0, height 28
+   * y=28   ├──────── row 1, height 28
+   * y=56   ├──────── row 2, height 28
+   * y=84   ├──────── row 3, height 56  ← setSize(3, 56)
+   * y=140  ├──────── row 4, height 28
+   *        └──────── ...
+   *
+   * indexToPosition(3) = 84
+   * positionToIndex(90) = 3
+   * ```
+   *
+   * 列轴是同一个模型，只是方向从 y/height 换成 x/width。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 1_000_000, defaultSize: 28 })
+   * const cols = new ChunkedAxis({ count: 500, defaultSize: 120 })
+   * ```
+   */
   constructor(opts: ChunkedAxisOptions) {
     this.defaultSize = opts.defaultSize
     this.count = opts.count
     this.rebuild()
   }
 
-  /** 轴版本号，每次尺寸变更时递增 */
+  /**
+   * 轴版本号，每次尺寸变更时递增。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * const before = rows.version
+   * rows.setSize(3, 56)
+   * rows.version > before // true
+   * ```
+   */
   get version(): number {
     return this._version
   }
 
-  /** 所有行/列的总像素尺寸 */
+  /**
+   * 所有行/列的总像素尺寸。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * rows.getTotalSize() // 280
+   * ```
+   */
   getTotalSize(): number {
     return this.totalSize
   }
 
-  /** 行/列总数 */
+  /**
+   * 行/列总数。
+   *
+   * @example
+   * ```ts
+   * const cols = new ChunkedAxis({ count: 20, defaultSize: 120 })
+   * cols.getCount() // 20
+   * ```
+   */
   getCount(): number {
     return this.count
   }
 
-  /** 当前分块数量 */
+  /**
+   * 当前分块数量。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 2050, defaultSize: 28 })
+   * rows.getChunkCount() // 3，因为 CHUNK_SIZE 是 1024
+   * ```
+   */
   getChunkCount(): number {
     return this.chunks.length
   }
 
-  /** 返回当前默认行高/列宽 */
+  /**
+   * 返回当前默认行高/列宽。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * rows.getDefaultSize() // 28
+   * ```
+   */
   getDefaultSize(): number {
     return this.defaultSize
   }
@@ -111,6 +214,15 @@ export class ChunkedAxis {
    * 在边界 `index === count - 1` 处，`indexToPosition(index + 1)` 会被 clamp 到 count - 1，
    * 导致差值为 0。任何需要单项尺寸的地方都应该走 getSize（painter 据此画末行/末列边界）。
    * 索引越界返回 0（不抛错——painter 可以安全调用）。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * rows.getSize(3) // 28
+   * rows.setSize(3, 56)
+   * rows.getSize(3) // 56
+   * rows.getSize(99) // 0，越界安全返回
+   * ```
    */
   getSize(index: number): number {
     if (index < 0 || index >= this.count) return 0
@@ -124,6 +236,13 @@ export class ChunkedAxis {
   /**
    * 返回 `index` 项左/上边界的像素位置。越界 clamp 到 [0, count - 1]。
    * 默认 chunk 走 O(1) 快路径；已物化 chunk 块内最多遍历 CHUNK_SIZE 项。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * rows.indexToPosition(0) // 0
+   * rows.indexToPosition(3) // 84
+   * ```
    */
   indexToPosition(index: number): number {
     if (this.count === 0) return 0
@@ -149,6 +268,15 @@ export class ChunkedAxis {
    *
    * 两步搜索：先二分 chunk 级 prefixSum（O(log n_chunks)）定位 chunk；再按 chunk 类型
    * 直接计算块内偏移（默认 chunk）或块内累加（已物化 chunk，最坏 O(CHUNK_SIZE)）。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * rows.positionToIndex(0) // 0
+   * rows.positionToIndex(27) // 0
+   * rows.positionToIndex(28) // 1
+   * rows.positionToIndex(90) // 3
+   * ```
    */
   positionToIndex(position: number): number {
     if (this.count === 0) return 0
@@ -184,6 +312,14 @@ export class ChunkedAxis {
    *
    * 热点开销在尾部 chunk 的 prefix sum 增量传播：O(n_chunks) 次 Float64 写。
    * 1M 行 / 977 chunks 实测 ~3μs——交互拖拽 resize 完全无感。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * rows.setSize(3, 56)
+   * rows.getSize(3) // 56
+   * rows.indexToPosition(4) // 140，第 4 行被第 3 行加高后向后推
+   * ```
    */
   setSize(index: number, size: number): void {
     if (index < 0 || index >= this.count) return
@@ -195,9 +331,7 @@ export class ChunkedAxis {
       // 新值就等于默认值，没必要物化整 chunk。
       if (size === this.defaultSize) return
       const rowsInChunk =
-        chunkIdx === this.chunks.length - 1
-          ? this.count - chunkIdx * CHUNK_SIZE
-          : CHUNK_SIZE
+        chunkIdx === this.chunks.length - 1 ? this.count - chunkIdx * CHUNK_SIZE : CHUNK_SIZE
       // 即使最后一个 partial chunk 也按 CHUNK_SIZE 分配——超出 rowsInChunk 的位置保持 0，
       // 通过 chunk.length 控制遍历范围。这样未来 count 扩张时不需要 reallocate。
       const sizes = new Float32Array(CHUNK_SIZE)
@@ -224,6 +358,15 @@ export class ChunkedAxis {
    * 返回与像素区间 [startPos, endPos] 相交的项索引区间（**两端均闭**）。
    * count === 0 时返回 [0, -1]——空区间哨兵，让调用方可以安全用 `for (i = range[0]; i <= range[1]; i++)`
    * 而不会执行。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * rows.getVisibleRange(56, 140) // [2, 5]
+   *
+   * const empty = new ChunkedAxis({ count: 0, defaultSize: 28 })
+   * empty.getVisibleRange(0, 100) // [0, -1]
+   * ```
    */
   getVisibleRange(startPos: number, endPos: number): [number, number] {
     if (this.count === 0) return [0, -1]
@@ -237,6 +380,16 @@ export class ChunkedAxis {
    * - 显式被改成 == oldDefault 的项视为「跟随默认」，自动提升到 newDefault
    * - 真正 override 的项（!= oldDefault）保持原值
    * 这条路径就是 `setTheme` 在用户没固定 defaultRowHeight 时走的逻辑。
+   *
+   * @example
+   * ```ts
+   * const rows = new ChunkedAxis({ count: 10, defaultSize: 28 })
+   * rows.setSize(3, 56) // 真正 override，后续保持 56
+   * rows.setDefaultSize(32)
+   * rows.getDefaultSize() // 32
+   * rows.getSize(0) // 32，默认行跟随新默认值
+   * rows.getSize(3) // 56，override 保持原值
+   * ```
    */
   setDefaultSize(newDefault: number): void {
     if (newDefault === this.defaultSize) return
@@ -248,8 +401,7 @@ export class ChunkedAxis {
     for (let i = 0; i < this.chunks.length; i++) {
       const chunk = this.chunks[i]!
       if (chunk.sizes === null) {
-        const rowsInChunk =
-          i === this.chunks.length - 1 ? this.count - i * CHUNK_SIZE : CHUNK_SIZE
+        const rowsInChunk = i === this.chunks.length - 1 ? this.count - i * CHUNK_SIZE : CHUNK_SIZE
         chunk.totalSize = rowsInChunk * newDefault
       } else {
         // 遍历 chunk.length（避免末尾填充零）；把等于 oldDefault 的项提升到 newDefault。
@@ -266,7 +418,15 @@ export class ChunkedAxis {
     this._version++
   }
 
-  /** 构造期初始化 chunks 与 chunkPrefixSum，仅在构造函数里调用一次。 */
+  /**
+   * 构造期初始化 chunks 与 chunkPrefixSum，仅在构造函数里调用一次。
+   *
+   * @example
+   * ```ts
+   * // 内部调用：new ChunkedAxis(...) -> rebuild()
+   * // 结果是 chunks / chunkPrefixSum / totalSize 按 count 和 defaultSize 初始化完成。
+   * ```
+   */
   private rebuild(): void {
     const nChunks = Math.ceil(this.count / CHUNK_SIZE)
     this.chunks = new Array(nChunks)

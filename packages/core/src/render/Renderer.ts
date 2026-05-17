@@ -7,6 +7,36 @@
  *   - 通过共享 frameScheduler 调度 RAF；同帧多次 invalidate() 合并为一次 flush（key 去重）
  *   - destroy() 时取消 pending RAF，避免组件销毁后还有一次延迟 paint（M1 hardening 修复）
  *
+ * 绘制流程示意：
+ *
+ * ```
+ * scroll / resize / setTheme / refresh
+ *                 │
+ *                 ▼
+ *        Renderer.invalidate()
+ *                 │ schedule("renderer:flush")
+ *                 ▼
+ *          FrameScheduler
+ *                 │ requestAnimationFrame
+ *                 ▼
+ *           Renderer.paint()
+ *                 │
+ *                 ├─ 1. Viewport.snapshot()
+ *                 │     └─ quadrants / scrollX/Y / contentRect
+ *                 │
+ *                 ├─ 2. clear canvas background
+ *                 │
+ *                 ├─ 3. DataSource.getRows() 预热可见行
+ *                 │
+ *                 ├─ 4. paintQuadrant(main)
+ *                 │     ├─ DataSource.getCell()
+ *                 │     ├─ CellPainter.paint()
+ *                 │     └─ GridLinesPainter.paint()
+ *                 │
+ *                 └─ 5. HeaderPainter.paint()
+ *                       └─ Canvas 2D context
+ * ```
+ *
  * 当前实现降级：
  *   - 只画 `main` 象限（FrozenRegions 暂只返回 main）；冻结的 3 个象限留 M3
  *   - paintQuadrant 已经按 viewport.scrollX/Y 偏移单元格与网格线；M2 NativeScroller
@@ -78,14 +108,47 @@ export class Renderer {
   /** 表头绘制器 */
   private headerPainter: HeaderPainter
 
+  /**
+   * 组装单帧绘制管线。
+   *
+   * Renderer 的实现思路是“薄调度器 + 专用 painter”：
+   *   - Renderer 持有会随外部变化的输入：DataSource、Viewport、行/列轴、Theme。
+   *   - 每次 paint() 开始时只从 Viewport.snapshot() 读一份不可变快照，决定本帧可见范围。
+   *   - 具体像素绘制拆给 CellPainter / GridLinesPainter / HeaderPainter，Renderer 只负责顺序。
+   *   - invalidate() 不直接绘制，而是通过 FrameScheduler 合并到下一帧 RAF。
+   *
+   * 这里不复制数据、不缓存可见单元格，也不直接做 DOM 操作；Grid 负责生命周期和 DOM，
+   * Renderer 只负责“给定当前状态，画出这一帧”。
+   */
   constructor(opts: RendererOptions) {
+    // Canvas 2D context 是所有 painter 最终写入的目标。
+    // HighDPI 已经在 Grid 中配置好 transform，所以这里继续使用 CSS px 坐标。
     this.ctx = opts.ctx
+
+    // DataSource 提供 schema、可见行预热和 getCell 热路径读取。
+    // Renderer 不拥有数据，只在 paint() 中按当前可见范围读取。
     this.data = opts.data
+
+    // Viewport 是本帧“画什么”的唯一读入口；Renderer 不直接向它写入滚动或尺寸。
     this.viewport = opts.viewport
+
+    // 行列轴用于把 row/col index 映射到 canvas 坐标和单元格尺寸。
+    // 它们由 Grid 创建和 mutation，Renderer 只在绘制时读取。
     this.rowsAxis = opts.rowsAxis
     this.colsAxis = opts.colsAxis
+
+    // Theme 是所有视觉值来源，painter 初始化时也拿同一份 theme。
     this.theme = opts.theme
+
+    // 正常路径由 Grid 传入 per-Grid scheduler，让 scroll/read/render 合并在同一 RAF。
+    // fallback new FrameScheduler() 只用于直接单测 Renderer 或独立使用时的兜底。
     this.scheduler = opts.scheduler ?? new FrameScheduler()
+
+    // 三个 painter 分别负责不同绘制职责：
+    //   - CellPainter：单元格内容、文本截断、类型分派
+    //   - GridLinesPainter：批量绘制水平/垂直网格线
+    //   - HeaderPainter：顶部列头背景和字段名
+    // Renderer 通过固定顺序调用它们，保证层级稳定：cell -> grid lines -> header。
     this.cellPainter = new CellPainter(this.theme)
     this.gridLinesPainter = new GridLinesPainter(this.theme)
     this.headerPainter = new HeaderPainter(this.theme)
@@ -122,6 +185,13 @@ export class Renderer {
   /**
    * 同步绘制一帧。直接调用会绕开 RAF 调度——仅用于 Grid 构造期的首帧同步绘制
    * 以及测试。生产路径走 invalidate() → scheduler → paint()。
+   *
+   * 为什么首帧不统一走 RAF：
+   *   - 构造期只有一次初始化，不存在高频重复 invalidate，直接画不会浪费合帧机会。
+   *   - `new Grid(container, options)` 返回后容器里应立即有画面，避免短暂空白。
+   *   - 测试可以同步断言首帧绘制结果，不必额外等待 requestAnimationFrame。
+   *
+   * 后续 scroll / resize / setTheme / refresh 仍必须走 invalidate()，让频繁变化合并到下一帧。
    */
   paint(): void {
     const snapshot = this.viewport.snapshot()

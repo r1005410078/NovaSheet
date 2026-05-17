@@ -55,6 +55,71 @@ export interface GridOptions {
  * 生命周期：`new Grid(container, opts)` 在 container 内挂一个 canvas 子节点 + 同步绘首帧，
  * 之后全部走 RAF 调度，直到 `destroy()`。
  * `destroy()` 幂等，并把 container 的 CSS `position` 还原为原值——避免污染宿主页面。
+ *
+ * 首次渲染调用流程：
+ *
+ * ```
+ * new Grid(container, options)
+ *          │
+ *          ├─ 1. 保存 data / theme / defaultRowHeight
+ *          │
+ *          ├─ 2. 创建 DOM 层
+ *          │      ├─ scrollHost   原生滚动容器
+ *          │      ├─ scrollSpacer 撑出滚动条范围
+ *          │      └─ canvas       实际绘制表格
+ *          │
+ *          ├─ 3. 创建布局与状态层
+ *          │      ├─ rowsAxis / colsAxis
+ *          │      ├─ FrozenRegions
+ *          │      ├─ ScrollMapper
+ *          │      └─ Viewport
+ *          │
+ *          ├─ 4. 创建渲染层
+ *          │      ├─ HighDPI.resize(width, height)
+ *          │      └─ Renderer(...)
+ *          │
+ *          ├─ 5. 接通滚动和 resize
+ *          │      ├─ NativeScroller.attach()
+ *          │      └─ ResizeObserver.observe(container)
+ *          │
+ *          └─ 6. renderer.paint()
+ *                 └─ 同步首帧：constructor 返回时 canvas 已经有画面
+ * ```
+ *
+ * 滚动后的渲染调用流程：
+ *
+ * ```
+ * 用户滚动 scrollHost
+ *          │
+ *          ▼
+ * NativeScroller
+ *          │ schedule("scroll:read")
+ *          ▼
+ * FrameScheduler / requestAnimationFrame
+ *          │
+ *          ▼
+ * 读取 scrollTop / scrollLeft
+ *          │
+ *          ▼
+ * Grid.mapScrollToLogical()
+ *          │ DOM scroll 坐标 -> 逻辑内容坐标 logicalX / logicalY
+ *          ▼
+ * Viewport.setScroll(logicalX, logicalY)
+ *          │
+ *          ▼
+ * Renderer.invalidate()
+ *          │ schedule("renderer:flush")
+ *          ▼
+ * FrameScheduler / requestAnimationFrame
+ *          │
+ *          ▼
+ * Renderer.paint()
+ *          │
+ *          ├─ Viewport.snapshot()
+ *          ├─ DataSource.getRows() / getCell()
+ *          ├─ CellPainter / GridLinesPainter / HeaderPainter
+ *          └─ Canvas 2D
+ * ```
  */
 export class Grid {
   /** 宿主容器 DOM 节点 */
@@ -98,24 +163,78 @@ export class Grid {
   /** 构造时保存容器的原始 position 值，销毁时恢复 */
   private originalPosition: string
 
+  /**
+   * 创建一个 Grid 实例，并立即在传入容器中挂载 scroll-host + canvas，完成首帧同步绘制。
+   *
+   * @example
+   * ```ts
+   * import { Grid, InMemoryDataSource } from '@novasheet/core'
+   *
+   * const container = document.getElementById('sheet')!
+   * const data = new InMemoryDataSource({
+   *   schema: {
+   *     fields: [
+   *       { id: 'name', name: 'Name', type: 'text', width: 180 },
+   *       { id: 'age', name: 'Age', type: 'number', width: 80 },
+   *     ],
+   *   },
+   *   rows: [
+   *     { name: 'Ada Lovelace', age: 36 },
+   *     { name: 'Grace Hopper', age: 85 },
+   *   ],
+   * })
+   *
+   * const grid = new Grid(container, { data })
+   * grid.scrollToRow(1)
+   * grid.destroy()
+   * ```
+   *
+   * @example
+   * ```ts
+   * const grid = new Grid(container, {
+   *   data,
+   *   theme: denseGridTheme,
+   *   defaultRowHeight: 40, // sticky: later setTheme() will not override row height
+   * })
+   * ```
+   */
   constructor(container: HTMLElement, options: GridOptions) {
+    // 1) 保存宿主传入的最小配置。
+    //
+    // Grid 是整个 core 的 facade：外部只把 DOM 容器、DataSource 和可选 Theme 交给它。
+    // 这里先把这些“外部事实”落到实例字段，后续所有子系统都从这些字段派生。
     this.container = container
     this.data = options.data
     this.theme = options.theme ?? denseGridTheme
+    // defaultRowHeight 一旦由用户显式传入，就视为 sticky 配置。
+    // 后续 setTheme() 不会再用新主题的 rowHeight 覆盖它；否则默认行高跟随主题。
     this.explicitDefaultRowHeight = options.defaultRowHeight
 
-    // Position the container so absolute children (canvas, scroll-host) anchor correctly
+    // 2) 准备宿主容器的定位上下文。
+    //
+    // Grid 会在 container 内挂两个 absolute 子节点：
+    //   - scrollHost：提供浏览器原生滚动条
+    //   - canvas：负责实际绘制
+
     const computedPos = getComputedStyle(this.container).position
     this.originalPosition = this.container.style.position
     if (computedPos === 'static') {
+      // 如果宿主原本是 static，absolute 子节点会相对更外层定位，所以这里临时改成 relative。
+      // container 不能保持 static：scrollHost/canvas 的 top/left/right/bottom 需要以 container
+      // 为 containing block，否则可能贴到 body 或其他外层定位祖先上，导致多个 Grid 互相覆盖。
+      // originalPosition 必须保存下来，destroy() 时还原，避免污染宿主页面布局。
       this.container.style.position = 'relative'
     }
 
-    // Scroll-host: native scrollbar provider; absolutely fills container.
-    // z-index: 1 puts it visually ABOVE the canvas so the browser-painted scrollbar
-    // (which lives at the scroll-host's edge) isn't hidden by canvas. Events still
-    // route to scroll-host correctly because canvas has pointer-events: none.
-    // M4 handle-layer will use z-index: 2 to sit above scroll-host for resize hits.
+    // 3) 创建 scroll-host：它不画内容，只负责拿到浏览器原生滚动能力。
+    //
+    // 设计点：
+    //   - absolute + 四边 0：让它完整覆盖 Grid 容器
+    //   - overflow: auto：由浏览器绘制滚动条，避免自绘 scrollbar 的复杂兼容问题
+    //   - z-index: 1：放在 canvas 上方，确保浏览器滚动条可见
+    //   - canvas 会设置 pointer-events: none，所以 wheel/touch 事件能落到 scrollHost
+    //
+    // M4 计划中的 resize handle layer 会用 z-index: 2，压在 scrollHost 上方接管命中区。
     this.scrollHost = document.createElement('div')
     this.scrollHost.setAttribute('data-novasheet-scroll-host', '')
     Object.assign(this.scrollHost.style, {
@@ -127,7 +246,13 @@ export class Grid {
       overflow: 'auto',
       zIndex: '1',
     })
-    // Spacer: sized to ScrollMapper.computeSpacerSize, gives the scrollbar its range
+
+    // 4) 创建 scroll-spacer：用一个空 div 撑出滚动范围。
+    //
+    // 真实内容可能是 1M 行，逻辑高度可达数千万 px；但浏览器元素 scrollHeight 有上限。
+    // 所以 spacer 的尺寸不是直接等于真实内容尺寸，而是后面由 resizeSpacer()
+    // 通过 ScrollMapper.computeSpacerSize() 计算，并在 SAFE_MAX 内封顶。
+    // 用户滚动这个 spacer，Grid 再把 DOM scrollTop 映射成逻辑内容坐标。
     this.scrollSpacer = document.createElement('div')
     this.scrollSpacer.setAttribute('data-novasheet-scroll-spacer', '')
     Object.assign(this.scrollSpacer.style, {
@@ -138,8 +263,11 @@ export class Grid {
     this.scrollHost.appendChild(this.scrollSpacer)
     this.container.appendChild(this.scrollHost)
 
-    // Canvas: paints below scroll-host so the scrollbar shows through; pointer-events: none
-    // lets wheel/touch events pass through to scroll-host (which is now on top via z-index: 1).
+    // 5) 创建 canvas：它只负责画当前可见区域。
+    //
+    // canvas 放在 scrollHost 下方（z-index: 0），scrollHost 放上方（z-index: 1）。
+    // pointer-events: none 是关键：canvas 虽然铺满容器，但不会挡住 scrollHost 的滚动事件。
+    // 也就是说，视觉内容来自 canvas，滚动交互来自 scrollHost。
     this.canvas = document.createElement('canvas')
     Object.assign(this.canvas.style, {
       position: 'absolute',
@@ -150,26 +278,54 @@ export class Grid {
     })
     this.container.appendChild(this.canvas)
 
+    // 6) 获取 2D 绘图上下文。
+    //
+    // 后续 Renderer / Painter 都共享这个 ctx。没有 2D context 时直接失败，
+    // 因为 NovaSheet 当前渲染路径完全基于 Canvas 2D。
     const ctx = this.canvas.getContext('2d')
     if (!ctx) throw new Error('NovaSheet: 2d canvas context unavailable')
     this.ctx = ctx
 
+    // 7) 建立两根布局轴：行轴和列轴。
+    //
+    // rowsAxis：rowIndex -> y position / row height
+    // colsAxis：colIndex -> x position / col width
+    //
+    // 行默认高度来自 options.defaultRowHeight 或 theme.metrics.rowHeight。
+    // 列默认宽度取 schema 字段宽度平均值，随后 applyFieldWidths() 只物化偏离平均值的列，
+    // 让列宽相近时 ChunkedAxis 保持更少的 override chunk。
     const rowHeight = this.resolveDefaultRowHeight()
     this.rowsAxis = new ChunkedAxis({ count: this.data.getRowCount(), defaultSize: rowHeight })
     this.colsAxis = new ChunkedAxis({
       count: this.data.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
     })
+
+    // 8) 建立冻结区域模型。
+    //
+    // 当前 FrozenRegions 还只是 M3 的接口骨架：即使传入 frozenRows/frozenCols，
+    // getQuadrants() 目前仍只返回 main 象限。保留这个对象是为了让 Viewport/Renderer
+    // 的契约提前稳定，后续接入 4 象限时不用推翻调用链。
     this.frozen = new FrozenRegions(
       this.rowsAxis,
       this.colsAxis,
       options.frozenRows ?? 0,
       options.frozenCols ?? 0,
     )
+
+    // 9) 建立滚动映射器和 Viewport。
+    //
+    // ScrollMapper 只负责数学映射：DOM scrollTop/Left <-> 逻辑内容坐标。
+    // Viewport 聚合尺寸、滚动位置、header 高度和象限切分，是 Renderer 每帧唯一读源。
     this.scrollMapper = new ScrollMapper()
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
 
+    // 10) 建立 DPR 适配器和 Renderer。
+    //
+    // HighDPI 负责把 canvas bitmap 放大到 devicePixelRatio，同时保持 painter 继续用 CSS px。
+    // Renderer 拿到 DataSource / Viewport / Axis / Theme / Scheduler 后，就能按 snapshot 绘制一帧。
+    // scheduler 是 per-Grid 实例共享的：NativeScroller 和 Renderer 都用它合并到同一 RAF。
     this.highDpi = new HighDPI(this.canvas, this.ctx)
     this.renderer = new Renderer({
       ctx: this.ctx,
@@ -181,32 +337,53 @@ export class Grid {
       scheduler: this.scheduler,
     })
 
+    // 11) 初始化尺寸、列宽和滚动 spacer。
+    //
     // happy-dom（以及未挂载的真实 DOM 元素）会把 getBoundingClientRect 全部返 0；
     // 退到默认尺寸保证首帧仍有内容，宿主会在 M2 引入 ResizeObserver 后立即纠正尺寸。
     const rect = this.container.getBoundingClientRect()
     const w = rect.width || 400
     const h = rect.height || 300
+    // canvas 物理尺寸 + CSS 尺寸同步到当前容器尺寸。
     this.highDpi.resize(w, h)
+    // Viewport 记录 CSS px 视口尺寸，供 snapshot() 计算可见行列范围。
     this.viewport.setSize(w, h)
+    // 将 schema field.width 写入列轴；只有偏离默认宽度的列会被物化。
     this.applyFieldWidths()
+    // 根据行列总尺寸重算 spacer，让原生滚动条拥有正确滚动范围。
     this.resizeSpacer()
 
-    // Wire native scroll → ScrollMapper → Viewport.setScroll → Renderer.invalidate
-    this.nativeScroller = new NativeScroller(this.scrollHost, this.scheduler, (scrollTop, scrollLeft) => {
-      const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
-      this.viewport.setScroll(logicalX, logicalY)
-      this.renderer.invalidate()
-    })
+    // 12) 接通滚动链路：
+    //
+    // DOM scroll event
+    //   -> NativeScroller 在同一帧读取 scrollTop/scrollLeft
+    //   -> Grid.mapScrollToLogical() 用 ScrollMapper 转成 logicalX/logicalY
+    //   -> Viewport.setScroll() 更新快照输入
+    //   -> Renderer.invalidate() 请求下一帧重绘
+    this.nativeScroller = new NativeScroller(
+      this.scrollHost,
+      this.scheduler,
+      (scrollTop, scrollLeft) => {
+        const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
+        this.viewport.setScroll(logicalX, logicalY)
+        this.renderer.invalidate()
+      },
+    )
     this.nativeScroller.attach()
 
-    // Watch container resize so spacer + canvas stay in sync with element size
+    // 13) 监听容器尺寸变化。
+    //
+    // 宿主布局变化时，canvas bitmap、Viewport 尺寸、scroll 映射和当前画面都要同步更新。
+    // happy-dom / 某些测试环境可能没有 ResizeObserver，所以这里按能力存在性启用。
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this._onContainerResize())
       this.resizeObserver.observe(this.container)
     }
 
-    // 同步首帧——让 new Grid(...) 后立即可见画面；
-    // 之后所有 paint 都走 RAF。
+    // 14) 同步绘制首帧。
+    //
+    // 构造函数结束前直接 paint 一次，保证 `new Grid(container, options)` 返回后
+    // 容器里已经有可见画面。后续数据、滚动、resize、主题变化都走 invalidate() + RAF。
     this.renderer.paint()
   }
 
@@ -396,8 +573,10 @@ export class Grid {
    * 退化为 getBoundingClientRect / 默认值仅是 happy-dom 兜底。
    */
   private getClientSize(): { clientW: number; clientH: number } {
-    const clientW = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
-    const clientH = this.container.clientHeight || this.container.getBoundingClientRect().height || 300
+    const clientW =
+      this.container.clientWidth || this.container.getBoundingClientRect().width || 400
+    const clientH =
+      this.container.clientHeight || this.container.getBoundingClientRect().height || 300
     return { clientW, clientH }
   }
 
@@ -410,7 +589,10 @@ export class Grid {
    *
    * 水平轴没有 header 等价物，直接用 (contentW, clientW)。
    */
-  private mapScrollToLogical(scrollTop: number, scrollLeft: number): { logicalX: number; logicalY: number } {
+  private mapScrollToLogical(
+    scrollTop: number,
+    scrollLeft: number,
+  ): { logicalX: number; logicalY: number } {
     const headerH = this.theme.metrics.headerHeight
     const contentH = this.rowsAxis.getTotalSize()
     const contentW = this.colsAxis.getTotalSize()
@@ -448,7 +630,10 @@ export class Grid {
    * 防止下一帧用过期的 logical 坐标绘制（非线性映射下旧 scrollTop 会被解读到错误位置）。
    */
   private remapScroll(): void {
-    const { logicalX, logicalY } = this.mapScrollToLogical(this.scrollHost.scrollTop, this.scrollHost.scrollLeft)
+    const { logicalX, logicalY } = this.mapScrollToLogical(
+      this.scrollHost.scrollTop,
+      this.scrollHost.scrollLeft,
+    )
     this.viewport.setScroll(logicalX, logicalY)
   }
 
