@@ -33,28 +33,38 @@ export const TenThousandRows: Story = {
 }
 
 /**
- * 1,000,000 rows — exceeds Firefox / iOS Safari element-height limits (~17.9M / ~16.7M),
- * so ScrollMapper.computeSpacerSize caps the spacer at 6,000,000 px and the scrollTop is
- * mapped non-linearly. Wheel / trackpad scroll smoothly; the scrollbar thumb covers
- * ~4.67 logical rows per pixel.
+ * 1,000,000 rows × 30 columns — the canonical stress test, covering both
+ * non-linear vertical scroll (28M px content capped at 6M spacer) AND
+ * horizontal scroll (4200 px content vs 780 px host).
  *
- * Allocation note: ~1M plain JS objects ≈ 150MB heap. Render is slow on weak machines;
- * the M5 column-typed TypedArray generator will fix this. For now, the story is the
- * canonical "stress test" demo.
+ * Allocation note: ~30M JS values across 1M Row objects ≈ 600-900MB heap
+ * depending on V8 overhead. First render is slow (3-8s on a typical laptop)
+ * — it's V8 building the dataset, not NovaSheet rendering. The M5 column-typed
+ * TypedArray generator will replace this with O(1) lazy materialization.
+ *
+ * After construction, scrolling stays smooth: ChunkedAxis is O(log n_chunks),
+ * Renderer paints only the visible ~30 rows × ~6 cols = 180 cells per frame.
  */
 export const OneMillionRows: Story = {
   render: () => {
-    const categories = ['alpha', 'beta', 'gamma', 'delta'] as const
+    const colCount = 30
+    const wideSchema: Schema = {
+      fields: Array.from({ length: colCount }, (_, c) => ({
+        id: `c${c}`,
+        name: `Column ${c}`,
+        type: c % 3 === 0 ? ('number' as const) : ('text' as const),
+        width: 140,
+      })),
+    }
     const rows = new Array<Record<string, string | number>>(1_000_000)
     for (let i = 0; i < rows.length; i++) {
-      rows[i] = {
-        idx: i,
-        name: `Row ${i}`,
-        category: categories[i % 4]!,
-        value: i * 0.5,
+      const row: Record<string, string | number> = {}
+      for (let c = 0; c < colCount; c++) {
+        row[`c${c}`] = c % 3 === 0 ? i * 100 + c : `r${i}-c${c}`
       }
+      rows[i] = row
     }
-    const data = new InMemoryDataSource({ schema, rows })
+    const data = new InMemoryDataSource({ schema: wideSchema, rows })
     return createGridHost({ data })
   },
 }
