@@ -3,7 +3,7 @@ import { InMemoryDataSource } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { generateRows, mixedTypesSchema } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
-import { sources } from '../story-sources'
+import allSevenSrc from './snippets/fieldTypes.allSeven.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/字段类型',
@@ -16,7 +16,7 @@ type Story = StoryObj
 
 export const AllSevenTypes: Story = {
   name: '七种字段类型',
-  ...docsStory(sources.fieldTypes.allSeven),
+  ...docsStory(allSevenSrc),
   render: () => {
     const schema = mixedTypesSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 50) })

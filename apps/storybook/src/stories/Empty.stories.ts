@@ -3,7 +3,7 @@ import { InMemoryDataSource } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
-import { sources } from '../story-sources'
+import noRowsSrc from './snippets/empty.noRows.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/空数据',
@@ -16,7 +16,7 @@ type Story = StoryObj
 
 export const NoRows: Story = {
   name: '无数据行',
-  ...docsStory(sources.empty.noRows),
+  ...docsStory(noRowsSrc),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: [] })

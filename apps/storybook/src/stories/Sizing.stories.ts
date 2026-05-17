@@ -3,7 +3,7 @@ import { Grid } from '@novasheet/web'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
 import { generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
-import { sources } from '../story-sources'
+import sizingCustomSrc from './snippets/sizing.custom.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/尺寸',
@@ -16,7 +16,7 @@ type Story = StoryObj
 
 export const CustomColumnWidthsAndRowHeights: Story = {
   name: '自定义列宽与行高',
-  ...docsStory(sources.sizing.custom),
+  ...docsStory(sizingCustomSrc),
   render: () => {
     const schema: Schema = {
       fields: [

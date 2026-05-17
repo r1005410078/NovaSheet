@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
 import { docsMeta, docsStory } from '../story-docs'
-import { sources } from '../story-sources'
+import introSrc from './snippets/intro.snippet.ts?raw'
 
 const meta: Meta = {
   title: '介绍',
@@ -17,7 +17,7 @@ type Story = StoryObj
 
 export const Welcome: Story = {
   name: '欢迎',
-  ...docsStory(sources.intro, '最小 Grid 用法；完整示例见各 **表格/** 分组 README。'),
+  ...docsStory(introSrc, '最小 Grid 用法；完整示例见各 **表格/** 分组 README。'),
   render: () => {
     const root = document.createElement('div')
     root.style.cssText = [

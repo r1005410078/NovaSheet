@@ -3,7 +3,8 @@ import { InMemoryDataSource, denseGridTheme, type Theme } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
-import { sources } from '../story-sources'
+import themeDenseSrc from './snippets/theme.dense.snippet.ts?raw'
+import themeCompactSrc from './snippets/theme.compact.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/主题',
@@ -16,7 +17,7 @@ type Story = StoryObj
 
 export const Dense: Story = {
   name: '默认紧凑',
-  ...docsStory(sources.theme.dense),
+  ...docsStory(themeDenseSrc),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 80) })
@@ -45,7 +46,7 @@ const compactTheme: Theme = {
 
 export const Compact: Story = {
   name: '更紧凑',
-  ...docsStory(sources.theme.compact),
+  ...docsStory(themeCompactSrc),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 80) })

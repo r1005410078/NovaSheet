@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { Grid } from '@novasheet/web'
+import type { Grid } from '@novasheet/web'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
-import { sources } from '../story-sources'
+import autofitLongTextSrc from './snippets/autofit.longText.snippet.ts?raw'
+import autofitLongTextDisabledSrc from './snippets/autofit.longText.disabled.snippet.ts?raw'
+import autofitAfterColumnResizeSrc from './snippets/autofit.afterColumnResize.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/行高自适应',
@@ -64,7 +66,7 @@ const sampleRows = [
  */
 export const LongTextAutofit: Story = {
   name: '长文本 + autofitRows()',
-  ...docsStory(sources.autofit.longText, '页面加载后自动调用 `grid.autofitRows()`，按文本内容撑开。'),
+  ...docsStory(autofitLongTextSrc, '页面加载后自动调用 `grid.autofitRows()`，按文本内容撑开。'),
   render: () => {
     const data = new InMemoryDataSource({ schema, rows: sampleRows })
     const host = createGridHost({ data }, 720, 360)
@@ -83,7 +85,7 @@ export const LongTextAutofit: Story = {
 export const WrapWithoutAutofit: Story = {
   name: '只换行不 autofit（对比）',
   ...docsStory(
-    sources.autofit.longText.replace('grid.autofitRows()', '// grid.autofitRows() — 故意不调'),
+    autofitLongTextDisabledSrc,
     'CellPainter 仍按 wrap 模式绘制，但行高保持默认；长文本会被单元格底部裁切。',
   ),
   render: () => {
@@ -99,9 +101,7 @@ export const WrapWithoutAutofit: Story = {
 export const AfterColumnResize: Story = {
   name: '列宽变化后再次 autofit',
   ...docsStory(
-    `grid.autofitRows()
-grid.setColumnWidth('desc', 100)  // 列变窄 → 文本应该多换几行
-grid.autofitRows()                // 再次手动重算`,
+    autofitAfterColumnResizeSrc,
     '本 demo 在 mount 后调用了两次 autofitRows——可观察第二次后 desc 列高度增加。',
   ),
   render: () => {

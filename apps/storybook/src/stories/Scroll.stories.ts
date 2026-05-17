@@ -4,7 +4,11 @@ import { InMemoryDataSource, type Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
 import { docsMeta, docsStory } from '../story-docs'
-import { sources } from '../story-sources'
+import tenThousandSrc from './snippets/scroll.tenThousand.snippet.ts?raw'
+import oneMillionSrc from './snippets/scroll.oneMillion.snippet.ts?raw'
+import scrollToRowSrc from './snippets/scroll.scrollToRow.snippet.ts?raw'
+import bothAxisSrc from './snippets/scroll.bothAxis.snippet.ts?raw'
+import scrollToCellSrc from './snippets/scroll.scrollToCell.snippet.ts?raw'
 
 const schema: Schema = {
   fields: [
@@ -25,7 +29,7 @@ type Story = StoryObj
 
 export const TenThousandRows: Story = {
   name: '一万行',
-  ...docsStory(sources.scroll.tenThousand),
+  ...docsStory(tenThousandSrc),
   render: () => {
     const rows = Array.from({ length: 10_000 }, (_, i) => ({
       idx: i,
@@ -40,7 +44,7 @@ export const TenThousandRows: Story = {
 
 export const OneMillionRows: Story = {
   name: '一百万行 × 30 列',
-  ...docsStory(sources.scroll.oneMillion, '`GeneratedDataSource` 按需生成，挂载无预分配。'),
+  ...docsStory(oneMillionSrc, '`GeneratedDataSource` 按需生成，挂载无预分配。'),
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {
@@ -61,7 +65,7 @@ export const OneMillionRows: Story = {
 
 export const ScrollToRow500: Story = {
   name: '滚动到第 500 行',
-  ...docsStory(sources.scroll.scrollToRow),
+  ...docsStory(scrollToRowSrc),
   render: () => {
     const rows = Array.from({ length: 2_000 }, (_, i) => ({
       idx: i,
@@ -81,7 +85,7 @@ export const ScrollToRow500: Story = {
 
 export const BothAxisScroll: Story = {
   name: '双向滚动（30 列）',
-  ...docsStory(sources.scroll.bothAxis),
+  ...docsStory(bothAxisSrc),
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {
@@ -106,7 +110,7 @@ export const BothAxisScroll: Story = {
 
 export const ScrollToCellFar: Story = {
   name: '滚动到远列',
-  ...docsStory(sources.scroll.scrollToCell),
+  ...docsStory(scrollToCellSrc),
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {

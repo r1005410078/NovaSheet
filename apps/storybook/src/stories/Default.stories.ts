@@ -3,7 +3,7 @@ import { InMemoryDataSource } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
-import { sources } from '../story-sources'
+import hundredRowsSrc from './snippets/default.hundredRows.snippet.ts?raw'
 
 const meta: Meta = {
   title: '表格/默认',
@@ -16,7 +16,7 @@ type Story = StoryObj
 
 export const HundredRowsThreeColumns: Story = {
   name: '100 行 × 3 列',
-  ...docsStory(sources.default.hundredRows),
+  ...docsStory(hundredRowsSrc),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 100) })
