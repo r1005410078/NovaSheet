@@ -8,7 +8,8 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@novasheet/core": "workspace:*"
+    "@novasheet/core": "workspace:*",
+    "@novasheet/web-canvas2d": "workspace:*"
   },
   "devDependencies": {
     "@storybook/html": "^10.4.0",

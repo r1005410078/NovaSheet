@@ -7,7 +7,7 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 ## Project shape
 
 - High-performance Canvas-based table engine, eventual AI-Native data workbench
-- Greenfield TS monorepo (bun workspaces); single shipped package today: `@novasheet/core`
+- Greenfield TS monorepo (bun workspaces); three packages: `@novasheet/core`, `@novasheet/web`, `@novasheet/web-canvas2d` (public `Grid` facade)
 - See `README.md` for product framing and Quick Start
 - See `docs/superpowers/specs/` for the design specs that drive plans
 - See `docs/superpowers/plans/` for milestone implementation plans (M1 done; M2-M5 outlined)
@@ -16,16 +16,19 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 ## Current state (read first on a fresh session)
 
-**Last shipped:** **M2 Virtualization & Scroll** (+ Bun migration) — tag `bun-migration` at the HEAD of `main`. 126 tests, lint/typecheck/build all clean. 1M+ rows scroll smoothly with non-linear `scrollTop` mapping. Visible in Storybook → Grid/Scroll (10k / 1M / scrollToRow / BothAxisScroll / ScrollToCellFar). Toolchain is now Bun-only (no Node / pnpm / Vitest / tsup).
+**Last shipped:** **Cross-platform refactor** — branch `refactor/cross-platform`. 132 tests across core / web / web-canvas2d; lint/typecheck/build all clean. Monolithic `@novasheet/core` split into:
 
-**Next milestone:** **M3 Frozen + Dynamic sizing** — not yet planned. Scope (per spec §4 + §5.3 + §5.7):
-- `FrozenRegions` returning 4 quadrants (topLeft / topRight / bottomLeft / main) when `frozenRows > 0` or `frozenCols > 0`
-- `Renderer` iterating all populated quadrants with per-quadrant scroll offsets (frozen quadrants don't scroll)
-- New `FrozenPainter` for inter-quadrant shadow gradients (spec §5.7)
-- Dynamic row-height autofit (multi-line text measurement)
-- Grid `setFrozen(rows, cols)` becomes load-bearing (currently a no-op stub from M1)
+- `@novasheet/core` — platform-independent (data, schema, theme, layout, `DefaultGridEngine`, `RenderFrame`). No DOM.
+- `@novasheet/web` — browser host (`DomGridHost`, `NativeScroller`, `ScrollMapper`, `WebGridRuntime`, `WebRenderer` contract). No Canvas-specific code.
+- `@novasheet/web-canvas2d` — Canvas2D renderer + public `Grid` facade. Consumers `import { Grid } from '@novasheet/web-canvas2d'`.
 
-**Per-Grid scheduler convention** (clarification of invariant #5): each `Grid` owns `new FrameScheduler()` shared by its `Renderer` and `NativeScroller`; the `frameScheduler` singleton exported from `util/raf` is NOT used cross-Grid (would clobber via `'renderer:flush'` key collision). When M3 / M4 add more RAF sources, they pass the same per-Grid instance.
+M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook → Grid/Scroll stories import `Grid` from `@novasheet/web-canvas2d`.
+
+**Next milestone:** **M3 Frozen + Dynamic sizing** — not yet planned. Same scope (spec §4 + §5.3 + §5.7), now across packages: `FrozenRegions` stays in `@novasheet/core`; `FrozenPainter` (M3) lands in `@novasheet/web-canvas2d/painters/`.
+
+**Per-Grid scheduler convention** (invariant #5): each `Grid` owns `new FrameScheduler()` shared by `Canvas2DRenderer` and `NativeScroller` via `WebGridRuntime`; the `frameScheduler` singleton from `util/raf` is NOT used cross-Grid.
+
+**Dependency direction:** `core ← web ← web-canvas2d`. No back-edges. `apps/storybook` depends on `@novasheet/web-canvas2d` (Grid) + `@novasheet/core` (DataSource types).
 
 **M3-M5 status:** outlined only — see spec §1 In Scope + spec appendix B for the Phase ordering.
 
@@ -59,10 +62,10 @@ Built up over the M1 cycle. Apply to all sessions, not just M1:
 ## Toolchain (NON-NEGOTIABLE)
 
 - **Package manager + runtime:** `bun` (≥ 1.2). **NEVER** use `npm`, `yarn`, or `pnpm` — they will desync the lockfile and break CI.
-- **Test:** `bun test` (top-level). Tests live in `packages/core/tests/`. Setup is preloaded via `bunfig.toml` (`[test] preload = ["./packages/core/tests/setup.ts"]`).
-- **Typecheck:** `bun run --filter @novasheet/core typecheck` — TypeScript is strict + `noUncheckedIndexedAccess` + `verbatimModuleSyntax`.
+- **Test:** `bun test` (top-level). Tests live in each `packages/<pkg>/tests/`. Preload chain in `bunfig.toml`: core → web → web-canvas2d setup files.
+- **Typecheck:** `bun run --filter '*' typecheck` — TypeScript is strict + `noUncheckedIndexedAccess` + `verbatimModuleSyntax`.
 - **Lint:** `bun run lint` — must be clean (0 errors, 0 warnings).
-- **Build:** `bun run --filter @novasheet/core build` (custom `build.ts` invoking `Bun.build` for ESM + CJS + `tsc --emitDeclarationOnly` for .d.ts).
+- **Build:** `bun run --filter @novasheet/web build && bun run --filter @novasheet/web-canvas2d build && bun run --filter @novasheet/core build` (order matters; core externalizes web packages).
 - **Storybook:** `bun run storybook` (or `bun run --filter @novasheet/storybook storybook`).
 - **All four (lint, typecheck, test, build) must pass** before any commit lands on `main` (CI enforces).
 - **Mock APIs in tests:** `bun:test` exports `mock` and `spyOn` (replaces Vitest's `vi.fn` / `vi.spyOn`). For global stubbing (no `vi.stubGlobal` in bun:test), use `packages/core/tests/helpers/global-stub.ts` (`stubGlobal` / `unstubAllGlobals`).
@@ -71,9 +74,9 @@ Built up over the M1 cycle. Apply to all sessions, not just M1:
 
 ## Architectural invariants (enforce in code review)
 
-1. **Renderer reads ONLY from `Viewport.snapshot()`** — never from `ChunkedAxis` / `FrozenRegions` / `DataSource` directly. Snapshot is the single immutable read source per frame.
-2. **All mutations go through the `Grid` facade.** The facade decides what to invalidate. Painters / Layout objects do not invalidate themselves.
-3. **Theme is the ONLY source of visual values.** No hardcoded px, fonts, or color literals in `src/render/`. This rule is checked manually in review; future ESLint custom rule planned.
+1. **Canvas2DRenderer reads ONLY from engine state** — via held `Viewport` + `RenderFrame` from `engine.getFrame()` on the RAF path; never from `ChunkedAxis` / `FrozenRegions` / `DataSource` outside the frame contract.
+2. **All mutations go through `DefaultGridEngine` or the public `Grid` facade.** The facade decides what to invalidate. Painters / layout objects do not invalidate themselves.
+3. **Theme is the ONLY source of visual values.** No hardcoded px, fonts, or color literals in `packages/web-canvas2d/src/painters/` or `render/`. Future ESLint custom rule planned.
 4. **DataSource.getRows endIndex is INCLUSIVE** (matches `ChunkedAxis.getVisibleRange` `[first, last]`). Do not change this convention.
 5. **One shared `frameScheduler` per Grid instance** — multiple RAF sources must coalesce. Future M2+ NativeScroller and ResizeObserver must use the same scheduler the Renderer uses.
 6. **`Grid.destroy()` must be fully idempotent.** Cancels all pending RAFs, restores `container.style.position`, removes the canvas. Strict Mode test (mount→destroy→mount) must remain green.
@@ -93,8 +96,8 @@ Built up over the M1 cycle. Apply to all sessions, not just M1:
 ## Testing conventions
 
 - **TDD strict.** Write the failing test first, see it fail, implement, see it pass, commit. Plan steps follow this exact rhythm.
-- **Canvas tests use `RecordingContext2D`** (`tests/helpers/recording-context.ts`) — captures ctx instruction sequences as `{ op, args }` objects. Assert on instruction sequences, not on pixels.
-- **`tests/setup.ts`** is preloaded by Bun (via `bunfig.toml [test] preload`). It registers happy-dom globally and installs the `RecordingContext` onto `HTMLCanvasElement.prototype.getContext('2d')` — Bun runtime alone has no DOM.
+- **Canvas tests use `RecordingContext2D`** (`packages/web-canvas2d/tests/helpers/recording-context.ts`) — captures ctx instruction sequences as `{ op, args }` objects.
+- **`packages/core/tests/setup.ts`** is minimal (no happy-dom). Web + web-canvas2d setups register happy-dom; web-canvas2d also stubs `getContext('2d')`.
 - **`bun:test` import**: `import { describe, expect, it, mock, spyOn } from 'bun:test'`. NOT `from 'vitest'`.
 - **Global stubbing**: `import { stubGlobal, unstubAllGlobals } from '../helpers/global-stub'` (bun:test has no built-in equivalent of `vi.stubGlobal`).
 - **Type-only failing tests** (Schema, DataSource interface) won't fail at runtime in `bun test` because TS imports erase. Use `tsc --noEmit` to verify the "test fails before implementation" gate for type-only modules.
@@ -131,25 +134,31 @@ Subagent prompts must:
 
 | Topic | Location |
 |---|---|
-| Public types & API | `packages/core/src/index.ts` (only re-export from here) |
-| Algorithm core | `packages/core/src/layout/ChunkedAxis.ts` |
-| Per-frame logic | `packages/core/src/render/Renderer.ts` |
+| Public Grid API | `packages/web-canvas2d/src/index.ts` |
+| DataSource / Schema / Theme types | `packages/core/src/index.ts` |
+| Engine state coordinator | `packages/core/src/engine/DefaultGridEngine.ts` |
+| Algorithm core | `packages/core/src/layout/ChunkedAxis.ts` (also `Axis` / `MutableAxis`) |
+| Per-frame Canvas2D logic | `packages/web-canvas2d/src/render/Canvas2DRenderer.ts` |
 | Theme tokens | `packages/core/src/theme/denseGridTheme.ts` |
-| DataSource ABC | `packages/core/src/data/DataSource.ts` |
-| Tests | `packages/core/tests/` (mirror src/ folder structure) |
-| Test helpers | `packages/core/tests/helpers/` |
-| Probe/exploration tests | `packages/core/tests/_probe.test.ts` (filename starts with `_` to signal "documents invariants, not a contract") |
+| DOM host | `packages/web/src/host/DomGridHost.ts` |
+| Scroll math + SAFE_MAX | `packages/web/src/scroll/ScrollMapper.ts` |
+| Web orchestrator | `packages/web/src/runtime/WebGridRuntime.ts` |
+| Tests | each `packages/<pkg>/tests/` mirrors its `src/` |
+| RecordingContext helper | `packages/web-canvas2d/tests/helpers/recording-context.ts` |
+| global-stub helper | `packages/web/tests/helpers/global-stub.ts` (+ duplicate in web-canvas2d) |
+| Probe tests | `packages/core/tests/_probe.test.ts` |
 
 ---
 
-## Things explicitly NOT in M1 (don't add prematurely)
+## Things explicitly NOT shipped yet (don't add prematurely)
 
-- `src/scroll/` — M2
-- `src/render/FrozenPainter.ts` (real impl beyond stub) — M3
-- Dynamic row-height autofit (multi-line text) — M3
-- `src/interaction/` — M4
-- `packages/react/` — M4
-- `apps/playground/` — M5 (custom Vite app with FPS overlay + 1M mock data for perf validation)
+- Frozen quadrants painting beyond stub (M3 — `packages/web-canvas2d/src/painters/FrozenPainter.ts`)
+- Dynamic row-height autofit / multi-line text (M3)
+- Resize handles / `<handle-layer>` interaction (M4 — likely `packages/web/src/interaction/`)
+- React wrapper (M4 — `packages/react` or `packages/web-react`)
+- WebGL / WebGPU renderers (post-Phase-1)
+- Server-paginated DataSource (Phase 4)
+- `apps/playground/` — M5 perf validation app
 
 If you find yourself wanting to add any of these, stop and confirm with the user. They've been deferred for a reason.
 

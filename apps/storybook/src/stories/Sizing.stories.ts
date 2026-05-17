@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { Grid, InMemoryDataSource, type Schema } from '@novasheet/core'
+import { Grid } from '@novasheet/web-canvas2d'
+import { InMemoryDataSource, type Schema } from '@novasheet/core'
 import { generateRows } from '../mock-data'
 
 const meta: Meta = {

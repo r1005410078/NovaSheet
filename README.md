@@ -6,17 +6,16 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ---
 
-## 当前状态：Phase 1 · M2 Virtualization & Scroll ✅（含 Bun 迁移）
+## 当前状态：Cross-platform refactor ✅
 
-M2 在 M1 渲染地基之上加入了原生滚动、ResizeObserver、scrollToRow/Cell API。
-工具链已从 pnpm + Node + Vitest + tsup 切换到 Bun 单一运行时。
+M2 能力保留；`@novasheet/core` 拆成三包，公共 `Grid` 从 `@novasheet/web-canvas2d` 导出。
 
 | 维度 | 数值 |
 |---|---|
-| 包 | `@novasheet/core`（TS，框架无关，零运行时依赖） |
-| 测试 | 126 passing（16 文件，bun:test） |
+| 包 | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d` |
+| 测试 | 132 passing（bun:test，跨三包） |
 | Lint / Typecheck / Build | 全部 clean |
-| 公共 API | `Grid` · `InMemoryDataSource` · `denseGridTheme` · `ScrollMapper` · `SAFE_MAX` |
+| 公共 API | `import { Grid } from '@novasheet/web-canvas2d'`；数据/主题类型来自 `@novasheet/core` |
 
 ### M1 能力
 
@@ -45,11 +44,14 @@ M2 在 M1 渲染地基之上加入了原生滚动、ResizeObserver、scrollToRow
 
 ```bash
 bun install
+bun run --filter @novasheet/web build
+bun run --filter @novasheet/web-canvas2d build
 bun run --filter @novasheet/core build
 ```
 
 ```ts
-import { Grid, InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { Grid } from '@novasheet/web-canvas2d'
+import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
 
 const data = new InMemoryDataSource({
   schema: {
@@ -82,25 +84,25 @@ grid.setRowHeight(3, 60)
 ## 架构概览
 
 ```
-┌──────────────────────────────────────────────────┐
-│  Grid (facade)                                   │
-└────────────────┬─────────────────────────────────┘
-                 │ 编排
-       ┌─────────┼────────┐
-       ▼         ▼        ▼
-  ┌────────┐ ┌──────┐ ┌──────────────┐
-  │Renderer│ │ ...  │ │ Interaction  │ ← M4 (resize)
-  └───┬────┘ └──┬───┘ └──────┬───────┘
-      │        │            │
-      └────┬───┴─────┬──────┘
-           ▼         ▼
-      ┌────────┐ ┌───────┐
-      │ Layout │ │ Theme │
-      └───┬────┘ └───────┘
-          ▼
-      ┌────────┐
-      │  Data  │
-      └────────┘
+┌────────────────────────────────────────────────────────────┐
+│   @novasheet/web-canvas2d                                  │
+│   Grid (public facade) · Canvas2DRenderer · painters       │
+│   HighDPI                                                  │
+└────────────────────────────┬───────────────────────────────┘
+                             │ depends on
+                             ▼
+┌────────────────────────────────────────────────────────────┐
+│   @novasheet/web                                           │
+│   DomGridHost · ScrollMapper · NativeScroller              │
+│   WebGridRuntime · WebRenderer (interface)                 │
+└────────────────────────────┬───────────────────────────────┘
+                             │ depends on
+                             ▼
+┌────────────────────────────────────────────────────────────┐
+│   @novasheet/core (no DOM, no canvas)                      │
+│   DefaultGridEngine · DataSource · Theme · ChunkedAxis     │
+│   RenderFrame (interface)                                  │
+└────────────────────────────────────────────────────────────┘
 ```
 
 详见 [docs/superpowers/specs/](docs/superpowers/specs/) 的设计文档。
@@ -112,7 +114,9 @@ grid.setRowHeight(3, 60)
 ```
 novasheet/
 ├── packages/
-│   └── core/                @novasheet/core — TS 渲染引擎（M1 已交付）
+│   ├── core/                @novasheet/core — 平台无关引擎
+│   ├── web/                 @novasheet/web — 浏览器 host + runtime
+│   └── web-canvas2d/        @novasheet/web-canvas2d — Canvas2D + 公共 Grid
 ├── apps/
 │   └── storybook/           组件变体玩具间（vanilla HTML flavor，无 React 依赖）
 ├── docs/
@@ -135,7 +139,9 @@ novasheet/
 ```bash
 bun install                # 安装依赖
 bun test                   # 跑全部包测试
-bun run --filter @novasheet/core build           # 构建 core 包
+bun run --filter @novasheet/web build
+bun run --filter @novasheet/web-canvas2d build
+bun run --filter @novasheet/core build
 bun run lint               # ESLint
 bun run format             # Prettier 全量格式化
 bun run storybook          # 启动组件变体玩具间（localhost:6006）
