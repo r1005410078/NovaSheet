@@ -47,8 +47,9 @@
  * 通过 DataSource.subscribe 发 rowsChanged 触发重绘）。
  */
 
-import type { DataSource, Quadrant, Theme } from '@novasheet/core'
+import type { DataSource, Quadrant, RenderFrame, Theme } from '@novasheet/core'
 import { FrameScheduler, type ChunkedAxis, type Viewport } from '@novasheet/core'
+import type { WebRenderer } from '@novasheet/web'
 import { CellPainter } from '../painters/CellPainter'
 import { GridLinesPainter } from '../painters/GridLinesPainter'
 import { HeaderPainter } from '../painters/HeaderPainter'
@@ -82,7 +83,7 @@ const RENDERER_KEY = 'renderer:flush'
  * M1 只画 `main` 象限（无滚动、无冻结）。管线骨架已为 M2/M3 留好——
  * paint() 入口与 Viewport 契约都不需要变。
  */
-export class Canvas2DRenderer {
+export class Canvas2DRenderer implements WebRenderer {
   /** canvas 2D 绘图上下文 */
   private ctx: CanvasRenderingContext2D
   /** 当前数据源 */
@@ -176,6 +177,21 @@ export class Canvas2DRenderer {
   /** 取消已入队但未执行的 flush。被 Grid.destroy() 调用——见 CLAUDE.md destroy 不变量。 */
   destroy(): void {
     this.scheduler.cancel(RENDERER_KEY)
+  }
+
+  mount(container: HTMLElement): void {
+    void container
+  }
+
+  resize(width: number, height: number, dpr: number): void {
+    void width
+    void height
+    void dpr
+  }
+
+  render(frame: RenderFrame): void {
+    void frame
+    this.paint()
   }
 
   /**

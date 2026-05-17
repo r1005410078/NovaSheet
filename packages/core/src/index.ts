@@ -30,6 +30,8 @@ export { Viewport } from './layout/Viewport'
 export { FrozenRegions } from './layout/FrozenRegions'
 export type { Axis, MutableAxis } from './layout/ChunkedAxis'
 export type { QuadrantRect, Quadrant, Quadrants } from './layout/FrozenRegions'
+export type { RenderFrame } from './render/RenderFrame'
+export type { ViewportSnapshot } from './layout/Viewport'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
