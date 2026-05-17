@@ -50,6 +50,7 @@ export class WebGridRuntime {
     this.engine.setViewportSize(width, height)
     this.onSurfaceResize?.(width, height, dpr)
     this.resizeSpacer()
+    this.syncScrollbarTheme()
     this.paintSync()
   }
 
@@ -73,6 +74,7 @@ export class WebGridRuntime {
   setTheme(theme: Theme, patchRenderer?: (renderer: WebRenderer) => void): void {
     this.engine.setTheme(theme)
     patchRenderer?.(this.renderer)
+    this.syncScrollbarTheme()
     this.afterEngineMutation()
   }
 
@@ -244,5 +246,9 @@ export class WebGridRuntime {
     const w = this.scrollMapper.computeSpacerSize(this.engine.getColsTotalSize())
     const h = this.scrollMapper.computeSpacerSize(this.engine.getRowsTotalSize() + headerH)
     this.host.setScrollSize(w, h)
+  }
+
+  private syncScrollbarTheme(): void {
+    this.host.applyScrollbarTheme(this.engine.getTheme().scrollbar)
   }
 }

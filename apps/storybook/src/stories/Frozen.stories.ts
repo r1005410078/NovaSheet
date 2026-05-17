@@ -1,45 +1,52 @@
 import type { Meta, StoryObj } from '@storybook/html'
 import { Grid } from '@novasheet/web'
-import type { Schema } from '@novasheet/core'
+import type { FieldDef, Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
 
 const meta: Meta = {
-  title: 'Grid/Frozen',
+  title: '表格/冻结',
   parameters: { layout: 'centered' },
 }
 export default meta
 
 type Story = StoryObj
 
+const METRIC_COUNT = 18
+
+const metricFields: FieldDef[] = Array.from({ length: METRIC_COUNT }, (_, i) => {
+  const n = i + 1
+  const id = `metric_${String(n).padStart(2, '0')}`
+  return {
+    id,
+    name: `指标 ${n}`,
+    type: n % 3 === 0 ? 'number' : 'text',
+    width: 100,
+  }
+})
+
 const schema: Schema = {
   fields: [
-    { id: 'employee', name: 'Employee', type: 'text', width: 160 },
-    { id: 'team', name: 'Team', type: 'text', width: 140 },
-    { id: 'region', name: 'Region', type: 'text', width: 140 },
-    { id: 'revenue', name: 'Revenue', type: 'number', width: 140 },
-    { id: 'growth', name: 'Growth', type: 'number', width: 120 },
-    { id: 'owner', name: 'Owner', type: 'text', width: 160 },
-    { id: 'status', name: 'Status', type: 'text', width: 120 },
-    { id: 'notes', name: 'Notes', type: 'text', width: 260 },
+    { id: 'employee', name: '员工', type: 'text', width: 120 },
+    ...metricFields,
+    { id: 'summary', name: '汇总', type: 'text', width: 180 },
   ],
 }
 
-const teams = ['Platform', 'Data', 'Design', 'Ops']
-const regions = ['NA', 'EU', 'APAC', 'LATAM']
-const statuses = ['On track', 'Watch', 'Blocked']
+const teams = ['平台', '数据', '设计', '运维']
+const regions = ['华北', '华东', '华南', '西南']
 
 export const FrozenTopLeftAndRight: Story = {
+  name: '顶行 + 左右列冻结（20 列）',
   render: () => {
     const data = new GeneratedDataSource(1_000, schema, (row, fieldId) => {
-      if (fieldId === 'employee') return `Employee ${row}`
-      if (fieldId === 'team') return teams[row % teams.length]!
-      if (fieldId === 'region') return regions[row % regions.length]!
-      if (fieldId === 'revenue') return row * 1_000 + 250
-      if (fieldId === 'growth') return Math.round(Math.sin(row / 10) * 1000) / 10
-      if (fieldId === 'owner') return `Owner ${row % 12}`
-      if (fieldId === 'status') return statuses[row % statuses.length]!
-      return `Quarterly note ${row}`
+      if (fieldId === 'employee') return `员工 ${row}`
+      if (fieldId === 'summary') return `第 ${(row % 4) + 1} 季度汇总 · 第 ${row} 行`
+      if (fieldId.startsWith('metric_')) {
+        const n = Number.parseInt(fieldId.slice('metric_'.length), 10)
+        return n % 3 === 0 ? row * n + 42 : `${regions[row % regions.length]!}·${teams[row % teams.length]!}`
+      }
+      return ''
     })
 
     const host = createGridHost({
@@ -48,7 +55,7 @@ export const FrozenTopLeftAndRight: Story = {
     })
     requestAnimationFrame(() => {
       const grid = (host as HTMLElement & { __grid: Grid }).__grid
-      grid.scrollToCell(24, 'owner')
+      grid.scrollToCell(24, 'metric_10')
     })
     return host
   },

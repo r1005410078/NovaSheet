@@ -4,7 +4,7 @@ import { createGridHost } from '../grid-host'
 import { generateRows } from '../mock-data'
 
 const meta: Meta = {
-  title: 'Grid/Larger',
+  title: '表格/大数据',
   parameters: { layout: 'centered' },
 }
 export default meta
@@ -17,6 +17,7 @@ type Story = StoryObj
  * 本 story 是 M1 的「视觉限制证物」——M2 落地后该 story 也是验证滚动行为的回归素材。
  */
 export const ThousandRowsFiveColumns: Story = {
+  name: '1000 行 × 5 列',
   render: () => {
     const schema: Schema = {
       fields: [

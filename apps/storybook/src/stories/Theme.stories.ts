@@ -4,7 +4,7 @@ import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 
 const meta: Meta = {
-  title: 'Grid/Theme',
+  title: '表格/主题',
   parameters: { layout: 'centered' },
 }
 export default meta
@@ -15,6 +15,7 @@ type Story = StoryObj
  * 默认 denseGridTheme——基线参考。
  */
 export const Dense: Story = {
+  name: '默认紧凑',
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 80) })
@@ -46,6 +47,7 @@ const compactTheme: Theme = {
 }
 
 export const Compact: Story = {
+  name: '更紧凑',
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 80) })

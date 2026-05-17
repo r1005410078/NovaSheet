@@ -4,7 +4,7 @@ import { InMemoryDataSource, type Schema } from '@novasheet/core'
 import { generateRows } from '../mock-data'
 
 const meta: Meta = {
-  title: 'Grid/Sizing',
+  title: '表格/尺寸',
   parameters: { layout: 'centered' },
 }
 export default meta
@@ -15,6 +15,7 @@ type Story = StoryObj
  * 演示 schema 自定义列宽（非均匀）+ 通过 setRowHeight 覆盖单行高度。
  */
 export const CustomColumnWidthsAndRowHeights: Story = {
+  name: '自定义列宽与行高',
   render: () => {
     const schema: Schema = {
       fields: [

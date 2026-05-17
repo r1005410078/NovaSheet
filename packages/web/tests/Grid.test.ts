@@ -185,6 +185,17 @@ describe('Grid — 浏览器门面', () => {
     grid.destroy()
   })
 
+  it('scroll-host 应用 Theme scrollbar CSS 变量', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+    expect(host.style.getPropertyValue('--ns-scrollbar-size')).toBe('10px')
+    expect(host.style.getPropertyValue('--ns-scrollbar-thumb')).toBe(
+      'rgba(31, 35, 40, 0.28)',
+    )
+    grid.destroy()
+  })
+
   it('scroll-host z-index 高于 canvas，原生滚动条可见', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })

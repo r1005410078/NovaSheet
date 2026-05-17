@@ -62,8 +62,11 @@ export const denseGridTheme: Theme = {
     },
   },
   scrollbar: {
-    trackWidth: 12,
-    thumbColor: 'rgba(0,0,0,0.3)',
+    trackWidth: 10,
+    trackColor: 'transparent',
+    thumbColor: 'rgba(31, 35, 40, 0.28)',
+    thumbHoverColor: 'rgba(31, 35, 40, 0.45)',
+    borderRadius: 5,
   },
   frozenSeparator: {
     color: '#d0d7de',

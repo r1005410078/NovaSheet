@@ -31,4 +31,12 @@ describe('denseGridTheme — 默认主题', () => {
     expect(denseGridTheme.frozenSeparator.color).toBe(denseGridTheme.colors.gridLineStrong)
     expect(denseGridTheme.frozenSeparator.width).toBe(1)
   })
+
+  it('暴露滚动条样式 token', () => {
+    expect(denseGridTheme.scrollbar.trackWidth).toBe(10)
+    expect(denseGridTheme.scrollbar.trackColor).toBe('transparent')
+    expect(denseGridTheme.scrollbar.thumbColor).toMatch(/rgba|#/)
+    expect(denseGridTheme.scrollbar.thumbHoverColor).toMatch(/rgba|#/)
+    expect(denseGridTheme.scrollbar.borderRadius).toBeGreaterThan(0)
+  })
 })

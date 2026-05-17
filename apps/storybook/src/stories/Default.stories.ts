@@ -4,7 +4,7 @@ import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 
 const meta: Meta = {
-  title: 'Grid/Default',
+  title: '表格/默认',
   parameters: { layout: 'centered' },
 }
 export default meta
@@ -16,6 +16,7 @@ type Story = StoryObj
  * M1 只有最上方约 17 行可见。
  */
 export const HundredRowsThreeColumns: Story = {
+  name: '100 行 × 3 列',
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 100) })

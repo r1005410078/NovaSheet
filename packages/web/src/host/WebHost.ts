@@ -1,4 +1,4 @@
-import type { FrameScheduler } from '@novasheet/core'
+import type { FrameScheduler, ThemeScrollbar } from '@novasheet/core'
 
 /** `DomGridHost` 等实现的构造参数。 */
 export interface WebHostOptions {
@@ -21,6 +21,8 @@ export interface WebHostOptions {
  */
 export interface WebHost {
   attach(): void
+  /** 将 Theme `scrollbar` 应用到原生 scroll-host（`setTheme` / 初次 attach 时调用）。 */
+  applyScrollbarTheme(scrollbar: ThemeScrollbar): void
   setScrollSize(width: number, height: number): void
   scrollTo(scrollTop: number, scrollLeft: number): void
   getScrollPosition(): { scrollTop: number; scrollLeft: number }

@@ -72,12 +72,18 @@ export interface ThemeIcons {
   readonly byFieldType: Readonly<Record<FieldType, IconDef>>
 }
 
-/** 滚动条样式（M2 引入 NativeScroller 后启用）。 */
+/** 滚动条样式（`DomGridHost` 通过 CSS 变量应用到原生 scroll-host）。 */
 export interface ThemeScrollbar {
-  /** 滚动条轨道宽度（px） */
+  /** 滚动条轨道宽度（px，WebKit 滑轨尺寸；Firefox 使用 `thin`） */
   readonly trackWidth: number
+  /** 滚动条轨道背景色 */
+  readonly trackColor: string
   /** 滚动条滑块颜色 */
   readonly thumbColor: string
+  /** 滚动条滑块悬停颜色 */
+  readonly thumbHoverColor: string
+  /** 滑块圆角（px） */
+  readonly borderRadius: number
 }
 
 /** 冻结行列边界线样式。 */

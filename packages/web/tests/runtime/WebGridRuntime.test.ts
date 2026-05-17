@@ -43,6 +43,7 @@ function makeEngine(): GridEngine {
 function makeHost(): WebHost {
   return {
     attach: mock(() => {}),
+    applyScrollbarTheme: mock(() => {}),
     setScrollSize: mock(() => {}),
     scrollTo: mock(() => {}),
     getDpr: () => 1,
@@ -141,6 +142,7 @@ describe('WebGridRuntime.setTheme — 换主题', () => {
     runtime.setTheme(theme, patch)
 
     expect(engine.setTheme).toHaveBeenCalledWith(theme)
+    expect(host.applyScrollbarTheme).toHaveBeenCalled()
     expect(patch).toHaveBeenCalledWith(renderer)
     expect(refreshSpy).toHaveBeenCalled()
   })

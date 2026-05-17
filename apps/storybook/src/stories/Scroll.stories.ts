@@ -14,7 +14,7 @@ const schema: Schema = {
 }
 
 const meta: Meta = {
-  title: 'Grid/Scroll',
+  title: '表格/滚动',
   parameters: { layout: 'centered' },
 }
 export default meta
@@ -22,6 +22,7 @@ type Story = StoryObj
 
 /** A regular-sized dataset that requires scrolling — the M2 happy path. */
 export const TenThousandRows: Story = {
+  name: '一万行',
   render: () => {
     const rows = Array.from({ length: 10_000 }, (_, i) => ({
       idx: i,
@@ -50,6 +51,7 @@ export const TenThousandRows: Story = {
  * JS values upfront (3-8s, 600-900MB heap) before the first paint.
  */
 export const OneMillionRows: Story = {
+  name: '一百万行 × 30 列',
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {
@@ -73,6 +75,7 @@ export const OneMillionRows: Story = {
  * Useful for verifying the scrollToRow API works (e.g., for jump-to-anchor flows).
  */
 export const ScrollToRow500: Story = {
+  name: '滚动到第 500 行',
   render: () => {
     const rows = Array.from({ length: 2_000 }, (_, i) => ({
       idx: i,
@@ -97,6 +100,7 @@ export const ScrollToRow500: Story = {
  * Wheel / shift+wheel / trackpad two-finger swipe all work via the same NativeScroller.
  */
 export const BothAxisScroll: Story = {
+  name: '双向滚动（30 列）',
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {
@@ -124,6 +128,7 @@ export const BothAxisScroll: Story = {
  * Pairs with BothAxisScroll for the X axis what ScrollToRow500 does for Y.
  */
 export const ScrollToCellFar: Story = {
+  name: '滚动到远列',
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {

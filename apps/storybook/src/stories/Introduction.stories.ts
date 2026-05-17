@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/html'
 
 const meta: Meta = {
-  title: 'Introduction',
+  title: '介绍',
   parameters: {
     layout: 'fullscreen',
   },
@@ -14,6 +14,7 @@ type Story = StoryObj
  * Plain HTML intro panel (no MDX). Explains current playground scope.
  */
 export const Welcome: Story = {
+  name: '欢迎',
   render: () => {
     const root = document.createElement('div')
     root.style.cssText = [

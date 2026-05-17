@@ -1,5 +1,6 @@
-import type { FrameScheduler } from '@novasheet/core'
+import type { FrameScheduler, ThemeScrollbar } from '@novasheet/core'
 import { NativeScroller } from '../scroll/NativeScroller'
+import { applyScrollbarTheme } from './scrollbar-style'
 import type { WebHost, WebHostOptions } from './WebHost'
 
 /**
@@ -25,6 +26,7 @@ export class DomGridHost implements WebHost {
   private destroyed = false
   private attached = false
   private currentDpr = 1
+  private pendingScrollbar: ThemeScrollbar | null = null
 
   constructor(options: WebHostOptions) {
     this.container = options.container
@@ -70,6 +72,10 @@ export class DomGridHost implements WebHost {
     this.nativeScroller = new NativeScroller(this.scrollHost, this.scheduler, this.onScroll)
     this.nativeScroller.attach()
 
+    if (this.pendingScrollbar) {
+      applyScrollbarTheme(this.scrollHost, this.pendingScrollbar)
+    }
+
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.emitResize())
       this.resizeObserver.observe(this.container)
@@ -77,6 +83,13 @@ export class DomGridHost implements WebHost {
 
     this.watchDpr()
     this.emitResize()
+  }
+
+  applyScrollbarTheme(scrollbar: ThemeScrollbar): void {
+    this.pendingScrollbar = scrollbar
+    if (this.scrollHost) {
+      applyScrollbarTheme(this.scrollHost, scrollbar)
+    }
   }
 
   setScrollSize(width: number, height: number): void {

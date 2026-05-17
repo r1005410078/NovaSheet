@@ -6,47 +6,44 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ---
 
-## 当前状态：Cross-platform refactor ✅
+## 当前状态
 
-M2 能力保留；`@novasheet/core` 拆成三包，公共 `Grid` 从 `@novasheet/web-canvas2d` 导出。
+三包拆分已完成；**M2 虚拟滚动**与 **M3 冻结区域绘制**（顶 / 左 / 右）已落地。公共 API 从 `@novasheet/web` 导出。
 
 | 维度 | 数值 |
 |---|---|
 | 包 | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d` |
-| 测试 | 132 passing（bun:test，跨三包） |
+| 测试 | 151 passing（bun:test，跨三包） |
 | Lint / Typecheck / Build | 全部 clean |
-| 公共 API | `import { Grid } from '@novasheet/web'`（默认 Canvas2D）；数据/主题类型来自 `@novasheet/core` |
+| 公共 API | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
 
-### M1 能力
+### 已交付
 
-- ✅ Canvas 单帧渲染（紧凑网格风默认主题，DPR 自适应）
-- ✅ Theme Token 系统（渲染管线零硬编码视觉值）
-- ✅ DataSource 抽象（同/异步双兼容签名，向 Phase 2+ 分页源开放）
-- ✅ ChunkedAxis 算法（O(log n_chunks) 行/列定位，内存随实际使用自适应）
-- ✅ Cell / Header / GridLines painter（含文本截断 + 千分位 + 字体度量缓存）
-- ✅ 共享 FrameScheduler（同帧多源 invalidate 合并为一次 RAF）
-- ✅ Grid facade（`setData` / `setTheme` / `setRowHeight` / `setColumnWidth` / `refresh` / `destroy`，destroy 幂等）
+| 里程碑 | 能力 |
+|---|---|
+| M1 | Canvas 单帧渲染 · Theme Token · DataSource · ChunkedAxis · Cell / Header / GridLines painter · `FrameScheduler` · Grid facade（`destroy` 幂等） |
+| M2 | 原生滚动（`NativeScroller` + `ScrollMapper` 非线性 `scrollTop` 映射）· `scrollToRow` / `scrollToCell` · 1M+ 行虚拟滚动 |
+| M3（部分） | 顶 / 左 / 右冻结（`FrozenRegions` + 分区域绘制 + 冻结分隔线）· `frozen` 配置 / `setFrozen()` |
 
-### 暂未交付（M2-M5）
+### 暂未交付
 
 | 里程碑 | 内容 |
 |---|---|
-| M2 | 虚拟滚动（NativeScroller + 非线性 scrollTop 映射） |
-| M3 | 冻结行列（4 象限） + 动态行高交互 |
-| M4 | 拖拽 / 键盘 resize · React Wrapper |
-| M5 | playground（1M mock）· Playwright 跨浏览器回归 · iOS Safari 真机验证 |
+| M3（剩余） | 动态行高 / 多行文本 autofit |
+| M4 | DOM resize handles · 选区 / 编辑 · React Wrapper |
+| M5 | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机验证 |
+
+架构细节见 [docs/architecture.md](docs/architecture.md)。
 
 ---
 
 ## Quick Start
 
-> M1 仅完成单帧静态渲染。滚动 / 选区 / 编辑等仍在路线图上。
-
 ```bash
 bun install
-bun run --filter @novasheet/web build
-bun run --filter @novasheet/web-canvas2d build
 bun run --filter @novasheet/core build
+bun run --filter @novasheet/web-canvas2d build
+bun run --filter @novasheet/web build
 ```
 
 ```ts
@@ -56,28 +53,43 @@ import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
 const data = new InMemoryDataSource({
   schema: {
     fields: [
-      { id: 'name', name: 'Name',   type: 'text',   width: 200 },
-      { id: 'age',  name: 'Age',    type: 'number', width: 80  },
-      { id: 'role', name: 'Role',   type: 'text',   width: 160 },
+      { id: 'employee', name: 'Employee', type: 'text',   width: 160 },
+      { id: 'team',     name: 'Team',     type: 'text',   width: 120 },
+      { id: 'region',   name: 'Region',   type: 'text',   width: 100 },
+      { id: 'revenue',  name: 'Revenue',  type: 'number', width: 120 },
+      { id: 'growth',   name: 'Growth',   type: 'number', width: 100 },
+      { id: 'owner',    name: 'Owner',    type: 'text',   width: 140 },
+      { id: 'status',   name: 'Status',   type: 'text',   width: 100 },
+      { id: 'notes',    name: 'Notes',    type: 'text',   width: 240 },
     ],
   },
-  rows: Array.from({ length: 100 }, (_, i) => ({
-    name: `User ${i}`,
-    age:  20 + (i % 50),
-    role: i % 3 === 0 ? 'engineer' : 'designer',
+  rows: Array.from({ length: 100_000 }, (_, i) => ({
+    employee: `Employee ${i}`,
+    team:     ['Platform', 'Data', 'Design'][i % 3],
+    region:   ['NA', 'EU', 'APAC'][i % 3],
+    revenue:  i * 1_000 + 250,
+    growth:   (i % 20) - 10,
+    owner:    `Owner ${i % 12}`,
+    status:   ['On track', 'Watch', 'Blocked'][i % 3],
+    notes:    `Quarterly note ${i}`,
   })),
 })
 
 const container = document.getElementById('app')!
-const grid = new Grid(container, { data, theme: denseGridTheme })
+const grid = new Grid(container, {
+  data,
+  theme: denseGridTheme,
+  frozen: { topRows: 1, leftCols: 1, rightCols: 1 }, // 顶行 + 左/右列冻结，中间列可横滚
+})
 
-// 程序化 API
-grid.setColumnWidth('age', 120)
-grid.setRowHeight(3, 60)
+grid.scrollToCell(500, 'owner') // 滚到中间列，观察左右冻结列固定
+grid.setColumnWidth('revenue', 140)
+grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 
-// 销毁
 // grid.destroy()
 ```
+
+本地查看变体：`bun run storybook` → **表格 / 滚动**、**表格 / 冻结** 等 story。
 
 ---
 
@@ -85,27 +97,29 @@ grid.setRowHeight(3, 60)
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│   @novasheet/web-canvas2d                                  │
-│   Grid (public facade) · Canvas2DRenderer · painters       │
-│   HighDPI                                                  │
+│   @novasheet/web                                           │
+│   Grid (public facade) · Canvas2DBackend · WebGridRuntime  │
+│   DomGridHost · ScrollMapper · NativeScroller              │
 └────────────────────────────┬───────────────────────────────┘
                              │ depends on
                              ▼
 ┌────────────────────────────────────────────────────────────┐
-│   @novasheet/web                                           │
-│   DomGridHost · ScrollMapper · NativeScroller              │
-│   WebGridRuntime · WebRenderer (interface)                 │
+│   @novasheet/web-canvas2d                                  │
+│   Canvas2DRenderer · Cell / Header / GridLines painters    │
+│   HighDPI                                                  │
 └────────────────────────────┬───────────────────────────────┘
                              │ depends on
                              ▼
 ┌────────────────────────────────────────────────────────────┐
 │   @novasheet/core (no DOM, no canvas)                      │
 │   DefaultGridEngine · DataSource · Theme · ChunkedAxis     │
-│   RenderFrame (interface)                                  │
+│   FrozenRegions · Viewport · RenderFrame                     │
 └────────────────────────────────────────────────────────────┘
 ```
 
-详见 [docs/superpowers/specs/](docs/superpowers/specs/) 的设计文档。
+**依赖方向（无环）**：`core` ← `web-canvas2d` ← `web` ← 应用 / Storybook。
+
+设计 spec：[docs/superpowers/specs/](docs/superpowers/specs/)。
 
 ---
 
@@ -115,11 +129,12 @@ grid.setRowHeight(3, 60)
 novasheet/
 ├── packages/
 │   ├── core/                @novasheet/core — 平台无关引擎
-│   ├── web/                 @novasheet/web — 浏览器 host + runtime
-│   └── web-canvas2d/        @novasheet/web-canvas2d — Canvas2D + 公共 Grid
+│   ├── web/                 @novasheet/web — 对外 Grid + 浏览器编排
+│   └── web-canvas2d/        @novasheet/web-canvas2d — Canvas2D 渲染器
 ├── apps/
-│   └── storybook/           组件变体玩具间（vanilla HTML flavor，无 React 依赖）
+│   └── storybook/           组件变体玩具间（vanilla HTML，无 React 依赖）
 ├── docs/
+│   ├── architecture.md      当前架构图（Mermaid + 单帧序列）
 │   └── superpowers/
 │       ├── specs/           设计 spec
 │       └── plans/           实现 plan + 里程碑追踪
@@ -129,6 +144,7 @@ novasheet/
 ```
 
 后续会陆续加入：
+
 - `packages/react/` (M4) — React Wrapper
 - `apps/playground/` (M5) — 含 1M mock 的性能验证演示
 
@@ -139,9 +155,9 @@ novasheet/
 ```bash
 bun install                # 安装依赖
 bun test                   # 跑全部包测试
-bun run --filter @novasheet/web build
-bun run --filter @novasheet/web-canvas2d build
 bun run --filter @novasheet/core build
+bun run --filter @novasheet/web-canvas2d build
+bun run --filter @novasheet/web build
 bun run lint               # ESLint
 bun run format             # Prettier 全量格式化
 bun run storybook          # 启动组件变体玩具间（localhost:6006）
@@ -162,7 +178,7 @@ bun run --filter @novasheet/core build
 
 详见 [Phase 1 设计文档](docs/superpowers/specs/2026-05-13-novasheet-phase1-canvas-grid-design.md) 附录 B：
 
-- **Phase 1**（进行中）：M1 Foundation ✅ → M2 滚动 → M3 冻结/动态 → M4 交互+React → M5 跨浏览器
+- **Phase 1**（进行中）：M1 Foundation ✅ → M2 滚动 ✅ → M3 冻结（绘制 ✅，动态行高待做）→ M4 交互+React → M5 跨浏览器
 - **Phase 2**：选区 / 键盘导航 / 复制粘贴 / 单元格编辑 / 字段类型专属编辑器 / 暗色主题
 - **Phase 3**：排序 / 筛选 / 分组 / 列重排 / 列隐藏
 - **Phase 4**：服务端分页 DataSource / OPFS / 协同
