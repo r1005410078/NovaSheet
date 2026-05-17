@@ -20,6 +20,7 @@ export class DomGridHost implements WebHost {
   private onPointerMove?: WebHostOptions['onPointerMove']
   private onPointerUp?: WebHostOptions['onPointerUp']
   private onKeyDown?: WebHostOptions['onKeyDown']
+  private onDoubleClick?: WebHostOptions['onDoubleClick']
   private scrollHost!: HTMLDivElement
   private scrollSpacer!: HTMLDivElement
   private nativeScroller!: NativeScroller
@@ -42,6 +43,7 @@ export class DomGridHost implements WebHost {
     this.onPointerMove = options.onPointerMove
     this.onPointerUp = options.onPointerUp
     this.onKeyDown = options.onKeyDown
+    this.onDoubleClick = options.onDoubleClick
   }
 
   attach(): void {
@@ -86,6 +88,7 @@ export class DomGridHost implements WebHost {
     this.scrollHost.addEventListener('pointerup', this.handlePointerUp)
     this.scrollHost.addEventListener('pointercancel', this.handlePointerUp)
     this.scrollHost.addEventListener('keydown', this.handleKeyDown)
+    this.scrollHost.addEventListener('dblclick', this.handleDoubleClick)
 
     if (this.pendingScrollbar) {
       applyScrollbarTheme(this.scrollHost, this.pendingScrollbar)
@@ -150,6 +153,7 @@ export class DomGridHost implements WebHost {
     this.scrollHost?.removeEventListener('pointerup', this.handlePointerUp)
     this.scrollHost?.removeEventListener('pointercancel', this.handlePointerUp)
     this.scrollHost?.removeEventListener('keydown', this.handleKeyDown)
+    this.scrollHost?.removeEventListener('dblclick', this.handleDoubleClick)
     this.nativeScroller?.destroy()
 
     if (this.scrollHost?.parentNode === this.container) {
@@ -178,8 +182,22 @@ export class DomGridHost implements WebHost {
 
   private handleKeyDown = (event: KeyboardEvent): void => {
     if (!this.onKeyDown) return
-    const handled = this.onKeyDown({ key: event.key, shiftKey: event.shiftKey })
+    const handled = this.onKeyDown({
+      key: event.key,
+      shiftKey: event.shiftKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      altKey: event.altKey,
+    })
     if (handled) event.preventDefault()
+  }
+
+  private handleDoubleClick = (event: MouseEvent): void => {
+    if (!this.onDoubleClick) return
+    const local = this.toLocalPointerEvent(event)
+    if (this.isScrollbarPointer(local)) return
+    event.preventDefault()
+    this.onDoubleClick(local)
   }
 
   private handlePointerMove = (event: PointerEvent): void => {
@@ -193,7 +211,11 @@ export class DomGridHost implements WebHost {
     this.onPointerUp?.()
   }
 
-  private toLocalPointerEvent(event: PointerEvent): { x: number; y: number; shiftKey: boolean } {
+  private toLocalPointerEvent(event: {
+    clientX: number
+    clientY: number
+    shiftKey: boolean
+  }): { x: number; y: number; shiftKey: boolean } {
     const rect = this.scrollHost.getBoundingClientRect()
     return {
       x: event.clientX - rect.left,

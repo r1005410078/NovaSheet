@@ -44,6 +44,13 @@ export interface GridEngine {
   selectCell(cell: CellAddress, options?: SelectCellOptions): void
   /** Phase 3.3 — 键盘导航；识别按键则更新选区并返回 true。 */
   navigateSelection(key: string, shiftKey: boolean): boolean
+  /** Phase 3.5 — 进入编辑；不可编辑格返回 false。 */
+  beginCellEdit(cell: CellAddress): boolean
+  updateCellEditDraft(draft: string): void
+  cancelCellEdit(): void
+  /** 提交编辑；非法输入返回 false。 */
+  commitCellEdit(): boolean
+  isCellEditing(): boolean
   clearSelection(): void
   getFrame(): RenderFrame
   getSelection(): GridSelection

@@ -31,6 +31,8 @@ Phase 3 选择与键盘导航。交互由 \`DomGridHost\` + \`WebGridRuntime\` �
 | Shift + Tab | 左移；首列时换到上一行末列 |
 | Enter | 下移一行 |
 | Shift + Enter | 上移一行 |
+| 直接打字 | 进入编辑（Phase 3.5，Sheets 式） |
+| F2 | 在原内容末尾编辑 |
 
 导航后若焦点格不在视口内，会自动 **滚动跟随**（\`computeScrollReveal\`）。
 

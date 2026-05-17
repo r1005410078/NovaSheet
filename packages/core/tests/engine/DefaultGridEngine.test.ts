@@ -75,4 +75,36 @@ describe('DefaultGridEngine — 默认引擎', () => {
     })
     expect(engine.getFrame().selection).toEqual(engine.getSelection())
   })
+
+  it('Phase 3.5 — begin / commit 单元格编辑', () => {
+    const data = makeData(3)
+    const engine = new DefaultGridEngine({ data })
+
+    expect(engine.beginCellEdit({ rowIndex: 1, colIndex: 0 })).toBe(true)
+    expect(engine.isCellEditing()).toBe(true)
+    engine.updateCellEditDraft('Bob')
+    expect(engine.commitCellEdit()).toBe(true)
+    expect(engine.isCellEditing()).toBe(false)
+    expect(data.getCell(1, 'name')).toBe('Bob')
+  })
+
+  it('Phase 3.5 — 非法 number 提交失败且保持编辑态', () => {
+    const engine = new DefaultGridEngine({ data: makeData(3) })
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 1 })
+    engine.updateCellEditDraft('not-a-number')
+    expect(engine.commitCellEdit()).toBe(false)
+    expect(engine.isCellEditing()).toBe(true)
+    engine.cancelCellEdit()
+    expect(engine.isCellEditing()).toBe(false)
+  })
+
+  it('Phase 3.5 — checkbox 列不可编辑', () => {
+    const schema: Schema = {
+      fields: [{ id: 'done', name: 'Done', type: 'checkbox', width: 80 }],
+    }
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({ schema, rows: [{ done: true }] }),
+    })
+    expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(false)
+  })
 })

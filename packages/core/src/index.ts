@@ -18,6 +18,8 @@ export type {
   DataSourceEvent,
   DataSourceListener,
 } from './data/DataSource'
+export { isMutableDataSource } from './data/MutableDataSource'
+export type { MutableDataSource } from './data/MutableDataSource'
 
 // 主题层
 export { denseGridTheme } from './theme/denseGridTheme'
@@ -84,6 +86,16 @@ export {
   RESIZE_KEYBOARD_STEP_LARGE,
 } from './interaction/HandleLayout'
 export type { ResizeHandleKind, ResizeHandleRect } from './interaction/HandleLayout'
+export {
+  formatCellForEdit,
+  isEditableFieldType,
+  isTypableEditKey,
+  parseCellEditInput,
+} from './interaction/CellEdit'
+export { CellEditModel } from './interaction/CellEditModel'
+export type { CellEditSession } from './interaction/CellEditModel'
+export { computeCellRect } from './interaction/CellLayout'
+export type { CellRect } from './interaction/CellLayout'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'

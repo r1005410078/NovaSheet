@@ -26,6 +26,7 @@ import type {
   GridController,
 } from '../grid/GridController'
 import { DomGridHost } from '../host/DomGridHost'
+import { DomCellEditor } from '../interaction/DomCellEditor'
 import { DomHandleLayer } from '../interaction/DomHandleLayer'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
@@ -49,6 +50,7 @@ export class Canvas2DBackend implements GridController {
   private renderer: Canvas2DRenderer
   private host: DomGridHost
   private handleLayer: DomHandleLayer
+  private cellEditor: DomCellEditor
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
   /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
@@ -97,6 +99,7 @@ export class Canvas2DBackend implements GridController {
       onPointerMove: (event) => this.runtime.handleHostPointerMove(event),
       onPointerUp: () => this.runtime.handleHostPointerUp(),
       onKeyDown: (event) => this.runtime.handleHostKeyDown(event),
+      onDoubleClick: (event) => this.runtime.handleHostDoubleClick(event),
     })
 
     this.runtime = new WebGridRuntime({
@@ -108,6 +111,15 @@ export class Canvas2DBackend implements GridController {
       handleLayer: this.handleLayer,
       onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
     })
+
+    this.cellEditor = new DomCellEditor(this.container, {
+      onDraftChange: (draft) => this.runtime.handleCellEditDraft(draft),
+      onCommitEnter: () => this.runtime.handleCellEditCommitEnter(),
+      onCommitBlur: () => this.runtime.handleCellEditCommitBlur(),
+      onCancel: () => this.runtime.handleCellEditCancel(),
+    })
+    this.cellEditor.attach()
+    this.runtime.setCellEditor(this.cellEditor)
 
     this.runtime.attach()
   }
@@ -158,6 +170,7 @@ export class Canvas2DBackend implements GridController {
   destroy(): void {
     this.runtime.destroy()
     this.handleLayer.destroy()
+    this.cellEditor.destroy()
     if (this.canvas.parentNode === this.container) {
       this.container.removeChild(this.canvas)
     }

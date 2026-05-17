@@ -138,7 +138,13 @@ describe('DomGridHost — keyboard events', () => {
     const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
     const prevented = !scrollHost.dispatchEvent(event)
 
-    expect(onKeyDown).toHaveBeenCalledWith({ key: 'ArrowDown', shiftKey: false })
+    expect(onKeyDown).toHaveBeenCalledWith({
+      key: 'ArrowDown',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+    })
     expect(prevented).toBe(true)
 
     host.destroy()

@@ -12,6 +12,9 @@ export interface WebPointerEvent {
 export interface WebKeyboardEvent {
   readonly key: string
   readonly shiftKey: boolean
+  readonly ctrlKey: boolean
+  readonly metaKey: boolean
+  readonly altKey: boolean
 }
 
 /** `DomGridHost` 等实现的构造参数。 */
@@ -33,6 +36,8 @@ export interface WebHostOptions {
   onPointerUp?: () => void
   /** keydown 入口；runtime 处理表格导航键。 */
   onKeyDown?: (event: WebKeyboardEvent) => boolean
+  /** dblclick 入口；runtime 进入单元格编辑。 */
+  onDoubleClick?: (event: WebPointerEvent) => void
 }
 
 /**

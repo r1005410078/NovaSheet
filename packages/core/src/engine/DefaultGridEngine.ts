@@ -1,4 +1,11 @@
 import type { DataSource } from '../data/DataSource'
+import { isMutableDataSource } from '../data/MutableDataSource'
+import {
+  formatCellForEdit,
+  isEditableFieldType,
+  parseCellEditInput,
+} from '../interaction/CellEdit'
+import { CellEditModel } from '../interaction/CellEditModel'
 import { parseSelectionNavigationKey } from '../interaction/SelectionNavigation'
 import {
   SelectionModel,
@@ -32,6 +39,7 @@ export class DefaultGridEngine implements GridEngine {
   private frozen: FrozenRegions
   private viewport: Viewport
   private selection = new SelectionModel()
+  private cellEdit = new CellEditModel()
 
   constructor(options: GridEngineOptions) {
     this.data = options.data
@@ -120,7 +128,43 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   clearSelection(): void {
+    this.cancelCellEdit()
     this.selection.clear()
+  }
+
+  beginCellEdit(cell: CellAddress): boolean {
+    const field = this.fieldAt(cell.colIndex)
+    if (!field || !isEditableFieldType(field.type)) return false
+    if (!isMutableDataSource(this.data)) return false
+
+    const value = this.data.getCell(cell.rowIndex, field.id)
+    this.cellEdit.begin(cell, field.id, field.type, formatCellForEdit(value, field.type))
+    return true
+  }
+
+  updateCellEditDraft(draft: string): void {
+    this.cellEdit.setDraft(draft)
+  }
+
+  cancelCellEdit(): void {
+    this.cellEdit.clear()
+  }
+
+  commitCellEdit(): boolean {
+    const session = this.cellEdit.getSession()
+    if (!session) return false
+    if (!isMutableDataSource(this.data)) return false
+
+    const parsed = parseCellEditInput(session.draft, session.fieldType)
+    if (parsed === undefined) return false
+
+    this.data.updateCell(session.cell.rowIndex, session.fieldId, parsed)
+    this.cellEdit.clear()
+    return true
+  }
+
+  isCellEditing(): boolean {
+    return this.cellEdit.isEditing()
   }
 
   navigateSelection(key: string, shiftKey: boolean): boolean {
@@ -143,6 +187,7 @@ export class DefaultGridEngine implements GridEngine {
       colsAxis: this.colsAxis,
       viewport: this.viewport.snapshot(),
       selection: this.selection.getSelection(),
+      cellEdit: this.cellEdit.getSession() ?? undefined,
     }
   }
 
@@ -213,6 +258,10 @@ export class DefaultGridEngine implements GridEngine {
       ? Math.max(this.theme.metrics.rowHeaderWidth, DEFAULT_EXCEL_ROW_HEADER_WIDTH)
       : 0
     this.viewport.setRowHeaderWidth(gutter)
+  }
+
+  private fieldAt(colIndex: number) {
+    return this.data.getSchema().fields[colIndex]
   }
 
   private applyFieldWidths(): void {

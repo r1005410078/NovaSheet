@@ -31,13 +31,13 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 | Phase 3.2  | Shift + 点击扩展选区 · pointer 拖拽框选 · 拖选边缘自动滚动 · Excel 行列头联动高亮 · 多格 selectedRange overlay 绘制 |
 | Phase 3.3  | 方向键 / Tab / Enter 移动 active cell · Shift + 方向键扩展选区 · 滚动跟随焦点格                         |
 | Phase 3.4  | DOM resize handle：列头拖列宽、行号列拖行高（最小 20px）· 冻结区与普通区同步                           |
+| Phase 3.5  | 基础编辑：选中即打字（Sheets 式）· F2/双击原位编辑 · Esc 取消 · Enter 提交下移 · text/number 列      |
 
 ### 暂未交付
 
 | 阶段                 | 内容                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------- |
-| Phase 3.5+           | 基础单元格编辑                                                                     |
-| Phase 4+             | 复制粘贴 · Undo / Redo · 单元格合并 · 字段类型编辑器 · 公式 / 导入导出 · 框架适配层 |
+| Phase 4+             | 单元格右键菜单 · 复制粘贴 · Undo / Redo · 填充柄 · 排序筛选 · 行列结构操作 |
 | 低优先级验证项       | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机验证             |
 
 架构细节见 [docs/architecture.md](docs/architecture.md)。
@@ -214,8 +214,8 @@ bun run --filter @novasheet/core build
 
 - **Phase 1**（已完成）：M1 Foundation ✅ → M2 滚动 ✅ → M3 冻结 / 尺寸自适应 ✅
 - **Phase 2**：Canvas 交互绘制分层 ✅
-- **Phase 3**：基础交互（3.1 选择模型 / 高亮 ✅ → 3.2 Shift / 拖拽扩展选择 ✅ → 3.3 键盘导航 ✅ → 3.4 resize ✅ → 3.5 基础编辑）
-- **Phase 4**：复制 / 粘贴 / 剪切 · Undo / Redo · 填充柄 · 排序 / 筛选 · 插入 / 删除 / 隐藏行列
+- **Phase 3**：基础交互（3.1–3.5 ✅：选择 · 键盘导航 · resize · 基础编辑）
+- **Phase 4**：4.0 单元格右键菜单 · 4.1 复制 / 粘贴 / 剪切 · 4.2 Undo / Redo · 4.3 填充柄 · 4.4 排序 / 筛选 · 4.5 插入 / 删除 / 隐藏行列（含列头 / 行头右键菜单）
 - **Phase 5**：单元格合并 / 取消合并 · 对齐方式 · 数字 / 日期 / 百分比 / 货币格式化 · 条件格式
 - **Phase 6**：字段类型专属编辑器 · Schema 校验 · 单元格校验规则 · 关联记录 / lookup / rollup · 分组 / 聚合 / 统计行
 - **Phase 7**：公式引擎 · 跨 sheet 引用 · 命名区域 · 数据透视表 · 图表 · 导入导出 xlsx/csv
@@ -244,7 +244,20 @@ Phase 3 聚焦“用户能像表格一样操作当前画布”，不承载复杂
 | Phase 3.2 | Shift / 拖拽扩展选择 ✅  | 基于 3.1 的 anchor / extent 扩展区域选择；支持 Shift + 点击、Shift + 方向键的数据状态、鼠标拖拽框选、拖选边缘自动滚动，以及 Excel 行列头联动高亮。 |
 | Phase 3.3 | 键盘导航 ✅              | 方向键、Tab、Enter 移动 active cell；Shift + 方向键扩展 selected range；滚动跟随 active cell。                                                |
 | Phase 3.4 | 行高 / 列宽 resize ✅    | DOM handle 层（列头 / 行号列命中区）；拖拽调整行高列宽；冻结与普通区每帧 sync。                                      |
-| Phase 3.5 | 基础编辑                 | 双击 / Enter 进入编辑，Esc 取消，Enter 提交；先支持文本 / 数字的基础输入，不在本阶段引入字段类型专属编辑器。                                 |
+| Phase 3.5 | 基础编辑 ✅              | 选中后直接键入进入编辑（Sheets 式）；F2 / 双击在原内容末尾编辑；Esc 取消；编辑中 Enter 提交并下移。                                        |
+
+### Phase 4 剪贴板与结构操作
+
+设计文档：[Phase 4.0 右键菜单](docs/superpowers/specs/2026-05-17-context-menu-design.md)
+
+| 子阶段    | 范围                         | 交付内容                                                                                    |
+| --------- | ---------------------------- | ------------------------------------------------------------------------------------------- |
+| Phase 4.0 | 单元格右键菜单               | DOM `ContextMenuLayer`；Cut / Copy / Paste 条目（4.1 前可 disabled）；仅 body 单元格命中。 |
+| Phase 4.1 | 剪贴板                       | `cut` / `copy` / `paste` 引擎 + Ctrl+X/C/V；与菜单共用命令。                                |
+| Phase 4.2 | Undo / Redo                  | 命令栈；与编辑 / 剪贴板操作挂钩。                                                           |
+| Phase 4.3 | 填充柄                       | 选区右下角 drag fill（overlay 层）。                                                        |
+| Phase 4.4 | 排序 / 筛选                  | 列头排序指示；筛选 UI（视 DataSource 能力）。                                               |
+| Phase 4.5 | 行列结构 + 头区右键菜单      | 插入 / 删除 / 隐藏行列；**列头 / 行头** context menu（依赖本阶段 API）。                  |
 
 Phase 3.1 会先把“后续 Shift 扩展选择、拖拽选择的基础状态”建好，但不会一次性交付全部选择手势。这个基础状态主要包括：
 

@@ -6,6 +6,7 @@
  */
 
 import type { DataSource } from '../data/DataSource'
+import type { CellEditSession } from '../interaction/CellEditModel'
 import type { GridSelection } from '../interaction/SelectionModel'
 import type { Axis } from '../layout/ChunkedAxis'
 import type { ViewportSnapshot } from '../layout/Viewport'
@@ -18,4 +19,6 @@ export interface RenderFrame {
   colsAxis: Axis
   viewport: ViewportSnapshot
   selection?: GridSelection
+  /** Phase 3.5 — 正在编辑的单元格（若有）。 */
+  cellEdit?: CellEditSession
 }

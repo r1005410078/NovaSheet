@@ -178,6 +178,19 @@ describe('CellPainter — 单元格', () => {
       expect(lines[lines.length - 1]!.endsWith('…')).toBe(true)
     })
 
+    it('wrap=true 值里的 \\n 强制分行（Alt+Enter 提交后渲染）', () => {
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme, { measurer: fixedWidthMeasurer }).paint(ctx, {
+        value: 'first\nsecond',
+        rect: { x: 0, y: 0, width: 200, height: 100 },
+        field: makeField({ type: 'text', wrap: true }),
+      })
+      const lines = ops
+        .filter((o): o is { op: 'fillText'; args: [string, number, number, number?] } => o.op === 'fillText')
+        .map((o) => o.args[0])
+      expect(lines).toEqual(['first', 'second'])
+    })
+
     it('number 字段即使 wrap=true 仍单行右对齐', () => {
       const { ctx, ops } = createRecordingContext()
       new CellPainter(denseGridTheme, { measurer: fixedWidthMeasurer }).paint(ctx, {

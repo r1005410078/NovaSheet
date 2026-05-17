@@ -23,6 +23,11 @@ function makeEngine(): GridEngine {
     setColumnWidth: mock(() => {}),
     selectCell: mock(() => {}),
     navigateSelection: mock(() => false),
+    beginCellEdit: mock(() => false),
+    updateCellEditDraft: mock(() => {}),
+    cancelCellEdit: mock(() => {}),
+    commitCellEdit: mock(() => false),
+    isCellEditing: mock(() => false),
     clearSelection: mock(() => {}),
     getSelection: mock(
       () =>
@@ -350,7 +355,13 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
     const host = makeHost()
     const runtime = new WebGridRuntime({ engine, host, renderer: makeRenderer() })
 
-    const handled = runtime.handleHostKeyDown({ key: 'ArrowDown', shiftKey: false })
+    const handled = runtime.handleHostKeyDown({
+      key: 'ArrowDown',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+    })
 
     expect(handled).toBe(true)
     expect(engine.navigateSelection).toHaveBeenCalledWith('ArrowDown', false)
@@ -360,8 +371,118 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
     const engine = makeEngine()
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
 
-    expect(runtime.handleHostKeyDown({ key: 'Escape', shiftKey: false })).toBe(false)
+    expect(
+      runtime.handleHostKeyDown({
+        key: 'Escape',
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+      }),
+    ).toBe(false)
     expect(engine.navigateSelection).toHaveBeenCalledWith('Escape', false)
+  })
+
+  it('选中后直接键入进入编辑（Sheets 式）', () => {
+    const engine = makeEngine()
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 1, colIndex: 0 },
+      anchorCell: { rowIndex: 1, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: 0 },
+      selectedRange: { startRow: 1, endRow: 1, startCol: 0, endCol: 0 },
+    }))
+    engine.beginCellEdit = mock(() => true)
+    engine.updateCellEditDraft = mock(() => {})
+    engine.getFrame = mock(() => ({
+      data: {} as never,
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: { indexToPosition: () => 0, getSize: () => 28 } as never,
+      colsAxis: { indexToPosition: () => 0, getSize: () => 100 } as never,
+      viewport: {
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            rowRange: [0, 9],
+            colRange: [0, 2],
+            rect: { x: 0, y: 32, width: 300, height: 200 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+      cellEdit: {
+        cell: { rowIndex: 1, colIndex: 0 },
+        fieldId: 'name',
+        fieldType: 'text' as const,
+        draft: 'x',
+      },
+    }))
+
+    const editor = {
+      open: mock(() => {}),
+      close: mock(() => {}),
+      isOpen: mock(() => false),
+      syncRect: mock(() => {}),
+      applyTheme: mock(() => {}),
+    }
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setCellEditor(editor as never)
+
+    const keyEvent = {
+      key: 'x',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+    }
+    expect(runtime.handleHostKeyDown(keyEvent)).toBe(true)
+    expect(engine.beginCellEdit).toHaveBeenCalledWith({ rowIndex: 1, colIndex: 0 })
+    expect(engine.updateCellEditDraft).toHaveBeenCalledWith('x')
+    expect(engine.navigateSelection).not.toHaveBeenCalled()
+  })
+
+  it('Enter 恢复为下移导航', () => {
+    const engine = makeEngine()
+    engine.navigateSelection = mock(() => true)
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+    }))
+    engine.getFrame = mock(() => ({
+      data: {} as never,
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: {
+        indexToPosition: (i: number) => i * 28,
+        getSize: () => 28,
+      } as never,
+      colsAxis: {
+        indexToPosition: (i: number) => i * 100,
+        getSize: () => 100,
+      } as never,
+      viewport: {
+        contentRect: { width: 400, height: 300 },
+        rowHeaderWidth: 0,
+        scrollX: 0,
+        scrollY: 0,
+      } as never,
+    }))
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+
+    expect(
+      runtime.handleHostKeyDown({
+        key: 'Enter',
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+      }),
+    ).toBe(true)
+    expect(engine.navigateSelection).toHaveBeenCalledWith('Enter', false)
+    expect(engine.beginCellEdit).not.toHaveBeenCalled()
   })
 })
 

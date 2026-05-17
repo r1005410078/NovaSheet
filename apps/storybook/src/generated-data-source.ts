@@ -5,6 +5,10 @@
  * 3000 万个 JS 值）降到 0ms（只 new 一个类实例）。Renderer 每帧只为可见 cell 调
  * `getCell` —— 单次调用 < 1μs，1M 行不再是 data-layer 瓶颈。
  *
+ * 编辑覆盖：实现 `MutableDataSource`，`updateCell` 写入稀疏 `Map`，`getCell`
+ * 优先读 override，再退回生成函数。编辑过的格保留生成行为同时支持改写——
+ * 让大数据 demo 也能演示双击编辑。
+ *
  * 适用场景：可程序化生成的展示 / mock 数据。真实业务数据请用 InMemoryDataSource
  * （≤ 30万行）或 Phase 4 的分页 DataSource。
  *
@@ -14,14 +18,19 @@
 import type {
   CellValue,
   DataSource,
+  DataSourceEvent,
   DataSourceListener,
+  MutableDataSource,
   Row,
   Schema,
 } from '@novasheet/core'
 
 export type CellGenerator = (rowIndex: number, fieldId: string) => CellValue
 
-export class GeneratedDataSource implements DataSource {
+export class GeneratedDataSource implements DataSource, MutableDataSource {
+  private overrides = new Map<string, CellValue>()
+  private listeners = new Set<DataSourceListener>()
+
   constructor(
     private rowCount: number,
     private schema: Schema,
@@ -48,7 +57,10 @@ export class GeneratedDataSource implements DataSource {
     const out: Row[] = new Array(end - start + 1)
     for (let r = start; r <= end; r++) {
       const row: Row = {}
-      for (const f of this.schema.fields) row[f.id] = this.cellFn(r, f.id)
+      for (const f of this.schema.fields) {
+        const key = `${r}:${f.id}`
+        row[f.id] = this.overrides.has(key) ? this.overrides.get(key)! : this.cellFn(r, f.id)
+      }
       out[r - start] = row
     }
     return out
@@ -57,11 +69,25 @@ export class GeneratedDataSource implements DataSource {
   /** Paint hot path——必须同步、零分配。Renderer 每帧调 ~600 次。 */
   getCell(rowIndex: number, fieldId: string): CellValue | undefined {
     if (rowIndex < 0 || rowIndex >= this.rowCount) return undefined
+    const key = `${rowIndex}:${fieldId}`
+    if (this.overrides.has(key)) return this.overrides.get(key)
     return this.cellFn(rowIndex, fieldId)
   }
 
-  /** 静态生成数据从不变更；订阅返回 no-op 解订阅函数。 */
-  subscribe(_listener: DataSourceListener): () => void {
-    return () => {}
+  updateCell(rowIndex: number, fieldId: string, value: CellValue): void {
+    if (rowIndex < 0 || rowIndex >= this.rowCount) return
+    this.overrides.set(`${rowIndex}:${fieldId}`, value)
+    this.emit({ type: 'rowsChanged', startIndex: rowIndex, endIndex: rowIndex })
+  }
+
+  subscribe(listener: DataSourceListener): () => void {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  private emit(event: DataSourceEvent): void {
+    for (const l of this.listeners) l(event)
   }
 }

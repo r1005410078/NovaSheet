@@ -27,14 +27,17 @@ import type {
 } from '@novasheet/core'
 import {
   autofitRowHeights,
+  computeCellRect,
   computeResizeHandles,
   computeScrollReveal,
   FrameScheduler,
   hitTestCell,
   MIN_RESIZE_SIZE,
+  isTypableEditKey,
   type CellAddress,
   type ResizeHandleRect,
 } from '@novasheet/core'
+import type { DomCellEditor } from '../interaction/DomCellEditor'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -91,6 +94,12 @@ export class WebGridRuntime {
   private draggingSelection = false
   private lastDragPointer: WebPointerEvent | null = null
   private handleLayer?: DomHandleLayer
+  private cellEditor?: DomCellEditor
+  /**
+   * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
+   * 非 multiline 编辑置 null。
+   */
+  private editingMultilineOriginalRowHeight: number | null = null
   private resizeDrag: {
     handle: ResizeHandleRect
     pointerId: number
@@ -114,6 +123,12 @@ export class WebGridRuntime {
     this.scrollMapper = new ScrollMapper()
   }
 
+  /** Phase 3.5 — backend 在 runtime 创建后注入编辑器。 */
+  setCellEditor(editor: DomCellEditor): void {
+    this.cellEditor = editor
+    this.syncCellEditorTheme()
+  }
+
   /** 注入或替换 TextMeasurer；backend 切换 measurer（如主题字体变更）时调用。 */
   setMeasurer(measurer: TextMeasurer): void {
     this.measurer = measurer
@@ -128,6 +143,7 @@ export class WebGridRuntime {
     this.resizeSpacer()
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
+    this.syncCellEditorTheme()
     this.paintSync()
   }
 
@@ -153,6 +169,7 @@ export class WebGridRuntime {
     patchRenderer?.(this.renderer)
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
+    this.syncCellEditorTheme()
     this.afterEngineMutation()
   }
 
@@ -286,6 +303,25 @@ export class WebGridRuntime {
     }
   }
 
+  handleCellEditDraft(draft: string): void {
+    if (this.destroyed) return
+    this.engine.updateCellEditDraft(draft)
+  }
+
+  handleCellEditCommitEnter(): void {
+    this.commitCellEdit(true)
+  }
+
+  handleCellEditCommitBlur(): void {
+    this.commitCellEdit(false)
+  }
+
+  handleCellEditCancel(): void {
+    if (this.destroyed) return
+    this.cancelCellEdit()
+    this.refresh()
+  }
+
   handleResizeKeyboard(handle: ResizeHandleRect, delta: number): void {
     if (this.destroyed) return
     const current = this.readResizeSize(handle)
@@ -299,6 +335,7 @@ export class WebGridRuntime {
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
+    this.cancelCellEdit()
     this.resizeDrag = null
     this.scheduler.cancel('renderer:flush')
     this.scheduler.cancel(HOST_RESIZE_KEY)
@@ -310,6 +347,7 @@ export class WebGridRuntime {
   handleHostScroll(scrollTop: number, scrollLeft: number): void {
     const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
     this.engine.setScroll(logicalX, logicalY)
+    this.syncCellEditorPosition()
     this.invalidate()
   }
 
@@ -327,6 +365,9 @@ export class WebGridRuntime {
 
   handleHostPointerDown(event: WebPointerEvent): void {
     if (this.destroyed) return
+    if (this.engine.isCellEditing()) {
+      this.commitCellEdit(false)
+    }
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return
     if (event.shiftKey) this.engine.selectCell(hit, { extend: true })
@@ -354,9 +395,36 @@ export class WebGridRuntime {
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
   }
 
-  /** Phase 3.3 — 方向键 / Tab / Enter 导航；返回 true 表示已消费按键。 */
+  handleHostDoubleClick(event: WebPointerEvent): void {
+    if (this.destroyed || this.resizeDrag || this.draggingSelection) return
+    const hit = hitTestCell(this.engine.getFrame(), event)
+    if (!hit) return
+    this.engine.selectCell(hit)
+    this.openCellEditor(hit, { selectAll: false })
+  }
+
+  /** Phase 3.3 / 3.5 — 导航；选中后直接键入进入编辑（Sheets 式）。 */
   handleHostKeyDown(event: WebKeyboardEvent): boolean {
     if (this.destroyed) return false
+    if (this.engine.isCellEditing()) return false
+
+    const cell = this.engine.getSelection().activeCell
+
+    if (event.key === 'F2' && cell) {
+      if (this.openCellEditor(cell, { selectAll: false })) return true
+    }
+
+    if (
+      cell &&
+      isTypableEditKey(event.key, {
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey,
+      })
+    ) {
+      if (this.beginCellEditWithDraft(cell, event.key)) return true
+    }
+
     if (!this.engine.navigateSelection(event.key, event.shiftKey)) return false
 
     const focus = this.getSelectionScrollTarget()
@@ -396,6 +464,7 @@ export class WebGridRuntime {
       const frame = this.engine.getFrame()
       this.renderer.render(frame)
       this.syncResizeHandles()
+      this.syncCellEditorPosition()
     })
   }
 
@@ -403,6 +472,7 @@ export class WebGridRuntime {
     const frame = this.engine.getFrame()
     this.renderer.render(frame)
     this.syncResizeHandles()
+    this.syncCellEditorPosition()
   }
 
   private syncResizeHandles(): void {
@@ -513,6 +583,102 @@ export class WebGridRuntime {
   private syncResizeHandleTheme(): void {
     const theme = this.engine.getTheme()
     this.handleLayer?.applyTheme(theme.colors, theme.metrics)
+  }
+
+  private syncCellEditorTheme(): void {
+    this.cellEditor?.applyTheme(this.engine.getTheme())
+  }
+
+  private openCellEditor(
+    cell: CellAddress,
+    options: { selectAll?: boolean } = {},
+  ): boolean {
+    if (!this.cellEditor || this.resizeDrag) return false
+    if (!this.engine.beginCellEdit(cell)) return false
+    return this.showCellEditor(options)
+  }
+
+  private beginCellEditWithDraft(cell: CellAddress, draft: string): boolean {
+    if (!this.cellEditor || this.resizeDrag) return false
+    if (!this.engine.beginCellEdit(cell)) return false
+    this.engine.updateCellEditDraft(draft)
+    return this.showCellEditor({ selectAll: false })
+  }
+
+  private showCellEditor(options: { selectAll?: boolean }): boolean {
+    const session = this.engine.getFrame().cellEdit
+    const rect = session ? computeCellRect(this.engine.getFrame(), session.cell) : null
+    if (!session || !rect || !this.cellEditor) {
+      this.engine.cancelCellEdit()
+      return false
+    }
+
+    const field = this.engine.getData().getSchema?.().fields[session.cell.colIndex]
+    const multiline = field?.wrap === true && field.type !== 'number'
+
+    this.editingMultilineOriginalRowHeight = multiline
+      ? this.engine.getRowsAxis().getSize(session.cell.rowIndex)
+      : null
+
+    this.cellEditor.open(rect, session.draft, { ...options, multiline })
+    return true
+  }
+
+  private commitCellEdit(moveAfter: boolean): void {
+    if (!this.engine.isCellEditing()) return
+    const session = this.engine.getFrame().cellEdit
+    const wasMultiline = this.editingMultilineOriginalRowHeight !== null
+    const editedRow = session?.cell.rowIndex
+    if (!this.engine.commitCellEdit()) return
+
+    this.editingMultilineOriginalRowHeight = null
+    this.cellEditor?.close()
+    // 失去焦点（Enter 或 blur 提交）才重算行高——交互成本从 N 键 × autofit 降到 1 次
+    if (wasMultiline && editedRow !== undefined) {
+      this.autofitRows({ rows: [editedRow] })
+    }
+    if (moveAfter) {
+      this.engine.navigateSelection('ArrowDown', false)
+      const focus = this.getSelectionScrollTarget()
+      if (focus) this.ensureCellVisible(focus)
+    }
+    this.refresh()
+  }
+
+  private cancelCellEdit(): void {
+    if (!this.engine.isCellEditing()) {
+      this.cellEditor?.close()
+      this.editingMultilineOriginalRowHeight = null
+      return
+    }
+    const session = this.engine.getFrame().cellEdit
+    const restoreHeight = this.editingMultilineOriginalRowHeight
+    const restoreRow = session?.cell.rowIndex
+    this.engine.cancelCellEdit()
+    this.cellEditor?.close()
+    if (restoreHeight !== null && restoreRow !== undefined) {
+      const currentHeight = this.engine.getRowsAxis().getSize(restoreRow)
+      if (currentHeight !== restoreHeight) {
+        this.engine.setRowHeight(restoreRow, restoreHeight)
+        this.afterEngineMutation()
+      }
+    }
+    this.editingMultilineOriginalRowHeight = null
+  }
+
+  private syncCellEditorPosition(): void {
+    if (!this.cellEditor?.isOpen()) return
+    const session = this.engine.getFrame().cellEdit
+    if (!session) {
+      this.cellEditor.close()
+      return
+    }
+    const rect = computeCellRect(this.engine.getFrame(), session.cell)
+    if (!rect) {
+      this.cancelCellEdit()
+      return
+    }
+    this.cellEditor.syncRect(rect)
   }
 
   private getSelectionScrollTarget(): CellAddress | null {
