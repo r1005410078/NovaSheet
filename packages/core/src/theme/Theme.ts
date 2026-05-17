@@ -32,7 +32,7 @@ export interface ThemeMetrics {
   readonly fontFamily: string
   /** 网格线宽度（px） */
   readonly borderWidth: number
-  /** 菜单项悬停背景色（box-shadow 格式字符串，M4） */
+  /** 菜单阴影效果（box-shadow 格式字符串，Phase 4.0） */
   readonly menuShadow: string
   /** 菜单水平内边距（px） */
   readonly menuPaddingX: number
@@ -56,13 +56,13 @@ export interface ThemeColors {
   readonly gridLineStrong: string
   /** 冻结区阴影颜色 */
   readonly frozenShadow: string
-  /** 行悬停背景色（M4） */
+  /** 行悬停背景色（Phase 4.0） */
   readonly hoverRowBg: string
-  /** 选区背景色（M4） */
+  /** 选区背景色（Phase 4.0） */
   readonly selectionBg: string
-  /** 选区边框颜色（M4） */
+  /** 选区边框颜色（Phase 4.0） */
   readonly selectionBorder: string
-  /** 菜单项悬停背景色（M4 Context menu） */
+  /** 菜单项悬停背景色（Phase 4.0 Context menu） */
   readonly menuItemHover: string
 }
 
