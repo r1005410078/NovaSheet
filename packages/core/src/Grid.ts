@@ -18,13 +18,10 @@
  */
 
 import type { DataSource } from './data/DataSource'
-import { ChunkedAxis } from './layout/ChunkedAxis'
-import { FrozenRegions } from './layout/FrozenRegions'
-import { Viewport } from './layout/Viewport'
+import { DefaultGridEngine } from './engine/DefaultGridEngine'
 import { Canvas2DRenderer as Renderer, HighDPI } from '@novasheet/web-canvas2d'
 import { NativeScroller } from '@novasheet/web'
 import { ScrollMapper } from '@novasheet/web'
-import { denseGridTheme } from './theme/denseGridTheme'
 import type { Theme } from './theme/Theme'
 import { FrameScheduler } from './util/raf'
 
@@ -131,20 +128,8 @@ export class Grid {
   private scrollSpacer!: HTMLDivElement
   /** canvas 2D 绘图上下文 */
   private ctx: CanvasRenderingContext2D
-  /** 当前数据源 */
-  private data: DataSource
-  /** 当前主题 */
-  private theme: Theme
-  /** 用户通过 options 显式传入的行高（优先于主题值） */
-  private explicitDefaultRowHeight: number | undefined
-  /** 行轴（管理每行的高度与位置映射） */
-  private rowsAxis: ChunkedAxis
-  /** 列轴（管理每列的宽度与位置映射） */
-  private colsAxis: ChunkedAxis
-  /** 冻结区域配置 */
-  private frozen: FrozenRegions
-  /** 视口状态（尺寸、滚动偏移、快照） */
-  private viewport: Viewport
+  /** 平台无关引擎状态 */
+  private engine: DefaultGridEngine
   /** 高 DPI 适配器 */
   private highDpi: HighDPI
   /** 帧渲染器 */
@@ -203,11 +188,13 @@ export class Grid {
     // Grid 是整个 core 的 facade：外部只把 DOM 容器、DataSource 和可选 Theme 交给它。
     // 这里先把这些“外部事实”落到实例字段，后续所有子系统都从这些字段派生。
     this.container = container
-    this.data = options.data
-    this.theme = options.theme ?? denseGridTheme
-    // defaultRowHeight 一旦由用户显式传入，就视为 sticky 配置。
-    // 后续 setTheme() 不会再用新主题的 rowHeight 覆盖它；否则默认行高跟随主题。
-    this.explicitDefaultRowHeight = options.defaultRowHeight
+    this.engine = new DefaultGridEngine({
+      data: options.data,
+      theme: options.theme,
+      frozenRows: options.frozenRows,
+      frozenCols: options.frozenCols,
+      defaultRowHeight: options.defaultRowHeight,
+    })
 
     // 2) 准备宿主容器的定位上下文。
     //
@@ -293,34 +280,10 @@ export class Grid {
     // 行默认高度来自 options.defaultRowHeight 或 theme.metrics.rowHeight。
     // 列默认宽度取 schema 字段宽度平均值，随后 applyFieldWidths() 只物化偏离平均值的列，
     // 让列宽相近时 ChunkedAxis 保持更少的 override chunk。
-    const rowHeight = this.resolveDefaultRowHeight()
-    this.rowsAxis = new ChunkedAxis({ count: this.data.getRowCount(), defaultSize: rowHeight })
-    this.colsAxis = new ChunkedAxis({
-      count: this.data.getSchema().fields.length,
-      defaultSize: this.averageColWidth(),
-    })
-
-    // 8) 建立冻结区域模型。
-    //
-    // 当前 FrozenRegions 还只是 M3 的接口骨架：即使传入 frozenRows/frozenCols，
-    // getQuadrants() 目前仍只返回 main 象限。保留这个对象是为了让 Viewport/Renderer
-    // 的契约提前稳定，后续接入 4 象限时不用推翻调用链。
-    this.frozen = new FrozenRegions(
-      this.rowsAxis,
-      this.colsAxis,
-      options.frozenRows ?? 0,
-      options.frozenCols ?? 0,
-    )
-
-    // 9) 建立滚动映射器和 Viewport。
-    //
-    // ScrollMapper 只负责数学映射：DOM scrollTop/Left <-> 逻辑内容坐标。
-    // Viewport 聚合尺寸、滚动位置、header 高度和象限切分，是 Renderer 每帧唯一读源。
+    // 8) 建立滚动映射器。
     this.scrollMapper = new ScrollMapper()
-    this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
-    this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
 
-    // 10) 建立 DPR 适配器和 Renderer。
+    // 9) 建立 DPR 适配器和 Renderer。
     //
     // HighDPI 负责把 canvas bitmap 放大到 devicePixelRatio，同时保持 painter 继续用 CSS px。
     // Renderer 拿到 DataSource / Viewport / Axis / Theme / Scheduler 后，就能按 snapshot 绘制一帧。
@@ -328,11 +291,11 @@ export class Grid {
     this.highDpi = new HighDPI(this.canvas, this.ctx)
     this.renderer = new Renderer({
       ctx: this.ctx,
-      data: this.data,
-      viewport: this.viewport,
-      rowsAxis: this.rowsAxis,
-      colsAxis: this.colsAxis,
-      theme: this.theme,
+      data: this.engine.getData(),
+      viewport: this.engine.getViewport(),
+      rowsAxis: this.engine.getRowsAxis(),
+      colsAxis: this.engine.getColsAxis(),
+      theme: this.engine.getTheme(),
       scheduler: this.scheduler,
     })
 
@@ -346,9 +309,7 @@ export class Grid {
     // canvas 物理尺寸 + CSS 尺寸同步到当前容器尺寸。
     this.highDpi.resize(w, h)
     // Viewport 记录 CSS px 视口尺寸，供 snapshot() 计算可见行列范围。
-    this.viewport.setSize(w, h)
-    // 将 schema field.width 写入列轴；只有偏离默认宽度的列会被物化。
-    this.applyFieldWidths()
+    this.engine.setViewportSize(w, h)
     // 根据行列总尺寸重算 spacer，让原生滚动条拥有正确滚动范围。
     this.resizeSpacer()
 
@@ -364,7 +325,7 @@ export class Grid {
       this.scheduler,
       (scrollTop, scrollLeft) => {
         const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
-        this.viewport.setScroll(logicalX, logicalY)
+        this.engine.setScroll(logicalX, logicalY)
         this.renderer.invalidate()
       },
     )
@@ -391,34 +352,17 @@ export class Grid {
    * 字段数、行数、字段宽度都可能变。frozenRows/Cols 与显式 defaultRowHeight 保留。
    */
   setData(data: DataSource): void {
-    this.data = data
-    this.rowsAxis = new ChunkedAxis({
-      count: this.data.getRowCount(),
-      defaultSize: this.resolveDefaultRowHeight(),
-    })
-    this.colsAxis = new ChunkedAxis({
-      count: this.data.getSchema().fields.length,
-      defaultSize: this.averageColWidth(),
-    })
-    this.frozen = new FrozenRegions(
-      this.rowsAxis,
-      this.colsAxis,
-      this.frozen.frozenRows,
-      this.frozen.frozenCols,
-    )
-    this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
-    this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
+    this.engine.setData(data)
     const rect = this.container.getBoundingClientRect()
-    this.viewport.setSize(rect.width || 400, rect.height || 300)
-    this.applyFieldWidths()
+    this.engine.setViewportSize(rect.width || 400, rect.height || 300)
     this.resizeSpacer()
     this.renderer = new Renderer({
       ctx: this.ctx,
-      data: this.data,
-      viewport: this.viewport,
-      rowsAxis: this.rowsAxis,
-      colsAxis: this.colsAxis,
-      theme: this.theme,
+      data: this.engine.getData(),
+      viewport: this.engine.getViewport(),
+      rowsAxis: this.engine.getRowsAxis(),
+      colsAxis: this.engine.getColsAxis(),
+      theme: this.engine.getTheme(),
       scheduler: this.scheduler,
     })
     this.remapScroll()
@@ -430,11 +374,7 @@ export class Grid {
    * 详见 GridOptions.defaultRowHeight。
    */
   setTheme(theme: Theme): void {
-    this.theme = theme
-    this.viewport.setHeaderHeight(theme.metrics.headerHeight)
-    if (this.explicitDefaultRowHeight === undefined) {
-      this.rowsAxis.setDefaultSize(theme.metrics.rowHeight)
-    }
+    this.engine.setTheme(theme)
     this.resizeSpacer()
     this.remapScroll()
     this.renderer.setTheme(theme)
@@ -443,7 +383,7 @@ export class Grid {
 
   /** 覆写单行行高。索引越界静默 no-op。 */
   setRowHeight(rowIndex: number, height: number): void {
-    this.rowsAxis.setSize(rowIndex, height)
+    this.engine.setRowHeight(rowIndex, height)
     this.resizeSpacer()
     this.remapScroll()
     this.invalidate()
@@ -454,10 +394,7 @@ export class Grid {
    * 未知 fieldId 静默 no-op。
    */
   setColumnWidth(fieldId: string, width: number): void {
-    const fields = this.data.getSchema().fields
-    const index = fields.findIndex((f) => f.id === fieldId)
-    if (index < 0) return
-    this.colsAxis.setSize(index, width)
+    this.engine.setColumnWidth(fieldId, width)
     this.resizeSpacer()
     this.remapScroll()
     this.invalidate()
@@ -499,13 +436,14 @@ export class Grid {
    * 越界静默 no-op。
    */
   scrollToRow(rowIndex: number, align: 'start' | 'center' | 'end' = 'start'): void {
-    if (rowIndex < 0 || rowIndex >= this.rowsAxis.getCount()) return
-    const top = this.rowsAxis.indexToPosition(rowIndex)
-    const size = this.rowsAxis.getSize(rowIndex)
+    const rowsAxis = this.engine.getRowsAxis()
+    if (rowIndex < 0 || rowIndex >= rowsAxis.getCount()) return
+    const top = rowsAxis.indexToPosition(rowIndex)
+    const size = rowsAxis.getSize(rowIndex)
     // align math uses 内容区高度（vpContentH = clientH - headerH），因为 logicalY 的语义是
     // 「content area top 的偏移」（不包括 header）。
     const { clientH } = this.getClientSize()
-    const vpContentH = clientH - this.theme.metrics.headerHeight
+    const vpContentH = clientH - this.engine.getTheme().metrics.headerHeight
     let logicalY: number
     if (align === 'start') logicalY = top
     else if (align === 'end') logicalY = top + size - vpContentH
@@ -519,13 +457,14 @@ export class Grid {
    * 滚动到指定单元格（行索引 + 字段 id）。行 / 字段越界静默 no-op。
    */
   scrollToCell(rowIndex: number, fieldId: string): void {
-    const fields = this.data.getSchema().fields
-    const colIndex = fields.findIndex((f) => f.id === fieldId)
-    if (rowIndex < 0 || rowIndex >= this.rowsAxis.getCount()) return
+    const rowsAxis = this.engine.getRowsAxis()
+    const colsAxis = this.engine.getColsAxis()
+    const colIndex = this.engine.getColumnIndex(fieldId)
+    if (rowIndex < 0 || rowIndex >= rowsAxis.getCount()) return
     if (colIndex < 0) return
 
-    const top = this.rowsAxis.indexToPosition(rowIndex)
-    const left = this.colsAxis.indexToPosition(colIndex)
+    const top = rowsAxis.indexToPosition(rowIndex)
+    const left = colsAxis.indexToPosition(colIndex)
     const scrollTop = this.logicalToScrollY(top)
     const scrollLeft = this.logicalToScrollX(left)
     this.nativeScroller.scrollTo(scrollTop, scrollLeft)
@@ -535,36 +474,6 @@ export class Grid {
   private invalidate(): void {
     if (this.destroyed) return
     this.renderer.invalidate()
-  }
-
-  /** 返回实际使用的默认行高：优先 options.defaultRowHeight，退回主题值 */
-  private resolveDefaultRowHeight(): number {
-    return this.explicitDefaultRowHeight ?? this.theme.metrics.rowHeight
-  }
-
-  /**
-   * 选一个能让 applyFieldWidths() 物化最少 chunk 的 defaultSize。
-   * Airtable 风格 schema 里多数字段宽度相近，这样列轴 ChunkedAxis 大概率维持默认状态。
-   */
-  private averageColWidth(): number {
-    const fields = this.data.getSchema().fields
-    if (fields.length === 0) return 100
-    const sum = fields.reduce((acc, f) => acc + f.width, 0)
-    return Math.max(1, Math.round(sum / fields.length))
-  }
-
-  /**
-   * 把 schema 里 per-field 的 width 物化到列轴。
-   * 仅对宽度 !== axis 默认值的字段调 setSize——宽度统一时整个列轴维持 O(1) 快路径。
-   */
-  private applyFieldWidths(): void {
-    const fields = this.data.getSchema().fields
-    const avg = this.colsAxis.getDefaultSize()
-    for (let i = 0; i < fields.length; i++) {
-      if (fields[i]!.width !== avg) {
-        this.colsAxis.setSize(i, fields[i]!.width)
-      }
-    }
   }
 
   /**
@@ -592,9 +501,9 @@ export class Grid {
     scrollTop: number,
     scrollLeft: number,
   ): { logicalX: number; logicalY: number } {
-    const headerH = this.theme.metrics.headerHeight
-    const contentH = this.rowsAxis.getTotalSize()
-    const contentW = this.colsAxis.getTotalSize()
+    const headerH = this.engine.getTheme().metrics.headerHeight
+    const contentH = this.engine.getRowsTotalSize()
+    const contentW = this.engine.getColsTotalSize()
     const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
     const { clientW, clientH } = this.getClientSize()
@@ -609,8 +518,8 @@ export class Grid {
    * （与真实浏览器一致：内容塞得下时 `scrollTo({ top: N })` 会被自动 clamp）。
    */
   private logicalToScrollY(logicalY: number): number {
-    const headerH = this.theme.metrics.headerHeight
-    const contentH = this.rowsAxis.getTotalSize()
+    const headerH = this.engine.getTheme().metrics.headerHeight
+    const contentH = this.engine.getRowsTotalSize()
     const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
     const { clientH } = this.getClientSize()
     return this.scrollMapper.logicalToScroll(logicalY, spacerH, contentH + headerH, clientH)
@@ -618,7 +527,7 @@ export class Grid {
 
   /** logicalToScrollY 的水平版本（X 轴无 header 偏移）。 */
   private logicalToScrollX(logicalX: number): number {
-    const contentW = this.colsAxis.getTotalSize()
+    const contentW = this.engine.getColsTotalSize()
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
     const { clientW } = this.getClientSize()
     return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, clientW)
@@ -633,7 +542,7 @@ export class Grid {
       this.scrollHost.scrollTop,
       this.scrollHost.scrollLeft,
     )
-    this.viewport.setScroll(logicalX, logicalY)
+    this.engine.setScroll(logicalX, logicalY)
   }
 
   /** Called by ResizeObserver and exposed for tests. */
@@ -641,7 +550,7 @@ export class Grid {
     if (this.destroyed) return
     const { clientW, clientH } = this.getClientSize()
     this.highDpi.resize(clientW, clientH)
-    this.viewport.setSize(clientW, clientH)
+    this.engine.setViewportSize(clientW, clientH)
     this.remapScroll()
     this.invalidate()
   }
@@ -653,9 +562,9 @@ export class Grid {
    * 端点对齐，最后一行可被滚到完全可见。水平没有 header 偏移。
    */
   private resizeSpacer(): void {
-    const headerH = this.theme.metrics.headerHeight
-    const w = this.scrollMapper.computeSpacerSize(this.colsAxis.getTotalSize())
-    const h = this.scrollMapper.computeSpacerSize(this.rowsAxis.getTotalSize() + headerH)
+    const headerH = this.engine.getTheme().metrics.headerHeight
+    const w = this.scrollMapper.computeSpacerSize(this.engine.getColsTotalSize())
+    const h = this.scrollMapper.computeSpacerSize(this.engine.getRowsTotalSize() + headerH)
     this.scrollSpacer.style.width = `${w}px`
     this.scrollSpacer.style.height = `${h}px`
   }

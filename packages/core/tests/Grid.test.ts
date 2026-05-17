@@ -240,7 +240,7 @@ describe('Grid', () => {
 
     // Spy on viewport.setScroll so we can assert the callback actually wired up.
     // Reach in via `unknown` cast (private field).
-    const viewport = (grid as unknown as { viewport: { setScroll: (x: number, y: number) => void } }).viewport
+    const viewport = (grid as unknown as { engine: { getViewport: () => { setScroll: (x: number, y: number) => void } } }).engine.getViewport()
     const setScrollSpy = spyOn(viewport, 'setScroll')
 
     // Fake a scroll event with new scrollTop
@@ -333,7 +333,7 @@ describe('Grid', () => {
     const grid = new Grid(el, { data: makeData() })
 
     const invalidateSpy = spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
-    const viewport = (grid as unknown as { viewport: { setSize: (w: number, h: number) => void } }).viewport
+    const viewport = (grid as unknown as { engine: { getViewport: () => { setSize: (w: number, h: number) => void } } }).engine.getViewport()
     const setSizeSpy = spyOn(viewport, 'setSize')
     const highDpi = (grid as unknown as { highDpi: { resize: (w: number, h: number) => void } }).highDpi
     const resizeSpy = spyOn(highDpi, 'resize')
