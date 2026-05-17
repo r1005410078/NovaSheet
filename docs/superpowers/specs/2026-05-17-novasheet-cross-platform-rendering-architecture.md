@@ -505,6 +505,74 @@ packages/web-canvas2d/tests/
 
 Keep all existing behavioral coverage.
 
+Detailed test migration:
+
+| Current test/helper                       | Target package          | Required changes                                                                                                                |
+| ----------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/data/Schema.test.ts`               | `packages/core/tests`   | Keep as pure type/runtime tests. No DOM setup required.                                                                         |
+| `tests/data/InMemoryDataSource.test.ts`   | `packages/core/tests`   | Keep as pure DataSource tests.                                                                                                  |
+| `tests/layout/ChunkedAxis.test.ts`        | `packages/core/tests`   | Keep as pure layout tests. Update imports if `Axis` interface is introduced.                                                    |
+| `tests/layout/Viewport.test.ts`           | `packages/core/tests`   | Keep in core. It should test `ViewportSnapshot` + `FrozenRegions` interaction without DOM.                                      |
+| `tests/theme/denseGridTheme.test.ts`      | `packages/core/tests`   | Keep in core if `denseGridTheme` remains platform-independent. Remove any Canvas DOM type assumptions from assertions.          |
+| `tests/scroll/ScrollMapper.test.ts`       | `packages/core/tests`   | Keep in core because `ScrollMapper` remains pure math.                                                                          |
+| `tests/util/raf.test.ts`                  | `packages/core/tests`   | Keep only if scheduler remains core. If scheduler moves to web runtime, move test to `packages/web/tests`.                      |
+| `tests/Grid.test.ts`                      | split                   | Move engine-only state tests to `packages/core/tests/engine/DefaultGridEngine.test.ts`; move DOM facade lifecycle tests to web. |
+| `tests/scroll/NativeScroller.test.ts`     | `packages/web/tests`    | Update imports to `@novasheet/web`; keep happy-dom/global stubbing helpers here.                                                |
+| `tests/render/Renderer.test.ts`           | `packages/web-canvas2d` | Rename to `Canvas2DRenderer.test.ts`; update expected instruction sequences if class names change.                              |
+| `tests/render/CellPainter.test.ts`        | `packages/web-canvas2d` | Move with Canvas2D painter.                                                                                                     |
+| `tests/render/GridLinesPainter.test.ts`   | `packages/web-canvas2d` | Move with Canvas2D painter.                                                                                                     |
+| `tests/render/HeaderPainter.test.ts`      | `packages/web-canvas2d` | Move with Canvas2D painter.                                                                                                     |
+| `tests/render/HighDPI.test.ts`            | `packages/web-canvas2d` | Move with Canvas2D surface because it asserts canvas bitmap/transform behavior.                                                 |
+| `tests/helpers/recording-context.ts`      | `packages/web-canvas2d` | Move under `tests/helpers`; keep it Canvas2D-specific.                                                                          |
+| `tests/helpers/recording-context.test.ts` | `packages/web-canvas2d` | Move with helper.                                                                                                               |
+| `tests/helpers/global-stub.ts`            | shared or duplicated    | Prefer `packages/web/tests/helpers/global-stub.ts` and `packages/web-canvas2d/tests/helpers/global-stub.ts` initially.          |
+| `tests/setup.ts`                          | split                   | Remove core dependency on global DOM setup. Add package-local setup files only for web/web-canvas2d tests.                      |
+| `tests/_probe.test.ts`                    | re-evaluate             | Keep only if it documents a current invariant; otherwise delete or move to the package owning the probed invariant.             |
+
+Test setup after refactor:
+
+```text
+packages/core/
+  tests/setup.ts              optional; no happy-dom unless a core test truly needs it
+
+packages/web/
+  tests/setup.ts              happy-dom + DOM global helpers
+  tests/helpers/global-stub.ts
+
+packages/web-canvas2d/
+  tests/setup.ts              happy-dom + RecordingContext2D canvas install
+  tests/helpers/recording-context.ts
+  tests/helpers/global-stub.ts
+```
+
+Package scripts:
+
+```json
+{
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun run build.ts"
+  }
+}
+```
+
+Root verification remains:
+
+```bash
+bun test
+bun run --filter '*' typecheck
+bun run --filter '*' build
+```
+
+Testing refactor rules:
+
+1. A test should live with the package that owns the behavior.
+2. Core tests should not require `HTMLCanvasElement`, `HTMLElement`, or `CanvasRenderingContext2D`.
+3. Web tests may use happy-dom but should not assert Canvas2D drawing instructions.
+4. Web Canvas2D tests may use `RecordingContext2D` and assert drawing instruction order.
+5. Every moved test must fail for the same kind of regression it caught before the refactor.
+
 ### Step 9: Compatibility Cleanup
 
 `@novasheet/core` should no longer export browser `Grid`.
