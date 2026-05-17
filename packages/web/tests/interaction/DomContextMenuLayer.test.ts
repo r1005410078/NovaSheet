@@ -167,3 +167,64 @@ describe('DomContextMenuLayer — keyboard navigation (spec §4.7)', () => {
     document.body.removeChild(container)
   })
 })
+
+describe('DomContextMenuLayer — viewport clamp (spec §4.4)', () => {
+  it('right overflow: 贴右边 8px', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    Object.defineProperty(menu, 'offsetWidth', { configurable: true, value: 200 })
+    Object.defineProperty(menu, 'offsetHeight', { configurable: true, value: 100 })
+    // happy-dom default window.innerWidth = 1024
+    layer.open({ clientX: 1000, clientY: 50, items: sampleItems })
+    expect(menu.style.left).toBe(`${1024 - 200 - 8}px`)
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('bottom overflow: flip 到 pointer 上方', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    Object.defineProperty(menu, 'offsetWidth', { configurable: true, value: 200 })
+    Object.defineProperty(menu, 'offsetHeight', { configurable: true, value: 200 })
+    // happy-dom default innerHeight = 768; clientY=700 + 200 = 900 > 768 → flip
+    layer.open({ clientX: 50, clientY: 700, items: sampleItems })
+    expect(menu.style.top).toBe(`${700 - 200}px`)
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('top overflow after flip: 贴顶 8px', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    Object.defineProperty(menu, 'offsetWidth', { configurable: true, value: 200 })
+    Object.defineProperty(menu, 'offsetHeight', { configurable: true, value: 900 })
+    // menu too tall — flip would put top at -200; top clamp → 8
+    layer.open({ clientX: 50, clientY: 700, items: sampleItems })
+    expect(menu.style.top).toBe(`8px`)
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('left overflow: 贴左 8px', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    Object.defineProperty(menu, 'offsetWidth', { configurable: true, value: 200 })
+    Object.defineProperty(menu, 'offsetHeight', { configurable: true, value: 100 })
+    layer.open({ clientX: -10, clientY: 50, items: sampleItems })
+    expect(menu.style.left).toBe('8px')
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+})

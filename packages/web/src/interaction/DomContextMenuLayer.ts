@@ -62,11 +62,28 @@ export class DomContextMenuLayer {
   open(options: OpenContextMenuOptions): void {
     if (!this.attached || this.destroyed) return
     this.renderItems(options.items)
+    // initial position; must set BEFORE data-open so offsetWidth/Height resolve after visible
     this.menu.style.left = `${options.clientX}px`
     this.menu.style.top = `${options.clientY}px`
     this.menu.setAttribute('data-open', '')
+    this.clampToViewport(options.clientX, options.clientY)
     this.opened = true
     this.focusFirstEnabled()
+  }
+
+  private clampToViewport(clientX: number, clientY: number): void {
+    const EDGE = 8
+    const win = this.menu.ownerDocument.defaultView!
+    const w = this.menu.offsetWidth
+    const h = this.menu.offsetHeight
+    let left = clientX
+    let top = clientY
+    if (left + w > win.innerWidth) left = win.innerWidth - w - EDGE
+    if (left < EDGE) left = EDGE
+    if (top + h > win.innerHeight) top = clientY - h // flip above pointer
+    if (top < EDGE) top = EDGE
+    this.menu.style.left = `${left}px`
+    this.menu.style.top = `${top}px`
   }
 
   close(): void {
