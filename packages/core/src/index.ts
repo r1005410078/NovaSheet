@@ -28,7 +28,16 @@ export { ChunkedAxis, CHUNK_SIZE } from './layout/ChunkedAxis'
 export { Viewport } from './layout/Viewport'
 export { FrozenRegions } from './layout/FrozenRegions'
 export type { Axis, MutableAxis } from './layout/ChunkedAxis'
-export type { QuadrantRect, Quadrant, Quadrants } from './layout/FrozenRegions'
+export type {
+  ColBand,
+  FrozenConfig,
+  Quadrant,
+  QuadrantRect,
+  Quadrants,
+  RenderRegion,
+  RenderRegionId,
+  RowBand,
+} from './layout/FrozenRegions'
 export { DefaultGridEngine } from './engine/DefaultGridEngine'
 export type { GridEngine, GridEngineOptions } from './engine/GridEngine'
 export type { RenderFrame } from './render/RenderFrame'
@@ -36,4 +45,3 @@ export type { ViewportSnapshot } from './layout/Viewport'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
-

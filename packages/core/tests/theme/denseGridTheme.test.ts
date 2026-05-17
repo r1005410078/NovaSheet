@@ -26,4 +26,9 @@ describe('denseGridTheme — 默认主题', () => {
     expect(denseGridTheme.colors.background).toMatch(/^#|^rgb/)
     expect(denseGridTheme.colors.gridLine).toMatch(/^#|^rgb/)
   })
+
+  it('暴露冻结分隔线样式', () => {
+    expect(denseGridTheme.frozenSeparator.color).toBe(denseGridTheme.colors.gridLineStrong)
+    expect(denseGridTheme.frozenSeparator.width).toBe(1)
+  })
 })

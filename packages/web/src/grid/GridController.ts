@@ -1,4 +1,4 @@
-import type { DataSource, GridEngineOptions, Theme } from '@novasheet/core'
+import type { DataSource, FrozenConfig, GridEngineOptions, Theme } from '@novasheet/core'
 
 /**
  * 渲染后端对内契约（Canvas2D / 未来 WebGL 等）。
@@ -11,6 +11,8 @@ export interface GridController {
   setTheme(theme: Theme): void
   setRowHeight(rowIndex: number, height: number): void
   setColumnWidth(fieldId: string, width: number): void
+  setFrozen(config: Partial<FrozenConfig>): void
+  setFrozen(rows: number, cols: number): void
   refresh(): void
   scrollToRow(rowIndex: number, align?: 'start' | 'center' | 'end'): void
   scrollToCell(rowIndex: number, fieldId: string): void

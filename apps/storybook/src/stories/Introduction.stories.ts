@@ -38,7 +38,7 @@ export const Welcome: Story = {
       <h2 style="margin: 20px 0 6px; font-size: 16px;">Coming later</h2>
       <ul style="margin: 0 0 16px 20px; padding: 0; font-size: 13px;">
         <li><strong>M2</strong> — virtualization &amp; native scroll</li>
-        <li><strong>M3</strong> — frozen quadrants &amp; specialised cell painters</li>
+        <li><strong>M3</strong> — frozen regions &amp; specialised cell painters</li>
         <li><strong>M4</strong> — interaction (resize / selection) &amp; React wrapper</li>
         <li><strong>M5</strong> — apps/playground &amp; AI surface</li>
       </ul>

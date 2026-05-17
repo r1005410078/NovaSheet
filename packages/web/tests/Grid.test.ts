@@ -23,6 +23,16 @@ function canvas2dDelegate(grid: Grid) {
       delegate: {
         runtime: { refresh: () => void }
         engine: {
+          getFrame: () => {
+            viewport: {
+              regions: Array<{ id: string; scrollOffsetX: number }>
+              quadrants: {
+                topLeft?: unknown
+                topRight?: unknown
+                bottomLeft?: unknown
+              }
+            }
+          }
           getViewport: () => {
             setScroll: (x: number, y: number) => void
             setSize: (w: number, h: number) => void
@@ -202,6 +212,43 @@ describe('Grid — 浏览器门面', () => {
     grid.destroy()
   })
 
+  it('setFrozen 更新冻结区域并触发重绘', () => {
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const grid = new Grid(el, { data: makeData() })
+    const spy = runtimeRefreshSpy(grid)
+
+    grid.setFrozen(1, 1)
+
+    const quadrants = canvas2dDelegate(grid).engine.getFrame().viewport.quadrants
+    expect(quadrants.topLeft).toBeDefined()
+    expect(quadrants.topRight).toBeDefined()
+    expect(quadrants.bottomLeft).toBeDefined()
+    expect(spy).toHaveBeenCalled()
+
+    grid.destroy()
+    document.body.removeChild(el)
+  })
+
+  it('setFrozen 支持右侧冻结列配置对象', () => {
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const grid = new Grid(el, { data: makeData() })
+    const spy = runtimeRefreshSpy(grid)
+
+    grid.setFrozen({ topRows: 1, leftCols: 1, rightCols: 1 })
+
+    const regionIds = canvas2dDelegate(grid).engine.getFrame().viewport.regions.map((region) => region.id)
+    expect(regionIds).toContain('middleRight')
+    expect(regionIds).toContain('topRight')
+    expect(spy).toHaveBeenCalled()
+
+    grid.destroy()
+    document.body.removeChild(el)
+  })
+
   it('destroy 同时移除 scroll-host 与 canvas', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
@@ -258,6 +305,46 @@ describe('Grid — 浏览器门面', () => {
 
     expect(setScrollSpy).toHaveBeenCalledTimes(1)
     expect(setScrollSpy).toHaveBeenCalledWith(0, 56)
+
+    grid.destroy()
+    document.body.removeChild(el)
+    globalThis.requestAnimationFrame = originalRaf
+  })
+
+  it('有左冻结列时横向滚动立即推动中心区域', () => {
+    const rafs: Array<() => void> = []
+    const originalRaf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = ((cb: () => void) => {
+      rafs.push(cb)
+      return rafs.length
+    }) as typeof requestAnimationFrame
+
+    const el = document.createElement('div')
+    Object.assign(el.style, { width: '400px', height: '300px' })
+    document.body.appendChild(el)
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'name', name: 'Name', type: 'text', width: 100 },
+          { id: 'age', name: 'Age', type: 'number', width: 100 },
+          { id: 'notes', name: 'Notes', type: 'text', width: 300 },
+        ],
+      },
+      rows: Array.from({ length: 20 }, (_, i) => ({ name: `n${i}`, age: i, notes: `note ${i}` })),
+    })
+    const grid = new Grid(el, { data, frozen: { leftCols: 1 } })
+    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+    while (rafs.length) rafs.shift()!()
+
+    Object.defineProperty(host, 'scrollTop', { value: 0, writable: true, configurable: true })
+    Object.defineProperty(host, 'scrollLeft', { value: 50, writable: true, configurable: true })
+    host.dispatchEvent(new Event('scroll'))
+    while (rafs.length) rafs.shift()!()
+
+    const main = canvas2dDelegate(grid)
+      .engine.getFrame()
+      .viewport.regions.find((region) => region.id === 'main')!
+    expect(main.scrollOffsetX).toBe(150)
 
     grid.destroy()
     document.body.removeChild(el)

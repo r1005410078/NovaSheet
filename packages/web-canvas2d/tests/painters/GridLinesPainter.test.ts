@@ -101,4 +101,24 @@ describe('GridLinesPainter — 网格线', () => {
       .filter((y) => y > 0 && y < 100)
     expect(lineYs).toContain(84.5)
   })
+
+  it('绘制冻结区域右边界与底边界线', () => {
+    const { ctx, ops } = createRecordingContext()
+    const rowsAxis = new ChunkedAxis({ count: 1, defaultSize: 28 })
+    const colsAxis = new ChunkedAxis({ count: 1, defaultSize: 100 })
+    new GridLinesPainter(denseGridTheme).paint(ctx, {
+      rowsAxis,
+      colsAxis,
+      rowRange: [0, 0],
+      colRange: [0, 0],
+      rect: { x: 0, y: 32, width: 100, height: 28 },
+      scrollOffsetX: 0,
+      scrollOffsetY: 0,
+    })
+
+    expect(ops).toContainEqual({ op: 'moveTo', args: [0, 59.5] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [100, 59.5] })
+    expect(ops).toContainEqual({ op: 'moveTo', args: [99.5, 32] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [99.5, 60] })
+  })
 })

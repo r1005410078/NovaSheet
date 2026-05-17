@@ -65,4 +65,8 @@ export const denseGridTheme: Theme = {
     trackWidth: 12,
     thumbColor: 'rgba(0,0,0,0.3)',
   },
+  frozenSeparator: {
+    color: '#d0d7de',
+    width: 1,
+  },
 }

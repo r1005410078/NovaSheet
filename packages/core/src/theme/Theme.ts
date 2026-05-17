@@ -44,7 +44,7 @@ export interface ThemeColors {
   readonly headerText: string
   /** 普通网格线颜色 */
   readonly gridLine: string
-  /** 强调网格线颜色（冻结边界等） */
+  /** 强调网格线颜色 */
   readonly gridLineStrong: string
   /** 冻结区阴影颜色 */
   readonly frozenShadow: string
@@ -80,6 +80,14 @@ export interface ThemeScrollbar {
   readonly thumbColor: string
 }
 
+/** 冻结行列边界线样式。 */
+export interface ThemeFrozenSeparator {
+  /** 冻结边界线颜色 */
+  readonly color: string
+  /** 冻结边界线宽度（px） */
+  readonly width: number
+}
+
 /** 完整主题定义接口，所有视觉值必须从此处读取，禁止在 src/render/ 内硬编码 */
 export interface Theme {
   readonly metrics: ThemeMetrics
@@ -87,4 +95,5 @@ export interface Theme {
   readonly cell: ThemeCell
   readonly icons: ThemeIcons
   readonly scrollbar: ThemeScrollbar
+  readonly frozenSeparator: ThemeFrozenSeparator
 }

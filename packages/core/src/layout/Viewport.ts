@@ -1,5 +1,5 @@
 /**
- * Viewport——聚合 ChunkedAxis（行列轴）+ FrozenRegions（象限切分）+ 当前 scroll 状态，
+ * Viewport——聚合 ChunkedAxis（行列轴）+ FrozenRegions（区域切分）+ 当前 scroll 状态，
  * 对外提供 `snapshot()`，是 Renderer **唯一**允许读取的数据源（CLAUDE.md 不变量 #1）。
  *
  * 它用来解决的问题：
@@ -12,7 +12,7 @@
  * ```
  * Grid 写入：size / scroll / headerHeight
  * Axis 提供：row/col size version
- * FrozenRegions 提供：quadrants
+ * FrozenRegions 提供：regions
  *
  * Renderer 读取：Viewport.snapshot()
  * ```
@@ -34,7 +34,7 @@
  *                         │ ViewportSnapshot  │
  *                         │ - contentRect     │
  *                         │ - scrollX/Y       │
- *                         │ - quadrants       │
+ *                         │ - regions         │
  *                         │ - version         │
  *                         └─────────┬─────────┘
  *                                   ▼
@@ -49,7 +49,7 @@
  */
 
 import type { ChunkedAxis } from './ChunkedAxis'
-import type { FrozenRegions, Quadrants } from './FrozenRegions'
+import type { FrozenRegions, Quadrants, RenderRegion } from './FrozenRegions'
 
 /**
  * 视口快照：单帧内 Renderer 读取的唯一不可变数据源。
@@ -60,12 +60,14 @@ import type { FrozenRegions, Quadrants } from './FrozenRegions'
  *
  * snapshot.contentRect // canvas 当前 CSS 尺寸，例如 { width: 800, height: 600 }
  * snapshot.scrollY // 当前内容滚动到哪里，例如 560
- * snapshot.quadrants.main.rowRange // 当前可见行，例如 [20, 40]
- * snapshot.quadrants.main.colRange // 当前可见列，例如 [2, 8]
+ * snapshot.regions[0]?.rowRange // 当前可见行，例如 [20, 40]
+ * snapshot.regions[0]?.colRange // 当前可见列，例如 [2, 8]
  * ```
  */
 export interface ViewportSnapshot {
-  /** 4 个象限的绘制范围（M1 只有 main） */
+  /** 可绘制区域数组；支持 left/center/right 冻结列 */
+  regions: RenderRegion[]
+  /** legacy 4 象限访问形状；新代码优先使用 regions */
   quadrants: Quadrants
   /** canvas 当前 CSS 尺寸 */
   contentRect: { width: number; height: number }
@@ -175,7 +177,7 @@ export class Viewport {
   }
 
   /**
-   * 不可变快照。每帧绘制开始时调用一次；FrozenRegions 内部根据 viewport 状态实时切分象限。
+ * 不可变快照。每帧绘制开始时调用一次；FrozenRegions 内部根据 viewport 状态实时切分绘制区域。
    * version 取 viewport 自身 + 两个 axis 的最大值——
    * 这样 axis 的 setSize / setDefaultSize 也会反映到 Renderer 的 invalidate 缓存键。
    *
@@ -186,19 +188,22 @@ export class Viewport {
    * viewport.setScroll(240, 560)
    *
    * const snapshot = viewport.snapshot()
-   * snapshot.quadrants.main.rect // { x: 0, y: 32, width: 800, height: 568 }
+   * snapshot.regions.find((r) => r.id === 'main')?.rect // { x: 0, y: 32, width: 800, height: 568 }
    * snapshot.version // viewport / rowsAxis / colsAxis 三者里的最大版本号
    * ```
    */
   snapshot(): ViewportSnapshot {
-    const quadrants = this.frozen.getQuadrants({
+    const rect = {
       width: this.width,
       height: this.height,
       scrollX: this.scrollX,
       scrollY: this.scrollY,
       headerHeight: this.headerHeight,
-    })
+    }
+    const regions = this.frozen.getRegions(rect)
+    const quadrants = this.frozen.getQuadrants(rect)
     return {
+      regions,
       quadrants,
       contentRect: { width: this.width, height: this.height },
       headerHeight: this.headerHeight,

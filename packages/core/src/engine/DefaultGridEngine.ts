@@ -1,6 +1,6 @@
 import type { DataSource } from '../data/DataSource'
 import { ChunkedAxis } from '../layout/ChunkedAxis'
-import { FrozenRegions } from '../layout/FrozenRegions'
+import { FrozenRegions, type FrozenConfig } from '../layout/FrozenRegions'
 import { Viewport } from '../layout/Viewport'
 import type { RenderFrame } from '../render/RenderFrame'
 import { denseGridTheme } from '../theme/denseGridTheme'
@@ -37,8 +37,7 @@ export class DefaultGridEngine implements GridEngine {
     this.frozen = new FrozenRegions(
       this.rowsAxis,
       this.colsAxis,
-      options.frozenRows ?? 0,
-      options.frozenCols ?? 0,
+      this.resolveFrozenConfig(options),
     )
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
@@ -58,8 +57,7 @@ export class DefaultGridEngine implements GridEngine {
     this.frozen = new FrozenRegions(
       this.rowsAxis,
       this.colsAxis,
-      this.frozen.frozenRows,
-      this.frozen.frozenCols,
+      this.frozen.getFrozenConfig(),
     )
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
@@ -74,8 +72,10 @@ export class DefaultGridEngine implements GridEngine {
     }
   }
 
-  setFrozen(rows: number, cols: number): void {
-    this.frozen.setFrozen(rows, cols)
+  setFrozen(config: Partial<FrozenConfig>): void
+  setFrozen(rows: number, cols: number): void
+  setFrozen(configOrRows: Partial<FrozenConfig> | number, cols = 0): void {
+    this.frozen.setFrozen(configOrRows, cols)
   }
 
   setViewportSize(width: number, height: number): void {
@@ -144,6 +144,21 @@ export class DefaultGridEngine implements GridEngine {
 
   private resolveDefaultRowHeight(): number {
     return this.explicitDefaultRowHeight ?? this.theme.metrics.rowHeight
+  }
+
+  private resolveFrozenConfig(options: GridEngineOptions): FrozenConfig {
+    if (options.frozen) {
+      return {
+        topRows: options.frozen.topRows ?? 0,
+        leftCols: options.frozen.leftCols ?? 0,
+        rightCols: options.frozen.rightCols ?? 0,
+      }
+    }
+    return {
+      topRows: options.frozenRows ?? 0,
+      leftCols: options.frozenCols ?? 0,
+      rightCols: 0,
+    }
   }
 
   private averageColWidth(): number {

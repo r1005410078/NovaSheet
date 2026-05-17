@@ -35,7 +35,7 @@ export interface CellPaintParams {
  *
  * 每个单元格做 ctx.save/clip/restore——保证长文本不会越界到相邻单元格，
  * 单次成本 ~5μs，M1 cell 数量下完全在 16ms 帧预算内。
- * 如果 profile 显示是热点，可以改成手动 clip：在 fillText 前与象限 rect 求交集。
+ * 如果 profile 显示是热点，可以改成手动 clip：在 fillText 前与当前区域 rect 求交集。
  */
 export class CellPainter {
   /**

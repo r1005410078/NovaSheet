@@ -3,7 +3,7 @@ import { ChunkedAxis } from '../../src/layout/ChunkedAxis'
 import { FrozenRegions } from '../../src/layout/FrozenRegions'
 import { Viewport } from '../../src/layout/Viewport'
 
-describe('Viewport — M1 单象限', () => {
+describe('Viewport — regions 快照', () => {
   function setup() {
     const rowsAxis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 5, defaultSize: 100 })
@@ -15,22 +15,23 @@ describe('Viewport — M1 单象限', () => {
     return { rowsAxis, colsAxis, frozen, vp }
   }
 
-  it('snapshot 的 main 象限覆盖可见行列', () => {
+  it('snapshot 的 main 区域覆盖可见行列', () => {
     const { vp } = setup()
     const snap = vp.snapshot()
-    expect(snap.quadrants.main).toBeDefined()
-    expect(snap.quadrants.topLeft).toBeUndefined()
+    const main = snap.regions.find((region) => region.id === 'main')
+    expect(main).toBeDefined()
+    expect(snap.regions.find((region) => region.id === 'topLeft')).toBeUndefined()
     // visible rows: y range [0, 280-32=248] → row range [0, ceil(248/28)-1]
-    expect(snap.quadrants.main.rowRange[0]).toBe(0)
-    expect(snap.quadrants.main.rowRange[1]).toBeGreaterThanOrEqual(8)
-    expect(snap.quadrants.main.colRange).toEqual([0, 3]) // 0..99, 100..199, 200..299, 300..399
+    expect(main!.rowRange[0]).toBe(0)
+    expect(main!.rowRange[1]).toBeGreaterThanOrEqual(8)
+    expect(main!.colRange).toEqual([0, 3]) // 0..99, 100..199, 200..299, 300..399
   })
 
   it('snapshot 反映当前滚动位置', () => {
     const { vp } = setup()
     vp.setScroll(0, 140) // scroll down 5 rows (140/28)
     const snap = vp.snapshot()
-    expect(snap.quadrants.main.rowRange[0]).toBe(5)
+    expect(snap.regions.find((region) => region.id === 'main')!.rowRange[0]).toBe(5)
   })
 
   it('变更后 version 递增', () => {
@@ -48,7 +49,8 @@ describe('Viewport — M1 单象限', () => {
     vp.setSize(400, 280)
     vp.setHeaderHeight(32)
     const snap = vp.snapshot()
-    expect(snap.quadrants.main.rowRange).toEqual([0, -1])
-    expect(snap.quadrants.main.colRange).toEqual([0, -1])
+    const main = snap.regions.find((region) => region.id === 'main')!
+    expect(main.rowRange).toEqual([0, -1])
+    expect(main.colRange).toEqual([0, -1])
   })
 })

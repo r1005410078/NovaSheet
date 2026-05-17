@@ -19,8 +19,10 @@ export interface HeaderPaintParams {
   colsAxis: Axis
   /** 可见列索引区间（两端均闭） */
   colRange: [number, number]
-  /** 整个 viewport 宽度，用于 header 背景占满 */
+  /** header 段宽度。无冻结时等于 viewport 宽度；冻结列时是当前段宽度。 */
   width: number
+  /** header 段在 canvas 上的 x。冻结列时 scrollable header 从冻结列右侧开始。 */
+  x?: number
   /**
    * 横向滚动偏移。header 跟列内容左右联动（cell 减去 scrollX，header 也要减），
    * 否则横向滚动后字段名会被画到 viewport 之外。M3 冻结列的 header 段
@@ -44,14 +46,23 @@ export class HeaderPainter {
   /** 绘制表头：先填充背景色，再逐列绘制字段名称文字 */
   paint(ctx: CanvasRenderingContext2D, params: HeaderPaintParams): void {
     const { schema, colsAxis, colRange, width } = params
+    const x = params.x ?? 0
     const scrollOffsetX = params.scrollOffsetX ?? 0
     const headerHeight = this.theme.metrics.headerHeight
 
-    // header 背景：占满整个 viewport 宽——M3 后冻结列 header 也由这一笔覆盖。
-    ctx.fillStyle = this.theme.colors.headerBackground
-    ctx.fillRect(0, 0, width, headerHeight)
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(x, 0, width, headerHeight)
+    ctx.clip()
 
-    if (colRange[1] < colRange[0]) return
+    // header 背景：占满当前 header 段；冻结列时 Renderer 会分段绘制。
+    ctx.fillStyle = this.theme.colors.headerBackground
+    ctx.fillRect(x, 0, width, headerHeight)
+
+    if (colRange[1] < colRange[0]) {
+      ctx.restore()
+      return
+    }
 
     ctx.fillStyle = this.theme.colors.headerText
     ctx.textBaseline = 'middle'
@@ -63,9 +74,11 @@ export class HeaderPainter {
       if (!field) continue
       // 减去 scrollOffsetX：header 跟随主区横向滚动；M3 冻结列段会被 Renderer 用
       // scrollOffsetX=0 再绘一次覆盖到固定位置。
-      const x = colsAxis.indexToPosition(c) - scrollOffsetX + padX
+      const textX = x + colsAxis.indexToPosition(c) - scrollOffsetX + padX
       const y = headerHeight / 2
-      ctx.fillText(field.name, x, y)
+      ctx.fillText(field.name, textX, y)
     }
+
+    ctx.restore()
   }
 }

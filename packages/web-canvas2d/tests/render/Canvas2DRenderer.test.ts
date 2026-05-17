@@ -17,7 +17,7 @@ const SCHEMA: Schema = {
   ],
 }
 
-describe('Canvas2DRenderer — M1 单象限', () => {
+describe('Canvas2DRenderer — regions 绘制', () => {
   function setup() {
     const { ctx, ops } = createRecordingContext()
     const data = new InMemoryDataSource({
@@ -128,5 +128,204 @@ describe('Canvas2DRenderer — M1 单象限', () => {
     )
     expect(thirty).toBeDefined()
     expect(thirty!.args[1]).toBe(92)
+  })
+
+  it('绘制冻结行列时使用每个区域自己的滚动基准', () => {
+    const { ctx, ops } = createRecordingContext()
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'name', name: 'Name', type: 'text', width: 100 },
+          { id: 'age', name: 'Age', type: 'number', width: 100 },
+          { id: 'role', name: 'Role', type: 'text', width: 100 },
+        ],
+      },
+      rows: [
+        { name: 'Alice', age: 30, role: 'Engineer' },
+        { name: 'Bob', age: 25, role: 'Designer' },
+        { name: 'Carol', age: 40, role: 'PM' },
+        { name: 'Dave', age: 35, role: 'QA' },
+      ],
+    })
+    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, 1, 1)
+    const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+    viewport.setSize(300, 144)
+    viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+    viewport.setScroll(100, 56)
+
+    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    renderer.paint()
+
+    const alice = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Alice',
+    )
+    expect(alice).toBeDefined()
+    expect(alice!.args[1]).toBe(8)
+    expect(alice!.args[2]).toBe(46)
+
+    const carolFrozenCol = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Carol',
+    )
+    expect(carolFrozenCol).toBeDefined()
+    expect(carolFrozenCol!.args[1]).toBe(8)
+    expect(carolFrozenCol!.args[2]).toBe(74)
+
+    const headerName = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Name',
+    )
+    const headerRole = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Role',
+    )
+    expect(headerName).toBeDefined()
+    expect(headerName!.args[1]).toBe(8)
+    expect(headerRole).toBeDefined()
+    expect(headerRole!.args[1]).toBe(108)
+
+    expect(ops).toContainEqual({ op: 'rect', args: [100, 60, 200, 84] })
+    expect(ops).toContainEqual({ op: 'rect', args: [100, 0, 200, 32] })
+    expect(ops).toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.frozenSeparator.color })
+    expect(ops).toContainEqual({ op: 'set:lineWidth', value: denseGridTheme.frozenSeparator.width })
+    expect(ops).toContainEqual({ op: 'moveTo', args: [99.5, 0] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [99.5, 144] })
+    expect(ops).toContainEqual({ op: 'moveTo', args: [0, 59.5] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [300, 59.5] })
+  })
+
+  it('内容尚未滚过冻结边界时绘制稳定的淡冻结线', () => {
+    const { ctx, ops } = createRecordingContext()
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'name', name: 'Name', type: 'text', width: 100 },
+          { id: 'age', name: 'Age', type: 'number', width: 100 },
+          { id: 'role', name: 'Role', type: 'text', width: 100 },
+        ],
+      },
+      rows: [
+        { name: 'Alice', age: 30, role: 'Engineer' },
+        { name: 'Bob', age: 25, role: 'Designer' },
+      ],
+    })
+    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 1, leftCols: 1, rightCols: 1 })
+    const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+    viewport.setSize(300, 144)
+    viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+    viewport.setScroll(0, 0)
+
+    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    renderer.paint()
+
+    expect(ops).not.toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.frozenSeparator.color })
+    const idleSeparatorStart = ops.findIndex(
+      (op) => op.op === 'set:strokeStyle' && op.value === denseGridTheme.colors.gridLine,
+    )
+    const idleSeparatorOps = ops.slice(idleSeparatorStart)
+    expect(idleSeparatorOps).toContainEqual({ op: 'moveTo', args: [99.5, 0] })
+    expect(idleSeparatorOps).toContainEqual({ op: 'lineTo', args: [99.5, 144] })
+    expect(idleSeparatorOps).toContainEqual({ op: 'moveTo', args: [199.5, 0] })
+    expect(idleSeparatorOps).toContainEqual({ op: 'lineTo', args: [199.5, 144] })
+    expect(idleSeparatorOps).toContainEqual({ op: 'moveTo', args: [0, 59.5] })
+    expect(idleSeparatorOps).toContainEqual({ op: 'lineTo', args: [300, 59.5] })
+  })
+
+  it('只横向滚过冻结边界时垂直冻结线变强，水平冻结线保持淡色', () => {
+    const { ctx, ops } = createRecordingContext()
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'name', name: 'Name', type: 'text', width: 100 },
+          { id: 'age', name: 'Age', type: 'number', width: 100 },
+          { id: 'role', name: 'Role', type: 'text', width: 100 },
+        ],
+      },
+      rows: [
+        { name: 'Alice', age: 30, role: 'Engineer' },
+        { name: 'Bob', age: 25, role: 'Designer' },
+      ],
+    })
+    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 1, leftCols: 1, rightCols: 1 })
+    const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+    viewport.setSize(300, 144)
+    viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+    viewport.setScroll(50, 0)
+
+    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    renderer.paint()
+
+    const separatorStart = ops.findIndex(
+      (op) => op.op === 'set:strokeStyle' && op.value === denseGridTheme.frozenSeparator.color,
+    )
+    const separatorOps = ops.slice(separatorStart)
+    expect(separatorOps).toContainEqual({ op: 'moveTo', args: [99.5, 0] })
+    expect(separatorOps).toContainEqual({ op: 'lineTo', args: [99.5, 144] })
+    expect(separatorOps).toContainEqual({ op: 'moveTo', args: [199.5, 0] })
+    expect(separatorOps).toContainEqual({ op: 'lineTo', args: [199.5, 144] })
+    expect(separatorOps).not.toContainEqual({ op: 'moveTo', args: [0, 59.5] })
+    expect(separatorOps).not.toContainEqual({ op: 'lineTo', args: [300, 59.5] })
+
+    const idleSeparatorStart = ops.findIndex(
+      (op) => op.op === 'set:strokeStyle' && op.value === denseGridTheme.colors.gridLine,
+    )
+    const idleSeparatorOps = ops.slice(idleSeparatorStart, separatorStart)
+    expect(idleSeparatorOps).toContainEqual({ op: 'moveTo', args: [0, 59.5] })
+    expect(idleSeparatorOps).toContainEqual({ op: 'lineTo', args: [300, 59.5] })
+  })
+
+  it('绘制右冻结列时把列固定到 viewport 右侧', () => {
+    const { ctx, ops } = createRecordingContext()
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'name', name: 'Name', type: 'text', width: 100 },
+          { id: 'age', name: 'Age', type: 'number', width: 100 },
+          { id: 'role', name: 'Role', type: 'text', width: 100 },
+        ],
+      },
+      rows: [
+        { name: 'Alice', age: 30, role: 'Engineer' },
+        { name: 'Bob', age: 25, role: 'Designer' },
+        { name: 'Carol', age: 40, role: 'PM' },
+      ],
+    })
+    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 0, leftCols: 0, rightCols: 1 })
+    const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+    viewport.setSize(300, 144)
+    viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+    viewport.setScroll(100, 0)
+
+    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    renderer.paint()
+
+    const engineer = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Engineer',
+    )
+    const roleHeader = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Role',
+    )
+
+    expect(engineer).toBeDefined()
+    expect(engineer!.args[1]).toBe(208)
+    expect(roleHeader).toBeDefined()
+    expect(roleHeader!.args[1]).toBe(208)
+    expect(ops).toContainEqual({ op: 'rect', args: [200, 32, 100, 112] })
+    expect(ops).toContainEqual({ op: 'rect', args: [200, 0, 100, 32] })
+    expect(ops).toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.frozenSeparator.color })
+    expect(ops).toContainEqual({ op: 'set:lineWidth', value: denseGridTheme.frozenSeparator.width })
+    expect(ops).toContainEqual({ op: 'moveTo', args: [199.5, 0] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 144] })
   })
 })

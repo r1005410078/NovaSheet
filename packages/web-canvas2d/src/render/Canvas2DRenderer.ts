@@ -3,7 +3,7 @@
  *
  * 职责：
  *   - 从 Viewport.snapshot() 取「该绘什么」的不可变快照
- *   - 按 spec §5.3 顺序合成各 painter：清屏 → main 象限（cell + grid lines）→ 冻结象限 → header
+ *   - 按 region.zIndex 顺序合成各 painter：清屏 → body regions → header regions
  *   - 通过共享 frameScheduler 调度 RAF；同帧多次 invalidate() 合并为一次 flush（key 去重）
  *   - destroy() 时取消 pending RAF，避免组件销毁后还有一次延迟 paint（M1 hardening 修复）
  *
@@ -22,32 +22,34 @@
  *           Renderer.paint()
  *                 │
  *                 ├─ 1. Viewport.snapshot()
- *                 │     └─ quadrants / scrollX/Y / contentRect
+ *                 │     └─ regions / scrollX/Y / contentRect
  *                 │
  *                 ├─ 2. clear canvas background
  *                 │
  *                 ├─ 3. DataSource.getRows() 预热可见行
  *                 │
- *                 ├─ 4. paintQuadrant(main)
+ *                 ├─ 4. paintRegion(main / frozen regions)
  *                 │     ├─ DataSource.getCell()
  *                 │     ├─ CellPainter.paint()
  *                 │     └─ GridLinesPainter.paint()
  *                 │
- *                 └─ 5. HeaderPainter.paint()
- *                       └─ Canvas 2D context
+ *                 ├─ 5. HeaderPainter.paint()
+ *                 │
+ *                 └─ 6. paintFrozenSeparators()
+ *                       └─ 强化冻结边界线，避免裁剪边缘看起来像文字被切坏
  * ```
  *
- * 当前实现降级：
- *   - 只画 `main` 象限（FrozenRegions 暂只返回 main）；冻结的 3 个象限留 M3
- *   - paintQuadrant 已经按 viewport.scrollX/Y 偏移单元格与网格线；M2 NativeScroller
- *     接入后由它驱动 viewport.setScroll
+ * 当前实现：
+ *   - 无冻结时只画 `main`；配置冻结行列后按 region.zIndex 绘制。
+ *   - paintRegion 按 region.scrollOffsetX/Y 偏移单元格与网格线；冻结区域自己的
+ *     offset 由 FrozenRegions 统一计算。
  *   - 不做局部脏区——全帧整片重绘（spec §5.2，预算 < 5ms 内绰绰有余）
  *
  * `getRows` 同步路径返回数组立即可用，Promise 返回值在 M1 直接忽略（M2+ 异步源会
  * 通过 DataSource.subscribe 发 rowsChanged 触发重绘）。
  */
 
-import type { DataSource, Quadrant, RenderFrame, Theme } from '@novasheet/core'
+import type { DataSource, RenderFrame, RenderRegion, Theme } from '@novasheet/core'
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { CellPainter } from '../painters/CellPainter'
 import { GridLinesPainter } from '../painters/GridLinesPainter'
@@ -79,8 +81,7 @@ const RENDERER_KEY = 'renderer:flush'
  * 每次 paint() 都从 Viewport.snapshot() 取最新快照（spec §4 单一数据源），
  * 通过 DataSource 取数（由 DataSource 自行决定同步/异步），把像素绘制委托给三个 painter。
  *
- * M1 只画 `main` 象限（无滚动、无冻结）。管线骨架已为 M2/M3 留好——
- * paint() 入口与 Viewport 契约都不需要变。
+ * 无冻结时只画 `main` 区域；冻结行列开启后同一管线迭代额外区域。
  */
 export class Canvas2DRenderer {
   /** canvas 2D 绘图上下文 */
@@ -222,7 +223,7 @@ export class Canvas2DRenderer {
 
   private paintFrame(frame: RenderFrame): void {
     const { viewport: snapshot, data, theme, rowsAxis, colsAxis } = frame
-    const { contentRect, headerHeight, quadrants, scrollX, scrollY } = snapshot
+    const { contentRect, regions } = snapshot
 
     // 1) 清屏 + 背景色
     this.ctx.fillStyle = theme.colors.background
@@ -232,57 +233,62 @@ export class Canvas2DRenderer {
     this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
 
     // 3) 区间预热：把可见行范围打给 DataSource（同步源直接返回，异步源借此触发 IO）
-    const main = quadrants.main
+    const main = regions.find((region) => region.id === 'main')!
     if (main.rowRange[1] >= main.rowRange[0]) {
       const maybe = data.getRows(main.rowRange[0], main.rowRange[1])
       // M1 仅同步源；M2+ 接异步源时这里要加 `if (maybe instanceof Promise) maybe.then(invalidate)`
       void maybe
     }
 
-    // 4) 绘主区——main 象限两轴都跟随滚动
-    this.paintQuadrant(main, scrollX, scrollY, data, rowsAxis, colsAxis)
+    // 4) 按层级绘制区域：主滚动区先画，冻结区后画覆盖在上层。
+    const paintOrder = [...regions].sort((a, b) => a.zIndex - b.zIndex)
+    for (const region of paintOrder) this.paintRegion(region, data, rowsAxis, colsAxis)
 
-    // 5) 列头（始终在最顶层，M3 加冻结象限后仍最后绘以覆盖滚动列头）。
-    this.headerPainter.paint(this.ctx, {
-      schema: data.getSchema(),
-      colsAxis,
-      colRange: main.colRange,
-      width: contentRect.width,
-      scrollOffsetX: scrollX,
-    })
+    // 5) 列头始终在最顶层；按列 band 分段绘制，左右冻结列不会跟随横向滚动。
+    for (const region of paintOrder.filter((r) => r.rowBand === 'middle')) {
+      this.headerPainter.paint(this.ctx, {
+        schema: data.getSchema(),
+        colsAxis,
+        colRange: region.colRange,
+        x: region.rect.x,
+        width: region.rect.width,
+        scrollOffsetX: region.scrollOffsetX,
+      })
+    }
 
-    void headerHeight
+    // 6) 冻结边界最后覆盖一层强分隔线，让裁剪边缘表达为“冻结层边界”。
+    this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
   }
 
   /**
-   * 绘制单个象限——main 象限两轴都跟随滚动；M3 的 topLeft / topRight / bottomLeft
-   * 分别传 (0, 0) / (scrollX, 0) / (0, scrollY)，逻辑统一。
+   * 绘制单个区域。main 两轴都跟随滚动；冻结区域通过 region.scrollOffsetX/Y
+   * 表达“哪个方向不滚”，Renderer 不再猜冻结尺寸。
    *
    * 单元格尺寸用 ChunkedAxis.getSize 而非 indexToPosition 差分——CLAUDE.md 不变量 #7。
    */
-  private paintQuadrant(
-    quadrant: Quadrant,
-    scrollX: number,
-    scrollY: number,
+  private paintRegion(
+    region: RenderRegion,
     data: DataSource,
     rowsAxis: Axis,
     colsAxis: Axis,
   ): void {
-    const { rowRange, colRange, rect } = quadrant
+    const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
+
+    ctxClipRect(this.ctx, rect)
 
     const schema = data.getSchema()
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
       const yTop = rowsAxis.indexToPosition(r)
       const rowHeight = rowsAxis.getSize(r)
-      const cellY = rect.y + yTop - scrollY
+      const cellY = rect.y + yTop - scrollOffsetY
 
       for (let c = colRange[0]; c <= colRange[1]; c++) {
         const field = schema.fields[c]
         if (!field) continue
         const xLeft = colsAxis.indexToPosition(c)
         const colWidth = colsAxis.getSize(c)
-        const cellX = rect.x + xLeft - scrollX
+        const cellX = rect.x + xLeft - scrollOffsetX
         const value = data.getCell(r, field.id)
         this.cellPainter.paint(this.ctx, {
           value,
@@ -298,8 +304,92 @@ export class Canvas2DRenderer {
       rowRange,
       colRange,
       rect,
-      scrollOffsetX: scrollX,
-      scrollOffsetY: scrollY,
+      scrollOffsetX,
+      scrollOffsetY,
     })
+
+    this.ctx.restore()
   }
+
+  /**
+   * 绘制冻结边界分隔线。
+   *
+   * 普通网格线已经在每个 region 内绘制，但冻结区会裁剪滚动内容；边界需要稳定存在，
+   * 否则滚动后强线突然出现会很生硬。未滚过冻结边界时画淡线，滚过后同一条线变强。
+   */
+  private paintFrozenSeparators(
+    regions: RenderRegion[],
+    contentRect: { width: number; height: number },
+    theme: Theme,
+    scrollX: number,
+    scrollY: number,
+  ): void {
+    const idleVerticalLines = new Set<number>()
+    const idleHorizontalLines = new Set<number>()
+    const activeVerticalLines = new Set<number>()
+    const activeHorizontalLines = new Set<number>()
+    const hasHorizontalOverflowPastFrozen = scrollX > 0
+    const hasVerticalOverflowPastFrozen = scrollY > 0
+
+    for (const region of regions) {
+      if (region.id === 'middleLeft') {
+        const lineX = region.rect.x + region.rect.width - 0.5
+        if (hasHorizontalOverflowPastFrozen) activeVerticalLines.add(lineX)
+        else idleVerticalLines.add(lineX)
+      }
+      if (region.id === 'middleRight') {
+        const lineX = region.rect.x - 0.5
+        if (hasHorizontalOverflowPastFrozen) activeVerticalLines.add(lineX)
+        else idleVerticalLines.add(lineX)
+      }
+      if (region.rowBand === 'top') {
+        const lineY = region.rect.y + region.rect.height - 0.5
+        if (hasVerticalOverflowPastFrozen) activeHorizontalLines.add(lineY)
+        else idleHorizontalLines.add(lineY)
+      }
+    }
+
+    this.strokeFrozenSeparatorLines(idleVerticalLines, idleHorizontalLines, contentRect, theme.colors.gridLine, theme)
+    this.strokeFrozenSeparatorLines(
+      activeVerticalLines,
+      activeHorizontalLines,
+      contentRect,
+      theme.frozenSeparator.color,
+      theme,
+    )
+  }
+
+  private strokeFrozenSeparatorLines(
+    verticalLines: Set<number>,
+    horizontalLines: Set<number>,
+    contentRect: { width: number; height: number },
+    color: string,
+    theme: Theme,
+  ): void {
+    if (verticalLines.size === 0 && horizontalLines.size === 0) return
+
+    this.ctx.save()
+    this.ctx.strokeStyle = color
+    this.ctx.lineWidth = theme.frozenSeparator.width
+    this.ctx.beginPath()
+
+    for (const x of verticalLines) {
+      this.ctx.moveTo(x, 0)
+      this.ctx.lineTo(x, contentRect.height)
+    }
+    for (const y of horizontalLines) {
+      this.ctx.moveTo(0, y)
+      this.ctx.lineTo(contentRect.width, y)
+    }
+
+    this.ctx.stroke()
+    this.ctx.restore()
+  }
+}
+
+function ctxClipRect(ctx: CanvasRenderingContext2D, rect: { x: number; y: number; width: number; height: number }): void {
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(rect.x, rect.y, rect.width, rect.height)
+  ctx.clip()
 }

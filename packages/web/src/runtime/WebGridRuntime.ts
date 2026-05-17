@@ -1,4 +1,4 @@
-import type { DataSource, GridEngine, Theme } from '@novasheet/core'
+import type { DataSource, FrozenConfig, GridEngine, Theme } from '@novasheet/core'
 import { FrameScheduler } from '@novasheet/core'
 import type { WebHost } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -83,6 +83,14 @@ export class WebGridRuntime {
 
   setColumnWidth(fieldId: string, width: number): void {
     this.engine.setColumnWidth(fieldId, width)
+    this.afterEngineMutation()
+  }
+
+  setFrozen(config: Partial<FrozenConfig>): void
+  setFrozen(rows: number, cols: number): void
+  setFrozen(configOrRows: Partial<FrozenConfig> | number, cols = 0): void {
+    if (typeof configOrRows === 'number') this.engine.setFrozen(configOrRows, cols)
+    else this.engine.setFrozen(configOrRows)
     this.afterEngineMutation()
   }
 

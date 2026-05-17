@@ -8,7 +8,8 @@
  * indexToPosition(index+1) - indexToPosition(index)——后者在末行/末列因 clamp 返回 0
  * （CLAUDE.md 不变量 #7，M1 hardening 修复）。
  *
- * scrollOffsetX/Y 由 Renderer 从 viewport.snapshot() 取出后传入；冻结象限传 0 即可。
+ * scrollOffsetX/Y 由 Renderer 从 viewport.snapshot().regions 取出后传入；
+ * 冻结区域会使用自己的滚动基准。
  */
 
 import type { Axis, QuadrantRect, Theme } from '@novasheet/core'
@@ -23,11 +24,11 @@ export interface GridLinesPaintParams {
   rowRange: [number, number]
   /** 可见列索引区间（两端均闭） */
   colRange: [number, number]
-  /** 象限矩形（canvas 坐标系） */
+  /** 当前绘制区域矩形（canvas 坐标系） */
   rect: QuadrantRect
-  /** Horizontal scroll offset to subtract from content X positions; 0 for frozen quadrants */
+  /** Horizontal scroll offset to subtract from content X positions; frozen regions use their own baseline */
   scrollOffsetX?: number
-  /** Vertical scroll offset to subtract from content Y positions; 0 for frozen quadrants */
+  /** Vertical scroll offset to subtract from content Y positions; frozen regions use their own baseline */
   scrollOffsetY?: number
 }
 
@@ -60,9 +61,9 @@ export class GridLinesPainter {
     // 时会 clamp 退化到 r 自身的位置，导致末行底线缺失（CLAUDE.md 不变量 #7）。
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
       const yBase = rowsAxis.indexToPosition(r) + rowsAxis.getSize(r)
-      // 亚像素对齐：floor + 0.5 把整数坐标偏移到像素中心，避免 1px 线变成 2px 模糊。
-      const y = Math.floor(rect.y + yBase - scrollOffsetY) + 0.5
-      if (y < rect.y || y > rect.y + rect.height) continue
+      const yRaw = rect.y + yBase - scrollOffsetY
+      const y = snapLineInside(yRaw, rect.y, rect.y + rect.height)
+      if (y === undefined) continue
       ctx.moveTo(rect.x, y)
       ctx.lineTo(rect.x + rect.width, y)
     }
@@ -70,12 +71,19 @@ export class GridLinesPainter {
     // 垂直线：每列右边（同样用 getSize 取末列的实际宽度）。
     for (let c = colRange[0]; c <= colRange[1]; c++) {
       const xBase = colsAxis.indexToPosition(c) + colsAxis.getSize(c)
-      const x = Math.floor(rect.x + xBase - scrollOffsetX) + 0.5
-      if (x < rect.x || x > rect.x + rect.width) continue
+      const xRaw = rect.x + xBase - scrollOffsetX
+      const x = snapLineInside(xRaw, rect.x, rect.x + rect.width)
+      if (x === undefined) continue
       ctx.moveTo(x, rect.y)
       ctx.lineTo(x, rect.y + rect.height)
     }
 
     ctx.stroke()
   }
+}
+
+function snapLineInside(raw: number, start: number, end: number): number | undefined {
+  if (raw < start || raw > end) return undefined
+  if (raw === end) return Math.ceil(raw) - 0.5
+  return Math.floor(raw) + 0.5
 }

@@ -1,4 +1,4 @@
-import type { DataSource, GridEngineOptions, Theme } from '@novasheet/core'
+import type { DataSource, FrozenConfig, GridEngineOptions, Theme } from '@novasheet/core'
 import { Canvas2DBackend } from './backends/Canvas2DBackend'
 import type { GridController } from './grid/GridController'
 
@@ -54,6 +54,13 @@ export class Grid {
 
   setColumnWidth(fieldId: string, width: number): void {
     this.delegate.setColumnWidth(fieldId, width)
+  }
+
+  setFrozen(config: Partial<FrozenConfig>): void
+  setFrozen(rows: number, cols: number): void
+  setFrozen(configOrRows: Partial<FrozenConfig> | number, cols = 0): void {
+    if (typeof configOrRows === 'number') this.delegate.setFrozen(configOrRows, cols)
+    else this.delegate.setFrozen(configOrRows)
   }
 
   refresh(): void {

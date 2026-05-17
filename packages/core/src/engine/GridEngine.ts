@@ -6,6 +6,7 @@
 
 import type { DataSource } from '../data/DataSource'
 import type { Axis } from '../layout/ChunkedAxis'
+import type { FrozenConfig } from '../layout/FrozenRegions'
 import type { Viewport } from '../layout/Viewport'
 import type { RenderFrame } from '../render/RenderFrame'
 import type { Theme } from '../theme/Theme'
@@ -14,7 +15,11 @@ import type { Theme } from '../theme/Theme'
 export interface GridEngineOptions {
   data: DataSource
   theme?: Theme
+  /** 推荐的新冻结配置：支持顶部、左侧、右侧冻结。 */
+  frozen?: Partial<FrozenConfig>
+  /** 兼容旧 API：等价于 `frozen.topRows`。新代码优先使用 `frozen`。 */
   frozenRows?: number
+  /** 兼容旧 API：等价于 `frozen.leftCols`。新代码优先使用 `frozen`。 */
   frozenCols?: number
   defaultRowHeight?: number
 }
@@ -22,6 +27,7 @@ export interface GridEngineOptions {
 export interface GridEngine {
   setData(data: DataSource): void
   setTheme(theme: Theme): void
+  setFrozen(config: Partial<FrozenConfig>): void
   setFrozen(rows: number, cols: number): void
   setViewportSize(width: number, height: number): void
   setHeaderHeight(headerHeight: number): void
