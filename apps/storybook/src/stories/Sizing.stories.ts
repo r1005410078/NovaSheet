@@ -2,20 +2,21 @@ import type { Meta, StoryObj } from '@storybook/html'
 import { Grid } from '@novasheet/web'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
 import { generateRows } from '../mock-data'
+import { docsMeta, docsStory } from '../story-docs'
+import { sources } from '../story-sources'
 
 const meta: Meta = {
   title: '表格/尺寸',
   parameters: { layout: 'centered' },
+  ...docsMeta('Schema 非均匀列宽 + `setRowHeight` 覆盖单行高度。'),
 }
 export default meta
 
 type Story = StoryObj
 
-/**
- * 演示 schema 自定义列宽（非均匀）+ 通过 setRowHeight 覆盖单行高度。
- */
 export const CustomColumnWidthsAndRowHeights: Story = {
   name: '自定义列宽与行高',
+  ...docsStory(sources.sizing.custom),
   render: () => {
     const schema: Schema = {
       fields: [
@@ -32,7 +33,6 @@ export const CustomColumnWidthsAndRowHeights: Story = {
     el.style.height = '480px'
     el.style.position = 'relative'
     const grid = new Grid(el, { data })
-    // 前 3 行依次高 56 / 40 / 20，凸显非均匀行高对网格线的影响。
     grid.setRowHeight(0, 56)
     grid.setRowHeight(1, 40)
     grid.setRowHeight(2, 20)

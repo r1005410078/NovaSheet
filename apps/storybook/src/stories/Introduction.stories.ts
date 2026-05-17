@@ -1,20 +1,23 @@
 import type { Meta, StoryObj } from '@storybook/html'
+import { docsMeta, docsStory } from '../story-docs'
+import { sources } from '../story-sources'
 
 const meta: Meta = {
   title: '介绍',
   parameters: {
     layout: 'fullscreen',
   },
+  ...docsMeta(
+    'NovaSheet Storybook：左侧 **表格/** 分组为 Grid 演示；点 **README** 查看说明与 TypeScript 示例。每个 story 下方可展开 **Show code** 复制源码。',
+  ),
 }
 export default meta
 
 type Story = StoryObj
 
-/**
- * Plain HTML intro panel (no MDX). Explains current playground scope.
- */
 export const Welcome: Story = {
   name: '欢迎',
+  ...docsStory(sources.intro, '最小 Grid 用法；完整示例见各 **表格/** 分组 README。'),
   render: () => {
     const root = document.createElement('div')
     root.style.cssText = [
@@ -25,26 +28,17 @@ export const Welcome: Story = {
       'line-height: 1.55',
     ].join(';')
     root.innerHTML = `
-      <h1 style="margin: 0 0 8px; font-size: 22px;">NovaSheet @novasheet/core playground</h1>
+      <h1 style="margin: 0 0 8px; font-size: 22px;">NovaSheet Storybook</h1>
       <p style="margin: 0 0 16px; color: #656d76; font-size: 14px;">
-        Stories below mount the vanilla TypeScript <code>Grid</code> class into a fixed-size container
-        (800 x 500 by default). Pick a story from the sidebar to see a single static frame.
+        左侧选择 <strong>表格/</strong> 下的 story 查看 Grid；选择同组的 <strong>README</strong> 查看说明与代码示例。
       </p>
-      <h2 style="margin: 20px 0 6px; font-size: 16px;">Current scope: M1 Foundation</h2>
+      <h2 style="margin: 20px 0 6px; font-size: 16px;">当前能力</h2>
       <ul style="margin: 0 0 16px 20px; padding: 0; font-size: 13px;">
-        <li>Single static frame; no scroll, no frozen rows/cols, no interaction.</li>
-        <li>Renders the first ~17 rows that fit in the 500px tall host.</li>
-        <li>Only <code>text</code> + <code>number</code> have dedicated CellPainter paths; others fall back to text.</li>
-      </ul>
-      <h2 style="margin: 20px 0 6px; font-size: 16px;">Coming later</h2>
-      <ul style="margin: 0 0 16px 20px; padding: 0; font-size: 13px;">
-        <li><strong>M2</strong> — virtualization &amp; native scroll</li>
-        <li><strong>M3</strong> — frozen regions &amp; specialised cell painters</li>
-        <li><strong>M4</strong> — interaction (resize / selection) &amp; React wrapper</li>
-        <li><strong>M5</strong> — apps/playground &amp; AI surface</li>
+        <li><strong>M2</strong> — 虚拟滚动、原生滚动条</li>
+        <li><strong>M3</strong> — 顶 / 左 / 右冻结区域</li>
       </ul>
       <p style="margin: 20px 0 0; color: #656d76; font-size: 12px;">
-        See <code>docs/superpowers/specs/</code> and <code>CLAUDE.md</code> in the repo for the full design.
+        设计文档：<code>docs/superpowers/specs/</code>
       </p>
     `
     return root

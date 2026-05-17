@@ -3,6 +3,8 @@ import { Grid } from '@novasheet/web'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
+import { docsMeta, docsStory } from '../story-docs'
+import { sources } from '../story-sources'
 
 const schema: Schema = {
   fields: [
@@ -16,13 +18,14 @@ const schema: Schema = {
 const meta: Meta = {
   title: '表格/滚动',
   parameters: { layout: 'centered' },
+  ...docsMeta('M2 原生滚动 + `ScrollMapper` 非线性 `scrollTop` 映射。'),
 }
 export default meta
 type Story = StoryObj
 
-/** A regular-sized dataset that requires scrolling — the M2 happy path. */
 export const TenThousandRows: Story = {
   name: '一万行',
+  ...docsStory(sources.scroll.tenThousand),
   render: () => {
     const rows = Array.from({ length: 10_000 }, (_, i) => ({
       idx: i,
@@ -35,23 +38,9 @@ export const TenThousandRows: Story = {
   },
 }
 
-/**
- * 1,000,000 rows × 30 columns via **GeneratedDataSource** — full Phase 1
- * stress test, **0ms mount** (no preallocation).
- *
- * Covers both:
- *   - non-linear vertical scroll (28M px content capped at 6M spacer)
- *   - horizontal scroll (4200 px content vs 780 px host)
- *
- * Why no allocation lag: GeneratedDataSource computes cell values on demand
- * via `cellFn(row, fieldId)`. Renderer only ever asks for ~30 × ~6 = 180
- * visible cells per frame, each ~1μs to compute. Memory stays O(1).
- *
- * Constrast: the equivalent InMemoryDataSource version would allocate ~30M
- * JS values upfront (3-8s, 600-900MB heap) before the first paint.
- */
 export const OneMillionRows: Story = {
   name: '一百万行 × 30 列',
+  ...docsStory(sources.scroll.oneMillion, '`GeneratedDataSource` 按需生成，挂载无预分配。'),
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {
@@ -70,12 +59,9 @@ export const OneMillionRows: Story = {
   },
 }
 
-/**
- * Demonstrates programmatic scrollTo: scrolls to row 500 on initial render.
- * Useful for verifying the scrollToRow API works (e.g., for jump-to-anchor flows).
- */
 export const ScrollToRow500: Story = {
   name: '滚动到第 500 行',
+  ...docsStory(sources.scroll.scrollToRow),
   render: () => {
     const rows = Array.from({ length: 2_000 }, (_, i) => ({
       idx: i,
@@ -85,7 +71,6 @@ export const ScrollToRow500: Story = {
     }))
     const data = new InMemoryDataSource({ schema, rows })
     const host = createGridHost({ data })
-    // Defer one frame so the Grid finishes initial mount + first paint before scrolling.
     requestAnimationFrame(() => {
       const grid = (host as HTMLElement & { __grid: Grid }).__grid
       grid.scrollToRow(500, 'center')
@@ -94,13 +79,9 @@ export const ScrollToRow500: Story = {
   },
 }
 
-/**
- * Wide schema (30 columns × 140 px = 4200 px content width) in a 780 px host —
- * triggers the **horizontal** native scrollbar in addition to vertical.
- * Wheel / shift+wheel / trackpad two-finger swipe all work via the same NativeScroller.
- */
 export const BothAxisScroll: Story = {
   name: '双向滚动（30 列）',
+  ...docsStory(sources.scroll.bothAxis),
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {
@@ -123,12 +104,9 @@ export const BothAxisScroll: Story = {
   },
 }
 
-/**
- * Programmatic horizontal scroll demo — scrolls to column 20 on mount via scrollToCell.
- * Pairs with BothAxisScroll for the X axis what ScrollToRow500 does for Y.
- */
 export const ScrollToCellFar: Story = {
   name: '滚动到远列',
+  ...docsStory(sources.scroll.scrollToCell),
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {

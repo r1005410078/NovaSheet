@@ -3,9 +3,10 @@ import { fileURLToPath } from 'node:url'
 
 const config: StorybookConfig = {
   stories: ['../src/stories/**/*.stories.@(ts|tsx)'],
-  // Storybook 10 absorbed addon-essentials into core (viewport / backgrounds / actions /
-  // controls / docs are all built-in now). No addon imports needed.
-  addons: [],
+  addons: ['@storybook/addon-docs'],
+  docs: {
+    defaultName: 'README',
+  },
   framework: {
     name: '@storybook/html-vite',
     options: {},

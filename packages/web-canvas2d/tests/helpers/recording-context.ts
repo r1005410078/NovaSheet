@@ -11,7 +11,11 @@ export type RecordedOp =
   | { op: 'moveTo'; args: [number, number] }
   | { op: 'lineTo'; args: [number, number] }
   | { op: 'stroke' }
+  | { op: 'strokePath' }
   | { op: 'fill' }
+  | { op: 'fillPath' }
+  | { op: 'translate'; args: [number, number] }
+  | { op: 'scale'; args: [number, number] }
   | { op: 'setTransform'; args: [number, number, number, number, number, number] }
   | { op: 'set:fillStyle'; value: string | CanvasGradient | CanvasPattern }
   | { op: 'set:strokeStyle'; value: string | CanvasGradient | CanvasPattern }
@@ -19,6 +23,7 @@ export type RecordedOp =
   | { op: 'set:textBaseline'; value: CanvasTextBaseline }
   | { op: 'set:textAlign'; value: CanvasTextAlign }
   | { op: 'set:lineWidth'; value: number }
+  | { op: 'set:lineCap'; value: CanvasLineCap }
 
 const CHAR_WIDTH = 7 // deterministic default for measureText
 
@@ -36,6 +41,7 @@ export function createRecordingContext(width = 800, height = 600): {
   let _textBaseline: CanvasTextBaseline = 'alphabetic'
   let _textAlign: CanvasTextAlign = 'left'
   let _lineWidth = 1
+  let _lineCap: CanvasLineCap = 'butt'
 
   const ctx = {
     canvas,
@@ -51,6 +57,8 @@ export function createRecordingContext(width = 800, height = 600): {
     set textAlign(v) { _textAlign = v; ops.push({ op: 'set:textAlign', value: v }) },
     get lineWidth() { return _lineWidth },
     set lineWidth(v) { _lineWidth = v; ops.push({ op: 'set:lineWidth', value: v }) },
+    get lineCap() { return _lineCap },
+    set lineCap(v) { _lineCap = v; ops.push({ op: 'set:lineCap', value: v }) },
 
     save() { ops.push({ op: 'save' }) },
     restore() { ops.push({ op: 'restore' }) },
@@ -67,8 +75,16 @@ export function createRecordingContext(width = 800, height = 600): {
     },
     moveTo(x: number, y: number) { ops.push({ op: 'moveTo', args: [x, y] }) },
     lineTo(x: number, y: number) { ops.push({ op: 'lineTo', args: [x, y] }) },
-    stroke() { ops.push({ op: 'stroke' }) },
-    fill() { ops.push({ op: 'fill' }) },
+    stroke(path?: Path2D) {
+      if (path) ops.push({ op: 'strokePath' })
+      else ops.push({ op: 'stroke' })
+    },
+    fill(path?: Path2D) {
+      if (path) ops.push({ op: 'fillPath' })
+      else ops.push({ op: 'fill' })
+    },
+    translate(x: number, y: number) { ops.push({ op: 'translate', args: [x, y] }) },
+    scale(x: number, y: number) { ops.push({ op: 'scale', args: [x, y] }) },
     setTransform(a: number, b: number, c: number, d: number, e: number, f: number) {
       ops.push({ op: 'setTransform', args: [a, b, c, d, e, f] })
     },

@@ -3,10 +3,13 @@ import { Grid } from '@novasheet/web'
 import type { FieldDef, Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
+import { docsMeta, docsStory } from '../story-docs'
+import { sources } from '../story-sources'
 
 const meta: Meta = {
   title: '表格/冻结',
   parameters: { layout: 'centered' },
+  ...docsMeta('顶行 + 左列 + 右列冻结（20 列）；中间列可横向滚动。'),
 }
 export default meta
 
@@ -38,6 +41,7 @@ const regions = ['华北', '华东', '华南', '西南']
 
 export const FrozenTopLeftAndRight: Story = {
   name: '顶行 + 左右列冻结（20 列）',
+  ...docsStory(sources.frozen.topLeftRight, '初始滚到 `metric_10`，观察左右冻结列。'),
   render: () => {
     const data = new GeneratedDataSource(1_000, schema, (row, fieldId) => {
       if (fieldId === 'employee') return `员工 ${row}`

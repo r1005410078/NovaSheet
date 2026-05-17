@@ -328,4 +328,25 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(ops).toContainEqual({ op: 'moveTo', args: [199.5, 0] })
     expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 144] })
   })
+
+  it('无数据行时绘制空状态插画与列头', () => {
+    const { ctx, ops } = createRecordingContext()
+    const data = new InMemoryDataSource({ schema: SCHEMA, rows: [] })
+    const rowsAxis = new ChunkedAxis({ count: 0, defaultSize: denseGridTheme.metrics.rowHeight })
+    const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+    viewport.setSize(400, 200)
+    viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    renderer.paint()
+
+    expect(ops.some((o) => o.op === 'fillPath')).toBe(true)
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    expect(texts).toContain('Name')
+    expect(texts).toContain(denseGridTheme.emptyState.title)
+    expect(texts).not.toContain('Alice')
+  })
 })

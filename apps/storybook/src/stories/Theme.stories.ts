@@ -2,20 +2,21 @@ import type { Meta, StoryObj } from '@storybook/html'
 import { InMemoryDataSource, denseGridTheme, type Theme } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
+import { docsMeta, docsStory } from '../story-docs'
+import { sources } from '../story-sources'
 
 const meta: Meta = {
   title: '表格/主题',
   parameters: { layout: 'centered' },
+  ...docsMeta('通过 `theme` 选项或 `setTheme` 切换 Theme Token。'),
 }
 export default meta
 
 type Story = StoryObj
 
-/**
- * 默认 denseGridTheme——基线参考。
- */
 export const Dense: Story = {
   name: '默认紧凑',
+  ...docsStory(sources.theme.dense),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 80) })
@@ -23,10 +24,6 @@ export const Dense: Story = {
   },
 }
 
-/**
- * 自定义 compactTheme——演示运行时主题切换。
- * 仅改 metrics.rowHeight 与若干颜色，其余从 denseGridTheme 继承。
- */
 const compactTheme: Theme = {
   ...denseGridTheme,
   metrics: {
@@ -48,6 +45,7 @@ const compactTheme: Theme = {
 
 export const Compact: Story = {
   name: '更紧凑',
+  ...docsStory(sources.theme.compact),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 80) })

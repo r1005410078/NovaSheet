@@ -86,6 +86,29 @@ export interface ThemeScrollbar {
   readonly borderRadius: number
 }
 
+/** 空状态插画单层（SVG path，由 `EmptyStatePainter` 按序绘制）。 */
+export interface ThemeEmptyStateLayer {
+  readonly path: string
+  readonly fill?: string
+  readonly stroke?: string
+  readonly lineWidth?: number
+  readonly lineCap?: CanvasLineCap
+}
+
+/** 无数据时正文区插画与文案（`EmptyStatePainter`）。 */
+export interface ThemeEmptyState {
+  /** SVG viewBox 宽度（path 坐标系） */
+  readonly viewBoxWidth: number
+  /** SVG viewBox 高度（path 坐标系） */
+  readonly viewBoxHeight: number
+  /** 插画图层（自底向上） */
+  readonly layers: readonly ThemeEmptyStateLayer[]
+  readonly titleColor: string
+  readonly subtitleColor: string
+  readonly title: string
+  readonly subtitle: string
+}
+
 /** 冻结行列边界线样式。 */
 export interface ThemeFrozenSeparator {
   /** 冻结边界线颜色 */
@@ -102,4 +125,5 @@ export interface Theme {
   readonly icons: ThemeIcons
   readonly scrollbar: ThemeScrollbar
   readonly frozenSeparator: ThemeFrozenSeparator
+  readonly emptyState: ThemeEmptyState
 }

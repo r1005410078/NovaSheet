@@ -32,6 +32,12 @@ describe('denseGridTheme — 默认主题', () => {
     expect(denseGridTheme.frozenSeparator.width).toBe(1)
   })
 
+  it('暴露空状态插画 token', () => {
+    expect(denseGridTheme.emptyState.title).toBe('暂无数据')
+    expect(denseGridTheme.emptyState.layers.length).toBeGreaterThan(5)
+    expect(denseGridTheme.emptyState.viewBoxWidth).toBeGreaterThan(0)
+  })
+
   it('暴露滚动条样式 token', () => {
     expect(denseGridTheme.scrollbar.trackWidth).toBe(10)
     expect(denseGridTheme.scrollbar.trackColor).toBe('transparent')

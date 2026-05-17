@@ -1,0 +1,54 @@
+<script>
+  /* Storybook 外壳：同上，过滤扩展注入噪声 */
+  ;(function () {
+    var NOISE = [
+      /MetaMask encountered an error setting the global Ethereum provider/i,
+      /Cannot set property ethereum of #<Window> which has only a getter/i,
+      /Failed to connect to MetaMask/i,
+      /content_main\.js/i,
+      /inpage\.js/i,
+      /moz-extension:/i,
+      /chrome-extension:/i,
+    ]
+    function isNoise(args) {
+      var text = Array.prototype.slice.call(args).join(' ')
+      return NOISE.some(function (re) {
+        return re.test(text)
+      })
+    }
+    ;['error', 'warn'].forEach(function (level) {
+      var orig = console[level].bind(console)
+      console[level] = function () {
+        if (isNoise(arguments)) return
+        orig.apply(console, arguments)
+      }
+    })
+    window.addEventListener('unhandledrejection', function (event) {
+      var reason = event.reason
+      var text =
+        reason && reason.stack
+          ? reason.stack
+          : reason && reason.message
+            ? reason.message
+            : String(reason != null ? reason : '')
+      if (NOISE.some(function (re) {
+        return re.test(text)
+      })) {
+        event.preventDefault()
+      }
+    })
+    window.addEventListener(
+      'error',
+      function (event) {
+        var text = (event.message || '') + '\n' + (event.filename || '')
+        if (NOISE.some(function (re) {
+          return re.test(text)
+        })) {
+          event.preventDefault()
+          return true
+        }
+      },
+      true,
+    )
+  })()
+</script>

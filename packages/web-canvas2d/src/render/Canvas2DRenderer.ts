@@ -52,6 +52,7 @@
 import type { DataSource, RenderFrame, RenderRegion, Theme } from '@novasheet/core'
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { CellPainter } from '../painters/CellPainter'
+import { EmptyStatePainter } from '../painters/EmptyStatePainter'
 import { GridLinesPainter } from '../painters/GridLinesPainter'
 import { HeaderPainter } from '../painters/HeaderPainter'
 
@@ -104,6 +105,8 @@ export class Canvas2DRenderer {
   private gridLinesPainter: GridLinesPainter
   /** 表头绘制器 */
   private headerPainter: HeaderPainter
+  /** 无数据插画绘制器 */
+  private emptyStatePainter: EmptyStatePainter
 
   /**
    * 组装单帧绘制管线。
@@ -149,6 +152,7 @@ export class Canvas2DRenderer {
     this.cellPainter = new CellPainter(this.theme)
     this.gridLinesPainter = new GridLinesPainter(this.theme)
     this.headerPainter = new HeaderPainter(this.theme)
+    this.emptyStatePainter = new EmptyStatePainter(this.theme)
   }
 
   /** 切换主题并同步 Painter；重绘由 `WebGridRuntime` 调度 `render(frame)`。 */
@@ -157,6 +161,7 @@ export class Canvas2DRenderer {
     this.cellPainter.setTheme(theme)
     this.gridLinesPainter.setTheme(theme)
     this.headerPainter.setTheme(theme)
+    this.emptyStatePainter.setTheme(theme)
   }
 
   /** 替换数据源；重绘由 runtime 负责。 */
@@ -229,10 +234,26 @@ export class Canvas2DRenderer {
     this.ctx.fillStyle = theme.colors.background
     this.ctx.fillRect(0, 0, contentRect.width, contentRect.height)
 
-    // 2) 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
+    const isEmpty = data.getRowCount() === 0
+    const paintOrder = [...regions].sort((a, b) => a.zIndex - b.zIndex)
+
+    // 2) 无数据：正文区插画 + 列头（跳过单元格与网格线）
+    if (isEmpty) {
+      const bodyTop = snapshot.headerHeight
+      const bodyHeight = contentRect.height - bodyTop
+      if (bodyHeight > 0) {
+        this.emptyStatePainter.paint(this.ctx, {
+          rect: { x: 0, y: bodyTop, width: contentRect.width, height: bodyHeight },
+        })
+      }
+      this.paintHeaders(paintOrder, data, colsAxis)
+      return
+    }
+
+    // 3) 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
     this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
 
-    // 3) 区间预热：把可见行范围打给 DataSource（同步源直接返回，异步源借此触发 IO）
+    // 4) 区间预热：把可见行范围打给 DataSource（同步源直接返回，异步源借此触发 IO）
     const main = regions.find((region) => region.id === 'main')!
     if (main.rowRange[1] >= main.rowRange[0]) {
       const maybe = data.getRows(main.rowRange[0], main.rowRange[1])
@@ -240,12 +261,23 @@ export class Canvas2DRenderer {
       void maybe
     }
 
-    // 4) 按层级绘制区域：主滚动区先画，冻结区后画覆盖在上层。
-    const paintOrder = [...regions].sort((a, b) => a.zIndex - b.zIndex)
+    // 5) 按层级绘制区域：主滚动区先画，冻结区后画覆盖在上层。
     for (const region of paintOrder) this.paintRegion(region, data, rowsAxis, colsAxis)
 
-    // 5) 列头始终在最顶层；按列 band 分段绘制，左右冻结列不会跟随横向滚动。
+    // 6) 列头始终在最顶层；按列 band 分段绘制，左右冻结列不会跟随横向滚动。
+    this.paintHeaders(paintOrder, data, colsAxis)
+
+    // 7) 冻结边界最后覆盖一层强分隔线，让裁剪边缘表达为“冻结层边界”。
+    this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
+  }
+
+  private paintHeaders(
+    paintOrder: RenderRegion[],
+    data: DataSource,
+    colsAxis: Axis,
+  ): void {
     for (const region of paintOrder.filter((r) => r.rowBand === 'middle')) {
+      if (region.colRange[1] < region.colRange[0]) continue
       this.headerPainter.paint(this.ctx, {
         schema: data.getSchema(),
         colsAxis,
@@ -255,9 +287,6 @@ export class Canvas2DRenderer {
         scrollOffsetX: region.scrollOffsetX,
       })
     }
-
-    // 6) 冻结边界最后覆盖一层强分隔线，让裁剪边缘表达为“冻结层边界”。
-    this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
   }
 
   /**
