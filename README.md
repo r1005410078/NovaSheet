@@ -10,7 +10,7 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ## 当前状态
 
-三包拆分已完成；**M1 Foundation**、**M2 虚拟滚动**、**M3 冻结 / 尺寸自适应**、**Phase 2 Canvas 交互绘制分层** 与 **Phase 3.1/3.2 选择交互** 已落地。公共 API 从 `@novasheet/web` 导出。
+三包拆分已完成；**M1 Foundation**、**M2 虚拟滚动**、**M3 冻结 / 尺寸自适应**、**Phase 2 Canvas 交互绘制分层**、**Phase 3.1–3.5 选择 / 键盘 / 编辑交互** 与 **Phase 4.0 右键菜单** 已落地。公共 API 从 `@novasheet/web` 导出。
 
 | 维度                     | 数值                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
@@ -32,12 +32,13 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 | Phase 3.3  | 方向键 / Tab / Enter 移动 active cell · Shift + 方向键扩展选区 · 滚动跟随焦点格                         |
 | Phase 3.4  | DOM resize handle：列头拖列宽、行号列拖行高（最小 20px）· 冻结区与普通区同步                           |
 | Phase 3.5  | 基础编辑：选中即打字（Sheets 式）· F2/双击原位编辑 · Esc 取消 · Enter 提交下移 · text/number 列      |
+| Phase 4.0  | 单元格右键菜单 ✅ · body 单元格右键打开 Cut / Copy / Paste；Paste 默认 disabled（Phase 4.1 剪贴板就绪后启用）；选中项通过 `onContextMenuAction` 回调外抛。 |
 
 ### 暂未交付
 
 | 阶段                 | 内容                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------- |
-| Phase 4+             | 单元格右键菜单 · 复制粘贴 · Undo / Redo · 填充柄（序列填充）· 排序筛选 · 行列结构操作 |
+| Phase 4.1+           | 复制粘贴（剪贴板集成）· Undo / Redo · 填充柄（序列填充）· 排序筛选 · 行列结构操作 |
 | 低优先级验证项       | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机验证             |
 
 架构细节见 [docs/architecture.md](docs/architecture.md)。
