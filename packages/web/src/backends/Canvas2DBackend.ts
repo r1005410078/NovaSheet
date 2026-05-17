@@ -1,3 +1,16 @@
+/**
+ * Canvas2DBackend——`Grid` facade 在 `renderer: 'canvas2d'` 时使用的后端实现。
+ *
+ * 把 `DefaultGridEngine` + `DomGridHost` + `Canvas2DRenderer` + `WebGridRuntime`
+ * 装配成一个 `GridController`，对外暴露公共 API。其他渲染器（WebGL/WebGPU）
+ * 实现各自的 `Backend` 即可，`Grid` 选择器根据 options 切换。
+ *
+ * 不变量：
+ *   - 单实例只有一个 canvas、一个 host、一个 runtime
+ *   - canvas 由 backend 拥有（renderer 不再自己 mount canvas，方便后端切换）
+ *   - `setData` 时换 renderer（轴 / viewport 重建后旧 renderer 引用已失效）
+ */
+
 import {
   DefaultGridEngine,
   FrameScheduler,

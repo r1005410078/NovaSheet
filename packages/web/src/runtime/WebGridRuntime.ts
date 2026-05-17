@@ -1,3 +1,22 @@
+/**
+ * WebGridRuntime——Web 侧表格编排器（spec §6 + CLAUDE.md「Per-Grid scheduler」不变量 #5）。
+ *
+ * 职责：
+ *   - 把 `GridEngine`（状态）、`WebHost`（DOM 生命周期）、`WebRenderer`（绘制）、
+ *     `ScrollMapper`（逻辑↔DOM 滚动映射）四件套连起来，对外暴露
+ *     `setData / setTheme / setRowHeight / setColumnWidth / setFrozen / scrollTo* / refresh / destroy`。
+ *   - 拥有**单个** `FrameScheduler`，让 scroll/resize/render 在同一帧里合并（CLAUDE.md 不变量 #5）。
+ *   - 隔离 DOM——本类不持有 canvas，也不读 window 全局；所有平台操作走 `WebHost` 回调。
+ *
+ * 数据流：
+ *   scrollHost scroll → handleHostScroll → ScrollMapper → engine.setScroll → renderer.render(frame)
+ *
+ * 不在职责范围内的：
+ *   - canvas/WebGL 上下文（由 `WebRenderer` 实现拥有）
+ *   - DOM 节点的创建与销毁（由 `WebHost` 实现拥有）
+ *   - 公开 API 面（由 `@novasheet/web` 的 `Grid` facade 包一层暴露）
+ */
+
 import type { DataSource, FrozenConfig, GridEngine, Theme } from '@novasheet/core'
 import { FrameScheduler } from '@novasheet/core'
 import type { WebHost } from '../host/WebHost'
