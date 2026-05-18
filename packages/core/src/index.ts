@@ -103,6 +103,10 @@ export type {
 export { computeCellRect } from './interaction/CellLayout'
 export type { CellRect } from './interaction/CellLayout'
 
+// 剪贴板层（Phase 4.1）
+export { serializeRowsToTsv, parseTsvToCells } from './clipboard/TsvFormat'
+export type { ClipboardAction, PasteSkippedCell } from './clipboard/types'
+
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
 
