@@ -866,3 +866,126 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
     expect(await runtime.handleClipboardCopy()).toBe(true) // copy 不要求 mutable
   })
 })
+
+describe('WebGridRuntime keyboard clipboard — Phase 4.1', () => {
+  function setup() {
+    const engine = makeEngine()
+    const rows = [{ a: 'x', b: 1 }] as Row[]
+    const schema: Schema = {
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: 100 },
+        { id: 'b', name: 'B', type: 'number', width: 100 },
+      ],
+    }
+    const updateCell = mock(() => {})
+    engine.getData = mock(
+      () =>
+        ({
+          getRowCount: () => 1,
+          getSchema: () => schema,
+          getRows: () => rows,
+          getCell: (r: number, f: string) =>
+            (rows[r] as Record<string, unknown> | undefined)?.[f] ?? null,
+          subscribe: () => () => {},
+          updateCell,
+        }) as never,
+    )
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+    }))
+    engine.clearRange = mock(() => {})
+    const adapter = {
+      writeText: mock(async (_: string) => true),
+      readText: mock(async () => ''),
+    }
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setClipboardAdapter(adapter as never)
+    return { engine, runtime, adapter }
+  }
+
+  it('Ctrl+C 触发 copy', async () => {
+    const { runtime, adapter } = setup()
+    expect(
+      runtime.handleHostKeyDown({
+        key: 'c',
+        ctrlKey: true,
+        shiftKey: false,
+        metaKey: false,
+        altKey: false,
+      }),
+    ).toBe(true)
+    await Promise.resolve()
+    expect(adapter.writeText).toHaveBeenCalled()
+  })
+
+  it('Cmd+C（macOS）等价 Ctrl+C', async () => {
+    const { runtime, adapter } = setup()
+    runtime.handleHostKeyDown({
+      key: 'c',
+      ctrlKey: false,
+      shiftKey: false,
+      metaKey: true,
+      altKey: false,
+    })
+    await Promise.resolve()
+    expect(adapter.writeText).toHaveBeenCalled()
+  })
+
+  it('Ctrl+X 触发 cut（清原格）', async () => {
+    const { engine, runtime } = setup()
+    runtime.handleHostKeyDown({
+      key: 'x',
+      ctrlKey: true,
+      shiftKey: false,
+      metaKey: false,
+      altKey: false,
+    })
+    await Promise.resolve()
+    expect(engine.clearRange).toHaveBeenCalled()
+  })
+
+  it('Ctrl+V 触发 paste', async () => {
+    const { runtime, adapter } = setup()
+    adapter.readText = mock(async () => 'pasted\t9')
+    runtime.handleHostKeyDown({
+      key: 'v',
+      ctrlKey: true,
+      shiftKey: false,
+      metaKey: false,
+      altKey: false,
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(adapter.readText).toHaveBeenCalled()
+  })
+
+  it('编辑中 Ctrl+C 不被 runtime 拦截（让浏览器原生剪贴板接管）', () => {
+    const { engine, runtime } = setup()
+    engine.isCellEditing = mock(() => true)
+    expect(
+      runtime.handleHostKeyDown({
+        key: 'c',
+        ctrlKey: true,
+        shiftKey: false,
+        metaKey: false,
+        altKey: false,
+      }),
+    ).toBe(false)
+  })
+
+  it('Shift+Ctrl+C 不触发剪贴板（避免误抢系统快捷键）', () => {
+    const { runtime, adapter } = setup()
+    const handled = runtime.handleHostKeyDown({
+      key: 'c',
+      ctrlKey: true,
+      shiftKey: true,
+      metaKey: false,
+      altKey: false,
+    })
+    expect(handled).toBe(false)
+    expect(adapter.writeText).not.toHaveBeenCalled()
+  })
+})

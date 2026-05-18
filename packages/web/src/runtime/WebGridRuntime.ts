@@ -653,6 +653,24 @@ export class WebGridRuntime {
     if (this.destroyed) return false
     if (this.engine.isCellEditing()) return false
 
+    // Phase 4.1 — Ctrl+X / C / V（Mac 上 Cmd）剪贴板快捷键；Shift / Alt 组合不抢
+    const mod = event.ctrlKey || event.metaKey
+    if (mod && !event.shiftKey && !event.altKey) {
+      const k = event.key.toLowerCase()
+      if (k === 'c') {
+        void this.handleClipboardCopy()
+        return true
+      }
+      if (k === 'x') {
+        void this.handleClipboardCut()
+        return true
+      }
+      if (k === 'v') {
+        void this.handleClipboardPaste()
+        return true
+      }
+    }
+
     const cell = this.engine.getSelection().activeCell
 
     if (event.key === 'F2' && cell) {
