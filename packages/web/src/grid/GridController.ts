@@ -40,6 +40,10 @@ export interface GridController {
   setClipboardReady(ready: boolean): void
   openContextMenuAt(rowIndex: number, fieldId: string): void
   closeContextMenu(): void
+  /** Phase 4.1 — 程序化触发 copy / cut / paste；走与 menu / 快捷键相同的引擎。 */
+  copy(): Promise<boolean>
+  cut(): Promise<boolean>
+  paste(): Promise<boolean>
   destroy(): void
   /** @internal ResizeObserver 集成测试入口 */
   _onContainerResize(): void

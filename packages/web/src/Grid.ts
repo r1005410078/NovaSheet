@@ -1,9 +1,11 @@
 import type {
+  CellRange,
   ContextMenuAction,
   ContextMenuContext,
   DataSource,
   FrozenConfig,
   GridEngineOptions,
+  PasteSkippedCell,
   Theme,
 } from '@novasheet/core'
 import { Canvas2DBackend } from './backends/Canvas2DBackend'
@@ -19,8 +21,16 @@ export type GridRendererBackend = 'canvas2d'
 export interface GridOptions extends GridEngineOptions {
   /** 渲染后端，默认 `'canvas2d'`。 */
   renderer?: GridRendererBackend
-  /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后默认接剪贴板引擎。 */
+  /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后不传走默认引擎（grid.copy/cut/paste）。 */
   onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+  /** Phase 4.1 — copy 完成（snapshot 已写剪贴板）。 */
+  onCopy?: (range: CellRange) => void
+  /** Phase 4.1 — cut 完成（已写剪贴板 + 原格已清）。 */
+  onCut?: (range: CellRange) => void
+  /** Phase 4.1 — paste 完成（target 范围已应用）。 */
+  onPaste?: (target: CellRange) => void
+  /** Phase 4.1 — 至少一格因类型不匹配 / read-only 被跳过时触发。 */
+  onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -28,11 +38,23 @@ export function withExcelHeaders<T extends GridOptions>(options: T): T {
   return { ...options, excelHeaders: true }
 }
 
-/** 从门面选项中剥离 `renderer` 和 `onContextMenuAction`，只把引擎参数传给 `DefaultGridEngine`。 */
+/** 从门面选项中剥离非引擎字段，只把引擎参数传给 `DefaultGridEngine`。 */
 function engineOptionsFrom(options: GridOptions): GridEngineOptions {
-  const { renderer: _backend, onContextMenuAction: _cb, ...engineOptions } = options
-  void _backend
-  void _cb
+  const {
+    renderer: _r,
+    onContextMenuAction: _a,
+    onCopy: _c,
+    onCut: _x,
+    onPaste: _v,
+    onPasteSkipped: _s,
+    ...engineOptions
+  } = options
+  void _r
+  void _a
+  void _c
+  void _x
+  void _v
+  void _s
   return engineOptions
 }
 
@@ -54,6 +76,10 @@ export class Grid {
       case 'canvas2d':
         this.delegate = new Canvas2DBackend(container, engineOptions, {
           onContextMenuAction: options.onContextMenuAction,
+          onCopy: options.onCopy,
+          onCut: options.onCut,
+          onPaste: options.onPaste,
+          onPasteSkipped: options.onPasteSkipped,
         })
         break
       default:
@@ -123,6 +149,19 @@ export class Grid {
 
   closeContextMenu(): void {
     this.delegate.closeContextMenu()
+  }
+
+  /** Phase 4.1 — 程序化触发；走与 menu / Ctrl+C 同一引擎。返回 true 表示动作成功（已写剪贴板 / 已应用写入）。 */
+  copy(): Promise<boolean> {
+    return this.delegate.copy()
+  }
+
+  cut(): Promise<boolean> {
+    return this.delegate.cut()
+  }
+
+  paste(): Promise<boolean> {
+    return this.delegate.paste()
   }
 
   destroy(): void {

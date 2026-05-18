@@ -14,14 +14,17 @@
 import {
   DefaultGridEngine,
   FrameScheduler,
+  type CellRange,
   type ContextMenuAction,
   type ContextMenuContext,
   type DataSource,
   type FrozenConfig,
   type GridEngineOptions,
+  type PasteSkippedCell,
   type Theme,
 } from '@novasheet/core'
 import { Canvas2DRenderer, Canvas2DTextMeasurer, HighDPI } from '@novasheet/web-canvas2d'
+import { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
@@ -55,6 +58,7 @@ export class Canvas2DBackend implements GridController {
   private handleLayer: DomHandleLayer
   private cellEditor: DomCellEditor
   private contextMenuLayer!: DomContextMenuLayer
+  private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
   /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
@@ -66,6 +70,10 @@ export class Canvas2DBackend implements GridController {
     options: GridEngineOptions,
     gridOptions?: {
       onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+      onCopy?: (range: CellRange) => void
+      onCut?: (range: CellRange) => void
+      onPaste?: (target: CellRange) => void
+      onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
     },
   ) {
     this.container = container
@@ -138,9 +146,14 @@ export class Canvas2DBackend implements GridController {
     })
     this.contextMenuLayer.attach()
     this.runtime.setContextMenuLayer(this.contextMenuLayer)
+    this.runtime.setClipboardAdapter(this.clipboardAdapter)
     if (gridOptions?.onContextMenuAction) {
       this.runtime.setOnContextMenuAction(gridOptions.onContextMenuAction)
     }
+    if (gridOptions?.onCopy) this.runtime.setOnCopy(gridOptions.onCopy)
+    if (gridOptions?.onCut) this.runtime.setOnCut(gridOptions.onCut)
+    if (gridOptions?.onPaste) this.runtime.setOnPaste(gridOptions.onPaste)
+    if (gridOptions?.onPasteSkipped) this.runtime.setOnPasteSkipped(gridOptions.onPasteSkipped)
 
     this.runtime.attach()
   }
@@ -198,6 +211,18 @@ export class Canvas2DBackend implements GridController {
 
   closeContextMenu(): void {
     this.runtime.closeContextMenu()
+  }
+
+  copy(): Promise<boolean> {
+    return this.runtime.handleClipboardCopy()
+  }
+
+  cut(): Promise<boolean> {
+    return this.runtime.handleClipboardCut()
+  }
+
+  paste(): Promise<boolean> {
+    return this.runtime.handleClipboardPaste()
   }
 
   destroy(): void {
