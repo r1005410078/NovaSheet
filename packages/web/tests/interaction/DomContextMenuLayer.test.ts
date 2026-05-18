@@ -22,7 +22,7 @@ describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
     layer.attach()
     layer.applyTheme(denseGridTheme)
     expect(layer.isOpen()).toBe(false)
-    expect(container.querySelector('[data-novasheet-context-menu]')).toBeTruthy()
+    expect(document.body.querySelector('[data-novasheet-context-menu]')).toBeTruthy()
     layer.destroy()
     document.body.removeChild(container)
   })
@@ -34,11 +34,11 @@ describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
     layer.applyTheme(denseGridTheme)
     layer.open({ clientX: 50, clientY: 60, items: sampleItems })
     expect(layer.isOpen()).toBe(true)
-    const buttons = container.querySelectorAll('[data-ns-action]')
+    const buttons = document.body.querySelectorAll('[data-ns-action]')
     expect(buttons.length).toBe(3)
     expect((buttons[0] as HTMLElement).textContent).toBe('Cut')
     expect((buttons[2] as HTMLElement).getAttribute('aria-disabled')).toBe('true')
-    expect(container.querySelector('[role="separator"]')).toBeTruthy()
+    expect(document.body.querySelector('[role="separator"]')).toBeTruthy()
     layer.destroy()
     document.body.removeChild(container)
   })
@@ -50,7 +50,7 @@ describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
     layer.attach()
     layer.applyTheme(denseGridTheme)
     layer.open({ clientX: 50, clientY: 60, items: sampleItems })
-    const cutBtn = container.querySelector('[data-ns-action="cut"]') as HTMLElement
+    const cutBtn = document.body.querySelector('[data-ns-action="cut"]') as HTMLElement
     cutBtn.click()
     expect(onSelect).toHaveBeenCalledWith('cut')
     expect(layer.isOpen()).toBe(false)
@@ -65,7 +65,7 @@ describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
     layer.attach()
     layer.applyTheme(denseGridTheme)
     layer.open({ clientX: 50, clientY: 60, items: sampleItems })
-    const pasteBtn = container.querySelector('[data-ns-action="paste"]') as HTMLElement
+    const pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLElement
     pasteBtn.click()
     expect(onSelect).not.toHaveBeenCalled()
     expect(layer.isOpen()).toBe(true)
@@ -79,10 +79,10 @@ describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
     layer.attach()
     layer.applyTheme(denseGridTheme)
     layer.open({ clientX: 10, clientY: 20, items: sampleItems })
-    const first = container.querySelector('[data-novasheet-context-menu]')!
+    const first = document.body.querySelector('[data-novasheet-context-menu]')!
     layer.close()
     layer.open({ clientX: 30, clientY: 40, items: sampleItems })
-    const second = container.querySelector('[data-novasheet-context-menu]')!
+    const second = document.body.querySelector('[data-novasheet-context-menu]')!
     expect(first).toBe(second)
     layer.destroy()
     document.body.removeChild(container)
@@ -93,7 +93,7 @@ describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
     const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
     layer.attach()
     layer.destroy()
-    expect(container.querySelector('[data-novasheet-context-menu-layer]')).toBeNull()
+    expect(document.body.querySelector('[data-novasheet-context-menu-layer]')).toBeNull()
     // destroy 后再操作幂等
     layer.close()
     layer.open({ clientX: 0, clientY: 0, items: sampleItems })
@@ -122,7 +122,7 @@ describe('DomContextMenuLayer — keyboard navigation (spec §4.7)', () => {
 
   it('ArrowDown 移到下一个 item；End 跳到最后一个非 disabled', () => {
     const { container, layer } = openLayer()
-    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    const menu = document.body.querySelector('[data-novasheet-context-menu]') as HTMLElement
     menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
     expect((document.activeElement as HTMLElement).getAttribute('data-ns-action')).toBe('copy')
     // 'paste' is disabled — ArrowDown should skip
@@ -137,26 +137,29 @@ describe('DomContextMenuLayer — keyboard navigation (spec §4.7)', () => {
 
   it('Enter 触发当前 focus item', () => {
     const { container, onSelect, layer } = openLayer()
-    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    const menu = document.body.querySelector('[data-novasheet-context-menu]') as HTMLElement
     menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     expect(onSelect).toHaveBeenCalledWith('cut')
     expect(layer.isOpen()).toBe(false)
+    layer.destroy()
     document.body.removeChild(container)
   })
 
   it('Escape 关闭菜单', () => {
     const { container, layer } = openLayer()
-    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    const menu = document.body.querySelector('[data-novasheet-context-menu]') as HTMLElement
     menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     expect(layer.isOpen()).toBe(false)
+    layer.destroy()
     document.body.removeChild(container)
   })
 
   it('Tab 关闭菜单（4.0 fail-safe：避免 focus 卡菜单）', () => {
     const { container, layer } = openLayer()
-    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    const menu = document.body.querySelector('[data-novasheet-context-menu]') as HTMLElement
     menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
     expect(layer.isOpen()).toBe(false)
+    layer.destroy()
     document.body.removeChild(container)
   })
 
@@ -164,6 +167,7 @@ describe('DomContextMenuLayer — keyboard navigation (spec §4.7)', () => {
     const { container, layer } = openLayer()
     document.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
     expect(layer.isOpen()).toBe(false)
+    layer.destroy()
     document.body.removeChild(container)
   })
 })
@@ -177,7 +181,7 @@ describe('DomContextMenuLayer — focus restoration on close (spec §4.5)', () =
     layer.applyTheme(denseGridTheme)
     layer.open({ clientX: 0, clientY: 0, items: sampleItems })
     // focus is now on the first enabled button (inside the menu)
-    expect(container.querySelector('[data-novasheet-context-menu]')!.contains(document.activeElement)).toBe(true)
+    expect(document.body.querySelector('[data-novasheet-context-menu]')!.contains(document.activeElement)).toBe(true)
     layer.close()
     expect(onClose).toHaveBeenCalledTimes(1)
     layer.destroy()
@@ -194,7 +198,7 @@ describe('DomContextMenuLayer — focus restoration on close (spec §4.5)', () =
     // move focus away from menu
     ;(document.activeElement as HTMLElement | null)?.blur()
     container.focus()
-    expect(container.querySelector('[data-novasheet-context-menu]')!.contains(document.activeElement)).toBe(false)
+    expect(document.body.querySelector('[data-novasheet-context-menu]')!.contains(document.activeElement)).toBe(false)
     layer.close()
     expect(onClose).not.toHaveBeenCalled()
     layer.destroy()
@@ -209,7 +213,7 @@ describe('DomContextMenuLayer — disabled 项 ARIA focusable (spec §4.7)', () 
     layer.attach()
     layer.applyTheme(denseGridTheme)
     layer.open({ clientX: 0, clientY: 0, items: sampleItems })
-    const pasteBtn = container.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
+    const pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
     expect(pasteBtn.disabled).toBe(false)           // HTML disabled NOT set
     expect(pasteBtn.getAttribute('aria-disabled')).toBe('true') // aria-only
     pasteBtn.focus()
@@ -225,7 +229,7 @@ describe('DomContextMenuLayer — viewport clamp (spec §4.4)', () => {
     const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
     layer.attach()
     layer.applyTheme(denseGridTheme)
-    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    const menu = document.body.querySelector('[data-novasheet-context-menu]') as HTMLElement
     Object.defineProperty(menu, 'offsetWidth', { configurable: true, value: 200 })
     Object.defineProperty(menu, 'offsetHeight', { configurable: true, value: 100 })
     // happy-dom default window.innerWidth = 1024
@@ -240,7 +244,7 @@ describe('DomContextMenuLayer — viewport clamp (spec §4.4)', () => {
     const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
     layer.attach()
     layer.applyTheme(denseGridTheme)
-    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    const menu = document.body.querySelector('[data-novasheet-context-menu]') as HTMLElement
     Object.defineProperty(menu, 'offsetWidth', { configurable: true, value: 200 })
     Object.defineProperty(menu, 'offsetHeight', { configurable: true, value: 200 })
     // happy-dom default innerHeight = 768; clientY=700 + 200 = 900 > 768 → flip
@@ -255,7 +259,7 @@ describe('DomContextMenuLayer — viewport clamp (spec §4.4)', () => {
     const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
     layer.attach()
     layer.applyTheme(denseGridTheme)
-    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    const menu = document.body.querySelector('[data-novasheet-context-menu]') as HTMLElement
     Object.defineProperty(menu, 'offsetWidth', { configurable: true, value: 200 })
     Object.defineProperty(menu, 'offsetHeight', { configurable: true, value: 900 })
     // menu too tall — flip would put top at -200; top clamp → 8
@@ -270,7 +274,7 @@ describe('DomContextMenuLayer — viewport clamp (spec §4.4)', () => {
     const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
     layer.attach()
     layer.applyTheme(denseGridTheme)
-    const menu = container.querySelector('[data-novasheet-context-menu]') as HTMLElement
+    const menu = document.body.querySelector('[data-novasheet-context-menu]') as HTMLElement
     Object.defineProperty(menu, 'offsetWidth', { configurable: true, value: 200 })
     Object.defineProperty(menu, 'offsetHeight', { configurable: true, value: 100 })
     layer.open({ clientX: -10, clientY: 50, items: sampleItems })

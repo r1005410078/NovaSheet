@@ -1,9 +1,12 @@
 /**
  * Phase 4.0 — DOM 右键菜单层（生命周期 + themed CSS）。
  *
- * 维护一个 `[data-novasheet-context-menu-layer]` overlay 和一个
- * `[data-novasheet-context-menu]` 菜单节点。每次 open() 复用同一节点，
- * 仅重新渲染 items。键盘导航 + 位置 clamp 在 Task 4/5 中添加。
+ * **Portal 模式**：layer 挂在 `document.body`（不是 grid container），CSS 变量直接
+ * 写在 layer 上。原因——`position: fixed` 一旦遇到祖先有 `transform / filter / perspective /
+ * will-change / contain`，containing block 会变成那个祖先而非视口；Storybook 等宿主框架
+ * 经常引入这类祖先（iframe 包装、动效层），导致菜单错位甚至看不见。挂 body 直接绕开。
+ *
+ * 多 Grid：每个实例创建独立 layer，destroy 时各自从 body 移除（spec §6.5 #2）。
  */
 
 import type { ContextMenuAction, ContextMenuItem, Theme } from '@novasheet/core'
@@ -38,23 +41,25 @@ export class DomContextMenuLayer {
   attach(): void {
     if (this.attached || this.destroyed) return
     this.attached = true
-    this.layer = document.createElement('div')
+    const doc = this.container.ownerDocument
+    this.layer = doc.createElement('div')
     this.layer.setAttribute('data-novasheet-context-menu-layer', '')
-    this.menu = document.createElement('div')
+    this.menu = doc.createElement('div')
     this.menu.setAttribute('data-novasheet-context-menu', '')
     this.menu.setAttribute('role', 'menu')
     this.menu.setAttribute('aria-label', 'Cell actions')
     this.menu.addEventListener('contextmenu', this.onMenuContextMenu)
     this.menu.addEventListener('keydown', this.onMenuKeyDown)
-    document.addEventListener('pointerdown', this.onDocumentPointerDown, true)
+    doc.addEventListener('pointerdown', this.onDocumentPointerDown, true)
     this.layer.appendChild(this.menu)
-    this.container.appendChild(this.layer)
-    ensureContextMenuStylesheet(this.container.ownerDocument)
+    doc.body.appendChild(this.layer)
+    ensureContextMenuStylesheet(doc)
   }
 
   applyTheme(theme: Theme): void {
     if (!this.attached) return
-    applyContextMenuTheme(this.container, theme)
+    // CSS 变量挂在 layer 自身（不是 container）——portal 模式下 menu 在 body 里，必须通过 layer 继承
+    applyContextMenuTheme(this.layer, theme)
   }
 
   isOpen(): boolean {
@@ -100,12 +105,11 @@ export class DomContextMenuLayer {
     if (this.destroyed) return
     this.destroyed = true
     if (this.attached) {
+      const doc = this.container.ownerDocument
       this.menu.removeEventListener('contextmenu', this.onMenuContextMenu)
       this.menu.removeEventListener('keydown', this.onMenuKeyDown)
-      document.removeEventListener('pointerdown', this.onDocumentPointerDown, true)
-      if (this.layer.parentNode === this.container) {
-        this.container.removeChild(this.layer)
-      }
+      doc.removeEventListener('pointerdown', this.onDocumentPointerDown, true)
+      this.layer.parentNode?.removeChild(this.layer)
       this.attached = false
       this.opened = false
     }

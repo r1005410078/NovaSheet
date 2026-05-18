@@ -468,7 +468,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
       new MouseEvent('contextmenu', { clientX: 50, clientY: 100, bubbles: true, cancelable: true }),
     )
 
-    const cutBtn = container.querySelector('[data-ns-action="cut"]') as HTMLButtonElement
+    const cutBtn = document.body.querySelector('[data-ns-action="cut"]') as HTMLButtonElement
     expect(cutBtn).toBeTruthy()
     cutBtn.click()
 
@@ -495,7 +495,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     scrollHost.dispatchEvent(
       new MouseEvent('contextmenu', { clientX: 30, clientY: 80, bubbles: true, cancelable: true }),
     )
-    let pasteBtn = container.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
+    let pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
     expect(pasteBtn.getAttribute('aria-disabled')).toBe('true')
     grid.closeContextMenu()
 
@@ -504,7 +504,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     scrollHost.dispatchEvent(
       new MouseEvent('contextmenu', { clientX: 30, clientY: 80, bubbles: true, cancelable: true }),
     )
-    pasteBtn = container.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
+    pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
     expect(pasteBtn.getAttribute('aria-disabled')).toBeNull()
 
     grid.destroy()
@@ -520,9 +520,9 @@ describe('Grid — Phase 4.0 context menu facade', () => {
         rows: [],
       }),
     })
-    expect(container.querySelector('[data-novasheet-context-menu-layer]')).toBeTruthy()
+    expect(document.body.querySelector('[data-novasheet-context-menu-layer]')).toBeTruthy()
     grid.destroy()
-    expect(container.querySelector('[data-novasheet-context-menu-layer]')).toBeNull()
+    expect(document.body.querySelector('[data-novasheet-context-menu-layer]')).toBeNull()
     document.body.removeChild(container)
   })
 })
