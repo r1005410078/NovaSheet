@@ -989,3 +989,70 @@ describe('WebGridRuntime keyboard clipboard — Phase 4.1', () => {
     expect(adapter.writeText).not.toHaveBeenCalled()
   })
 })
+
+describe('WebGridRuntime menu default dispatch — Phase 4.1', () => {
+  function setup() {
+    const engine = makeEngine()
+    const rows = [{ a: 'x' }] as Row[]
+    const schema: Schema = {
+      fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }],
+    }
+    engine.getData = mock(
+      () =>
+        ({
+          getRowCount: () => 1,
+          getSchema: () => schema,
+          getRows: () => rows,
+          getCell: (r: number, f: string) =>
+            (rows[r] as Record<string, unknown> | undefined)?.[f] ?? null,
+          subscribe: () => () => {},
+          updateCell: mock(() => {}),
+        }) as never,
+    )
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+    }))
+    engine.clearRange = mock(() => {})
+    const adapter = {
+      writeText: mock(async (_: string) => true),
+      readText: mock(async () => ''),
+    }
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setClipboardAdapter(adapter as never)
+    return { engine, runtime, adapter }
+  }
+
+  it('consumer 没传 onContextMenuAction 时点 copy 自动走 grid.copy()', async () => {
+    const { runtime, adapter } = setup()
+    runtime.handleContextMenuSelected('copy')
+    await Promise.resolve()
+    expect(adapter.writeText).toHaveBeenCalled()
+  })
+
+  it('consumer 没传 onContextMenuAction 时点 cut 自动走 grid.cut()', async () => {
+    const { engine, runtime } = setup()
+    runtime.handleContextMenuSelected('cut')
+    await Promise.resolve()
+    expect(engine.clearRange).toHaveBeenCalled()
+  })
+
+  it('consumer 传了 onContextMenuAction 时优先 callback，不调内部引擎', async () => {
+    const { runtime, adapter } = setup()
+    const consumer = mock((_a: string, _c: never) => {})
+    runtime.setOnContextMenuAction(consumer as never)
+    // 模拟 menu 走过一次 open，存了 lastContextMenuContext
+    ;(runtime as unknown as { lastContextMenuContext: unknown }).lastContextMenuContext = {
+      cell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      hasSelection: true,
+      clipboardReady: true,
+    }
+    runtime.handleContextMenuSelected('copy')
+    await Promise.resolve()
+    expect(consumer).toHaveBeenCalled()
+    expect(adapter.writeText).not.toHaveBeenCalled()
+  })
+})

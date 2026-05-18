@@ -331,11 +331,15 @@ export class WebGridRuntime {
     }
 
     const newSelection = this.engine.getSelection()
+    // Phase 4.1：Paste 项 enabled 与否取决于 DataSource 是否可写——外部剪贴板有没有内容
+    // runtime 同步不可知（异步 readText 才能确定）；consumer 显式 setClipboardReady(true)
+    // 也走这条 OR 路径，保留 4.0 兼容
+    const dataMutable = isMutableDataSource(this.engine.getData())
     const ctx: ContextMenuContext = {
       cell: hit,
       selectedRange: newSelection.selectedRange,
       hasSelection: newSelection.activeCell !== null,
-      clipboardReady: this.clipboardReady,
+      clipboardReady: dataMutable || this.clipboardReady,
     }
     this.lastContextMenuContext = ctx
     const items = getCellContextMenuItems(ctx)
@@ -347,8 +351,22 @@ export class WebGridRuntime {
   }
 
   handleContextMenuSelected(id: ContextMenuAction): void {
-    if (!this.lastContextMenuContext) return
-    this.onContextMenuAction?.(id, this.lastContextMenuContext)
+    // Phase 4.1：consumer 传了 callback 完全接管；没传走默认引擎
+    if (this.onContextMenuAction) {
+      if (this.lastContextMenuContext) this.onContextMenuAction(id, this.lastContextMenuContext)
+      return
+    }
+    if (id === 'copy') {
+      void this.handleClipboardCopy()
+      return
+    }
+    if (id === 'cut') {
+      void this.handleClipboardCut()
+      return
+    }
+    if (id === 'paste') {
+      void this.handleClipboardPaste()
+    }
   }
 
   openContextMenuAt(rowIndex: number, fieldId: string): void {

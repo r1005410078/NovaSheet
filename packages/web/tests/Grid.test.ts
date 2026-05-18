@@ -479,7 +479,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     document.body.removeChild(container)
   })
 
-  it('setClipboardReady(true) makes Paste enabled on next open', () => {
+  it('Phase 4.1: Paste 项在 MutableDataSource 下默认 enabled（不再依赖 setClipboardReady）', () => {
     const container = document.createElement('div')
     Object.assign(container.style, { width: '400px', height: '300px', position: 'relative' })
     document.body.appendChild(container)
@@ -491,21 +491,20 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     })
     const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
 
-    // first open — Paste disabled
     scrollHost.dispatchEvent(
       new MouseEvent('contextmenu', { clientX: 30, clientY: 80, bubbles: true, cancelable: true }),
     )
-    let pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
-    expect(pasteBtn.getAttribute('aria-disabled')).toBe('true')
-    grid.closeContextMenu()
-
-    // setClipboardReady → reopen → enabled
-    grid.setClipboardReady(true)
-    scrollHost.dispatchEvent(
-      new MouseEvent('contextmenu', { clientX: 30, clientY: 80, bubbles: true, cancelable: true }),
-    )
-    pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
+    const pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
     expect(pasteBtn.getAttribute('aria-disabled')).toBeNull()
+
+    // setClipboardReady 保留 API（4.0 兼容）但不再影响 enabled 状态
+    grid.setClipboardReady(false)
+    grid.closeContextMenu()
+    scrollHost.dispatchEvent(
+      new MouseEvent('contextmenu', { clientX: 30, clientY: 80, bubbles: true, cancelable: true }),
+    )
+    const pasteBtn2 = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
+    expect(pasteBtn2.getAttribute('aria-disabled')).toBeNull()
 
     grid.destroy()
     document.body.removeChild(container)
