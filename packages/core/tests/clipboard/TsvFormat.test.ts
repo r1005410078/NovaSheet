@@ -51,9 +51,9 @@ describe('parseTsvToCells', () => {
     ])
   })
 
-  it('number 列：NaN → null', () => {
+  it('number 列：无法 coerce 时保留 raw string（让 applyPaste 决定 SKIP）', () => {
     const out = parseTsvToCells('abc\nhello', ['qty'], schema)
-    expect(out).toEqual([[null], [null]])
+    expect(out).toEqual([['abc'], ['hello']])
   })
 
   it('text 列：空串保留为空串（不是 null）', () => {
@@ -61,13 +61,13 @@ describe('parseTsvToCells', () => {
     expect(out).toEqual([[''], ['hello']])
   })
 
-  it('checkbox：true/1/yes → true；false/0/no → false；其它 → null', () => {
+  it('checkbox：true/1/yes → true；false/0/no/空 → false；其它保留 raw string（让 applyPaste 决定 SKIP）', () => {
     const out = parseTsvToCells(
       'true\n1\nyes\nfalse\n0\nno\nmaybe',
       ['done'],
       schema,
     )
-    expect(out).toEqual([[true], [true], [true], [false], [false], [false], [null]])
+    expect(out).toEqual([[true], [true], [true], [false], [false], [false], ['maybe']])
   })
 
   it('行长不齐：短行右侧补 null', () => {

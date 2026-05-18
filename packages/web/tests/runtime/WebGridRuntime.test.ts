@@ -5,6 +5,8 @@ import type {
   GridEngine,
   GridSelection,
   ResizeHandleRect,
+  Row,
+  Schema,
   Theme,
 } from '@novasheet/core'
 import type { WebHost } from '../../src/host/WebHost'
@@ -720,5 +722,147 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
     runtime.handleResizePointerUp(1)
 
     expect(engine.setColumnWidth).not.toHaveBeenCalled()
+  })
+})
+
+describe('WebGridRuntime clipboard — Phase 4.1', () => {
+  function makeAdapter(readReturn = '') {
+    return {
+      writeText: mock(async (_: string) => true),
+      readText: mock(async () => readReturn),
+    }
+  }
+
+  function makeMutableData(rows: Row[], schema: Schema) {
+    const updateCell = mock((rowIndex: number, fieldId: string, value: unknown) => {
+      const row = rows[rowIndex]
+      if (row) (row as Record<string, unknown>)[fieldId] = value
+    })
+    return {
+      getRowCount: () => rows.length,
+      getSchema: () => schema,
+      getRows: () => rows,
+      getCell: (r: number, f: string) => (rows[r] as Record<string, unknown> | undefined)?.[f] ?? null,
+      subscribe: () => () => {},
+      updateCell,
+    }
+  }
+
+  const schema: Schema = {
+    fields: [
+      { id: 'a', name: 'A', type: 'text', width: 100 },
+      { id: 'b', name: 'B', type: 'number', width: 100 },
+    ],
+  }
+
+  function setupForCopyCut(activeCell = { rowIndex: 0, colIndex: 0 }, range = {
+    startRow: 0,
+    endRow: 0,
+    startCol: 0,
+    endCol: 1,
+  }) {
+    const engine = makeEngine()
+    const rows = [{ a: 'hello', b: 42 }] as Row[]
+    const data = makeMutableData(rows, schema)
+    engine.getData = mock(() => data as never)
+    engine.getSelection = mock(() => ({
+      activeCell,
+      anchorCell: activeCell,
+      extentCell: activeCell,
+      selectedRange: range,
+    }))
+    engine.clearRange = mock(() => {})
+    const adapter = makeAdapter()
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setClipboardAdapter(adapter as never)
+    return { engine, runtime, adapter, data, rows }
+  }
+
+  it('copy 写 TSV 到 adapter', async () => {
+    const { runtime, adapter } = setupForCopyCut()
+    expect(await runtime.handleClipboardCopy()).toBe(true)
+    expect(adapter.writeText).toHaveBeenCalledWith('hello\t42')
+  })
+
+  it('cut 写 TSV + 立即调 engine.clearRange', async () => {
+    const { engine, runtime, adapter } = setupForCopyCut()
+    expect(await runtime.handleClipboardCut()).toBe(true)
+    expect(adapter.writeText).toHaveBeenCalledWith('hello\t42')
+    expect(engine.clearRange).toHaveBeenCalledWith({
+      startRow: 0,
+      endRow: 0,
+      startCol: 0,
+      endCol: 1,
+    })
+  })
+
+  it('paste readText 返回 null（adapter 不可用）→ no-op', async () => {
+    const { runtime, data } = setupForCopyCut()
+    ;(runtime as unknown as { clipboardAdapter: { readText: () => Promise<null> } }).clipboardAdapter = {
+      writeText: async () => true,
+      readText: async () => null,
+    } as never
+    expect(await runtime.handleClipboardPaste()).toBe(false)
+    expect(data.updateCell).not.toHaveBeenCalled()
+  })
+
+  it('paste 内部缓存命中走 typed 路径（保留类型）', async () => {
+    const { runtime, adapter, data } = setupForCopyCut()
+    await runtime.handleClipboardCopy()
+    // adapter.readText 返回 copy 时写入的同样 TSV → 内部缓存 hash 命中
+    adapter.readText = mock(async () => 'hello\t42')
+    expect(await runtime.handleClipboardPaste()).toBe(true)
+    // typed 路径：number 字段值保留为 42（不是字符串）
+    const writeCalls = data.updateCell.mock.calls
+    const bWrite = writeCalls.find((c) => c[1] === 'b')
+    expect(bWrite?.[2]).toBe(42)
+  })
+
+  it('paste 外部 TSV（hash 不匹配）走 parse + coerce 路径', async () => {
+    const { runtime, adapter, data } = setupForCopyCut()
+    // 没 copy 过，clipboardCache 为 null；外部 TSV
+    adapter.readText = mock(async () => 'external\t99')
+    expect(await runtime.handleClipboardPaste()).toBe(true)
+    const writeCalls = data.updateCell.mock.calls
+    expect(writeCalls.map((c) => [c[1], c[2]])).toEqual([
+      ['a', 'external'],
+      ['b', 99],
+    ])
+  })
+
+  it('paste 类型不匹配触发 onPasteSkipped', async () => {
+    const { runtime, adapter } = setupForCopyCut()
+    const skipped = mock((_: readonly { rowIndex: number; fieldId: string; reason: string }[]) => {})
+    runtime.setOnPasteSkipped(skipped as never)
+    adapter.readText = mock(async () => 'ok\tabc')  // 'abc' → number 列 → skip
+    await runtime.handleClipboardPaste()
+    expect(skipped).toHaveBeenCalledWith([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
+  })
+
+  it('non-Mutable DataSource：cut/paste no-op；copy 仍允许', async () => {
+    const engine = makeEngine()
+    engine.getData = mock(
+      () =>
+        ({
+          getRowCount: () => 1,
+          getSchema: () => schema,
+          getRows: () => [],
+          getCell: () => 'x',
+          subscribe: () => () => {},
+        }) as never,
+    )
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+    }))
+    const adapter = makeAdapter()
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setClipboardAdapter(adapter as never)
+
+    expect(await runtime.handleClipboardCut()).toBe(false)
+    expect(await runtime.handleClipboardPaste()).toBe(false)
+    expect(await runtime.handleClipboardCopy()).toBe(true) // copy 不要求 mutable
   })
 })

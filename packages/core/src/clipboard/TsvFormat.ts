@@ -84,30 +84,22 @@ function coerce(value: string, type: string | undefined): ParsedCellValue {
   }
 
   if (type === 'number') {
-    // 空串 → null
-    if (value === '') {
-      return null
-    }
-    // trim + 尝试转换
+    if (value === '') return null
     const trimmed = value.trim()
     const num = Number(trimmed)
-    // 只有有限的数字才接受，NaN → null
-    return Number.isFinite(num) ? num : null
+    // 不能 coerce 的就保留 raw string——让 applyPaste 的 coerceForType 决定 SKIP，
+    // 不在这里偷偷把 'abc' 吞成 null。spec §4.3：类型不匹配跳过 + onPasteSkipped 事件。
+    return Number.isFinite(num) ? num : value
   }
 
   if (type === 'checkbox') {
-    // 规范化：trim + lowercase
     const normalized = value.trim().toLowerCase()
-    // true/1/yes → true
-    if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
-      return true
-    }
-    // false/0/no/'' → false
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes') return true
     if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === '') {
       return false
     }
-    // 其他值 → null
-    return null
+    // unknown checkbox text → 保留 raw，applyPaste 决定 SKIP
+    return value
   }
 
   // text / 其他类型 → raw string（不转换）
