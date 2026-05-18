@@ -463,6 +463,8 @@ export class WebGridRuntime {
 
   handleHostPointerDown(event: WebPointerEvent): void {
     if (this.destroyed) return
+    // 仅左键进入 drag-select；右键 / 中键留给 contextmenu / 其它路径
+    if ((event.button ?? 0) !== 0) return
     if (this.engine.isCellEditing()) {
       this.commitCellEdit(false)
     }

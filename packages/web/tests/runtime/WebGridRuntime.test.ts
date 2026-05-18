@@ -510,6 +510,34 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     expect(menu.open).not.toHaveBeenCalled()
   })
 
+  it('右键 pointerdown（button=2）不进入 drag-select 模式', () => {
+    const engine = makeEngine()
+    engine.getFrame = mock(() => ({
+      data: {} as never,
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: { indexToPosition: () => 0, getSize: () => 28, positionToIndex: (p: number) => Math.floor(p / 28) } as never,
+      colsAxis: { indexToPosition: () => 0, getSize: () => 100, positionToIndex: (p: number) => Math.floor(p / 100) } as never,
+      viewport: {
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            rowRange: [0, 9],
+            colRange: [0, 2],
+            rect: { x: 0, y: 32, width: 300, height: 200 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+    }))
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.handleHostPointerDown({ x: 50, y: 60, shiftKey: false, button: 2 })
+    expect((runtime as unknown as { draggingSelection: boolean }).draggingSelection).toBe(false)
+    expect(engine.selectCell).not.toHaveBeenCalled()
+  })
+
   it('cell 编辑中先 commit 再开菜单', () => {
     const engine = makeEngine()
     engine.isCellEditing = mock(() => true)

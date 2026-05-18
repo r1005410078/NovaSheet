@@ -213,6 +213,7 @@ export class DomGridHost implements WebHost {
       x: event.clientX - rect.left,
       y: event.clientY - rect.top,
       shiftKey: event.shiftKey,
+      button: event.button,
       clientX: event.clientX,
       clientY: event.clientY,
     })
@@ -241,12 +242,14 @@ export class DomGridHost implements WebHost {
     clientX: number
     clientY: number
     shiftKey: boolean
-  }): { x: number; y: number; shiftKey: boolean } {
+    button?: number
+  }): { x: number; y: number; shiftKey: boolean; button: number } {
     const rect = this.scrollHost.getBoundingClientRect()
     return {
       x: event.clientX - rect.left,
       y: event.clientY - rect.top,
       shiftKey: event.shiftKey,
+      button: event.button ?? 0,
     }
   }
 

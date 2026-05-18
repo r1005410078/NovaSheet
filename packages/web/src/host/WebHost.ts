@@ -7,6 +7,12 @@ export interface WebPointerEvent {
   readonly y: number
   readonly shiftKey: boolean
   /**
+   * `MouseEvent.button`：0=左键，1=中键，2=右键。`pointermove`/`up` 路径不填。
+   * runtime 用它区分右键 pointerdown——右键不应进入 drag-select 模式，否则会
+   * 把后续 `contextmenu` 卡掉。
+   */
+  readonly button?: number
+  /**
    * 视口坐标（仅 `contextmenu` 路径填充）。Phase 4.0 上下文菜单 DOM 用 position: fixed，
    * 直接拿 viewport 锚点更省一次坐标换算。其它 pointer 入口可省略。
    */
