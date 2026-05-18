@@ -107,4 +107,40 @@ describe('DefaultGridEngine — 默认引擎', () => {
     })
     expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(false)
   })
+
+  it('Phase 4.1 — clearRange 把 MutableDataSource 内每个 cell 置 null', () => {
+    const schema: Schema = {
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: 100 },
+        { id: 'b', name: 'B', type: 'number', width: 100 },
+      ],
+    }
+    const data = new InMemoryDataSource({
+      schema,
+      rows: [
+        { a: 'x', b: 1 },
+        { a: 'y', b: 2 },
+      ],
+    })
+    const engine = new DefaultGridEngine({ data })
+    engine.clearRange({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
+    expect(data.getCell(0, 'a')).toBe(null)
+    expect(data.getCell(0, 'b')).toBe(null)
+    expect(data.getCell(1, 'a')).toBe(null)
+    expect(data.getCell(1, 'b')).toBe(null)
+  })
+
+  it('Phase 4.1 — clearRange 在 non-Mutable DataSource 上 silent no-op', () => {
+    const data = {
+      getRowCount: () => 1,
+      getSchema: () => ({ fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 100 }] }),
+      getRows: () => [],
+      getCell: () => 'x',
+      subscribe: () => () => {},
+    }
+    const engine = new DefaultGridEngine({ data: data as never })
+    expect(() =>
+      engine.clearRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }),
+    ).not.toThrow()
+  })
 })

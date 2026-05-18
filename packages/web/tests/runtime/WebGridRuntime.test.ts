@@ -28,6 +28,7 @@ function makeEngine(): GridEngine {
     cancelCellEdit: mock(() => {}),
     commitCellEdit: mock(() => false),
     isCellEditing: mock(() => false),
+    clearRange: mock(() => {}),
     clearSelection: mock(() => {}),
     getSelection: mock(
       () =>

@@ -7,6 +7,7 @@
 import type { DataSource } from '../data/DataSource'
 import type {
   CellAddress,
+  CellRange,
   GridSelection,
   SelectCellOptions,
 } from '../interaction/SelectionModel'
@@ -51,6 +52,8 @@ export interface GridEngine {
   /** 提交编辑；非法输入返回 false。 */
   commitCellEdit(): boolean
   isCellEditing(): boolean
+  /** Phase 4.1 — 把 `range` 内每个 cell 置 null；非 MutableDataSource 静默 no-op。 */
+  clearRange(range: CellRange): void
   clearSelection(): void
   getFrame(): RenderFrame
   getSelection(): GridSelection

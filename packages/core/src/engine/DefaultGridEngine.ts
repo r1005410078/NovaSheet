@@ -10,6 +10,7 @@ import { parseSelectionNavigationKey } from '../interaction/SelectionNavigation'
 import {
   SelectionModel,
   type CellAddress,
+  type CellRange,
   type GridSelection,
   type SelectCellOptions,
 } from '../interaction/SelectionModel'
@@ -165,6 +166,18 @@ export class DefaultGridEngine implements GridEngine {
 
   isCellEditing(): boolean {
     return this.cellEdit.isEditing()
+  }
+
+  clearRange(range: CellRange): void {
+    if (!isMutableDataSource(this.data)) return
+    const fields = this.data.getSchema().fields
+    for (let r = range.startRow; r <= range.endRow; r++) {
+      for (let c = range.startCol; c <= range.endCol; c++) {
+        const field = fields[c]
+        if (!field) continue
+        this.data.updateCell(r, field.id, null)
+      }
+    }
   }
 
   navigateSelection(key: string, shiftKey: boolean): boolean {
