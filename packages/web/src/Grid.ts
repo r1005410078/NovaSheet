@@ -12,9 +12,10 @@ import { Canvas2DBackend } from './backends/Canvas2DBackend'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
+  FillEvent,
   GridController,
-  UndoEvent,
   RedoEvent,
+  UndoEvent,
 } from './grid/GridController'
 
 /** 已支持的渲染后端；WebGL 待 `@novasheet/web-webgl` 接入后扩展。 */
@@ -37,6 +38,8 @@ export interface GridOptions extends GridEngineOptions {
   onUndo?: (event: UndoEvent) => void
   /** Phase 4.2 — redo 完成时触发,携带刚执行的 UndoCommand。 */
   onRedo?: (event: RedoEvent) => void
+  /** Phase 4.3 — fill handle 提交完成时触发。 */
+  onFill?: (event: FillEvent) => void
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -55,6 +58,7 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
     onPasteSkipped: _s,
     onUndo: _u,
     onRedo: _y,
+    onFill: _f,
     ...engineOptions
   } = options
   void _r
@@ -65,6 +69,7 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
   void _s
   void _u
   void _y
+  void _f
   return engineOptions
 }
 
@@ -92,6 +97,7 @@ export class Grid {
           onPasteSkipped: options.onPasteSkipped,
           onUndo: options.onUndo,
           onRedo: options.onRedo,
+          onFill: options.onFill,
         })
         break
       default:
@@ -200,6 +206,10 @@ export class Grid {
   onRedo(handler: (event: RedoEvent) => void): () => void {
     this.delegate.setOnRedo(handler)
     return () => this.delegate.setOnRedo(() => {})
+  }
+
+  onFill(handler: (event: FillEvent) => void): () => void {
+    return this.delegate.onFill(handler)
   }
 
   destroy(): void {

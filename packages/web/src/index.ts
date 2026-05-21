@@ -18,4 +18,4 @@ export type { ClipboardAction, PasteSkippedCell } from '@novasheet/core'
 export { WebClipboardAdapter } from './clipboard/WebClipboardAdapter'
 
 export type { UndoCommand } from '@novasheet/core'
-export type { UndoEvent, RedoEvent } from './grid/GridController'
+export type { FillEvent, RedoEvent, UndoEvent } from './grid/GridController'

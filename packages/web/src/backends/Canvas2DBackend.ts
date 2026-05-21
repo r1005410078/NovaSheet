@@ -30,7 +30,7 @@ import type {
   AutofitRowsResult,
   GridController,
 } from '../grid/GridController'
-import type { UndoEvent, RedoEvent } from '../runtime/WebGridRuntime'
+import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
 import { DomGridHost } from '../host/DomGridHost'
 import { DomCellEditor } from '../interaction/DomCellEditor'
 import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
@@ -79,6 +79,7 @@ export class Canvas2DBackend implements GridController {
       onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
       onUndo?: (event: UndoEvent) => void
       onRedo?: (event: RedoEvent) => void
+      onFill?: (event: FillEvent) => void
     },
   ) {
     this.container = container
@@ -169,6 +170,7 @@ export class Canvas2DBackend implements GridController {
     if (gridOptions?.onPasteSkipped) this.runtime.setOnPasteSkipped(gridOptions.onPasteSkipped)
     if (gridOptions?.onUndo) this.runtime.setOnUndo(gridOptions.onUndo)
     if (gridOptions?.onRedo) this.runtime.setOnRedo(gridOptions.onRedo)
+    if (gridOptions?.onFill) this.runtime.setOnFill(gridOptions.onFill)
 
     this.runtime.attach()
   }
@@ -277,6 +279,11 @@ export class Canvas2DBackend implements GridController {
 
   setOnRedo(cb: (event: RedoEvent) => void): void {
     this.runtime.setOnRedo(cb)
+  }
+
+  onFill(handler: (event: FillEvent) => void): () => void {
+    this.runtime.setOnFill(handler)
+    return () => this.runtime.setOnFill(() => {})
   }
 
   /** 用当前 engine 状态构造新的 `Canvas2DRenderer`（`setData` 后轴/viewport 会重建）。 */
