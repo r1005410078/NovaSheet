@@ -779,14 +779,13 @@ export class WebGridRuntime {
     if (!hit) return
     if (event.shiftKey) this.engine.selectCell(hit, { extend: true })
     else this.engine.selectCell(hit)
-    this.draggingSelection = true
     this.lastDragPointer = event
-    this.updateDragAutoScroll(event)
     this.refresh()
   }
 
   handleHostPointerMove(event: WebPointerEvent): void {
-    if (this.destroyed || !this.draggingSelection) return
+    if (this.destroyed || !this.lastDragPointer) return
+    this.draggingSelection = true
     this.lastDragPointer = event
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (hit) {

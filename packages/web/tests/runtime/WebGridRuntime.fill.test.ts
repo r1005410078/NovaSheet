@@ -31,6 +31,30 @@ describe('WebGridRuntime fill handle', () => {
     })
   })
 
+  it('syncs fill handle in the same render as pointer selection', () => {
+    const fillLayer = makeFillLayer()
+    const engine = makeEngine()
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer })
+    const rafs: Array<FrameRequestCallback> = []
+    const originalRaf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafs.push(cb)
+      return rafs.length
+    }) as typeof requestAnimationFrame
+
+    runtime.handleHostPointerDown({ x: 50, y: 45, shiftKey: false })
+    rafs[rafs.length - 1]!(performance.now())
+
+    expect(fillLayer.sync).toHaveBeenLastCalledWith({
+      x: 196,
+      y: 86,
+      width: 8,
+      height: 8,
+    })
+
+    globalThis.requestAnimationFrame = originalRaf
+  })
+
   it('drag commits fill target and emits onFill', () => {
     const engine = makeEngine()
     const fillLayer = makeFillLayer()
