@@ -5,9 +5,10 @@
  */
 
 import type { DataSource } from '../data/DataSource'
-import type { UndoCommand } from '../undo/UndoCommand'
+import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
+import type { FillDirection } from '../fill/FillTarget'
 import type {
   CellAddress,
   CellRange,
@@ -33,6 +34,13 @@ export interface GridEngineOptions {
   defaultRowHeight?: number
   /** Excel 风格：列头显示 A/B/…、左侧显示 1-based 行号。 */
   excelHeaders?: boolean
+}
+
+export interface FillCommitResult {
+  readonly source: CellRange
+  readonly fill: CellRange
+  readonly result: CellRange
+  readonly writes: readonly CellWrite[]
 }
 
 export interface GridEngine {
@@ -88,4 +96,7 @@ export interface GridEngine {
     fieldIdsAtCols: readonly string[],
     onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
   ): void
+
+  /** Phase 4.3 — 提交一次填充柄写入为 1 步 undo;无写入时返回 null。 */
+  commitFill(source: CellRange, fill: CellRange, direction: FillDirection): FillCommitResult | null
 }

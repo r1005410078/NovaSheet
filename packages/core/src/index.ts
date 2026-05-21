@@ -53,7 +53,7 @@ export type {
   RowBand,
 } from './layout/FrozenRegions'
 export { DefaultGridEngine } from './engine/DefaultGridEngine'
-export type { GridEngine, GridEngineOptions } from './engine/GridEngine'
+export type { FillCommitResult, GridEngine, GridEngineOptions } from './engine/GridEngine'
 export type { RenderFrame } from './render/RenderFrame'
 export type { ViewportSnapshot } from './layout/Viewport'
 

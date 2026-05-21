@@ -4,6 +4,8 @@ import { isMutableDataSource } from '../data/MutableDataSource'
 import { applyPaste } from '../clipboard/ApplyPaste'
 import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
+import { computeFillWrites } from '../fill/FillSeries'
+import { unionRange, type FillDirection } from '../fill/FillTarget'
 import {
   formatCellForEdit,
   isEditableFieldType,
@@ -26,7 +28,7 @@ import { denseGridTheme } from '../theme/denseGridTheme'
 import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
-import type { GridEngine, GridEngineOptions } from './GridEngine'
+import type { FillCommitResult, GridEngine, GridEngineOptions } from './GridEngine'
 
 /**
  * `GridEngine` 默认实现。
@@ -328,6 +330,28 @@ export class DefaultGridEngine implements GridEngine {
     this.undoStack.push({ kind: 'paste', target: range, before, after })
   }
 
+  commitFill(source: CellRange, fill: CellRange, direction: FillDirection): FillCommitResult | null {
+    if (!isMutableDataSource(this.data)) return null
+    const after: CellWrite[] = computeFillWrites({ data: this.data, source, fill, direction }).map((w) => ({
+      rowIndex: w.rowIndex,
+      fieldId: w.fieldId,
+      value: w.value,
+    }))
+    if (after.length === 0) return null
+
+    const before: CellWrite[] = after.map((w) => ({
+      rowIndex: w.rowIndex,
+      fieldId: w.fieldId,
+      value: this.data.getCell(w.rowIndex, w.fieldId) ?? null,
+    }))
+    for (const w of after) this.data.updateCell(w.rowIndex, w.fieldId, w.value)
+
+    const result = unionRange(source, fill)
+    this.undoStack.push({ kind: 'fill', source, fill, result, before, after })
+    this.selection.setSelectedRange(result)
+    return { source, fill, result, writes: after }
+  }
+
   private applyUndo(cmd: UndoCommand): void {
     switch (cmd.kind) {
       case 'editCell':
@@ -341,6 +365,10 @@ export class DefaultGridEngine implements GridEngine {
       case 'paste':
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
         this.restoreSelectionForRange(cmd.target)
+        return
+      case 'fill':
+        for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
+        this.restoreSelectionForRange(cmd.source)
         return
       case 'resizeRow':
         this.rowsAxis.setSize(cmd.rowIndex, cmd.before)
@@ -364,6 +392,10 @@ export class DefaultGridEngine implements GridEngine {
       case 'paste':
         for (const w of cmd.after) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
         this.restoreSelectionForRange(cmd.target)
+        return
+      case 'fill':
+        for (const w of cmd.after) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
+        this.restoreSelectionForRange(cmd.result)
         return
       case 'resizeRow':
         this.rowsAxis.setSize(cmd.rowIndex, cmd.after)

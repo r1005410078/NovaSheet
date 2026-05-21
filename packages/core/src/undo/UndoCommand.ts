@@ -27,6 +27,14 @@ export type UndoCommand =
       readonly after: ReadonlyArray<CellWrite>
     }
   | {
+      readonly kind: 'fill'
+      readonly source: CellRange
+      readonly fill: CellRange
+      readonly result: CellRange
+      readonly before: ReadonlyArray<CellWrite>
+      readonly after: ReadonlyArray<CellWrite>
+    }
+  | {
       readonly kind: 'resizeRow'
       readonly rowIndex: number
       readonly before: number
