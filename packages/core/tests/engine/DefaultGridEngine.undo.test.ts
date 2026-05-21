@@ -101,5 +101,33 @@ describe('DefaultGridEngine — editCell undo/redo', () => {
     engine.undo()
     expect(engine.canRedo()).toBe(true)
     expect(engine.canUndo()).toBe(false)
+    engine.redo()
+    // 关键:redo 不应该把新命令 push 到 undoStack(否则栈深会变 2)
+    expect(engine.canUndo()).toBe(true)
+    expect(engine.canRedo()).toBe(false)
+    // 再 undo 一次回到清空状态
+    engine.undo()
+    expect(engine.canUndo()).toBe(false)
+    expect(engine.canRedo()).toBe(true)
+  })
+
+  it('undo editCell 把多 cell range 选区折叠到受影响 cell', () => {
+    const engine = makeEngine()
+    // 先建一个多 cell 选区
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.navigateSelection('ArrowRight', true) // shift+right 扩展
+    engine.navigateSelection('ArrowDown', true)
+    // 注:此时选区跨越多 cell
+    // 然后编辑 active cell
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('z')
+    engine.commitCellEdit()
+    engine.undo()
+    const sel = engine.getSelection()
+    expect(sel.activeCell).toEqual({ rowIndex: 0, colIndex: 0 })
+    // 折叠后,selectedRange 应该是单 cell
+    expect(sel.selectedRange).toEqual({
+      startRow: 0, endRow: 0, startCol: 0, endCol: 0,
+    })
   })
 })
