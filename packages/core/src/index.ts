@@ -109,6 +109,10 @@ export type { ClipboardAction, PasteSkippedCell } from './clipboard/types'
 export { computePasteTarget, applyPaste } from './clipboard/ApplyPaste'
 export type { ApplyPasteSource, GridDimensions, PasteTargetRect } from './clipboard/ApplyPaste'
 
+// 填充柄层（Phase 4.3）
+export { computeFillTarget, unionRange } from './fill/FillTarget'
+export type { FillDimensions, FillDirection, FillTarget } from './fill/FillTarget'
+
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
 
