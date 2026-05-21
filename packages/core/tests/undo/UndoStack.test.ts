@@ -62,8 +62,8 @@ describe('UndoStack', () => {
       if (v) popped.push(v)
     }
     expect(popped.length).toBe(100)
-    expect((popped[0] as { rowIndex: number }).rowIndex).toBe(100)
-    expect((popped[99] as { rowIndex: number }).rowIndex).toBe(1)
+    expect(popped[0]).toEqual(edit(100))
+    expect(popped[99]).toEqual(edit(1))
   })
 
   it('clear 清空双栈', () => {
