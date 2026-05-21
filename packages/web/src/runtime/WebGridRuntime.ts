@@ -24,6 +24,7 @@ import type {
   GridEngine,
   TextMeasurer,
   Theme,
+  UndoCommand,
 } from '@novasheet/core'
 import {
   applyPaste,
@@ -91,6 +92,13 @@ export interface WebGridRuntimeOptions {
   handleLayer?: DomHandleLayer
 }
 
+export interface UndoEvent {
+  readonly command: UndoCommand
+}
+export interface RedoEvent {
+  readonly command: UndoCommand
+}
+
 /** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
 const HOST_RESIZE_KEY = 'host:resize'
 const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
@@ -130,6 +138,9 @@ export class WebGridRuntime {
   private onCut?: (range: CellRange) => void
   private onPaste?: (target: CellRange) => void
   private onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
+  // Phase 4.2 — undo/redo
+  private onUndoCb?: (event: UndoEvent) => void
+  private onRedoCb?: (event: RedoEvent) => void
   /**
    * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
    * 非 multiline 编辑置 null。
@@ -202,6 +213,39 @@ export class WebGridRuntime {
 
   setOnPasteSkipped(cb: (cells: readonly PasteSkippedCell[]) => void): void {
     this.onPasteSkipped = cb
+  }
+
+  // Phase 4.2 — undo/redo
+  setOnUndo(cb: (event: UndoEvent) => void): void {
+    this.onUndoCb = cb
+  }
+
+  setOnRedo(cb: (event: RedoEvent) => void): void {
+    this.onRedoCb = cb
+  }
+
+  canUndo(): boolean {
+    return this.engine.canUndo()
+  }
+
+  canRedo(): boolean {
+    return this.engine.canRedo()
+  }
+
+  undo(): void {
+    if (this.destroyed) return
+    const cmd = this.engine.undo()
+    if (!cmd) return
+    this.afterEngineMutation()
+    this.onUndoCb?.({ command: cmd })
+  }
+
+  redo(): void {
+    if (this.destroyed) return
+    const cmd = this.engine.redo()
+    if (!cmd) return
+    this.afterEngineMutation()
+    this.onRedoCb?.({ command: cmd })
   }
 
   /** snapshot 当前 selectedRange 的值 + TSV；selection 空返回 null。 */

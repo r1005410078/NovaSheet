@@ -84,6 +84,13 @@ function makeEngine(): GridEngine {
       }) as never,
     getViewport: mock(() => ({}) as never),
     getData: mock(() => ({}) as never),
+    undo: mock(() => undefined),
+    redo: mock(() => undefined),
+    canUndo: mock(() => false),
+    canRedo: mock(() => false),
+    commitRowResize: mock(() => {}),
+    commitColumnResize: mock(() => {}),
+    commitPaste: mock(() => {}),
   }
 }
 
