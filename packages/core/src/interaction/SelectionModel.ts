@@ -66,7 +66,7 @@ export class SelectionModel {
     this.selection = EMPTY_SELECTION
   }
 
-  /** Phase 4.2 — undo/redo 恢复矩形选区。 */
+  /** 把整个选区矩形(active + anchor + extent + selectedRange)对齐到给定 range。 */
   setSelectedRange(range: CellRange): void {
     const anchor: CellAddress = { rowIndex: range.startRow, colIndex: range.startCol }
     const extent: CellAddress = { rowIndex: range.endRow, colIndex: range.endCol }

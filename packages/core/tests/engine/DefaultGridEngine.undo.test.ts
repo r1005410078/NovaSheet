@@ -174,4 +174,24 @@ describe('DefaultGridEngine — clearRange undo/redo', () => {
     expect(engine.getData().getCell(0, 'a')).toBeNull()
     expect(engine.getData().getCell(0, 'b')).toBeNull()
   })
+
+  it('clearRange 跳过原本就 null 的 cell:undo 只恢复非空格', () => {
+    const engine = makeEngine()
+    // 手动把 (0,1) 设为 null,模拟混合状态
+    const data = engine.getData() as unknown as { updateCell(rowIndex: number, fieldId: string, value: null): void }
+    data.updateCell(0, 'b', null)
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+    expect(engine.getData().getCell(0, 'b')).toBeNull()
+
+    // 清栈(updateCell 不经过 commitCellEdit,不会 push 到 undo 栈)
+    expect(engine.canUndo()).toBe(false)
+
+    engine.clearRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 1 })
+    expect(engine.getData().getCell(0, 'a')).toBeNull()
+    expect(engine.getData().getCell(0, 'b')).toBeNull()
+
+    engine.undo()
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+    expect(engine.getData().getCell(0, 'b')).toBeNull() // 原本就是 null,不应被恢复成 1
+  })
 })
