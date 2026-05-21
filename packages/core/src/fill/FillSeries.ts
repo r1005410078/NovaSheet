@@ -149,18 +149,24 @@ function inferTextTailProjector(samples: readonly CellValue[]): SeriesProjector 
 
   const first = textSamples[0]!
   const width = Math.max(...textSamples.map((sample) => sample.width))
-  return (offset) => `${prefix}${String(first.numeric + delta * offset).padStart(width, '0')}`
+  return (offset) => `${prefix}${formatTextTailNumber(first.numeric + delta * offset, width)}`
 }
 
 function parseTextTailSample(value: CellValue): TextTailSample | null {
   if (typeof value !== 'string') return null
-  const match = /^(.*?)(\d+)$/.exec(value)
+  const match = /^(.*?)([+-]?\d+)$/.exec(value)
   if (!match) return null
+  const digits = match[2]!.replace(/^[+-]/, '')
   return {
     prefix: match[1]!,
     numeric: Number(match[2]!),
-    width: match[2]!.length,
+    width: digits.length,
   }
+}
+
+function formatTextTailNumber(value: number, width: number): string {
+  const sign = value < 0 ? '-' : ''
+  return `${sign}${String(Math.abs(value)).padStart(width, '0')}`
 }
 
 function cloneCellValue(value: CellValue): CellValue {

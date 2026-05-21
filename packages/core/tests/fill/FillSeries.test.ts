@@ -70,6 +70,16 @@ describe('computeFillWrites', () => {
     expect(writes.map((w) => w.value)).toEqual(['Item 005', 'Item 007'])
   })
 
+  it('extends signed text tail series through zero', () => {
+    const writes = computeFillWrites({
+      data: data([{ label: 'Item -2' }, { label: 'Item -1' }, {}, {}]),
+      source: r(0, 1, 0, 0),
+      fill: r(2, 3, 0, 0),
+      direction: 'down',
+    })
+    expect(writes.map((w) => w.value)).toEqual(['Item 0', 'Item 1'])
+  })
+
   it('extends Date series by millisecond delta', () => {
     const writes = computeFillWrites({
       data: data([{ date: new Date('2026-01-01T00:00:00Z') }, { date: new Date('2026-01-03T00:00:00Z') }, {}, {}]),
