@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from 'bun:test'
+import { describe, expect, it, mock, spyOn } from 'bun:test'
 import {
   DefaultGridEngine,
   InMemoryDataSource,
@@ -52,7 +52,7 @@ function setup() {
   const host = makeHost()
   const renderer = makeRenderer()
   const runtime = new WebGridRuntime({ engine, host, renderer })
-  return { engine, runtime, data }
+  return { engine, runtime, data, host, renderer }
 }
 
 describe('WebGridRuntime — undo/redo + events', () => {
@@ -101,5 +101,17 @@ describe('WebGridRuntime — undo/redo + events', () => {
     runtime.setOnRedo((e) => events.push(e.command))
     runtime.redo()
     expect(events.length).toBe(0)
+  })
+
+  it('runtime.undo() 触发 afterEngineMutation 副作用链(host.setScrollSize + runtime.refresh)', () => {
+    const { engine, runtime, host } = setup()
+    engine.commitRowResize(0, 24, 50)
+    type MockFn = { mock: { calls: unknown[] } }
+    const setScrollSizeBefore = (host.setScrollSize as unknown as MockFn).mock.calls.length
+    const refreshSpy = spyOn(runtime, 'refresh')
+    runtime.undo()
+    const setScrollSizeAfter = (host.setScrollSize as unknown as MockFn).mock.calls.length
+    expect(setScrollSizeAfter).toBeGreaterThan(setScrollSizeBefore)
+    expect(refreshSpy).toHaveBeenCalled()
   })
 })
