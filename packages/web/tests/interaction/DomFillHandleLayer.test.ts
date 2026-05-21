@@ -25,6 +25,8 @@ describe('DomFillHandleLayer', () => {
     expect(root.querySelectorAll('[data-novasheet-fill-preview]').length).toBe(2)
     const preview = root.querySelector('[data-novasheet-fill-preview]') as HTMLElement
     expect(preview.style.borderStyle).toBe('dashed')
+    expect(preview.style.borderWidth).toBe('1px')
+    expect(preview.style.opacity).toBe('0.72')
     layer.hidePreview()
     expect(root.querySelectorAll('[data-novasheet-fill-preview]').length).toBe(0)
   })
