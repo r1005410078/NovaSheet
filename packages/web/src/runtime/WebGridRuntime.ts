@@ -27,7 +27,6 @@ import type {
   UndoCommand,
 } from '@novasheet/core'
 import {
-  applyPaste,
   autofitRowHeights,
   computeCellRect,
   computePasteTarget,
@@ -330,8 +329,11 @@ export class WebGridRuntime {
       colCount: fields.length,
     })
 
-    applyPaste(source, target, schema, fieldIdsAtCols, data, (skipped) =>
-      this.onPasteSkipped?.(skipped),
+    this.engine.commitPaste(
+      source,
+      target,
+      fieldIdsAtCols,
+      (skipped) => this.onPasteSkipped?.(skipped),
     )
     this.afterEngineMutation()
     const targetRange: CellRange = {

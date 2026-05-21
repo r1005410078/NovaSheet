@@ -198,3 +198,24 @@ describe('WebGridRuntime — resize via commit* APIs', () => {
     expect(engine.getColsAxis().getSize(0)).toBe(before)
   })
 })
+
+describe('WebGridRuntime — paste undo integration', () => {
+  it('engine.commitPaste 走 undo 栈,runtime.undo 还原 + 选区设回 target', () => {
+    const { engine, runtime } = setup()
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.commitPaste(
+      { cells: [['p', 99]], sourceFieldIds: ['a', 'b'], typed: false },
+      { startRow: 0, endRow: 0, startCol: 0, endCol: 1, tile: { rows: 1, cols: 1 } },
+      ['a', 'b'],
+    )
+    expect(engine.getData().getCell(0, 'a')).toBe('p')
+    expect(engine.getData().getCell(0, 'b')).toBe(99)
+    runtime.undo()
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+    expect(engine.getData().getCell(0, 'b')).toBe(1)
+    const sel = engine.getSelection()
+    expect(sel.selectedRange).toEqual({
+      startRow: 0, endRow: 0, startCol: 0, endCol: 1,
+    })
+  })
+})

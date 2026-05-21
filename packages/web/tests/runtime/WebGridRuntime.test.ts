@@ -814,33 +814,43 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
   })
 
   it('paste 内部缓存命中走 typed 路径（保留类型）', async () => {
-    const { runtime, adapter, data } = setupForCopyCut()
+    const { engine, runtime, adapter } = setupForCopyCut()
     await runtime.handleClipboardCopy()
     // adapter.readText 返回 copy 时写入的同样 TSV → 内部缓存 hash 命中
     adapter.readText = mock(async () => 'hello\t42')
     expect(await runtime.handleClipboardPaste()).toBe(true)
-    // typed 路径：number 字段值保留为 42（不是字符串）
-    const writeCalls = data.updateCell.mock.calls
-    const bWrite = writeCalls.find((c) => c[1] === 'b')
-    expect(bWrite?.[2]).toBe(42)
+    // typed 路径：engine.commitPaste 收到 typed:true 的 source，number 字段值保留为 42
+    const calls = (engine.commitPaste as ReturnType<typeof mock>).mock.calls
+    expect(calls.length).toBe(1)
+    const source = calls[0]?.[0] as { typed: boolean; cells: unknown[][] }
+    expect(source.typed).toBe(true)
+    const bVal = source.cells[0]?.[1]
+    expect(bVal).toBe(42)
   })
 
   it('paste 外部 TSV（hash 不匹配）走 parse + coerce 路径', async () => {
-    const { runtime, adapter, data } = setupForCopyCut()
+    const { engine, runtime, adapter } = setupForCopyCut()
     // 没 copy 过，clipboardCache 为 null；外部 TSV
     adapter.readText = mock(async () => 'external\t99')
     expect(await runtime.handleClipboardPaste()).toBe(true)
-    const writeCalls = data.updateCell.mock.calls
-    expect(writeCalls.map((c) => [c[1], c[2]])).toEqual([
-      ['a', 'external'],
-      ['b', 99],
-    ])
+    // 外部 TSV 走 parse+coerce 路径：engine.commitPaste 收到正确的 source cells
+    const calls = (engine.commitPaste as ReturnType<typeof mock>).mock.calls
+    expect(calls.length).toBe(1)
+    const source = calls[0]?.[0] as { typed: boolean; cells: unknown[][] }
+    expect(source.typed).toBe(false)
+    expect(source.cells[0]).toEqual(['external', 99])
   })
 
   it('paste 类型不匹配触发 onPasteSkipped', async () => {
-    const { runtime, adapter } = setupForCopyCut()
+    const { engine, runtime, adapter } = setupForCopyCut()
     const skipped = mock((_: readonly { rowIndex: number; fieldId: string; reason: string }[]) => {})
     runtime.setOnPasteSkipped(skipped as never)
+    // 让 commitPaste mock 调用传入的 onSkipped 回调（模拟引擎行为）
+    ;(engine.commitPaste as ReturnType<typeof mock>).mockImplementation(
+      (_src: unknown, _tgt: unknown, _fids: unknown, onSkippedCb?: (cells: readonly { rowIndex: number; fieldId: string; reason: string }[]) => void) => {
+        onSkippedCb?.([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
+      },
+    )
     adapter.readText = mock(async () => 'ok\tabc')  // 'abc' → number 列 → skip
     await runtime.handleClipboardPaste()
     expect(skipped).toHaveBeenCalledWith([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
