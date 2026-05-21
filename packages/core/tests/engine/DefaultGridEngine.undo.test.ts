@@ -263,4 +263,26 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
     )
     expect(engine.canUndo()).toBe(false)
   })
+
+  it('typed:true 路径同样进 undo 栈(写入前 onWrite + 跳过 coerce)', () => {
+    const engine = makeEngine()
+    // typed:true 表示 cells 已是 CellValue,跳过 coerceForType;b 列直接接收 number
+    const typedSource: ApplyPasteSource = {
+      cells: [['typed-text', 42]],
+      sourceFieldIds: ['a', 'b'],
+      typed: true,
+    }
+    engine.commitPaste(typedSource, targetRect(0, 0, 0, 1), ['a', 'b'])
+    expect(engine.getData().getCell(0, 'a')).toBe('typed-text')
+    expect(engine.getData().getCell(0, 'b')).toBe(42)
+    expect(engine.canUndo()).toBe(true)
+
+    engine.undo()
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+    expect(engine.getData().getCell(0, 'b')).toBe(1)
+
+    engine.redo()
+    expect(engine.getData().getCell(0, 'a')).toBe('typed-text')
+    expect(engine.getData().getCell(0, 'b')).toBe(42)
+  })
 })

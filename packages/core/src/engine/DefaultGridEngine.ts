@@ -25,7 +25,7 @@ import type { RenderFrame } from '../render/RenderFrame'
 import { denseGridTheme } from '../theme/denseGridTheme'
 import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
-import type { UndoCommand } from '../undo/UndoCommand'
+import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import type { GridEngine, GridEngineOptions } from './GridEngine'
 
 /**
@@ -304,8 +304,8 @@ export class DefaultGridEngine implements GridEngine {
     onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
   ): void {
     if (!isMutableDataSource(this.data)) return
-    const before: { rowIndex: number; fieldId: string; value: CellValue }[] = []
-    const after: { rowIndex: number; fieldId: string; value: CellValue }[] = []
+    const before: CellWrite[] = []
+    const after: CellWrite[] = []
     applyPaste(
       source,
       target,
