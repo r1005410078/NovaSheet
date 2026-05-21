@@ -179,3 +179,22 @@ describe('WebGridRuntime — keyboard routing', () => {
     expect(engine.getRowsAxis().getSize(0)).toBe(50)
   })
 })
+
+describe('WebGridRuntime — resize via commit* APIs', () => {
+  it('engine.commitRowResize 直调走 undo 栈', () => {
+    const { engine, runtime } = setup()
+    const before = engine.getRowsAxis().getSize(0)
+    engine.commitRowResize(0, before, 100)
+    expect(engine.getRowsAxis().getSize(0)).toBe(100)
+    runtime.undo()
+    expect(engine.getRowsAxis().getSize(0)).toBe(before)
+  })
+
+  it('engine.commitColumnResize 直调走 undo 栈', () => {
+    const { engine, runtime } = setup()
+    const before = engine.getColsAxis().getSize(0)
+    engine.commitColumnResize(0, before, 200)
+    runtime.undo()
+    expect(engine.getColsAxis().getSize(0)).toBe(before)
+  })
+})

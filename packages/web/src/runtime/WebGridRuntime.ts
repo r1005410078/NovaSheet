@@ -601,10 +601,15 @@ export class WebGridRuntime {
     const { handle, startSize, previewSize } = this.resizeDrag
     this.resizeDrag = null
     this.handleLayer?.hideIndicator()
-    if (previewSize !== startSize) {
-      this.applyResizeSize(handle, previewSize)
-      this.afterEngineMutation()
+    if (previewSize === startSize) return
+    if (handle.kind === 'row' && handle.rowIndex !== undefined) {
+      this.engine.commitRowResize(handle.rowIndex, startSize, previewSize)
+    } else if (handle.kind === 'column' && handle.fieldId) {
+      const colIndex = this.engine.getColumnIndex(handle.fieldId)
+      if (colIndex < 0) return
+      this.engine.commitColumnResize(colIndex, startSize, previewSize)
     }
+    this.afterEngineMutation()
   }
 
   handleCellEditDraft(draft: string): void {
@@ -631,7 +636,14 @@ export class WebGridRuntime {
     const current = this.readResizeSize(handle)
     if (current === null) return
     const next = Math.max(MIN_RESIZE_SIZE, current + delta)
-    this.applyResizeSize(handle, next)
+    if (next === current) return
+    if (handle.kind === 'row' && handle.rowIndex !== undefined) {
+      this.engine.commitRowResize(handle.rowIndex, current, next)
+    } else if (handle.kind === 'column' && handle.fieldId) {
+      const colIndex = this.engine.getColumnIndex(handle.fieldId)
+      if (colIndex < 0) return
+      this.engine.commitColumnResize(colIndex, current, next)
+    }
     this.syncResizeHandles()
     this.refresh()
   }
@@ -1054,20 +1066,6 @@ export class WebGridRuntime {
     const delta =
       drag.handle.kind === 'column' ? clientX - drag.startClientX : clientY - drag.startClientY
     return Math.max(MIN_RESIZE_SIZE, drag.startSize + delta)
-  }
-
-  private applyResizeSize(handle: ResizeHandleRect, size: number): void {
-    if (handle.kind === 'column' && handle.fieldId) {
-      this.engine.setColumnWidth(handle.fieldId, size)
-      this.resizeSpacer()
-      this.invalidate()
-      return
-    }
-    if (handle.kind === 'row' && handle.rowIndex !== undefined) {
-      this.engine.setRowHeight(handle.rowIndex, size)
-      this.resizeSpacer()
-      this.invalidate()
-    }
   }
 
   private showResizeIndicator(size: number): void {

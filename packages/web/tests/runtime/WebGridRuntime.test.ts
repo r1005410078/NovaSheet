@@ -676,7 +676,7 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
     height: 32,
   }
 
-  it('拖拽中只更新预览，松手才 setColumnWidth', () => {
+  it('拖拽中只更新预览，松手才 commitColumnResize', () => {
     const engine = makeEngine()
     engine.getColumnIndex = () => 0
     engine.getColsAxis = () =>
@@ -694,16 +694,16 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
     })
 
     runtime.handleResizePointerDown(columnHandle, 1, 100, 0)
-    expect(engine.setColumnWidth).not.toHaveBeenCalled()
+    expect(engine.commitColumnResize).not.toHaveBeenCalled()
     expect(showIndicator).toHaveBeenCalled()
 
     runtime.handleResizePointerMove(1, 130, 0)
-    expect(engine.setColumnWidth).not.toHaveBeenCalled()
+    expect(engine.commitColumnResize).not.toHaveBeenCalled()
     expect(showIndicator).toHaveBeenCalledTimes(2)
 
     runtime.handleResizePointerUp(1)
-    expect(engine.setColumnWidth).toHaveBeenCalledTimes(1)
-    expect(engine.setColumnWidth).toHaveBeenCalledWith('name', 130)
+    expect(engine.commitColumnResize).toHaveBeenCalledTimes(1)
+    expect(engine.commitColumnResize).toHaveBeenCalledWith(0, 100, 130)
     expect(hideIndicator).toHaveBeenCalled()
   })
 
@@ -728,7 +728,7 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
     runtime.handleResizePointerDown(columnHandle, 1, 100, 0)
     runtime.handleResizePointerUp(1)
 
-    expect(engine.setColumnWidth).not.toHaveBeenCalled()
+    expect(engine.commitColumnResize).not.toHaveBeenCalled()
   })
 })
 
