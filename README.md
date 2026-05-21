@@ -10,12 +10,12 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ## 当前状态
 
-三包拆分已完成；**M1 Foundation**、**M2 虚拟滚动**、**M3 冻结 / 尺寸自适应**、**Phase 2 Canvas 交互绘制分层**、**Phase 3.1–3.5 选择 / 键盘 / 编辑交互**、**Phase 4.0 右键菜单** 与 **Phase 4.1 剪贴板** 已落地。公共 API 从 `@novasheet/web` 导出。
+三包拆分已完成；**M1 Foundation**、**M2 虚拟滚动**、**M3 冻结 / 尺寸自适应**、**Phase 2 Canvas 交互绘制分层**、**Phase 3.1–3.5 选择 / 键盘 / 编辑交互**、**Phase 4.0 右键菜单**、**Phase 4.1 剪贴板** 与 **Phase 4.2 Undo / Redo** 已落地。公共 API 从 `@novasheet/web` 导出。
 
 | 维度                     | 数值                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d`                                                     |
-| 测试                     | 335 passing（bun:test，跨三包）                                                                                      |
+| 测试                     | 385 passing（bun:test，跨三包）                                                                                      |
 | Lint / Typecheck / Build | 全部 clean                                                                                                           |
 | 公共 API                 | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
 
@@ -253,12 +253,13 @@ Phase 3 聚焦“用户能像表格一样操作当前画布”，不承载复杂
 设计文档：
 - [Phase 4.0 右键菜单](docs/superpowers/specs/2026-05-17-context-menu-design.md)
 - [Phase 4.1 剪贴板](docs/superpowers/specs/2026-05-18-clipboard-design.md)
+- [Phase 4.2 Undo / Redo](docs/superpowers/specs/2026-05-21-undo-redo-design.md)
 
 | 子阶段    | 范围                         | 交付内容                                                                                    |
 | --------- | ---------------------------- | ------------------------------------------------------------------------------------------- |
 | Phase 4.0 ✅ | 单元格右键菜单               | DOM `ContextMenuLayer`（portal 到 body 避开祖先 transform）；Cut / Copy / Paste 条目；Paste 默认 disabled，`Grid.setClipboardReady(true)` 启用；选中项走 `onContextMenuAction(action, ctx)` 回调；ARIA menu pattern + ↑↓/Home/End/Enter/Esc/Tab。 |
 | Phase 4.1 ✅ | 剪贴板                  | TSV 序列化 + 内部类型缓存（FNV-1a hash 验证）；Ctrl/Cmd+X/C/V 与菜单同一引擎；Cut 立即清（Sheets 风格）；Excel/Sheets 双向互通；类型不匹配跳过 + `onPasteSkipped` 事件。 |
-| Phase 4.2 | Undo / Redo                  | 命令栈；与编辑 / 剪贴板操作挂钩。                                                           |
+| Phase 4.2 ✅ | Undo / Redo                  | UndoStack(深 100)+ discriminated-union UndoCommand；cell edit / Cut / Paste / Row+Col resize 进栈；`Cmd/Ctrl+Z`、`Cmd+Shift+Z`、`Ctrl+Y` 键盘；编辑中 Cmd/Ctrl+Z 交给浏览器 input 原生；Undo/Redo 后选区恢复到受影响范围；`Grid.undo() / redo() / canUndo() / canRedo()` + `onUndo / onRedo` 事件。 |
 | Phase 4.3 | 填充柄                       | 选区右下角 drag fill（overlay 层）——序列 / 公式外推，**不是**填充颜色（颜色属 Phase 5 cell formatting）。 |
 | Phase 4.4 | 排序 / 筛选                  | 列头排序指示；筛选 UI（视 DataSource 能力）。                                               |
 | Phase 4.5 | 行列结构 + 头区右键菜单      | 插入 / 删除 / 隐藏行列；**列头 / 行头** context menu（依赖本阶段 API）。                  |
