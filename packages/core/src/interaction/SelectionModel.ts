@@ -66,6 +66,18 @@ export class SelectionModel {
     this.selection = EMPTY_SELECTION
   }
 
+  /** Phase 4.2 — undo/redo 恢复矩形选区。 */
+  setSelectedRange(range: CellRange): void {
+    const anchor: CellAddress = { rowIndex: range.startRow, colIndex: range.startCol }
+    const extent: CellAddress = { rowIndex: range.endRow, colIndex: range.endCol }
+    this.selection = {
+      activeCell: anchor,
+      anchorCell: anchor,
+      extentCell: extent,
+      selectedRange: normalizeRange(anchor, extent),
+    }
+  }
+
   /** Phase 3.3 — 键盘导航；返回移动后的焦点格（用于滚动跟随）。 */
   navigate(intent: SelectionNavigationIntent, bounds: GridIndexBounds): CellAddress | null {
     return applySelectionNavigation(this, intent, bounds)

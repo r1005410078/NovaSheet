@@ -184,12 +184,19 @@ export class DefaultGridEngine implements GridEngine {
   clearRange(range: CellRange): void {
     if (!isMutableDataSource(this.data)) return
     const fields = this.data.getSchema().fields
+    const before: { rowIndex: number; fieldId: string; value: CellValue }[] = []
     for (let r = range.startRow; r <= range.endRow; r++) {
       for (let c = range.startCol; c <= range.endCol; c++) {
         const field = fields[c]
         if (!field) continue
+        const v = this.data.getCell(r, field.id)
+        if (v === null || v === undefined) continue
+        before.push({ rowIndex: r, fieldId: field.id, value: v })
         this.data.updateCell(r, field.id, null)
       }
+    }
+    if (before.length > 0) {
+      this.undoStack.push({ kind: 'clearRange', range, before })
     }
   }
 
@@ -293,6 +300,10 @@ export class DefaultGridEngine implements GridEngine {
         this.applyEditCellWrite(cmd.rowIndex, cmd.fieldId, cmd.before)
         this.restoreSelectionForEdit(cmd.rowIndex, cmd.fieldId)
         return
+      case 'clearRange':
+        for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
+        this.restoreSelectionForRange(cmd.range)
+        return
       default:
         return
     }
@@ -304,9 +315,17 @@ export class DefaultGridEngine implements GridEngine {
         this.applyEditCellWrite(cmd.rowIndex, cmd.fieldId, cmd.after)
         this.restoreSelectionForEdit(cmd.rowIndex, cmd.fieldId)
         return
+      case 'clearRange':
+        for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, null)
+        this.restoreSelectionForRange(cmd.range)
+        return
       default:
         return
     }
+  }
+
+  private restoreSelectionForRange(range: CellRange): void {
+    this.selection.setSelectedRange(range)
   }
 
   private applyEditCellWrite(rowIndex: number, fieldId: string, value: CellValue): void {

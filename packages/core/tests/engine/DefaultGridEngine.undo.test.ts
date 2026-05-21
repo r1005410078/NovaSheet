@@ -111,7 +111,7 @@ describe('DefaultGridEngine — editCell undo/redo', () => {
     expect(engine.canRedo()).toBe(true)
   })
 
-  it('undo editCell 把多 cell range 选区折叠到受影响 cell', () => {
+  it('undo editCell 把多 cell range 选区折叠到受影响 cell (Task 3)', () => {
     const engine = makeEngine()
     // 先建一个多 cell 选区
     engine.selectCell({ rowIndex: 0, colIndex: 0 })
@@ -129,5 +129,49 @@ describe('DefaultGridEngine — editCell undo/redo', () => {
     expect(sel.selectedRange).toEqual({
       startRow: 0, endRow: 0, startCol: 0, endCol: 0,
     })
+  })
+})
+
+describe('DefaultGridEngine — clearRange undo/redo', () => {
+  it('clearRange 收集非空 cell 为 before 后 push 一条', () => {
+    const engine = makeEngine()
+    engine.clearRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 1 })
+    expect(engine.getData().getCell(0, 'a')).toBeNull()
+    expect(engine.getData().getCell(0, 'b')).toBeNull()
+    expect(engine.canUndo()).toBe(true)
+  })
+
+  it('clearRange 全空范围不 push', () => {
+    const engine = makeEngine()
+    engine.clearRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 1 })
+    expect(engine.canUndo()).toBe(true)
+    // 再清一次:此时全是 null
+    engine.clearRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 1 })
+    // 栈深仍为 1(第二次未 push)
+    engine.undo()
+    expect(engine.canUndo()).toBe(false)
+  })
+
+  it('undo clearRange 恢复原值 + 选区设回 range', () => {
+    const engine = makeEngine()
+    engine.clearRange({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
+    const cmd = engine.undo()
+    expect(cmd?.kind).toBe('clearRange')
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+    expect(engine.getData().getCell(0, 'b')).toBe(1)
+    expect(engine.getData().getCell(1, 'a')).toBe('y')
+    expect(engine.getData().getCell(1, 'b')).toBe(2)
+    const sel = engine.getSelection()
+    expect(sel.activeCell).toEqual({ rowIndex: 0, colIndex: 0 })
+    expect(sel.selectedRange).toEqual({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
+  })
+
+  it('redo clearRange 再次清除', () => {
+    const engine = makeEngine()
+    engine.clearRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 1 })
+    engine.undo()
+    engine.redo()
+    expect(engine.getData().getCell(0, 'a')).toBeNull()
+    expect(engine.getData().getCell(0, 'b')).toBeNull()
   })
 })
