@@ -15,6 +15,22 @@ describe('WebGridRuntime fill handle', () => {
     expect(fillLayer.sync).toHaveBeenCalled()
   })
 
+  it('resyncs fill handle when pointer selection ends', () => {
+    const fillLayer = makeFillLayer()
+    const engine = makeEngine()
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer })
+
+    runtime.handleHostPointerDown({ x: 50, y: 45, shiftKey: false })
+    runtime.handleHostPointerUp()
+
+    expect(fillLayer.sync).toHaveBeenLastCalledWith({
+      x: 196,
+      y: 86,
+      width: 8,
+      height: 8,
+    })
+  })
+
   it('drag commits fill target and emits onFill', () => {
     const engine = makeEngine()
     const fillLayer = makeFillLayer()

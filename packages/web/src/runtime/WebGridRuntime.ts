@@ -788,6 +788,7 @@ export class WebGridRuntime {
     this.draggingSelection = false
     this.lastDragPointer = null
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
+    this.syncFillHandle()
   }
 
   handleHostDoubleClick(event: WebPointerEvent): void {
