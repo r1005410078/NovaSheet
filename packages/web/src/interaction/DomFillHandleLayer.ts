@@ -1,11 +1,13 @@
 import type { OverlayRect } from './RangeOverlayRects'
 
+/** DOM 层只转发原始 client 坐标；runtime 负责转换成 container-local 坐标。 */
 export interface DomFillHandleLayerCallbacks {
   readonly onFillPointerDown: (pointerId: number, clientX: number, clientY: number) => void
   readonly onFillPointerMove: (pointerId: number, clientX: number, clientY: number) => void
   readonly onFillPointerUp: (pointerId: number) => void
 }
 
+/** 填充柄和拖拽预览的 DOM overlay；独立于 canvas，保证手柄命中和样式可控。 */
 export class DomFillHandleLayer {
   private layer!: HTMLDivElement
   private handle!: HTMLDivElement
@@ -77,6 +79,7 @@ export class DomFillHandleLayer {
         position: 'absolute',
         pointerEvents: 'none',
         boxSizing: 'border-box',
+        // 预览框按 Google Sheets 的感觉处理得比选中框更轻：细虚线 + 低不透明度。
         borderWidth: '1px',
         borderStyle: 'dashed',
         borderColor: 'var(--novasheet-selection-border, #0969da)',

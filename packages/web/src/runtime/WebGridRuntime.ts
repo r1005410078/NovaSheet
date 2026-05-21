@@ -687,6 +687,7 @@ export class WebGridRuntime {
     if (!target) return
     const result = this.engine.commitFill(target.source, target.fill, target.direction)
     if (!result) return
+    // 填充可能写入 wrap 文本；只对实际 touched rows 重算行高，避免拖一次就全表 autofit。
     const autofit = this.autofitRows({ rows: uniqueRows(result.writes.map((w) => w.rowIndex)) })
     if (autofit.changedRows === 0) this.afterEngineMutation()
     this.onFill?.({ source: target.source, fill: target.fill, result: target.result, direction: target.direction })

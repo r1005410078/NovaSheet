@@ -1,18 +1,26 @@
-# Phase 4.3 Fill Handle Implementation Plan
+# Phase 4.3 填充柄实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给 agentic workers:** 必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`,按 task 逐项实施。步骤使用 checkbox（`- [ ]`）语法跟踪。
 
-**Goal:** Build Sheets-style fill handle drag with copy + number/date/text-tail series fill, integrated with undo/redo and the public web API.
+**目标:** 实现 Sheets 风格的填充柄拖拽,支持复制、数字 / Date / 文本尾号序列填充,并接入 undo/redo 与 web public API。
 
-**Architecture:** Core owns fill target and fill write computation as pure functions, plus `DefaultGridEngine.commitFill()` and undo/redo dispatch. Web owns DOM overlay hit targets and preview rectangles, with `WebGridRuntime` orchestrating drag state, auto-scroll, commit, and events. Canvas rendering remains unchanged except for the existing selection overlay.
+**架构:** Core 以纯函数负责填充目标范围和填充值计算,并提供 `DefaultGridEngine.commitFill()` 与 undo/redo 分发。Web 负责 DOM overlay 命中目标和预览矩形,由 `WebGridRuntime` 编排拖拽状态、auto-scroll、commit 与事件。Canvas 渲染除已有选区 overlay 外保持不变。
 
-**Tech Stack:** TypeScript, Bun test, `@novasheet/core`, `@novasheet/web`, DOM overlay layers, Canvas2D backend.
+**技术栈:** TypeScript、Bun test、`@novasheet/core`、`@novasheet/web`、DOM overlay layers、Canvas2D backend。
+
+**实施后对齐记录:** 本计划已落地并合入 `main`。实现过程中根据手工体验和 review 增补了几项与当前功能一致的 follow-up:
+
+- 填充柄样式对齐 Google Sheets:8x8 圆形手柄,拖拽 preview 为更轻的 1px dashed overlay。
+- DOM pointer 的 `clientX/clientY` 在 runtime 内转换为 container-local 坐标,避免拖拽预览与鼠标错位。
+- pointer 选区结束后同一帧同步填充柄,避免先出现选中框、后出现手柄的视觉延迟。
+- 文本尾号支持 signed suffix,例如 `Item -2`, `Item -1` 下拉得到 `Item 0`, `Item 1`。
+- 填充写入 `wrap: true` 文本后,只对实际写入行触发 autofit,避免全表重算。
 
 ---
 
-## File Structure
+## 文件结构
 
-Create:
+新增:
 
 - `packages/core/src/fill/FillTarget.ts` — computes fill direction/ranges from source selection and hovered cell.
 - `packages/core/src/fill/FillSeries.ts` — computes write values for copy, number series, Date series, and text-tail series.
@@ -27,7 +35,7 @@ Create:
 - `apps/storybook/src/stories/FillHandle.stories.ts` — manual demo.
 - `apps/storybook/src/stories/snippets/fill-handle.basic.snippet.ts` — story snippet.
 
-Modify:
+修改:
 
 - `packages/core/src/undo/UndoCommand.ts` — add `fill` command.
 - `packages/core/src/engine/GridEngine.ts` — add `commitFill`.
@@ -42,7 +50,7 @@ Modify:
 
 ---
 
-## Task 1: Core Fill Target
+## Task 1: Core 填充目标范围
 
 **Files:**
 - Create: `packages/core/src/fill/FillTarget.ts`
@@ -244,7 +252,7 @@ git commit -m "feat(core): compute fill handle target ranges"
 
 ---
 
-## Task 2: Core Fill Series Writes
+## Task 2: Core 填充序列写入
 
 **Files:**
 - Create: `packages/core/src/fill/FillSeries.ts`
@@ -535,7 +543,7 @@ git commit -m "feat(core): compute fill handle series writes"
 
 ---
 
-## Task 3: Engine Commit Fill and Undo/Redo
+## Task 3: Engine 提交填充与 Undo/Redo
 
 **Files:**
 - Modify: `packages/core/src/undo/UndoCommand.ts`
@@ -775,7 +783,7 @@ git commit -m "feat(core): commit fill handle operations with undo"
 
 ---
 
-## Task 4: Web Range Overlay Rects
+## Task 4: Web 范围 Overlay 矩形
 
 **Files:**
 - Create: `packages/web/src/interaction/RangeOverlayRects.ts`
@@ -924,7 +932,7 @@ git commit -m "feat(web): compute range overlay rects for fill handle"
 
 ---
 
-## Task 5: DOM Fill Handle Layer
+## Task 5: DOM 填充柄 Layer
 
 **Files:**
 - Create: `packages/web/src/interaction/DomFillHandleLayer.ts`
@@ -1145,7 +1153,7 @@ git commit -m "feat(web): add fill handle DOM layer"
 
 ---
 
-## Task 6: Web Runtime Fill Drag
+## Task 6: Web Runtime 填充拖拽
 
 **Files:**
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
@@ -1486,7 +1494,7 @@ git commit -m "feat(web): wire fill handle drag runtime"
 
 ---
 
-## Task 7: Public API and Storybook
+## Task 7: Public API 与 Storybook
 
 **Files:**
 - Modify: `packages/web/src/grid/GridController.ts`
@@ -1636,10 +1644,10 @@ git commit -m "feat(web): expose fill handle API and story"
 
 ---
 
-## Task 8: Final Verification
+## Task 8: 最终验证
 
-**Files:**
-- No new files unless verification reveals a bug.
+**文件:**
+- 除非验证暴露 bug,否则不新增文件。
 
 - [ ] **Step 1: Run full test suite**
 
@@ -1647,7 +1655,7 @@ git commit -m "feat(web): expose fill handle API and story"
 bun test
 ```
 
-Expected: all tests pass.
+预期:所有测试通过。
 
 - [ ] **Step 2: Run typecheck**
 
@@ -1655,7 +1663,7 @@ Expected: all tests pass.
 bun run typecheck
 ```
 
-Expected: all packages exit 0.
+预期:所有 packages exit 0。
 
 - [ ] **Step 3: Run lint**
 
@@ -1663,7 +1671,7 @@ Expected: all packages exit 0.
 bun run lint
 ```
 
-Expected: no lint errors.
+预期:无 lint errors。
 
 - [ ] **Step 4: Build storybook**
 
@@ -1671,22 +1679,22 @@ Expected: no lint errors.
 bun run build-storybook
 ```
 
-Expected: Storybook build succeeds.
+预期:Storybook build 成功。
 
-- [ ] **Step 5: Commit any verification fixes**
+- [ ] **Step 5: 提交验证过程中发现的问题修复**
 
-When a verification command reveals a real issue, commit the fix with a focused message and exact changed files:
+当验证命令暴露真实问题时,用聚焦的 commit message 和精确文件列表提交修复:
 
 ```bash
 git add packages/core/src packages/core/tests packages/web/src packages/web/tests apps/storybook/src README.md
 git commit -m "fix: stabilize fill handle verification"
 ```
 
-When no files changed, record the verification output in the final handoff and do not create an empty commit.
+如果没有文件变化,在最终交接中记录验证输出,不要创建空 commit。
 
 ---
 
-## Spec Coverage Checklist
+## Spec 覆盖清单
 
 - Fill handle UI: Tasks 5 and 6.
 - Four directions: Tasks 1, 2, 3, and 6.

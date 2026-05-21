@@ -1,4 +1,4 @@
-# Phase 4.3 — Fill Handle 设计
+# Phase 4.3 — 填充柄设计
 
 **日期:** 2026-05-21
 **所属阶段:** Phase 4.3(剪贴板与结构操作 / 填充柄)
@@ -12,13 +12,14 @@
 
 | 能力 | 是否交付 | 说明 |
 | --- | --- | --- |
-| 选区右下角 fill handle | 是 | DOM overlay,不在 canvas 上接 pointer |
+| 选区右下角填充柄 | 是 | DOM overlay,不在 canvas 上接 pointer |
 | 向下 / 向右 / 向上 / 向左拖拽填充 | 是 | 只允许沿一个主方向扩展,与表格软件一致 |
-| 拖拽目标区域预览 | 是 | 用 DOM overlay 框显示即将写入的 fill range |
+| 拖拽目标区域预览 | 是 | 用更轻的 DOM 虚线框显示即将写入的 fill range |
 | 单值复制 | 是 | 单格或单样本无法推导序列时复制 |
 | 数字等差序列 | 是 | `1,2 -> 3,4`;单个数字默认复制 |
 | 文本尾号序列 | 是 | `Item 1, Item 2 -> Item 3`;单个文本默认复制 |
-| Date 按天差序列 | 是 | 两个 Date 可推导天差;单个 Date 默认复制 |
+| Date 按毫秒差序列 | 是 | 两个 Date 可推导毫秒差;常见日期表现为按天填充;单个 Date 默认复制 |
+| 填充后 wrap 文本自动行高 | 是 | 只对本次 fill 实际写入的行做 autofit |
 | checkbox / select / array / url / 普通文本复制 | 是 | 不做语义外推 |
 | Undo / Redo | 是 | 一次拖拽提交为一条 undo 命令 |
 | 公式引用外推 | 否 | 当前没有公式模型/解析器,避免假支持 |
@@ -39,7 +40,7 @@
 ### 2.1 手柄显示
 
 - 当存在非空 `selectedRange`,且没有 cell edit / resize drag / selection drag / context menu open 时显示 fill handle。
-- 手柄锚在选区右下角,大小 7x7 px,使用 `theme.colors.selectionBorder`。
+- 手柄锚在选区右下角,大小 8x8 px,圆形,使用 `theme.colors.selectionBorder`。
 - 手柄位于 DOM overlay 层,`pointer-events: auto`;其它 overlay 区域保持 `pointer-events: none`。
 - source range 的右下角不可见时不显示手柄。冻结区和普通区都可能绘制同一个选区边界;DOM layer 只选择当前 frame 中可见的那个右下角位置。
 
@@ -70,7 +71,8 @@ dragging -> pointerup/pointercancel -> idle(commit or cancel)
 - preview 为空时取消。
 - preview 非空时调用 `engine.commitFill(sourceRange, fillRange, direction)`。
 - 提交后 selection 变成 source + fill 的联合矩形,active cell 保持 source 左上角。
-- 发 `onFill` 事件,然后 `afterEngineMutation()`。
+- 对本次 `writes` 触及的行调用 `autofitRows`,让填充出来的 wrap 文本立刻撑开行高;若行高没有变化,仍走 `afterEngineMutation()` 保持刷新语义。
+- 发 `onFill` 事件。
 
 ---
 
@@ -145,8 +147,8 @@ export function computeFillWrites(input: ComputeFillWritesInput): readonly FillW
 推导优先级:
 
 1. **number 等差:** source 在轴向上至少 2 个有限 number,且相邻差值稳定。向下/向右延续正方向;向上/向左反向延续。
-2. **Date 等差天数:** source 在轴向上至少 2 个有效 Date,相邻毫秒差稳定。按毫秒差延续,常见日期表现为按天填充。
-3. **文本尾号:** source 在轴向上至少 2 个 string,且每个值都匹配同一前缀/后缀与尾部整数,整数差值稳定。例如 `Q1`, `Q2`;`Item 001`, `Item 002`。保留数字宽度。
+2. **Date 等差毫秒:** source 在轴向上至少 2 个有效 Date,相邻毫秒差稳定。按毫秒差延续,常见日期表现为按天填充。
+3. **文本尾号:** source 在轴向上至少 2 个 string,且每个值都匹配同一前缀与尾部整数,整数差值稳定。例如 `Q1`, `Q2`;`Item 001`, `Item 002`;`Item -2`, `Item -1`。保留数字宽度,负数过零后自然输出 `0`, `1`,不输出 `-0` 或双负号。
 4. **复制:** 任一规则不匹配时,按 source pattern 循环复制。
 
 单个样本永远复制,不猜测 `1 -> 2` 或 `Item 1 -> Item 2`。这避免用户只想复制编号时被意外改写。未来可用 modifier 或设置切换。
@@ -216,7 +218,7 @@ export interface FillCommitResult {
 
 ## 6. Web 层接入
 
-### 6.1 DOM Fill Handle Layer
+### 6.1 DOM 填充柄 Layer
 
 新增 `DomFillHandleLayer`:
 
@@ -226,6 +228,7 @@ export interface FillCommitResult {
 - callbacks:`onFillPointerDown/Move/Up`。
 
 手柄层与 resize handle 同级,但 z-index 高于 resize handles。resize handles 位于表头/行头边界;fill handle 位于 body selection 角落,命中区不会冲突。
+拖拽预览使用 1px dashed + 低透明度,视觉上比选中框更轻,贴近 Google Sheets 的反馈层级。
 
 ### 6.2 Runtime 状态
 
@@ -311,6 +314,7 @@ grid.onFill(handler: (e: FillEvent) => void): () => void
 - attach/sync/destroy。
 - pointerdown/move/up 回调与 pointer capture。
 - preview 显示与隐藏。
+- 圆形手柄与更轻的虚线 preview 样式。
 
 `packages/web/tests/runtime/WebGridRuntime.fill.test.ts`
 
@@ -319,6 +323,7 @@ grid.onFill(handler: (e: FillEvent) => void): () => void
 - preview range 更新。
 - cell editing/resize dragging/drag selecting 时隐藏或不进入 fill drag。
 - 成功 fill 后触发 `onFill`。
+- 填充写入 wrap 文本后,实际写入行会自动 autofit。
 
 ### 7.3 Storybook
 
@@ -340,9 +345,12 @@ grid.onFill(handler: (e: FillEvent) => void): () => void
 - `packages/core/tests/fill/FillSeries.test.ts`
 - `packages/core/tests/engine/DefaultGridEngine.fill.test.ts`
 - `packages/web/src/interaction/DomFillHandleLayer.ts`
+- `packages/web/src/interaction/RangeOverlayRects.ts`
 - `packages/web/tests/interaction/DomFillHandleLayer.test.ts`
+- `packages/web/tests/interaction/RangeOverlayRects.test.ts`
 - `packages/web/tests/runtime/WebGridRuntime.fill.test.ts`
 - `apps/storybook/src/stories/FillHandle.stories.ts`
+- `apps/storybook/src/stories/snippets/fill-handle.basic.snippet.ts`
 
 **修改:**
 
@@ -374,6 +382,8 @@ grid.onFill(handler: (e: FillEvent) => void): () => void
 - 单格复制、数字序列、文本尾号序列、Date 序列均按设计工作。
 - 向下/上/右/左填充均可提交。
 - 拖拽中有清晰 preview,拖回 source 内不提交。
+- preview 虚线比选中边框更轻,填充柄为圆形。
+- 填充出来的 wrap 文本会自动撑开对应行高。
 - 一次 fill 是一步 undo,undo/redo 后数据与选区正确。
 - 非 mutable DataSource 上 fill silent no-op。
 - Core/Web 单元测试通过,Storybook 可手动验证。

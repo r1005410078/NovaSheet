@@ -7,7 +7,7 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 ## Project shape
 
 - High-performance Canvas-based table engine, eventual AI-Native data workbench
-- Greenfield TS monorepo (bun workspaces); three packages: `@novasheet/core`, `@novasheet/web`, `@novasheet/web-canvas2d` (public `Grid` facade)
+- Greenfield TS monorepo (bun workspaces); three packages: `@novasheet/core`, `@novasheet/web`, `@novasheet/web-canvas2d` (`@novasheet/web` exposes the public `Grid` facade)
 - See `README.md` for product framing and Quick Start
 - See `docs/superpowers/specs/` for the design specs that drive plans
 - See `docs/superpowers/plans/` for milestone implementation plans (M1 done; M2-M5 outlined)
@@ -16,21 +16,21 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 ## Current state (read first on a fresh session)
 
-**Last shipped:** **Cross-platform refactor** — branch `refactor/cross-platform`. 132 tests across core / web / web-canvas2d; lint/typecheck/build all clean. Monolithic `@novasheet/core` split into:
+**Last shipped:** **Phase 4.3 fill handle** — merged to `main`. Current shipped interaction stack includes context menu, clipboard, undo/redo, resize handles, autofit/multi-line wrap, and Sheets-style fill handle with copy + number/date/text-tail series.
 
 - `@novasheet/core` — platform-independent (data, schema, theme, layout, `DefaultGridEngine`, `RenderFrame`). No DOM.
-- `@novasheet/web` — browser host (`DomGridHost`, `NativeScroller`, `ScrollMapper`, `WebGridRuntime`, `WebRenderer` contract). No Canvas-specific code.
-- `@novasheet/web-canvas2d` — Canvas2D renderer + public `Grid` facade. Consumers `import { Grid } from '@novasheet/web-canvas2d'`.
+- `@novasheet/web` — browser host/runtime (`DomGridHost`, `NativeScroller`, `ScrollMapper`, `WebGridRuntime`) plus public `Grid` facade and Canvas2D backend assembly.
+- `@novasheet/web-canvas2d` — Canvas2D renderer, text measurer, and surface utilities. Consumers normally import `Grid` from `@novasheet/web`.
 
-M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook → Grid/Scroll stories import `Grid` from `@novasheet/web-canvas2d`.
+M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses the public `Grid` facade from `@novasheet/web`.
 
-**Next milestone:** **M3 Frozen + Dynamic sizing** — not yet planned. Same scope (spec §4 + §5.3 + §5.7), now across packages: `FrozenRegions` stays in `@novasheet/core`; `FrozenPainter` (M3) lands in `@novasheet/web-canvas2d/painters/`.
+**Next milestone:** **Phase 4.4 sorting/filtering** unless the user redirects. Phase 4.3 fill handle is complete and documented in `docs/superpowers/specs/2026-05-21-fill-handle-design.md`.
 
 **Per-Grid scheduler convention** (invariant #5): each `Grid` owns `new FrameScheduler()` shared by `Canvas2DRenderer` and `NativeScroller` via `WebGridRuntime`; the `frameScheduler` singleton from `util/raf` is NOT used cross-Grid.
 
-**Dependency direction:** `core ← web ← web-canvas2d`. No back-edges. `apps/storybook` depends on `@novasheet/web-canvas2d` (Grid) + `@novasheet/core` (DataSource types).
+**Dependency direction:** `@novasheet/core` is platform-independent. `@novasheet/web-canvas2d` depends on core for render contracts; `@novasheet/web` depends on core + web-canvas2d to expose the browser `Grid` facade and Canvas2D backend. `apps/storybook` depends on `@novasheet/web` + `@novasheet/core`.
 
-**M3-M5 status:** outlined only — see spec §1 In Scope + spec appendix B for the Phase ordering.
+**Phase 4 status:** 4.0 context menu, 4.1 clipboard, 4.2 undo/redo, and 4.3 fill handle are shipped. 4.4 sorting/filtering and later structural operations remain future work.
 
 **Locked architectural decisions** (do NOT revisit casually, see spec ADR §A):
 
@@ -147,7 +147,7 @@ Subagent prompts must:
 
 | Topic | Location |
 |---|---|
-| Public Grid API | `packages/web-canvas2d/src/index.ts` |
+| Public Grid API | `packages/web/src/Grid.ts` / `packages/web/src/index.ts` |
 | DataSource / Schema / Theme types | `packages/core/src/index.ts` |
 | Engine state coordinator | `packages/core/src/engine/DefaultGridEngine.ts` |
 | Algorithm core | `packages/core/src/layout/ChunkedAxis.ts` (also `Axis` / `MutableAxis`) |
@@ -166,8 +166,6 @@ Subagent prompts must:
 ## Things explicitly NOT shipped yet (don't add prematurely)
 
 - Frozen quadrants painting beyond stub (M3 — `packages/web-canvas2d/src/painters/FrozenPainter.ts`)
-- Dynamic row-height autofit / multi-line text (M3)
-- Resize handles / `<handle-layer>` interaction (M4 — likely `packages/web/src/interaction/`)
 - React wrapper (M4 — `packages/react` or `packages/web-react`)
 - WebGL / WebGPU renderers (post-Phase-1)
 - Server-paginated DataSource (Phase 4)

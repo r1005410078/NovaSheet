@@ -1,7 +1,9 @@
 import type { CellAddress, CellRange } from '../interaction/SelectionModel'
 
+/** 填充柄拖拽的主方向；一次拖拽只沿一个轴扩展。 */
 export type FillDirection = 'down' | 'up' | 'right' | 'left'
 
+/** 由 source 选区和 hover cell 推导出的实际写入范围。 */
 export interface FillTarget {
   readonly source: CellRange
   readonly fill: CellRange
@@ -9,11 +11,13 @@ export interface FillTarget {
   readonly direction: FillDirection
 }
 
+/** 目标表格边界，用于把越界 hover 坐标 clamp 回合法行列。 */
 export interface FillDimensions {
   readonly rowCount: number
   readonly colCount: number
 }
 
+/** 计算填充柄拖拽目标；hover 在 source 内或 clamp 后没有新增格子时返回 null。 */
 export function computeFillTarget(
   source: CellRange,
   hover: CellAddress,
@@ -65,6 +69,7 @@ function fillRangeForDirection(
   return null
 }
 
+/** 返回两个 range 的归一化联合矩形，供 fill commit 后更新 selection。 */
 export function unionRange(a: CellRange, b: CellRange): CellRange {
   return {
     startRow: Math.min(a.startRow, b.startRow),

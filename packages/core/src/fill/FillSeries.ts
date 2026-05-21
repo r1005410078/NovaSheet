@@ -3,6 +3,7 @@ import type { CellValue } from '../data/Schema'
 import type { CellRange } from '../interaction/SelectionModel'
 import type { FillDirection } from './FillTarget'
 
+/** 一次 fill commit 要写入的单元格值；colIndex 保留给 web 层和测试按自然网格顺序断言。 */
 export interface FillWrite {
   readonly rowIndex: number
   readonly colIndex: number
@@ -10,6 +11,7 @@ export interface FillWrite {
   readonly value: CellValue
 }
 
+/** 计算填充值所需的只读输入；函数本身不写 DataSource。 */
 export interface ComputeFillWritesInput {
   readonly data: DataSource
   readonly source: CellRange
@@ -25,6 +27,7 @@ interface TextTailSample {
   readonly width: number
 }
 
+/** 生成 fill range 的写入列表；垂直按列推导，水平按行推导，输出保持 row-major 顺序。 */
 export function computeFillWrites(input: ComputeFillWritesInput): readonly FillWrite[] {
   const fields = input.data.getSchema().fields
   const writes: FillWrite[] = []
@@ -154,6 +157,7 @@ function inferTextTailProjector(samples: readonly CellValue[]): SeriesProjector 
 
 function parseTextTailSample(value: CellValue): TextTailSample | null {
   if (typeof value !== 'string') return null
+  // 符号属于尾号本身，而不是 prefix；否则 Item -1 过零会格式化成 Item --1。
   const match = /^(.*?)([+-]?\d+)$/.exec(value)
   if (!match) return null
   const digits = match[2]!.replace(/^[+-]/, '')

@@ -1,5 +1,6 @@
 import type { CellRange, RenderFrame } from '@novasheet/core'
 
+/** DOM overlay 使用的 CSS 像素矩形，坐标相对 grid container。 */
 export interface OverlayRect {
   readonly x: number
   readonly y: number
@@ -9,6 +10,7 @@ export interface OverlayRect {
 
 const HANDLE_SIZE = 8
 
+/** 把一个逻辑 CellRange 拆成当前 frame 可见区域内的 DOM overlay 矩形；冻结区会产生多个 rect。 */
 export function computeRangeOverlayRects(frame: RenderFrame, range: CellRange): OverlayRect[] {
   const rects: OverlayRect[] = []
   for (const region of frame.viewport.regions) {
@@ -27,6 +29,7 @@ export function computeRangeOverlayRects(frame: RenderFrame, range: CellRange): 
   return rects
 }
 
+/** 选择最靠右下的可见 rect 作为填充柄锚点，避免冻结区重复边框生成多个手柄。 */
 export function computeFillHandleRect(frame: RenderFrame, range: CellRange): OverlayRect | null {
   const rects = computeRangeOverlayRects(frame, range)
   if (rects.length === 0) return null
