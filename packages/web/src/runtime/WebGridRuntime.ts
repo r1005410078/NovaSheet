@@ -139,8 +139,8 @@ export class WebGridRuntime {
   private onPaste?: (target: CellRange) => void
   private onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
   // Phase 4.2 — undo/redo
-  private onUndoCb?: (event: UndoEvent) => void
-  private onRedoCb?: (event: RedoEvent) => void
+  private onUndo?: (event: UndoEvent) => void
+  private onRedo?: (event: RedoEvent) => void
   /**
    * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
    * 非 multiline 编辑置 null。
@@ -217,11 +217,11 @@ export class WebGridRuntime {
 
   // Phase 4.2 — undo/redo
   setOnUndo(cb: (event: UndoEvent) => void): void {
-    this.onUndoCb = cb
+    this.onUndo = cb
   }
 
   setOnRedo(cb: (event: RedoEvent) => void): void {
-    this.onRedoCb = cb
+    this.onRedo = cb
   }
 
   canUndo(): boolean {
@@ -237,7 +237,7 @@ export class WebGridRuntime {
     const cmd = this.engine.undo()
     if (!cmd) return
     this.afterEngineMutation()
-    this.onUndoCb?.({ command: cmd })
+    this.onUndo?.({ command: cmd })
   }
 
   redo(): void {
@@ -245,7 +245,7 @@ export class WebGridRuntime {
     const cmd = this.engine.redo()
     if (!cmd) return
     this.afterEngineMutation()
-    this.onRedoCb?.({ command: cmd })
+    this.onRedo?.({ command: cmd })
   }
 
   /** snapshot 当前 selectedRange 的值 + TSV；selection 空返回 null。 */
