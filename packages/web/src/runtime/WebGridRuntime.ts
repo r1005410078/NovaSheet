@@ -731,6 +731,23 @@ export class WebGridRuntime {
         void this.handleClipboardPaste()
         return true
       }
+      if (k === 'z') {
+        if (!this.engine.canUndo()) return false
+        this.undo()
+        return true
+      }
+      if (k === 'y' && event.ctrlKey && !event.metaKey) {
+        if (!this.engine.canRedo()) return false
+        this.redo()
+        return true
+      }
+    }
+
+    // Cmd/Ctrl+Shift+Z — redo
+    if (mod && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z') {
+      if (!this.engine.canRedo()) return false
+      this.redo()
+      return true
     }
 
     const cell = this.engine.getSelection().activeCell

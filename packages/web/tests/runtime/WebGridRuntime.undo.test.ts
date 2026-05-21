@@ -115,3 +115,67 @@ describe('WebGridRuntime — undo/redo + events', () => {
     expect(refreshSpy).toHaveBeenCalled()
   })
 })
+
+describe('WebGridRuntime — keyboard routing', () => {
+  it('Cmd+Z 在 canUndo 时返回 true 并 undo', () => {
+    const { engine, runtime } = setup()
+    engine.commitRowResize(0, 24, 50)
+    const handled = runtime.handleHostKeyDown({
+      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+    })
+    expect(handled).toBe(true)
+    expect(engine.getRowsAxis().getSize(0)).toBe(24)
+  })
+
+  it('Ctrl+Z 在 canUndo 时返回 true 并 undo', () => {
+    const { engine, runtime } = setup()
+    engine.commitRowResize(0, 24, 50)
+    const handled = runtime.handleHostKeyDown({
+      key: 'z', shiftKey: false, ctrlKey: true, metaKey: false, altKey: false,
+    })
+    expect(handled).toBe(true)
+  })
+
+  it('Cmd+Z 在空栈时返回 false(不 preventDefault)', () => {
+    const { runtime } = setup()
+    const handled = runtime.handleHostKeyDown({
+      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+    })
+    expect(handled).toBe(false)
+  })
+
+  it('Cmd+Shift+Z 在 canRedo 时 redo', () => {
+    const { engine, runtime } = setup()
+    engine.commitRowResize(0, 24, 50)
+    runtime.undo()
+    const handled = runtime.handleHostKeyDown({
+      key: 'z', shiftKey: true, ctrlKey: false, metaKey: true, altKey: false,
+    })
+    expect(handled).toBe(true)
+    expect(engine.getRowsAxis().getSize(0)).toBe(50)
+  })
+
+  it('Ctrl+Y 在 canRedo 时 redo(Windows 风格)', () => {
+    const { engine, runtime } = setup()
+    engine.commitRowResize(0, 24, 50)
+    runtime.undo()
+    const handled = runtime.handleHostKeyDown({
+      key: 'y', shiftKey: false, ctrlKey: true, metaKey: false, altKey: false,
+    })
+    expect(handled).toBe(true)
+    expect(engine.getRowsAxis().getSize(0)).toBe(50)
+  })
+
+  it('编辑中按 Cmd+Z 不被拦截(handleHostKeyDown 在 isCellEditing 时 short-circuit)', () => {
+    const { engine, runtime } = setup()
+    engine.commitRowResize(0, 24, 50)
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    const handled = runtime.handleHostKeyDown({
+      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+    })
+    expect(handled).toBe(false)
+    // engine 未受影响,resize 仍生效
+    expect(engine.getRowsAxis().getSize(0)).toBe(50)
+  })
+})
