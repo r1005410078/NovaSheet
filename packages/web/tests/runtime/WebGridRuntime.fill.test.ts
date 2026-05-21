@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import type { DataSource, GridEngine, GridSelection, Theme } from '@novasheet/core'
+import { denseGridTheme, type DataSource, type GridEngine, type GridSelection, type Theme } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 import type { WebHost } from '../../src/host/WebHost'
 import type { WebRenderer } from '../../src/render/WebRenderer'
@@ -93,6 +93,45 @@ describe('WebGridRuntime fill handle', () => {
     runtime.handleFillPointerMove(1, 0, 150)
     runtime.handleFillPointerUp(1)
     expect(engine.commitFill).not.toHaveBeenCalled()
+  })
+
+  it('autofits rows touched by filled wrap text', () => {
+    const engine = makeEngine()
+    const frame = engine.getFrame() as { data: DataSource; theme: Theme }
+    frame.theme = denseGridTheme
+    frame.data = {
+      getRowCount: () => 10,
+      getSchema: () => ({ fields: [
+        { id: 'a', name: 'A', type: 'text', width: 44, wrap: true },
+        { id: 'b', name: 'B', type: 'number', width: 100 },
+      ] }),
+      getRows: () => [],
+      getCell: (rowIndex: number, fieldId: string) =>
+        rowIndex === 2 && fieldId === 'a' ? 'filled text needs several wrapped lines' : null,
+      subscribe: () => () => {},
+    } as unknown as DataSource
+    engine.commitFill = mock((source, fill) => ({
+      source,
+      fill,
+      result: { startRow: 0, endRow: 2, startCol: 0, endCol: 0 },
+      writes: [{ rowIndex: 2, fieldId: 'a', value: 'filled text needs several wrapped lines' }],
+    }))
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer: makeFillLayer(),
+      measurer: { measureWidth: (text) => text.length * 7 },
+    })
+
+    runtime.handleFillPointerDown(1, 50, 45)
+    runtime.handleFillPointerMove(1, 50, 90)
+    runtime.handleFillPointerUp(1)
+
+    expect(engine.setRowHeight).toHaveBeenCalledWith(2, expect.any(Number))
+    expect((engine.setRowHeight as ReturnType<typeof mock>).mock.calls[0]?.[1]).toBeGreaterThan(
+      denseGridTheme.metrics.rowHeight,
+    )
   })
 })
 
