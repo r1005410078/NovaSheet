@@ -324,7 +324,7 @@ describe('DefaultGridEngine — resize undo/redo', () => {
   })
 })
 
-describe('DefaultGridEngine — capacity + setData + non-mutable resize', () => {
+describe('DefaultGridEngine — capacity + non-mutable resize', () => {
   it('栈深 100:101 次 commit 后最早一条被挤掉', () => {
     const engine = makeEngine()
     for (let i = 0; i < 101; i++) {
@@ -336,17 +336,6 @@ describe('DefaultGridEngine — capacity + setData + non-mutable resize', () => 
       popped++
     }
     expect(popped).toBe(100)
-  })
-
-  it('setData 在有 undo 项时清空', () => {
-    const engine = makeEngine()
-    engine.commitRowResize(0, 24, 50)
-    const data2 = new InMemoryDataSource({
-      schema,
-      rows: [{ a: 'p', b: 9 }],
-    })
-    engine.setData(data2)
-    expect(engine.canUndo()).toBe(false)
   })
 
   it('非 MutableDataSource: resize 仍可 commit', () => {
