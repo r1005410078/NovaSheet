@@ -5,6 +5,7 @@
  */
 
 import type { DataSource } from '../data/DataSource'
+import type { UndoCommand } from '../undo/UndoCommand'
 import type {
   CellAddress,
   CellRange,
@@ -65,4 +66,16 @@ export interface GridEngine {
   getColsAxis(): Axis
   getViewport(): Viewport
   getData(): DataSource
+
+  /** Phase 4.2 — undo/redo */
+  undo(): UndoCommand | undefined
+  redo(): UndoCommand | undefined
+  canUndo(): boolean
+  canRedo(): boolean
+
+  /** Phase 4.2 — 提交一次列宽调整为 1 步 undo;before === after 时不入栈。 */
+  commitColumnResize(colIndex: number, oldWidth: number, newWidth: number): void
+
+  /** Phase 4.2 — 提交一次行高调整为 1 步 undo;before === after 时不入栈。 */
+  commitRowResize(rowIndex: number, oldHeight: number, newHeight: number): void
 }

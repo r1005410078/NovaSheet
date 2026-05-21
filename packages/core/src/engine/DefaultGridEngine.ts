@@ -20,6 +20,8 @@ import { Viewport } from '../layout/Viewport'
 import type { RenderFrame } from '../render/RenderFrame'
 import { denseGridTheme } from '../theme/denseGridTheme'
 import type { Theme } from '../theme/Theme'
+import { UndoStack } from '../undo/UndoStack'
+import type { UndoCommand } from '../undo/UndoCommand'
 import type { GridEngine, GridEngineOptions } from './GridEngine'
 
 /**
@@ -41,6 +43,7 @@ export class DefaultGridEngine implements GridEngine {
   private viewport: Viewport
   private selection = new SelectionModel()
   private cellEdit = new CellEditModel()
+  private undoStack = new UndoStack()
 
   constructor(options: GridEngineOptions) {
     this.data = options.data
@@ -85,6 +88,7 @@ export class DefaultGridEngine implements GridEngine {
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
     this.applySheetChrome()
     this.applyFieldWidths()
+    this.undoStack.clear()
   }
 
   setTheme(theme: Theme): void {
@@ -238,6 +242,49 @@ export class DefaultGridEngine implements GridEngine {
 
   getData(): DataSource {
     return this.data
+  }
+
+  undo(): UndoCommand | undefined {
+    const cmd = this.undoStack.popUndo()
+    if (!cmd) return undefined
+    this.applyUndo(cmd)
+    return cmd
+  }
+
+  redo(): UndoCommand | undefined {
+    const cmd = this.undoStack.popRedo()
+    if (!cmd) return undefined
+    this.applyRedo(cmd)
+    return cmd
+  }
+
+  canUndo(): boolean {
+    return this.undoStack.canUndo()
+  }
+
+  canRedo(): boolean {
+    return this.undoStack.canRedo()
+  }
+
+  commitRowResize(rowIndex: number, oldHeight: number, newHeight: number): void {
+    if (oldHeight === newHeight) return
+    this.rowsAxis.setSize(rowIndex, newHeight)
+    this.undoStack.push({ kind: 'resizeRow', rowIndex, before: oldHeight, after: newHeight })
+  }
+
+  commitColumnResize(colIndex: number, oldWidth: number, newWidth: number): void {
+    if (oldWidth === newWidth) return
+    this.colsAxis.setSize(colIndex, newWidth)
+    this.undoStack.push({ kind: 'resizeColumn', colIndex, before: oldWidth, after: newWidth })
+  }
+
+  private applyUndo(cmd: UndoCommand): void {
+    // 各 kind 分支将在后续 Task 中补全;本任务只确保 setData 清栈 + commitRowResize 工作
+    void cmd
+  }
+
+  private applyRedo(cmd: UndoCommand): void {
+    void cmd
   }
 
   private resolveDefaultRowHeight(): number {
