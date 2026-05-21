@@ -46,6 +46,22 @@ describe('WebGridRuntime fill handle', () => {
     expect(onFill).toHaveBeenCalled()
   })
 
+  it('uses local pointer coordinates for fill drag hit testing', () => {
+    const engine = makeEngine()
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost({ left: 100, top: 80 }),
+      renderer: makeRenderer(),
+      fillLayer: makeFillLayer(),
+    })
+
+    runtime.handleFillPointerDown(1, 250, 170)
+    runtime.handleFillPointerMove(1, 250, 230)
+    runtime.handleFillPointerUp(1)
+
+    expect(engine.commitFill).toHaveBeenCalled()
+  })
+
   it('does not enter fill drag without a selected range', () => {
     const engine = makeEngine({ selectedRange: null, activeCell: null, anchorCell: null, extentCell: null })
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer: makeFillLayer() })
@@ -153,7 +169,7 @@ function makeEngine(selection: GridSelection = {
   } as unknown as GridEngine
 }
 
-function makeHost(): WebHost {
+function makeHost(offset: { left: number; top: number } = { left: 0, top: 0 }): WebHost {
   return {
     attach: mock(() => {}),
     applyScrollbarTheme: mock(() => {}),
@@ -161,7 +177,7 @@ function makeHost(): WebHost {
     scrollTo: mock(() => {}),
     getDpr: () => 1,
     getContainerSize: () => ({ width: 400, height: 300 }),
-    getContainerBoundingRect: () => ({ left: 0, top: 0 }),
+    getContainerBoundingRect: () => offset,
     getScrollPosition: () => ({ scrollTop: 0, scrollLeft: 0 }),
     focusScrollHost: mock(() => {}),
     destroy: mock(() => {}),

@@ -648,17 +648,18 @@ export class WebGridRuntime {
     if (!source) return
     this.closeContextMenu()
     this.draggingSelection = false
+    const pointer = this.fillPointerFromClient(clientX, clientY)
     this.fillDrag = {
       pointerId,
       source,
       target: null,
-      lastPointer: { x: clientX, y: clientY, clientX, clientY, shiftKey: false },
+      lastPointer: pointer,
     }
   }
 
   handleFillPointerMove(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed || !this.fillDrag || this.fillDrag.pointerId !== pointerId) return
-    const pointer = { x: clientX, y: clientY, clientX, clientY, shiftKey: false }
+    const pointer = this.fillPointerFromClient(clientX, clientY)
     this.fillDrag.lastPointer = pointer
     const hit = hitTestCell(this.engine.getFrame(), pointer)
     if (!hit) return
@@ -684,6 +685,17 @@ export class WebGridRuntime {
     if (!result) return
     this.afterEngineMutation()
     this.onFill?.({ source: target.source, fill: target.fill, result: target.result, direction: target.direction })
+  }
+
+  private fillPointerFromClient(clientX: number, clientY: number): WebPointerEvent {
+    const rect = this.host.getContainerBoundingRect()
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+      clientX,
+      clientY,
+      shiftKey: false,
+    }
   }
 
   handleCellEditDraft(draft: string): void {
