@@ -286,3 +286,78 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
     expect(engine.getData().getCell(0, 'b')).toBe(42)
   })
 })
+
+describe('DefaultGridEngine — resize undo/redo', () => {
+  it('commitRowResize 相等不 push', () => {
+    const engine = makeEngine()
+    engine.commitRowResize(0, 24, 24)
+    expect(engine.canUndo()).toBe(false)
+  })
+
+  it('undo resizeRow 恢复旧高', () => {
+    const engine = makeEngine()
+    const before = engine.getRowsAxis().getSize(0)
+    engine.commitRowResize(0, before, 80)
+    expect(engine.getRowsAxis().getSize(0)).toBe(80)
+    engine.undo()
+    expect(engine.getRowsAxis().getSize(0)).toBe(before)
+  })
+
+  it('redo resizeRow 还原新高', () => {
+    const engine = makeEngine()
+    const before = engine.getRowsAxis().getSize(0)
+    engine.commitRowResize(0, before, 80)
+    engine.undo()
+    engine.redo()
+    expect(engine.getRowsAxis().getSize(0)).toBe(80)
+  })
+
+  it('commitColumnResize 对称', () => {
+    const engine = makeEngine()
+    const before = engine.getColsAxis().getSize(0)
+    engine.commitColumnResize(0, before, 200)
+    expect(engine.getColsAxis().getSize(0)).toBe(200)
+    engine.undo()
+    expect(engine.getColsAxis().getSize(0)).toBe(before)
+    engine.redo()
+    expect(engine.getColsAxis().getSize(0)).toBe(200)
+  })
+})
+
+describe('DefaultGridEngine — capacity + setData + non-mutable resize', () => {
+  it('栈深 100:101 次 commit 后最早一条被挤掉', () => {
+    const engine = makeEngine()
+    for (let i = 0; i < 101; i++) {
+      engine.commitRowResize(0, 20 + i, 21 + i)
+    }
+    let popped = 0
+    while (engine.canUndo()) {
+      engine.undo()
+      popped++
+    }
+    expect(popped).toBe(100)
+  })
+
+  it('setData 在有 undo 项时清空', () => {
+    const engine = makeEngine()
+    engine.commitRowResize(0, 24, 50)
+    const data2 = new InMemoryDataSource({
+      schema,
+      rows: [{ a: 'p', b: 9 }],
+    })
+    engine.setData(data2)
+    expect(engine.canUndo()).toBe(false)
+  })
+
+  it('非 MutableDataSource: resize 仍可 commit', () => {
+    const readonly = new InMemoryDataSource({
+      schema,
+      rows: [{ a: 'r', b: 7 }],
+    })
+    // 移除 updateCell 让 isMutableDataSource() 返回 false
+    ;(readonly as unknown as { updateCell?: unknown }).updateCell = undefined
+    const engine = new DefaultGridEngine({ data: readonly })
+    engine.commitRowResize(0, 24, 60)
+    expect(engine.canUndo()).toBe(true)
+  })
+})

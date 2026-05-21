@@ -342,7 +342,11 @@ export class DefaultGridEngine implements GridEngine {
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
         this.restoreSelectionForRange(cmd.target)
         return
-      default:
+      case 'resizeRow':
+        this.rowsAxis.setSize(cmd.rowIndex, cmd.before)
+        return
+      case 'resizeColumn':
+        this.colsAxis.setSize(cmd.colIndex, cmd.before)
         return
     }
   }
@@ -361,7 +365,11 @@ export class DefaultGridEngine implements GridEngine {
         for (const w of cmd.after) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
         this.restoreSelectionForRange(cmd.target)
         return
-      default:
+      case 'resizeRow':
+        this.rowsAxis.setSize(cmd.rowIndex, cmd.after)
+        return
+      case 'resizeColumn':
+        this.colsAxis.setSize(cmd.colIndex, cmd.after)
         return
     }
   }
