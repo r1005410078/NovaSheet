@@ -13,6 +13,8 @@ import type {
   AutofitRowsOptions,
   AutofitRowsResult,
   GridController,
+  UndoEvent,
+  RedoEvent,
 } from './grid/GridController'
 
 /** 已支持的渲染后端；WebGL 待 `@novasheet/web-webgl` 接入后扩展。 */
@@ -31,6 +33,10 @@ export interface GridOptions extends GridEngineOptions {
   onPaste?: (target: CellRange) => void
   /** Phase 4.1 — 至少一格因类型不匹配 / read-only 被跳过时触发。 */
   onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
+  /** Phase 4.2 — undo 完成时触发,携带刚执行的 UndoCommand。 */
+  onUndo?: (event: UndoEvent) => void
+  /** Phase 4.2 — redo 完成时触发,携带刚执行的 UndoCommand。 */
+  onRedo?: (event: RedoEvent) => void
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -47,6 +53,8 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
     onCut: _x,
     onPaste: _v,
     onPasteSkipped: _s,
+    onUndo: _u,
+    onRedo: _y,
     ...engineOptions
   } = options
   void _r
@@ -55,6 +63,8 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
   void _x
   void _v
   void _s
+  void _u
+  void _y
   return engineOptions
 }
 
@@ -80,6 +90,8 @@ export class Grid {
           onCut: options.onCut,
           onPaste: options.onPaste,
           onPasteSkipped: options.onPasteSkipped,
+          onUndo: options.onUndo,
+          onRedo: options.onRedo,
         })
         break
       default:
@@ -162,6 +174,32 @@ export class Grid {
 
   paste(): Promise<boolean> {
     return this.delegate.paste()
+  }
+
+  undo(): void {
+    this.delegate.undo()
+  }
+
+  redo(): void {
+    this.delegate.redo()
+  }
+
+  canUndo(): boolean {
+    return this.delegate.canUndo()
+  }
+
+  canRedo(): boolean {
+    return this.delegate.canRedo()
+  }
+
+  onUndo(handler: (event: UndoEvent) => void): () => void {
+    this.delegate.setOnUndo(handler)
+    return () => this.delegate.setOnUndo(() => {})
+  }
+
+  onRedo(handler: (event: RedoEvent) => void): () => void {
+    this.delegate.setOnRedo(handler)
+    return () => this.delegate.setOnRedo(() => {})
   }
 
   destroy(): void {

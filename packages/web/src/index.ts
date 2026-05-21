@@ -16,3 +16,6 @@ export type { WebGridRuntimeOptions } from './runtime/WebGridRuntime'
 export type { ContextMenuAction, ContextMenuContext, ContextMenuItem } from '@novasheet/core'
 export type { ClipboardAction, PasteSkippedCell } from '@novasheet/core'
 export { WebClipboardAdapter } from './clipboard/WebClipboardAdapter'
+
+export type { UndoCommand } from '@novasheet/core'
+export type { UndoEvent, RedoEvent } from './grid/GridController'

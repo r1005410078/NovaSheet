@@ -1,4 +1,6 @@
 import type { DataSource, FrozenConfig, GridEngineOptions, Theme } from '@novasheet/core'
+import type { UndoEvent, RedoEvent } from '../runtime/WebGridRuntime'
+export type { UndoEvent, RedoEvent }
 
 /** Grid.autofitRows 入参。`rows` 缺省 = 全表。 */
 export interface AutofitRowsOptions {
@@ -47,6 +49,12 @@ export interface GridController {
   destroy(): void
   /** @internal ResizeObserver 集成测试入口 */
   _onContainerResize(): void
+  undo(): void
+  redo(): void
+  canUndo(): boolean
+  canRedo(): boolean
+  setOnUndo(cb: (event: UndoEvent) => void): void
+  setOnRedo(cb: (event: RedoEvent) => void): void
 }
 
 export type { GridEngineOptions }
