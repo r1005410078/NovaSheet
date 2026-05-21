@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
 import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
 import type { Schema } from '../../src/data/Schema'
+import type { ApplyPasteSource, PasteTargetRect } from '../../src/clipboard/ApplyPaste'
 
 const schema: Schema = {
   fields: [
@@ -193,5 +194,73 @@ describe('DefaultGridEngine — clearRange undo/redo', () => {
     engine.undo()
     expect(engine.getData().getCell(0, 'a')).toBe('x')
     expect(engine.getData().getCell(0, 'b')).toBeNull() // 原本就是 null,不应被恢复成 1
+  })
+})
+
+describe('DefaultGridEngine — commitPaste undo/redo', () => {
+  function pasteSource(cells: (string | number | null)[][], fieldIds: string[]): ApplyPasteSource {
+    return {
+      cells,
+      sourceFieldIds: fieldIds,
+      typed: false,
+    }
+  }
+  function targetRect(startRow: number, endRow: number, startCol: number, endCol: number): PasteTargetRect {
+    return { startRow, endRow, startCol, endCol, tile: { rows: 1, cols: 1 } }
+  }
+
+  it('commitPaste 写入 + push paste 命令', () => {
+    const engine = makeEngine()
+    engine.commitPaste(
+      pasteSource([['p', 99]], ['a', 'b']),
+      targetRect(0, 0, 0, 1),
+      ['a', 'b'],
+    )
+    expect(engine.getData().getCell(0, 'a')).toBe('p')
+    expect(engine.getData().getCell(0, 'b')).toBe(99)
+    expect(engine.canUndo()).toBe(true)
+  })
+
+  it('undo commitPaste 恢复 before;redo 恢复 after', () => {
+    const engine = makeEngine()
+    engine.commitPaste(
+      pasteSource([['p', 99]], ['a', 'b']),
+      targetRect(0, 0, 0, 1),
+      ['a', 'b'],
+    )
+    engine.undo()
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+    expect(engine.getData().getCell(0, 'b')).toBe(1)
+    engine.redo()
+    expect(engine.getData().getCell(0, 'a')).toBe('p')
+    expect(engine.getData().getCell(0, 'b')).toBe(99)
+  })
+
+  it('类型不匹配跳过的格子不记录 + onSkipped 仍触发', () => {
+    const engine = makeEngine()
+    let skippedCount = 0
+    engine.commitPaste(
+      pasteSource([['p', 'not-a-number']], ['a', 'b']),
+      targetRect(0, 0, 0, 1),
+      ['a', 'b'],
+      (skipped) => { skippedCount = skipped.length },
+    )
+    expect(skippedCount).toBe(1)
+    expect(engine.getData().getCell(0, 'a')).toBe('p')
+    expect(engine.getData().getCell(0, 'b')).toBe(1)  // 未变
+    engine.undo()
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+    expect(engine.getData().getCell(0, 'b')).toBe(1)
+  })
+
+  it('全部跳过 → 不 push', () => {
+    const engine = makeEngine()
+    // 单格 source 落在 b 列(number),'not-a-number' 会被跳过
+    engine.commitPaste(
+      pasteSource([['not-a-number']], ['b']),
+      targetRect(0, 0, 1, 1),
+      ['a', 'b'],
+    )
+    expect(engine.canUndo()).toBe(false)
   })
 })

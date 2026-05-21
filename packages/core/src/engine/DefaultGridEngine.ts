@@ -1,6 +1,9 @@
 import type { CellValue } from '../data/Schema'
 import type { DataSource } from '../data/DataSource'
 import { isMutableDataSource } from '../data/MutableDataSource'
+import { applyPaste } from '../clipboard/ApplyPaste'
+import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
+import type { PasteSkippedCell } from '../clipboard/types'
 import {
   formatCellForEdit,
   isEditableFieldType,
@@ -294,6 +297,37 @@ export class DefaultGridEngine implements GridEngine {
     this.undoStack.push({ kind: 'resizeColumn', colIndex, before: oldWidth, after: newWidth })
   }
 
+  commitPaste(
+    source: ApplyPasteSource,
+    target: PasteTargetRect,
+    fieldIdsAtCols: readonly string[],
+    onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
+  ): void {
+    if (!isMutableDataSource(this.data)) return
+    const before: { rowIndex: number; fieldId: string; value: CellValue }[] = []
+    const after: { rowIndex: number; fieldId: string; value: CellValue }[] = []
+    applyPaste(
+      source,
+      target,
+      this.data.getSchema(),
+      fieldIdsAtCols,
+      this.data,
+      onSkipped,
+      (rec: PasteWriteRecord) => {
+        before.push({ rowIndex: rec.rowIndex, fieldId: rec.fieldId, value: rec.before })
+        after.push({ rowIndex: rec.rowIndex, fieldId: rec.fieldId, value: rec.after })
+      },
+    )
+    if (after.length === 0) return
+    const range: CellRange = {
+      startRow: target.startRow,
+      endRow: target.endRow,
+      startCol: target.startCol,
+      endCol: target.endCol,
+    }
+    this.undoStack.push({ kind: 'paste', target: range, before, after })
+  }
+
   private applyUndo(cmd: UndoCommand): void {
     switch (cmd.kind) {
       case 'editCell':
@@ -303,6 +337,10 @@ export class DefaultGridEngine implements GridEngine {
       case 'clearRange':
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
         this.restoreSelectionForRange(cmd.range)
+        return
+      case 'paste':
+        for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
+        this.restoreSelectionForRange(cmd.target)
         return
       default:
         return
@@ -318,6 +356,10 @@ export class DefaultGridEngine implements GridEngine {
       case 'clearRange':
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, null)
         this.restoreSelectionForRange(cmd.range)
+        return
+      case 'paste':
+        for (const w of cmd.after) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
+        this.restoreSelectionForRange(cmd.target)
         return
       default:
         return

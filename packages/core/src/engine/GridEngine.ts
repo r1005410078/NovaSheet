@@ -6,6 +6,8 @@
 
 import type { DataSource } from '../data/DataSource'
 import type { UndoCommand } from '../undo/UndoCommand'
+import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
+import type { PasteSkippedCell } from '../clipboard/types'
 import type {
   CellAddress,
   CellRange,
@@ -78,4 +80,12 @@ export interface GridEngine {
 
   /** Phase 4.2 — 提交一次行高调整为 1 步 undo;before === after 时不入栈。 */
   commitRowResize(rowIndex: number, oldHeight: number, newHeight: number): void
+
+  /** Phase 4.2 — 提交一次粘贴为 1 步 undo;无写入(全跳过)时不入栈。 */
+  commitPaste(
+    source: ApplyPasteSource,
+    target: PasteTargetRect,
+    fieldIdsAtCols: readonly string[],
+    onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
+  ): void
 }

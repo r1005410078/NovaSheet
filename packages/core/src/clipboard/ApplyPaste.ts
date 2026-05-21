@@ -3,6 +3,13 @@ import type { CellAddress, CellRange } from '../interaction/SelectionModel'
 import type { CellValue, Schema } from '../data/Schema'
 import type { PasteSkippedCell } from './types'
 
+export interface PasteWriteRecord {
+  readonly rowIndex: number
+  readonly fieldId: string
+  readonly before: CellValue
+  readonly after: CellValue
+}
+
 export interface PasteTargetRect {
   readonly startRow: number
   readonly endRow: number
@@ -97,6 +104,7 @@ export function applyPaste(
   fieldIdsAtCols: readonly string[],
   data: MutableDataSource,
   onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
+  onWrite?: (record: PasteWriteRecord) => void,
 ): void {
   const skipped: PasteSkippedCell[] = []
   const sourceRows = source.cells.length
@@ -114,6 +122,10 @@ export function applyPaste(
       if (!fieldId) continue
 
       if (source.typed) {
+        if (onWrite) {
+          const beforeTyped = data.getCell(r, fieldId) ?? null
+          onWrite({ rowIndex: r, fieldId, before: beforeTyped, after: rawValue as CellValue })
+        }
         data.updateCell(r, fieldId, rawValue as CellValue)
         continue
       }
@@ -123,6 +135,10 @@ export function applyPaste(
       if (coerced === SKIP) {
         skipped.push({ rowIndex: r, fieldId, reason: 'type' })
         continue
+      }
+      if (onWrite) {
+        const beforeCoerced = data.getCell(r, fieldId) ?? null
+        onWrite({ rowIndex: r, fieldId, before: beforeCoerced, after: coerced as CellValue })
       }
       data.updateCell(r, fieldId, coerced as CellValue)
     }
