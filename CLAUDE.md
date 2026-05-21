@@ -91,6 +91,19 @@ Built up over the M1 cycle. Apply to all sessions, not just M1:
 - `noUncheckedIndexedAccess` is on — array/Map reads need `!` or explicit guards.
 - Definite-assignment assertion (`!:`) is acceptable when a field is set indirectly via a constructor-called helper (e.g., `ChunkedAxis.chunkPrefixSum!: Float64Array` set in `rebuild()`).
 
+## Code comment conventions
+
+NovaSheet uses a **少而硬** comment strategy: public API is readable, core rules are traceable, and ordinary code relies on naming + tests.
+
+- **Public exports need short TSDoc/JSDoc.** Exported classes, functions, interfaces, and important types should explain purpose and contract, not restate parameter names.
+- **Private code is comment-light by default.** Add comments only for algorithms, coordinate systems, scheduling/order constraints, invariants, compatibility constraints, or non-obvious tradeoffs.
+- **Comments should explain why, not what.** Avoid line-by-line narration such as "assign value to variable"; prefer context that prevents future regressions.
+- **Layer-specific density:** `core` may document algorithms and platform-independent invariants; `web/runtime` should document interaction flow, coordinate spaces, and RAF/scheduler timing; Storybook should stay sparse and explain demo intent only when useful.
+- **Tests describe behavior first.** Prefer precise test names and assertions over long explanatory comments in test bodies.
+- **External docs hold large design context.** Keep full design rationale in `docs/superpowers/specs/` or `docs/superpowers/plans/`; code comments may point to those docs when a local rule depends on a larger decision.
+- **TODOs must be scoped.** Use a milestone or phase prefix, e.g. `TODO(phase-4.4): ...`; do not leave unowned TODOs.
+- **No decorative or stale comments.** Remove comments that duplicate obvious code, refer to old architecture, or no longer match the implementation.
+
 ---
 
 ## Testing conventions
