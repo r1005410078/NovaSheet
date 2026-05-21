@@ -10,6 +10,7 @@ describe('DomFillHandleLayer', () => {
     const handle = root.querySelector('[data-novasheet-fill-handle]') as HTMLElement
     expect(handle.style.left).toBe('10px')
     expect(handle.style.top).toBe('20px')
+    expect(handle.style.borderRadius).toBe('50%')
     layer.sync(null)
     expect(handle.style.display).toBe('none')
     layer.destroy()
@@ -22,6 +23,8 @@ describe('DomFillHandleLayer', () => {
     layer.attach()
     layer.showPreview([{ x: 0, y: 0, width: 100, height: 30 }, { x: 0, y: 30, width: 100, height: 30 }])
     expect(root.querySelectorAll('[data-novasheet-fill-preview]').length).toBe(2)
+    const preview = root.querySelector('[data-novasheet-fill-preview]') as HTMLElement
+    expect(preview.style.borderStyle).toBe('dashed')
     layer.hidePreview()
     expect(root.querySelectorAll('[data-novasheet-fill-preview]').length).toBe(0)
   })

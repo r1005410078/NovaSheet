@@ -41,6 +41,7 @@ export class DomFillHandleLayer {
       cursor: 'crosshair',
       background: 'var(--novasheet-selection-border, #0969da)',
       border: '1px solid #fff',
+      borderRadius: '50%',
       boxSizing: 'border-box',
     })
     this.handle.addEventListener('pointerdown', this.onPointerDown)
@@ -76,7 +77,9 @@ export class DomFillHandleLayer {
         position: 'absolute',
         pointerEvents: 'none',
         boxSizing: 'border-box',
-        border: '2px solid var(--novasheet-selection-border, #0969da)',
+        borderWidth: '2px',
+        borderStyle: 'dashed',
+        borderColor: 'var(--novasheet-selection-border, #0969da)',
         background: 'rgba(9,105,218,0.06)',
         left: `${rect.x}px`,
         top: `${rect.y}px`,
