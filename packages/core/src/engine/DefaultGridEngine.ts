@@ -1,3 +1,4 @@
+import type { CellValue } from '../data/Schema'
 import type { DataSource } from '../data/DataSource'
 import { isMutableDataSource } from '../data/MutableDataSource'
 import {
@@ -163,7 +164,15 @@ export class DefaultGridEngine implements GridEngine {
     const parsed = parseCellEditInput(session.draft, session.fieldType)
     if (parsed === undefined) return false
 
+    const before = this.data.getCell(session.cell.rowIndex, session.fieldId) ?? null
     this.data.updateCell(session.cell.rowIndex, session.fieldId, parsed)
+    this.undoStack.push({
+      kind: 'editCell',
+      rowIndex: session.cell.rowIndex,
+      fieldId: session.fieldId,
+      before,
+      after: parsed,
+    })
     this.cellEdit.clear()
     return true
   }
@@ -279,12 +288,36 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private applyUndo(cmd: UndoCommand): void {
-    // 各 kind 分支将在后续 Task 中补全;本任务只确保 setData 清栈 + commitRowResize 工作
-    void cmd
+    switch (cmd.kind) {
+      case 'editCell':
+        this.applyEditCellWrite(cmd.rowIndex, cmd.fieldId, cmd.before)
+        this.restoreSelectionForEdit(cmd.rowIndex, cmd.fieldId)
+        return
+      default:
+        return
+    }
   }
 
   private applyRedo(cmd: UndoCommand): void {
-    void cmd
+    switch (cmd.kind) {
+      case 'editCell':
+        this.applyEditCellWrite(cmd.rowIndex, cmd.fieldId, cmd.after)
+        this.restoreSelectionForEdit(cmd.rowIndex, cmd.fieldId)
+        return
+      default:
+        return
+    }
+  }
+
+  private applyEditCellWrite(rowIndex: number, fieldId: string, value: CellValue): void {
+    if (!isMutableDataSource(this.data)) return
+    this.data.updateCell(rowIndex, fieldId, value)
+  }
+
+  private restoreSelectionForEdit(rowIndex: number, fieldId: string): void {
+    const colIndex = this.getColumnIndex(fieldId)
+    if (colIndex < 0) return
+    this.selection.selectCell({ rowIndex, colIndex })
   }
 
   private resolveDefaultRowHeight(): number {

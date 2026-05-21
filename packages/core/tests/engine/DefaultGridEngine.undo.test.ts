@@ -45,3 +45,61 @@ describe('DefaultGridEngine — undo/redo scaffolding', () => {
     expect(engine.canRedo()).toBe(false)
   })
 })
+
+describe('DefaultGridEngine — editCell undo/redo', () => {
+  it('commitCellEdit 后 push editCell 命令', () => {
+    const engine = makeEngine()
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('z')
+    engine.commitCellEdit()
+    expect(engine.canUndo()).toBe(true)
+  })
+
+  it('undo 还原原值 + active 落到原 cell + canRedo=true', () => {
+    const engine = makeEngine()
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('z')
+    engine.commitCellEdit()
+    expect(engine.getData().getCell(0, 'a')).toBe('z')
+
+    const cmd = engine.undo()
+    expect(cmd?.kind).toBe('editCell')
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+    expect(engine.getSelection().activeCell).toEqual({ rowIndex: 0, colIndex: 0 })
+    expect(engine.canRedo()).toBe(true)
+  })
+
+  it('redo 重新写入 after', () => {
+    const engine = makeEngine()
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('z')
+    engine.commitCellEdit()
+    engine.undo()
+    engine.redo()
+    expect(engine.getData().getCell(0, 'a')).toBe('z')
+    expect(engine.canRedo()).toBe(false)
+  })
+
+  it('编辑同值仍 push 一步(与 Sheets/Excel 一致)', () => {
+    const engine = makeEngine()
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('x') // 与原值相同
+    engine.commitCellEdit()
+    expect(engine.canUndo()).toBe(true)
+  })
+
+  it('undo/redo 不再 push 新条目(防递归)', () => {
+    const engine = makeEngine()
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('z')
+    engine.commitCellEdit()
+    engine.undo()
+    expect(engine.canRedo()).toBe(true)
+    expect(engine.canUndo()).toBe(false)
+  })
+})
