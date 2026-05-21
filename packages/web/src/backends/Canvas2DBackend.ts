@@ -34,6 +34,7 @@ import type { UndoEvent, RedoEvent } from '../runtime/WebGridRuntime'
 import { DomGridHost } from '../host/DomGridHost'
 import { DomCellEditor } from '../interaction/DomCellEditor'
 import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
+import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import { DomHandleLayer } from '../interaction/DomHandleLayer'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
@@ -57,6 +58,7 @@ export class Canvas2DBackend implements GridController {
   private renderer: Canvas2DRenderer
   private host: DomGridHost
   private handleLayer: DomHandleLayer
+  private fillHandleLayer: DomFillHandleLayer
   private cellEditor: DomCellEditor
   private contextMenuLayer!: DomContextMenuLayer
   private clipboardAdapter = new WebClipboardAdapter()
@@ -109,6 +111,13 @@ export class Canvas2DBackend implements GridController {
     })
     this.handleLayer.attach()
 
+    this.fillHandleLayer = new DomFillHandleLayer(this.container, {
+      onFillPointerDown: (pointerId, x, y) => this.runtime.handleFillPointerDown(pointerId, x, y),
+      onFillPointerMove: (pointerId, x, y) => this.runtime.handleFillPointerMove(pointerId, x, y),
+      onFillPointerUp: (pointerId) => this.runtime.handleFillPointerUp(pointerId),
+    })
+    this.fillHandleLayer.attach()
+
     this.host = new DomGridHost({
       container: this.container,
       scheduler: this.scheduler,
@@ -131,6 +140,7 @@ export class Canvas2DBackend implements GridController {
       scheduler: this.scheduler,
       measurer: this.measurer,
       handleLayer: this.handleLayer,
+      fillLayer: this.fillHandleLayer,
       onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
     })
 
@@ -233,6 +243,7 @@ export class Canvas2DBackend implements GridController {
   destroy(): void {
     this.contextMenuLayer.destroy()
     this.runtime.destroy()
+    this.fillHandleLayer.destroy()
     this.handleLayer.destroy()
     this.cellEditor.destroy()
     if (this.canvas.parentNode === this.container) {

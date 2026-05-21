@@ -29,6 +29,7 @@ import type {
 import {
   autofitRowHeights,
   computeCellRect,
+  computeFillTarget,
   computePasteTarget,
   computeResizeHandles,
   computeScrollReveal,
@@ -45,13 +46,17 @@ import {
   type CellRange,
   type ContextMenuAction,
   type ContextMenuContext,
+  type FillDirection,
+  type FillTarget,
   type PasteSkippedCell,
   type ResizeHandleRect,
   type Row,
 } from '@novasheet/core'
 import type { DomCellEditor } from '../interaction/DomCellEditor'
 import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
+import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
+import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
 import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
@@ -89,6 +94,8 @@ export interface WebGridRuntimeOptions {
   measurer?: TextMeasurer
   /** Phase 3.4 — DOM resize handles；每帧 render 后 sync 位置。 */
   handleLayer?: DomHandleLayer
+  /** Phase 4.3 — DOM fill handle + drag preview layer. */
+  fillLayer?: DomFillHandleLayer
 }
 
 export interface UndoEvent {
@@ -96,6 +103,12 @@ export interface UndoEvent {
 }
 export interface RedoEvent {
   readonly command: UndoCommand
+}
+export interface FillEvent {
+  readonly source: CellRange
+  readonly fill: CellRange
+  readonly result: CellRange
+  readonly direction: FillDirection
 }
 
 /** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
@@ -125,6 +138,7 @@ export class WebGridRuntime {
   private draggingSelection = false
   private lastDragPointer: WebPointerEvent | null = null
   private handleLayer?: DomHandleLayer
+  private fillLayer?: DomFillHandleLayer
   private cellEditor?: DomCellEditor
   private contextMenuLayer?: DomContextMenuLayer
   private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
@@ -140,6 +154,7 @@ export class WebGridRuntime {
   // Phase 4.2 — undo/redo
   private onUndo?: (event: UndoEvent) => void
   private onRedo?: (event: RedoEvent) => void
+  private onFill?: (event: FillEvent) => void
   /**
    * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
    * 非 multiline 编辑置 null。
@@ -156,6 +171,12 @@ export class WebGridRuntime {
     /** 拖拽预览尺寸；pointerup 时一次性 commit（spec §6.5.2） */
     previewSize: number
   } | null = null
+  private fillDrag: {
+    pointerId: number
+    source: CellRange
+    target: FillTarget | null
+    lastPointer: WebPointerEvent | null
+  } | null = null
 
   constructor(opts: WebGridRuntimeOptions) {
     this.engine = opts.engine
@@ -165,6 +186,7 @@ export class WebGridRuntime {
     this.onSurfaceResize = opts.onSurfaceResize
     this.measurer = opts.measurer
     this.handleLayer = opts.handleLayer
+    this.fillLayer = opts.fillLayer
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -221,6 +243,10 @@ export class WebGridRuntime {
 
   setOnRedo(cb: (event: RedoEvent) => void): void {
     this.onRedo = cb
+  }
+
+  setOnFill(cb: (event: FillEvent) => void): void {
+    this.onFill = cb
   }
 
   canUndo(): boolean {
@@ -531,6 +557,7 @@ export class WebGridRuntime {
     this.remapScroll()
     this.refresh()
     this.contextMenuLayer?.close()
+    this.fillLayer?.hidePreview()
   }
 
   scrollToRow(rowIndex: number, align: 'start' | 'center' | 'end' = 'start'): void {
@@ -614,6 +641,51 @@ export class WebGridRuntime {
     this.afterEngineMutation()
   }
 
+  handleFillPointerDown(pointerId: number, clientX: number, clientY: number): void {
+    if (this.destroyed || this.resizeDrag || this.draggingSelection) return
+    if (this.engine.isCellEditing()) this.commitCellEdit(false)
+    const source = this.engine.getSelection().selectedRange
+    if (!source) return
+    this.closeContextMenu()
+    this.draggingSelection = false
+    this.fillDrag = {
+      pointerId,
+      source,
+      target: null,
+      lastPointer: { x: clientX, y: clientY, clientX, clientY, shiftKey: false },
+    }
+  }
+
+  handleFillPointerMove(pointerId: number, clientX: number, clientY: number): void {
+    if (this.destroyed || !this.fillDrag || this.fillDrag.pointerId !== pointerId) return
+    const pointer = { x: clientX, y: clientY, clientX, clientY, shiftKey: false }
+    this.fillDrag.lastPointer = pointer
+    const hit = hitTestCell(this.engine.getFrame(), pointer)
+    if (!hit) return
+    const data = this.engine.getData()
+    this.fillDrag.target = computeFillTarget(this.fillDrag.source, hit, {
+      rowCount: data.getRowCount(),
+      colCount: data.getSchema().fields.length,
+    })
+    if (this.fillDrag.target) {
+      this.fillLayer?.showPreview(computeRangeOverlayRects(this.engine.getFrame(), this.fillDrag.target.fill))
+    } else {
+      this.fillLayer?.hidePreview()
+    }
+  }
+
+  handleFillPointerUp(pointerId: number): void {
+    if (!this.fillDrag || this.fillDrag.pointerId !== pointerId) return
+    const target = this.fillDrag.target
+    this.fillDrag = null
+    this.fillLayer?.hidePreview()
+    if (!target) return
+    const result = this.engine.commitFill(target.source, target.fill, target.direction)
+    if (!result) return
+    this.afterEngineMutation()
+    this.onFill?.({ source: target.source, fill: target.fill, result: target.result, direction: target.direction })
+  }
+
   handleCellEditDraft(draft: string): void {
     if (this.destroyed) return
     this.engine.updateCellEditDraft(draft)
@@ -655,6 +727,8 @@ export class WebGridRuntime {
     this.destroyed = true
     this.cancelCellEdit()
     this.resizeDrag = null
+    this.fillDrag = null
+    this.fillLayer?.hidePreview()
     this.scheduler.cancel('renderer:flush')
     this.scheduler.cancel(HOST_RESIZE_KEY)
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
@@ -820,6 +894,7 @@ export class WebGridRuntime {
       const frame = this.engine.getFrame()
       this.renderer.render(frame)
       this.syncResizeHandles()
+      this.syncFillHandle()
       this.syncCellEditorPosition()
     })
   }
@@ -828,6 +903,7 @@ export class WebGridRuntime {
     const frame = this.engine.getFrame()
     this.renderer.render(frame)
     this.syncResizeHandles()
+    this.syncFillHandle()
     this.syncCellEditorPosition()
   }
 
@@ -835,6 +911,20 @@ export class WebGridRuntime {
     if (!this.handleLayer || this.resizeDrag) return
     const frame = this.engine.getFrame()
     this.handleLayer.sync(computeResizeHandles(frame))
+  }
+
+  private syncFillHandle(): void {
+    if (!this.fillLayer) return
+    if (this.resizeDrag || this.draggingSelection || this.fillDrag || this.engine.isCellEditing()) {
+      this.fillLayer.sync(null)
+      return
+    }
+    const range = this.engine.getSelection().selectedRange
+    if (!range) {
+      this.fillLayer.sync(null)
+      return
+    }
+    this.fillLayer.sync(computeFillHandleRect(this.engine.getFrame(), range))
   }
 
   private updateDragAutoScroll(pointer: WebPointerEvent): void {

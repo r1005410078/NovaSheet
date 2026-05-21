@@ -91,6 +91,7 @@ function makeEngine(): GridEngine {
     commitRowResize: mock(() => {}),
     commitColumnResize: mock(() => {}),
     commitPaste: mock(() => {}),
+    commitFill: mock(() => null),
   }
 }
 
