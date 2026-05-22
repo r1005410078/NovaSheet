@@ -28,6 +28,7 @@ import { denseGridTheme } from '../theme/denseGridTheme'
 import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
+import { findViewRow, resolveUnderlyingRow } from '../view/coordinates'
 import type { FillCommitResult, GridEngine, GridEngineOptions } from './GridEngine'
 
 /**
@@ -170,10 +171,11 @@ export class DefaultGridEngine implements GridEngine {
     if (parsed === undefined) return false
 
     const before = this.data.getCell(session.cell.rowIndex, session.fieldId) ?? null
+    const underlyingRow = resolveUnderlyingRow(this.data, session.cell.rowIndex)
     this.data.updateCell(session.cell.rowIndex, session.fieldId, parsed)
     this.undoStack.push({
       kind: 'editCell',
-      rowIndex: session.cell.rowIndex,
+      rowIndex: underlyingRow,
       fieldId: session.fieldId,
       before,
       after: parsed,
@@ -196,7 +198,7 @@ export class DefaultGridEngine implements GridEngine {
         if (!field) continue
         const v = this.data.getCell(r, field.id)
         if (v === null || v === undefined) continue
-        before.push({ rowIndex: r, fieldId: field.id, value: v })
+        before.push({ rowIndex: resolveUnderlyingRow(this.data, r), fieldId: field.id, value: v })
         this.data.updateCell(r, field.id, null)
       }
     }
@@ -316,8 +318,9 @@ export class DefaultGridEngine implements GridEngine {
       this.data,
       onSkipped,
       (rec: PasteWriteRecord) => {
-        before.push({ rowIndex: rec.rowIndex, fieldId: rec.fieldId, value: rec.before })
-        after.push({ rowIndex: rec.rowIndex, fieldId: rec.fieldId, value: rec.after })
+        const underlyingRow = resolveUnderlyingRow(this.data, rec.rowIndex)
+        before.push({ rowIndex: underlyingRow, fieldId: rec.fieldId, value: rec.before })
+        after.push({ rowIndex: underlyingRow, fieldId: rec.fieldId, value: rec.after })
       },
     )
     if (after.length === 0) return
@@ -332,19 +335,20 @@ export class DefaultGridEngine implements GridEngine {
 
   commitFill(source: CellRange, fill: CellRange, direction: FillDirection): FillCommitResult | null {
     if (!isMutableDataSource(this.data)) return null
-    const after: CellWrite[] = computeFillWrites({ data: this.data, source, fill, direction }).map((w) => ({
-      rowIndex: w.rowIndex,
+    const viewWrites = computeFillWrites({ data: this.data, source, fill, direction })
+    const after: CellWrite[] = viewWrites.map((w) => ({
+      rowIndex: resolveUnderlyingRow(this.data, w.rowIndex),
       fieldId: w.fieldId,
       value: w.value,
     }))
     if (after.length === 0) return null
 
-    const before: CellWrite[] = after.map((w) => ({
-      rowIndex: w.rowIndex,
+    const before: CellWrite[] = viewWrites.map((w) => ({
+      rowIndex: resolveUnderlyingRow(this.data, w.rowIndex),
       fieldId: w.fieldId,
       value: this.data.getCell(w.rowIndex, w.fieldId) ?? null,
     }))
-    for (const w of after) this.data.updateCell(w.rowIndex, w.fieldId, w.value)
+    for (const w of viewWrites) this.data.updateCell(w.rowIndex, w.fieldId, w.value)
 
     const result = unionRange(source, fill)
     this.undoStack.push({ kind: 'fill', source, fill, result, before, after })
@@ -412,13 +416,22 @@ export class DefaultGridEngine implements GridEngine {
 
   private applyEditCellWrite(rowIndex: number, fieldId: string, value: CellValue): void {
     if (!isMutableDataSource(this.data)) return
-    this.data.updateCell(rowIndex, fieldId, value)
+    const viewRow = findViewRow(this.data, rowIndex)
+    if (viewRow === -1 && this.data.updateCellByUnderlyingRow) {
+      this.data.updateCellByUnderlyingRow(rowIndex, fieldId, value)
+    } else if (viewRow !== -1) {
+      this.data.updateCell(viewRow, fieldId, value)
+    } else {
+      this.data.updateCell(rowIndex, fieldId, value)
+    }
   }
 
   private restoreSelectionForEdit(rowIndex: number, fieldId: string): void {
     const colIndex = this.getColumnIndex(fieldId)
     if (colIndex < 0) return
-    this.selection.selectCell({ rowIndex, colIndex })
+    const viewRow = findViewRow(this.data, rowIndex)
+    if (viewRow === -1) return
+    this.selection.selectCell({ rowIndex: viewRow, colIndex })
   }
 
   private resolveDefaultRowHeight(): number {

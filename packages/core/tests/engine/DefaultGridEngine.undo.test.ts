@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
 import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
-import type { Schema } from '../../src/data/Schema'
+import { FilterLayer } from '../../src/view/FilterLayer'
+import { SortLayer } from '../../src/view/SortLayer'
+import type { CellValue, Schema } from '../../src/data/Schema'
 import type { ApplyPasteSource, PasteTargetRect } from '../../src/clipboard/ApplyPaste'
 
 const schema: Schema = {
@@ -20,6 +22,36 @@ function makeEngine() {
     ],
   })
   return new DefaultGridEngine({ data })
+}
+
+class RecordingDataSource extends InMemoryDataSource {
+  writesByUnderlying: Array<{ row: number; fieldId: string; value: CellValue }> = []
+
+  override updateCellByUnderlyingRow(row: number, fieldId: string, value: CellValue): void {
+    this.writesByUnderlying.push({ row, fieldId, value })
+    super.updateCellByUnderlyingRow(row, fieldId, value)
+  }
+}
+
+function makeFilteredSortedData() {
+  const source = new RecordingDataSource({
+    schema,
+    rows: [
+      { a: 'skip', b: 100 },
+      { a: 'keep-low', b: 1 },
+      { a: 'keep-high', b: 9 },
+    ],
+  })
+  const filter = new FilterLayer()
+  filter.setSpec({
+    fieldId: 'a',
+    op: { kind: 'text-contains', value: 'keep', caseSensitive: false },
+  })
+  const sort = new SortLayer()
+  sort.setSpec({ fieldId: 'b', direction: 'desc' })
+  const filtered = filter.wrap(source)
+  const composed = sort.wrap(filtered)
+  return { source, composed }
 }
 
 describe('DefaultGridEngine — undo/redo scaffolding', () => {
@@ -131,6 +163,27 @@ describe('DefaultGridEngine — editCell undo/redo', () => {
       startRow: 0, endRow: 0, startCol: 0, endCol: 0,
     })
   })
+
+  it('stores editCell undo row as underlying row through filtered sorted view', () => {
+    const { source, composed } = makeFilteredSortedData()
+    const engine = new DefaultGridEngine({ data: composed })
+    expect(composed.resolveUnderlyingRow?.(0)).toBe(2)
+
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('keep-edited')
+    engine.commitCellEdit()
+    expect(source.getCell(2, 'a')).toBe('keep-edited')
+
+    const cmd = engine.undo()
+    expect(cmd).toMatchObject({
+      kind: 'editCell',
+      rowIndex: 2,
+      fieldId: 'a',
+      before: 'keep-high',
+      after: 'keep-edited',
+    })
+    expect(source.getCell(2, 'a')).toBe('keep-high')
+  })
 })
 
 describe('DefaultGridEngine — clearRange undo/redo', () => {
@@ -194,6 +247,21 @@ describe('DefaultGridEngine — clearRange undo/redo', () => {
     engine.undo()
     expect(engine.getData().getCell(0, 'a')).toBe('x')
     expect(engine.getData().getCell(0, 'b')).toBeNull() // 原本就是 null,不应被恢复成 1
+  })
+
+  it('stores clearRange before writes by underlying row through filtered sorted view', () => {
+    const { composed } = makeFilteredSortedData()
+    const engine = new DefaultGridEngine({ data: composed })
+    expect(composed.resolveUnderlyingRow?.(0)).toBe(2)
+
+    engine.clearRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 1 })
+    const cmd = engine.undo()
+    expect(cmd?.kind).toBe('clearRange')
+    if (cmd?.kind !== 'clearRange') return
+    expect(cmd.before).toEqual([
+      { rowIndex: 2, fieldId: 'a', value: 'keep-high' },
+      { rowIndex: 2, fieldId: 'b', value: 9 },
+    ])
   })
 })
 
@@ -284,6 +352,50 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
     engine.redo()
     expect(engine.getData().getCell(0, 'a')).toBe('typed-text')
     expect(engine.getData().getCell(0, 'b')).toBe(42)
+  })
+
+  it('stores paste before/after writes by underlying row through filtered sorted view', () => {
+    const { composed } = makeFilteredSortedData()
+    const engine = new DefaultGridEngine({ data: composed })
+    expect(composed.resolveUnderlyingRow?.(0)).toBe(2)
+
+    engine.commitPaste(
+      pasteSource([['pasted', 99]], ['a', 'b']),
+      targetRect(0, 0, 0, 1),
+      ['a', 'b'],
+    )
+    const cmd = engine.undo()
+    expect(cmd?.kind).toBe('paste')
+    if (cmd?.kind !== 'paste') return
+    expect(cmd.before).toEqual([
+      { rowIndex: 2, fieldId: 'a', value: 'keep-high' },
+      { rowIndex: 2, fieldId: 'b', value: 9 },
+    ])
+    expect(cmd.after).toEqual([
+      { rowIndex: 2, fieldId: 'a', value: 'pasted' },
+      { rowIndex: 2, fieldId: 'b', value: 99 },
+    ])
+  })
+
+  it('undo uses updateCellByUnderlyingRow when underlying row is not visible', () => {
+    const { source, composed } = makeFilteredSortedData()
+    const hiddenOnReplay = composed as typeof composed & {
+      findViewRow(underlyingRow: number): number
+    }
+    hiddenOnReplay.findViewRow = () => -1
+    const engine = new DefaultGridEngine({ data: hiddenOnReplay })
+
+    engine.commitPaste(
+      pasteSource([['pasted']], ['a']),
+      targetRect(0, 0, 0, 0),
+      ['a', 'b'],
+    )
+    engine.undo()
+    expect(source.writesByUnderlying.at(-1)).toEqual({
+      row: 2,
+      fieldId: 'a',
+      value: 'keep-high',
+    })
   })
 })
 
