@@ -83,9 +83,13 @@ export class ViewPipeline {
 
   private compose(): { composed: DataSource; wrappers: DataSource[] } {
     const wrappers: DataSource[] = []
+    const seenWrappers = new Set<DataSource>()
     const composed = this.layers.reduce<DataSource>((upstream, layer) => {
       const wrapper = layer.wrap(upstream)
-      wrappers.push(wrapper)
+      if (wrapper !== upstream && wrapper !== this.source && !seenWrappers.has(wrapper)) {
+        wrappers.push(wrapper)
+        seenWrappers.add(wrapper)
+      }
       return wrapper
     }, this.source)
     return { composed, wrappers }

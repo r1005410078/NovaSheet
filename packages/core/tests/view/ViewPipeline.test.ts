@@ -173,6 +173,30 @@ class TopPassthroughLayer implements ViewLayer<number> {
   }
 }
 
+class IdentityLayer implements ViewLayer<number> {
+  readonly id = 'identity'
+  private spec = 0
+  private notify: ((change: ViewLayerChange) => void) | null = null
+
+  bindPipeline(notify: (change: ViewLayerChange) => void): void {
+    this.notify = notify
+  }
+
+  getSpec(): number {
+    return this.spec
+  }
+
+  setSpec(spec: number): boolean {
+    this.spec = spec
+    this.notify?.({ layerId: this.id, reason: 'spec-changed' })
+    return true
+  }
+
+  wrap(upstream: DataSource): DataSource {
+    return upstream
+  }
+}
+
 describe('ViewPipeline', () => {
   it('wraps layers in add order and returns composed source', () => {
     const pipeline = new ViewPipeline(source)
@@ -255,6 +279,24 @@ describe('ViewPipeline', () => {
     expect(events).toEqual([{ oldRow: 10, disposedDuringCallback: 0 }])
     expect(lower.disposed).toBe(1)
     expect(pipeline.getComposed().resolveUnderlyingRow?.(0)).toBe(10)
+  })
+
+  it('does not dispose the raw source when a layer returns it unchanged', () => {
+    let rawDisposeCount = 0
+    const rawSource: DataSource & { dispose(): void } = {
+      ...source,
+      dispose: () => {
+        rawDisposeCount += 1
+      },
+    }
+    const pipeline = new ViewPipeline(rawSource)
+    const layer = new IdentityLayer()
+    pipeline.add(layer)
+
+    layer.setSpec(1)
+
+    expect(rawDisposeCount).toBe(0)
+    expect(pipeline.getComposed()).toBe(rawSource)
   })
 
   it('does not notify unsubscribed listeners', () => {
