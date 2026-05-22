@@ -336,6 +336,11 @@ export class DefaultGridEngine implements GridEngine {
   commitFill(source: CellRange, fill: CellRange, direction: FillDirection): FillCommitResult | null {
     if (!isMutableDataSource(this.data)) return null
     const viewWrites = computeFillWrites({ data: this.data, source, fill, direction })
+    const resultWrites: CellWrite[] = viewWrites.map((w) => ({
+      rowIndex: w.rowIndex,
+      fieldId: w.fieldId,
+      value: w.value,
+    }))
     const after: CellWrite[] = viewWrites.map((w) => ({
       rowIndex: resolveUnderlyingRow(this.data, w.rowIndex),
       fieldId: w.fieldId,
@@ -353,7 +358,7 @@ export class DefaultGridEngine implements GridEngine {
     const result = unionRange(source, fill)
     this.undoStack.push({ kind: 'fill', source, fill, result, before, after })
     this.selection.setSelectedRange(result)
-    return { source, fill, result, writes: after }
+    return { source, fill, result, writes: resultWrites }
   }
 
   private applyUndo(cmd: UndoCommand): void {
@@ -364,15 +369,15 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'clearRange':
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
-        this.restoreSelectionForRange(cmd.range)
+        this.restoreSelectionForWrites(cmd.before, cmd.range)
         return
       case 'paste':
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
-        this.restoreSelectionForRange(cmd.target)
+        this.restoreSelectionForWrites(cmd.before, cmd.target)
         return
       case 'fill':
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
-        this.restoreSelectionForRange(cmd.source)
+        this.restoreSelectionForWrites(cmd.before, cmd.source)
         return
       case 'resizeRow':
         this.rowsAxis.setSize(cmd.rowIndex, cmd.before)
@@ -391,15 +396,15 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'clearRange':
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, null)
-        this.restoreSelectionForRange(cmd.range)
+        this.restoreSelectionForWrites(cmd.before, cmd.range)
         return
       case 'paste':
         for (const w of cmd.after) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
-        this.restoreSelectionForRange(cmd.target)
+        this.restoreSelectionForWrites(cmd.after, cmd.target)
         return
       case 'fill':
         for (const w of cmd.after) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
-        this.restoreSelectionForRange(cmd.result)
+        this.restoreSelectionForWrites(cmd.after, cmd.result)
         return
       case 'resizeRow':
         this.rowsAxis.setSize(cmd.rowIndex, cmd.after)
@@ -410,8 +415,19 @@ export class DefaultGridEngine implements GridEngine {
     }
   }
 
-  private restoreSelectionForRange(range: CellRange): void {
-    this.selection.setSelectedRange(range)
+  private restoreSelectionForWrites(writes: readonly CellWrite[], fallbackRange: CellRange): void {
+    const visibleRows: number[] = []
+    for (const write of writes) {
+      const viewRow = findViewRow(this.data, write.rowIndex)
+      if (viewRow !== -1) visibleRows.push(viewRow)
+    }
+    if (visibleRows.length === 0) return
+    this.selection.setSelectedRange({
+      startRow: Math.min(...visibleRows),
+      endRow: Math.max(...visibleRows),
+      startCol: fallbackRange.startCol,
+      endCol: fallbackRange.endCol,
+    })
   }
 
   private applyEditCellWrite(rowIndex: number, fieldId: string, value: CellValue): void {

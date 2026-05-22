@@ -3,7 +3,8 @@ import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
 import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
 import { FilterLayer } from '../../src/view/FilterLayer'
 import { SortLayer } from '../../src/view/SortLayer'
-import type { CellValue, Schema } from '../../src/data/Schema'
+import type { DataSource, DataSourceListener } from '../../src/data/DataSource'
+import type { CellValue, Row, Schema } from '../../src/data/Schema'
 import type { ApplyPasteSource, PasteTargetRect } from '../../src/clipboard/ApplyPaste'
 
 const schema: Schema = {
@@ -52,6 +53,76 @@ function makeFilteredSortedData() {
   const filtered = filter.wrap(source)
   const composed = sort.wrap(filtered)
   return { source, composed }
+}
+
+class OrderedViewDataSource implements DataSource {
+  constructor(
+    private readonly source: RecordingDataSource,
+    private order: number[],
+  ) {}
+
+  setOrder(order: number[]): void {
+    this.order = order
+  }
+
+  getRowCount(): number {
+    return this.order.length
+  }
+
+  getSchema(): Schema {
+    return this.source.getSchema()
+  }
+
+  getRows(startIndex: number, endIndex: number): Row[] {
+    const rows: Row[] = []
+    for (let viewRow = startIndex; viewRow <= endIndex; viewRow += 1) {
+      const underlyingRow = this.order[viewRow]
+      if (underlyingRow == null) continue
+      const [row] = this.source.getRows(underlyingRow, underlyingRow)
+      if (row) rows.push(row)
+    }
+    return rows
+  }
+
+  getCell(rowIndex: number, fieldId: string): CellValue | undefined {
+    const underlyingRow = this.order[rowIndex]
+    return underlyingRow == null ? undefined : this.source.getCell(underlyingRow, fieldId)
+  }
+
+  resolveUnderlyingRow(viewRow: number): number {
+    return this.order[viewRow] ?? -1
+  }
+
+  findViewRow(underlyingRow: number): number {
+    return this.order.indexOf(underlyingRow)
+  }
+
+  subscribe(_listener: DataSourceListener): () => void {
+    return () => {}
+  }
+
+  updateCell(rowIndex: number, fieldId: string, value: CellValue): void {
+    const underlyingRow = this.order[rowIndex]
+    if (underlyingRow == null) return
+    this.source.updateCellByUnderlyingRow(underlyingRow, fieldId, value)
+  }
+
+  updateCellByUnderlyingRow(row: number, fieldId: string, value: CellValue): void {
+    this.source.updateCellByUnderlyingRow(row, fieldId, value)
+  }
+}
+
+function makeOrderedViewData(order = [2, 1]) {
+  const source = new RecordingDataSource({
+    schema,
+    rows: [
+      { a: 'skip', b: 100 },
+      { a: 'keep-low', b: 1 },
+      { a: 'keep-high', b: 9 },
+    ],
+  })
+  const view = new OrderedViewDataSource(source, order)
+  return { source, view }
 }
 
 describe('DefaultGridEngine — undo/redo scaffolding', () => {
@@ -263,6 +334,23 @@ describe('DefaultGridEngine — clearRange undo/redo', () => {
       { rowIndex: 2, fieldId: 'b', value: 9 },
     ])
   })
+
+  it('undo clearRange maps range selection to visible written rows after view order changes', () => {
+    const { view } = makeOrderedViewData()
+    const engine = new DefaultGridEngine({ data: view })
+
+    engine.clearRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 1 })
+    view.setOrder([1, 2])
+    engine.undo()
+
+    expect(engine.getSelection().activeCell).toEqual({ rowIndex: 1, colIndex: 0 })
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 1,
+      endRow: 1,
+      startCol: 0,
+      endCol: 1,
+    })
+  })
 })
 
 describe('DefaultGridEngine — commitPaste undo/redo', () => {
@@ -395,6 +483,28 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
       row: 2,
       fieldId: 'a',
       value: 'keep-high',
+    })
+  })
+
+  it('undo paste leaves selection unchanged when written rows are hidden after view changes', () => {
+    const { view } = makeOrderedViewData()
+    const engine = new DefaultGridEngine({ data: view })
+    engine.selectCell({ rowIndex: 1, colIndex: 1 })
+
+    engine.commitPaste(
+      pasteSource([['pasted']], ['a']),
+      targetRect(0, 0, 0, 0),
+      ['a', 'b'],
+    )
+    view.setOrder([])
+    engine.undo()
+
+    expect(engine.getSelection().activeCell).toEqual({ rowIndex: 1, colIndex: 1 })
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 1,
+      endRow: 1,
+      startCol: 1,
+      endCol: 1,
     })
   })
 })
