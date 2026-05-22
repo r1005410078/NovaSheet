@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test'
+import type { DataSource, DataSourceEvent, DataSourceListener } from '../../src/data/DataSource'
 import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
 import type { MutableDataSource } from '../../src/data/MutableDataSource'
-import type { Row } from '../../src/data/Schema'
+import type { CellValue, Row, Schema } from '../../src/data/Schema'
 import { SortLayer } from '../../src/view/SortLayer'
 
 const schema = {
@@ -46,6 +47,47 @@ function sortedColumn(fieldId: string, direction: 'asc' | 'desc', rows = default
   expect(layer.setSpec({ fieldId, direction })).toBe(true)
   const sorted = layer.wrap(makeSource(rows))
   return Array.from({ length: sorted.getRowCount() }, (_, row) => sorted.getCell(row, fieldId))
+}
+
+class MutableSchemaDataSource implements DataSource {
+  private listeners = new Set<DataSourceListener>()
+
+  constructor(
+    private schemaValue: Schema,
+    private rows: Row[],
+  ) {}
+
+  getRowCount(): number {
+    return this.rows.length
+  }
+
+  getSchema(): Schema {
+    return this.schemaValue
+  }
+
+  getRows(startIndex: number, endIndex: number): Row[] {
+    return this.rows.slice(startIndex, endIndex + 1)
+  }
+
+  getCell(rowIndex: number, fieldId: string): CellValue | undefined {
+    return this.rows[rowIndex]?.[fieldId]
+  }
+
+  subscribe(listener: DataSourceListener): () => void {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  setSchema(schemaValue: Schema): void {
+    this.schemaValue = schemaValue
+    this.emit({ type: 'schemaChanged' })
+  }
+
+  private emit(event: DataSourceEvent): void {
+    for (const listener of this.listeners) listener(event)
+  }
 }
 
 describe('SortLayer', () => {
@@ -157,6 +199,28 @@ describe('SortLayer', () => {
     expect(sorted.getRows(0, 3)).toEqual(defaultRows())
   })
 
+  it('rejects missing fields after schema capture and keeps the current spec unchanged', () => {
+    const layer = new SortLayer()
+    layer.wrap(makeSource())
+
+    expect(layer.setSpec({ fieldId: 'missing', direction: 'asc' })).toBe(false)
+    expect(layer.getSpec()).toBeNull()
+
+    expect(layer.setSpec({ fieldId: 'score', direction: 'asc' })).toBe(true)
+    expect(layer.setSpec({ fieldId: 'missing', direction: 'desc' })).toBe(false)
+    expect(layer.getSpec()).toEqual({ fieldId: 'score', direction: 'asc' })
+  })
+
+  it('clears a pre-wrap missing-field spec once schema is known', () => {
+    const layer = new SortLayer()
+
+    expect(layer.setSpec({ fieldId: 'missing', direction: 'asc' })).toBe(true)
+    const sorted = layer.wrap(makeSource())
+
+    expect(layer.getSpec()).toBeNull()
+    expect(sorted.getRows(0, 3)).toEqual(defaultRows())
+  })
+
   it('cycles a field through ascending, descending, and unsorted states', () => {
     const layer = new SortLayer()
 
@@ -177,6 +241,88 @@ describe('SortLayer', () => {
     expect(sorted.findViewRow?.(1)).toBe(0)
     expect(sorted.findViewRow?.(0)).toBe(1)
     expect(sorted.findViewRow?.(99)).toBe(-1)
+  })
+
+  it('is transparent when the sort spec is null', () => {
+    const source = makeSource()
+    const sorted = new SortLayer().wrap(source)
+
+    expect(sorted.getRowCount()).toBe(source.getRowCount())
+    expect(sorted.getRows(0, 3)).toEqual(defaultRows())
+    expect(sorted.getCell(0, 'name')).toBe('Beta')
+    expect(sorted.getCell(1, 'score')).toBe(1)
+    expect(sorted.resolveUnderlyingRow?.(2)).toBe(2)
+    expect(sorted.findViewRow?.(3)).toBe(3)
+  })
+
+  it('passes rowsChanged through without resorting the current wrapper order', () => {
+    const source = makeSource()
+    const layer = new SortLayer()
+    layer.setSpec({ fieldId: 'score', direction: 'asc' })
+    const sorted = layer.wrap(source)
+    const events: DataSourceEvent[] = []
+    sorted.subscribe((event) => events.push(event))
+
+    expect((sorted.getRows(0, 3) as Row[]).map((row) => row.name)).toEqual([
+      'alpha',
+      'Beta',
+      'delta',
+      'Gamma',
+    ])
+
+    source.updateCell(3, 'score', 0)
+
+    expect(events).toEqual([{ type: 'rowsChanged', startIndex: 3, endIndex: 3 }])
+    expect((sorted.getRows(0, 3) as Row[]).map((row) => row.name)).toEqual([
+      'alpha',
+      'Beta',
+      'delta',
+      'Gamma',
+    ])
+    expect(sorted.getCell(2, 'score')).toBe(0)
+  })
+
+  it('rebuilds mapping and re-emits rowCountChanged and reset events', () => {
+    const source = makeSource()
+    const layer = new SortLayer()
+    layer.setSpec({ fieldId: 'score', direction: 'asc' })
+    const sorted = layer.wrap(source)
+    const events: DataSourceEvent[] = []
+    sorted.subscribe((event) => events.push(event))
+
+    source.setRows([
+      { name: 'Zed', score: 10, status: 'Done', tags: [] },
+      { name: 'Able', score: 0, status: 'Todo', tags: [] },
+    ])
+
+    expect(events).toEqual([{ type: 'rowCountChanged', newCount: 2 }, { type: 'reset' }])
+    expect(sorted.getRowCount()).toBe(2)
+    expect((sorted.getRows(0, 1) as Row[]).map((row) => row.name)).toEqual(['Able', 'Zed'])
+    expect(sorted.resolveUnderlyingRow?.(0)).toBe(1)
+  })
+
+  it('rebuilds mapping and re-emits schemaChanged events', () => {
+    const source = new MutableSchemaDataSource(
+      { fields: [{ id: 'score', name: 'Score', type: 'number', width: 80 }] },
+      [
+        { score: 2, name: 'B' },
+        { score: 1, name: 'A' },
+      ],
+    )
+    const layer = new SortLayer()
+    layer.setSpec({ fieldId: 'score', direction: 'asc' })
+    const sorted = layer.wrap(source)
+    const events: DataSourceEvent[] = []
+    sorted.subscribe((event) => events.push(event))
+
+    expect((sorted.getRows(0, 1) as Row[]).map((row) => row.name)).toEqual(['A', 'B'])
+
+    source.setSchema({ fields: [{ id: 'score', name: 'Score', type: 'multiSelect', width: 80 }] })
+
+    expect(events).toEqual([{ type: 'schemaChanged' }])
+    expect(layer.getSpec()).toBeNull()
+    expect((sorted.getRows(0, 1) as Row[]).map((row) => row.name)).toEqual(['B', 'A'])
+    expect(sorted.resolveUnderlyingRow?.(0)).toBe(0)
   })
 
   it('writes by view row for updateCell and by raw row for updateCellByUnderlyingRow', () => {
