@@ -21,7 +21,7 @@
 | 列头排序箭头 + 筛选漏斗指示 | 是 | `HeaderPainter` 通过 `ViewLayer.headerDecoration` 拉取装饰，绘制态 icon |
 | Filter popover 面板（按 FieldType 切换控件） | 是 | 与 4.0 的菜单 popover 同样作为 DOM overlay |
 | `DataSource.resolveUnderlyingRow / findViewRow`（可选） | 是 | 视图坐标 ↔ 底层稳定行键的双向映射 |
-| `MutableDataSource.updateCellByUnderlyingRow`（可选） | 是 | undo/redo 对被过滤行的写入 fallback |
+| `MutableDataSource.updateCellByUnderlyingRow`（可选） | 是 | raw source 可选；mutable decorated source 必须实现，用于 undo/redo 写回被过滤行 |
 | Undo / Redo 与视图变化的解耦 | 是 | 命令存底层 rowIndex；undo/redo 时映回视图 |
 | 选区在视图切换后的重定位 / 自动清空 | 是 | 由 Grid 协调 ViewLayer 事件触发 |
 | 编辑会话在视图切换时强制 commit-or-cancel | 是 | 不试图保留编辑态 |
@@ -91,6 +91,12 @@ export interface ViewLayer<TSpec = unknown> {
   /** 稳定 id（'sort' | 'filter' | 未来 'group' 等）；同 id 在管线中只能存在一个。 */
   readonly id: string
 
+  /**
+   * ViewPipeline 在 add(layer) 时注入；layer 的 setSpec 只负责替换自身状态，
+   * spec 实际变更后必须调用 notify({ layerId: id, reason: 'spec-changed' })。
+   */
+  bindPipeline(notify: (change: ViewLayerChange) => void): void
+
   /** 当前 spec；不可变结构，外部通过 setSpec 整体替换。 */
   getSpec(): TSpec
 
@@ -115,6 +121,14 @@ export interface ViewLayer<TSpec = unknown> {
    * `ctx.targetKind === 'columnHeader'` 时由 ViewPipeline 调用；4.4 不在 cell 菜单上贡献项。
    */
   contextMenuItems?(ctx: ColumnHeaderMenuContext): readonly ContextMenuItem[]
+}
+
+export type ViewLayerChangeReason = 'spec-changed' | 'upstream-reset'
+
+export interface ViewLayerChange {
+  /** 触发变更的 layer id；4.4 中只会是 'sort' | 'filter'。 */
+  readonly layerId: string
+  readonly reason: ViewLayerChangeReason
 }
 
 export interface HeaderDecoration {
@@ -146,8 +160,11 @@ export class ViewPipeline {
 
   get(layerId: string): ViewLayer | undefined
 
-  /** spec 变化时由 layer 通知；内部重建套娃链并 emit 通知。 */
-  rebuild(): void
+  /**
+   * spec / 上游变化时由 layer 通知；内部重建套娃链并 emit 通知。
+   * rebuild 必须先捕获旧 composed DS 的 resolver 快照，再创建新的 wrapper 链。
+   */
+  rebuild(change: ViewLayerChange): void
 
   /** Engine 持有的 DS。 */
   getComposed(): DataSource
@@ -162,21 +179,34 @@ export class ViewPipeline {
    * 订阅 spec 变化 / 上游 reset。
    *
    * 回调入参：
-   *  - `reason`: 触发原因——
+   *  - `change.layerId`: 触发变更的 layer id
+   *  - `change.reason`: 触发原因——
    *      `'spec-changed'`：某 layer 的 spec 替换；旧数据未变，oldResolveUnderlyingRow 仍可用于重映射
    *      `'upstream-reset'`：上游 emit 了 reset / rowCountChanged / schemaChanged；旧 rowIndex 语义已失效，
    *                          消费者应放弃重映射、清空依赖 rowIndex 的状态
    *  - `oldResolveUnderlyingRow`: rebuild 之前 composed DS 的 resolveUnderlyingRow 函数引用；
-   *      仅在 reason === 'spec-changed' 时使用才有意义。
+   *      仅在 change.reason === 'spec-changed' 时使用才有意义。
    */
   subscribe(
     listener: (
-      reason: 'spec-changed' | 'upstream-reset',
+      change: ViewLayerChange,
       oldResolveUnderlyingRow: (viewRow: number) => number,
     ) => void,
   ): () => void
 }
 ```
+
+### 3.2.1 变更通知与快照契约
+
+`ViewPipeline.add(layer)` 时会调用 `layer.bindPipeline(notify)`。`SortLayer.setSpec` / `FilterLayer.setSpec` 在 spec 内容真实变化时：
+
+1. 替换自身不可变 spec
+2. 调用 `notify({ layerId: layer.id, reason: 'spec-changed' })`
+3. `ViewPipeline.rebuild(change)` 捕获旧 composed DS 的 resolver 快照，重建完整 wrapper 链，然后通知订阅者
+
+`oldResolveUnderlyingRow` 必须绑定旧 composed DS 的映射快照；禁止闭包读取会被原地替换的 `order/inverse`。实现上优先选择“每次 rebuild 创建新的 wrapper 实例”，旧 wrapper 及其映射数组保持不可变，直到订阅回调结束后自然释放。
+
+上游 `reset / rowCountChanged / schemaChanged` 由当前 composed DS 透传为 `notify({ layerId, reason: 'upstream-reset' })`；若事件来自 raw source 且无法归因，`ViewPipeline` 使用最靠近 raw source 的内置层 id（4.4 为 `filter`）作为 `layerId`，但消费者只应依赖 `reason` 判断是否清空 rowIndex 相关状态。
 
 ### 3.3 Grid 集成
 
@@ -257,7 +287,7 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
     return inverse[upRow] ?? -1   // 数组越界视为 -1
     ```
   - `updateCell(viewIdx, fid, value) → upstream.updateCell(order[viewIdx], fid, value)`
-  - `updateCellByUnderlyingRow(underlyingRow, fid, value) → upstream.updateCellByUnderlyingRow?.(underlyingRow, fid, value)`；上游不支持时回退 `upstream.updateCell(upstream.findViewRow?.(underlyingRow) ?? underlyingRow, fid, value)`。
+  - `updateCellByUnderlyingRow(underlyingRow, fid, value) → upstream.updateCellByUnderlyingRow?.(underlyingRow, fid, value)`；上游不支持时仅在 `upstream.findViewRow?.(underlyingRow) ?? underlyingRow` 返回可见行时回退 `upstream.updateCell(viewRow, fid, value)`，否则跳过。
 - 上游事件处理：
   - `reset / rowCountChanged / schemaChanged` → 全量重建 `order/inverse` → re-emit 同事件
   - `rowsChanged` → 透传，不重新排序（用户改一个 cell 不应让该行突然跳走，与 Sheets 行为一致）
@@ -268,13 +298,17 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
 contextMenuItems(ctx):
   const field = ctx.field
   const sortable = isSortable(field.type)         // field.type !== 'multiSelect'
-  const dir = sortable ? getDirection(field.id) : null
+  const dir = getDirection(field.id)
+  const current = getSpec()
+  const canClear = current !== null && current.fieldId === field.id
   return [
     { id: 'sort-asc',  label: '升序',     disabled: !sortable,    checked: dir==='asc' },
     { id: 'sort-desc', label: '降序',     disabled: !sortable,    checked: dir==='desc' },
-    { id: 'sort-none', label: '清除排序', disabled: dir === null, separatorAfter: true },
+    { id: 'sort-none', label: '清除排序', disabled: !canClear,     separatorAfter: true },
   ]
 ```
+
+`sort-none` 不依赖当前字段是否仍然 sortable；schemaChanged 把已排序列变成 `multiSelect` 时，用户仍应能从菜单清掉遗留排序态（正常路径下 schema 失效也会自动 `setSpec(null)`）。
 
 ### 4.5 headerDecoration
 
@@ -314,7 +348,7 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
   isActive(fieldId: string): boolean
   getSpec(): FilterSpec | null
   setSpec(spec: FilterSpec | null): boolean
-  clear(fieldId?: string): void   // 不传 fieldId → 等价 setSpec(null)
+  clear(fieldId?: string): void   // 不传 fieldId → 等价 setSpec(null)；传入非当前 active 字段 → no-op
 
   wrap(upstream: DataSource): DataSource
   headerDecoration(field: Field): HeaderDecoration | null
@@ -408,7 +442,7 @@ export interface MutableDataSource extends DataSource {
   /**
    * 按底层坐标直接写。装饰源把调用透传到上游同名方法，最终落到最底层源；
    * 用于 undo / redo：保证被过滤掉的行也能写回底层。
-   * 缺省时引擎走 fallback：data.updateCell(findViewRow(data, underlyingRow), ...)。
+   * 缺省时引擎走 fallback：data.updateCell(underlyingRow, ...)；该 fallback 仅适用于非装饰 identity 源。
    */
   updateCellByUnderlyingRow?(underlyingRow: number, fieldId: string, value: CellValue): void
 }
@@ -431,6 +465,7 @@ export function findViewRow(source: DataSource, underlyingRow: number): number {
 - `resolveUnderlyingRow` / `findViewRow` 是纯查询，不能 emit 事件、不能触发 wrap 重建。
 - spec 不变期间，两个方法对同一 underlyingRow / viewRow 互为逆映射（双射 invariant，过滤掉的行除外）。
 - 装饰器实现时用 `Int32Array` 存映射，避免 Number 装箱。
+- 所有 mutable decorated source 必须实现 `updateCellByUnderlyingRow`；否则被过滤掉的底层行无法通过 undo / redo 写回。engine 的 fallback 只服务 raw identity mutable source。
 
 ---
 
@@ -583,7 +618,7 @@ interface ThemeIcons {
 
 ### 8.1 onViewChange 流程
 
-`ViewPipeline.subscribe` 触发后，按 `reason` 分两条路径，统一前置步骤：
+`ViewPipeline.subscribe` 触发后，按 `change.reason` 分两条路径，统一前置步骤：
 
 **前置（两条路径共用）**：
 
@@ -597,7 +632,7 @@ interface ThemeIcons {
 3. 取消 fill handle 拖拽（若存在）
 ```
 
-**reason === 'spec-changed'** —— 旧数据未变，尝试按底层行重映射 selection：
+**change.reason === 'spec-changed'** —— 旧数据未变，尝试按底层行重映射 selection：
 
 ```
 4. 取旧 selection（anchor + active 两端）；视图坐标
@@ -607,15 +642,15 @@ interface ThemeIcons {
 8. 若两端都 !== -1：把 selection 平移到新坐标对 + 同 colIndex
    若任一端 === -1（被过滤掉）：清空 selection
 9. invalidate frame
-10. emit viewChange + 对应的 sortChange / filterChange
+10. emit viewChange({ layerId: change.layerId }) + 对应的 sortChange / filterChange
 ```
 
-**reason === 'upstream-reset'** —— 旧 rowIndex 语义已失效，直接清空依赖 rowIndex 的状态：
+**change.reason === 'upstream-reset'** —— 旧 rowIndex 语义已失效，直接清空依赖 rowIndex 的状态：
 
 ```
 4. 清空 selection
 5. invalidate frame
-6. emit viewChange（layerId 反映触发该 reset 的层；若不可判定则取 'sort'）
+6. emit viewChange({ layerId: change.layerId })
 ```
 
 注：`setData(newSource)` 会显式清空 spec 并重建 pipeline（§3.3），其内部清空 selection 的逻辑独立于 subscribe 回调，不依赖 'upstream-reset' 路径。
@@ -645,7 +680,7 @@ for (const w of cmd.writes) {
     if (this.data.updateCellByUnderlyingRow) {
       this.data.updateCellByUnderlyingRow(w.rowIndex, w.fieldId, w.value)
     } else {
-      // identity 情况下二者等价
+      // 仅 raw identity mutable source 会走到这里；decorated mutable source 必须实现 updateCellByUnderlyingRow。
       this.data.updateCell(w.rowIndex, w.fieldId, w.value)
     }
   } else {
@@ -676,11 +711,29 @@ grid.on('filterChange', (e: { spec: FilterSpec | null })    => void)
 
 三种事件同时暴露：`viewChange` 合事件 + 各 layer 自己的分事件，消费者按需订阅。
 
+事件派发规则：
+
+- `change.layerId === 'sort'`：emit `viewChange` 后 emit `sortChange({ spec: sortLayer.getSpec() })`
+- `change.layerId === 'filter'`：emit `viewChange` 后 emit `filterChange({ spec: filterLayer.getSpec() })`
+- `change.reason === 'upstream-reset'` 时，分事件只在对应 layer 因 schema 失效主动清空 spec 时派发；raw source 数据重置不伪造 sort/filter spec 变化
+
 ### 8.5 与 4.3 fill handle 的衔接
 
 - fill handle 的 source / fill / result range 全部使用视图坐标（4.3 现有行为不变）。
 - `engine.commitFill` 内部生成的 writes 按 §8.2 翻译为底层坐标。
 - 视图变化（spec 切换）时强制 cancel 正在进行的 fill 拖拽。
+
+### 8.6 实现 checkpoint
+
+实现 4.4 时按下面顺序推进，避免 UI 先行后再返工坐标语义：
+
+1. 先补 core 协议：`DataSource.resolveUnderlyingRow / findViewRow`、`MutableDataSource.updateCellByUnderlyingRow`、`coordinates.ts` helper。
+2. 实现 `ViewLayer` / `ViewPipeline`，先用测试锁住 `bindPipeline` 通知、`ViewLayerChange.layerId`、`oldResolveUnderlyingRow` 快照语义。
+3. 实现 `FilterLayer` 和 `SortLayer` 的 DataSource wrapper；先完成只读映射，再补 mutable 透传。
+4. 改 `DefaultGridEngine` 写入与 undo/redo：所有 undo command 记录底层 rowIndex，执行时用 `findViewRow` / `updateCellByUnderlyingRow`。
+5. 接入 Grid：构造 pipeline、处理 `viewChange`、重定位 / 清空 selection、暴露 `getSortLayer / getFilterLayer / getViewPipeline`。
+6. 接入列头菜单和 HeaderPainter icon；最后再做 `FilterPopover`，确保 overlay 与 cell 菜单 / fill handle 互斥。
+7. 补 web 集成测试与 Storybook 场景；特别覆盖“排序/筛选激活后编辑不自动重排/重过滤”和“被过滤行可 undo 写回”。
 
 ---
 
@@ -693,9 +746,9 @@ grid.on('filterChange', (e: { spec: FilterSpec | null })    => void)
 | `SortLayer.wrap` | text/number/date/checkbox/singleSelect 各 asc/desc/null 末尾断言；stable sort；多次 setSpec 顺序正确；multiSelect 被拒 |
 | `FilterLayer.wrap` | 每个 FilterOp 至少 3 行覆盖（命中/未命中/空值）；schemaChanged 失效 spec 降级；rowsChanged 不重过滤 |
 | `ViewPipeline` 套娃 | filter→sort 后 getCell 数据正确；`resolveUnderlyingRow / findViewRow` 双射 invariant；spec 变化触发 subscribe；oldResolveUnderlyingRow 在 subscribe 回调中可用 |
-| `MutableDataSource.updateCellByUnderlyingRow` | 装饰源透传到上游；被过滤行可写底层；无 updateCellByUnderlyingRow 的源走 fallback |
+| `MutableDataSource.updateCellByUnderlyingRow` | 装饰源必须实现并透传到上游；被过滤行可写底层；raw identity 源无 updateCellByUnderlyingRow 时走 fallback |
 | `ContextMenuModel.getColumnHeaderContextMenuItems` | sort 三态 checked；filter 激活时「清除」启用；multiSelect 列上 sort 全禁用 |
-| `DefaultGridEngine` 视图协调 | view 切换后 selection 重定位 / 清空各分支；undo 命令 rowIndex 翻译；undo 命中已过滤行的 fallback 路径 |
+| `DefaultGridEngine` 视图协调 | view 切换后 selection 重定位 / 清空各分支；undo 命令 rowIndex 翻译；undo 命中已过滤行时调用 updateCellByUnderlyingRow |
 | `FilterPopover` 表单 | 各 op 的「应用」按钮启用 / 禁用条件；Esc / 外部点击 / Apply / Clear / Cancel 五条路径 |
 
 ### 9.2 集成测试（`packages/web/tests`）
