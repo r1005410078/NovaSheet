@@ -333,7 +333,7 @@ export class Canvas2DRenderer {
     // 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
     this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
     this.preloadVisibleRows(ctx)
-    for (const region of paintOrder) this.paintCellContentRegion(region, data, rowsAxis, colsAxis)
+    for (const region of paintOrder) this.paintCellContentRegion(region, data, rowsAxis, colsAxis, ctx.frame.cellEdit?.cell)
     this.paintHeaders(paintOrder, data, colsAxis, excelChrome)
     this.paintRowHeaders(regions, rowsAxis, snapshot)
   }
@@ -499,6 +499,7 @@ export class Canvas2DRenderer {
     data: DataSource,
     rowsAxis: Axis,
     colsAxis: Axis,
+    editingCell?: CellAddress,
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -512,6 +513,7 @@ export class Canvas2DRenderer {
       const cellY = rect.y + yTop - scrollOffsetY
 
       for (let c = colRange[0]; c <= colRange[1]; c++) {
+        if (editingCell && editingCell.rowIndex === r && editingCell.colIndex === c) continue
         const field = schema.fields[c]
         if (!field) continue
         const xLeft = colsAxis.indexToPosition(c)

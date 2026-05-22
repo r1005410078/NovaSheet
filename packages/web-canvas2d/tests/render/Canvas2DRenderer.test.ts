@@ -110,6 +110,28 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(carol!.args[2]).toBe(46)
   })
 
+  it('编辑中的 cell 内容交给 DOM editor，不再由 canvas 重复绘制', () => {
+    const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      cellEdit: {
+        cell: { rowIndex: 0, colIndex: 0 },
+        fieldId: 'name',
+        fieldType: 'text',
+        draft: 'Alice',
+      },
+    })
+
+    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    expect(texts).not.toContain('Alice')
+    expect(texts).toContain('Bob')
+  })
+
   it('横向滚动时 cellX 减去 scrollX', () => {
     const { ops, viewport, renderer } = setup()
     viewport.setScroll(100, 0) // scroll right by 100px = 1 col
