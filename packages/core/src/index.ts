@@ -117,6 +117,8 @@ export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'
 
 // 视图坐标协议（Phase 4.4）
 export { findViewRow, resolveUnderlyingRow } from './view/coordinates'
+export { SortLayer } from './view/SortLayer'
+export type { SortDirection, SortSpec } from './view/SortLayer'
 export { ViewPipeline } from './view/ViewPipeline'
 export type {
   ColumnHeaderMenuAction,
