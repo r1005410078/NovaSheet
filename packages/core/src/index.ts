@@ -117,6 +117,16 @@ export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'
 
 // 视图坐标协议（Phase 4.4）
 export { findViewRow, resolveUnderlyingRow } from './view/coordinates'
+export { ViewPipeline } from './view/ViewPipeline'
+export type {
+  ColumnHeaderMenuAction,
+  ColumnHeaderMenuContext,
+  ColumnHeaderMenuItem,
+  HeaderDecoration,
+  ViewLayer,
+  ViewLayerChange,
+  ViewLayerChangeReason,
+} from './view/ViewLayer'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
