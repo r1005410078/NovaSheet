@@ -23,7 +23,9 @@ export class ViewPipeline {
   }
 
   add(layer: ViewLayer): void {
-    layer.bindPipeline((change) => this.rebuild(change))
+    layer.bindPipeline((change) => {
+      if (this.layers.includes(layer)) this.rebuild(change)
+    })
     this.layers.push(layer)
     this.composed = this.compose()
   }

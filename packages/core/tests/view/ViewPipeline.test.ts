@@ -57,6 +57,35 @@ class FakeLayer implements ViewLayer<string | null> {
   }
 }
 
+class SpecOffsetLayer implements ViewLayer<number> {
+  readonly id = 'offset'
+  private spec = 10
+  private notify: ((change: ViewLayerChange) => void) | null = null
+
+  bindPipeline(notify: (change: ViewLayerChange) => void): void {
+    this.notify = notify
+  }
+
+  getSpec(): number {
+    return this.spec
+  }
+
+  setSpec(spec: number): boolean {
+    if (this.spec === spec) return false
+    this.spec = spec
+    this.notify?.({ layerId: this.id, reason: 'spec-changed' })
+    return true
+  }
+
+  wrap(upstream: DataSource): DataSource {
+    const offset = this.spec
+    return {
+      ...upstream,
+      resolveUnderlyingRow: (row) => upstream.resolveUnderlyingRow?.(row + offset) ?? row + offset,
+    }
+  }
+}
+
 describe('ViewPipeline', () => {
   it('wraps layers in add order and returns composed source', () => {
     const pipeline = new ViewPipeline(source)
@@ -75,6 +104,47 @@ describe('ViewPipeline', () => {
     })
     layer.setSpec('x')
     expect(events).toEqual([{ layerId: 'a', oldRow: 10 }])
+  })
+
+  it('reports old resolver snapshot from before rebuilding after a spec change', () => {
+    const pipeline = new ViewPipeline(source)
+    const layer = new SpecOffsetLayer()
+    pipeline.add(layer)
+    const events: Array<{ oldRow: number; newRow: number | undefined }> = []
+    pipeline.subscribe((_change, oldResolveUnderlyingRow) => {
+      events.push({
+        oldRow: oldResolveUnderlyingRow(0),
+        newRow: pipeline.getComposed().resolveUnderlyingRow?.(0),
+      })
+    })
+    layer.setSpec(20)
+    expect(events).toEqual([{ oldRow: 10, newRow: 20 }])
+  })
+
+  it('does not notify unsubscribed listeners', () => {
+    const pipeline = new ViewPipeline(source)
+    const layer = new FakeLayer('a', { filterActive: true })
+    pipeline.add(layer)
+    const events: string[] = []
+    const unsubscribe = pipeline.subscribe((change) => {
+      events.push(change.layerId)
+    })
+    unsubscribe()
+    layer.setSpec('x')
+    expect(events).toEqual([])
+  })
+
+  it('ignores stale callbacks from removed layers', () => {
+    const pipeline = new ViewPipeline(source)
+    const layer = new FakeLayer('a', { filterActive: true })
+    pipeline.add(layer)
+    pipeline.remove('a')
+    const events: string[] = []
+    pipeline.subscribe((change) => {
+      events.push(change.layerId)
+    })
+    layer.setSpec('x')
+    expect(events).toEqual([])
   })
 
   it('collects header decorations and menu items in layer order', () => {
