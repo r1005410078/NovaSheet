@@ -26,11 +26,13 @@ export class ViewPipeline {
     if (this.layers.some((existingLayer) => existingLayer.id === layer.id)) {
       throw new Error(`ViewPipeline: duplicate layer id "${layer.id}"`)
     }
+    const oldComposed = this.composed
     layer.bindPipeline((change) => {
       if (this.layers.includes(layer)) this.rebuild(change)
     })
     this.layers.push(layer)
     this.composed = this.compose()
+    if (oldComposed !== this.source) disposeViewSource(oldComposed)
   }
 
   remove(layerId: string): void {
@@ -52,6 +54,7 @@ export class ViewPipeline {
     for (const listener of this.listeners) {
       listener(change, oldResolveUnderlyingRow)
     }
+    disposeViewSource(oldComposed)
   }
 
   getComposed(): DataSource {
@@ -79,4 +82,9 @@ export class ViewPipeline {
   private compose(): DataSource {
     return this.layers.reduce<DataSource>((upstream, layer) => layer.wrap(upstream), this.source)
   }
+}
+
+function disposeViewSource(source: DataSource): void {
+  const disposable = source as { dispose?: () => void }
+  disposable.dispose?.()
 }

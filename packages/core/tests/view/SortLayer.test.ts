@@ -325,6 +325,32 @@ describe('SortLayer', () => {
     expect(sorted.resolveUnderlyingRow?.(0)).toBe(0)
   })
 
+  it('stops reacting to upstream structural events after disposal', () => {
+    const source = makeSource()
+    const layer = new SortLayer()
+    layer.setSpec({ fieldId: 'score', direction: 'asc' })
+    const sorted = layer.wrap(source)
+    const events: DataSourceEvent[] = []
+    sorted.subscribe((event) => events.push(event))
+
+    const disposable = sorted as { dispose?: () => void }
+    disposable.dispose?.()
+    source.setRows([
+      { name: 'Zero', score: 0, status: 'Todo', tags: [] },
+      { name: 'One', score: 1, status: 'Todo', tags: [] },
+      { name: 'Two', score: 2, status: 'Todo', tags: [] },
+      { name: 'Three', score: 3, status: 'Todo', tags: [] },
+    ])
+
+    expect(events).toEqual([])
+    expect((sorted.getRows(0, 3) as Row[]).map((row) => row.name)).toEqual([
+      'One',
+      'Zero',
+      'Three',
+      'Two',
+    ])
+  })
+
   it('writes by view row for updateCell and by raw row for updateCellByUnderlyingRow', () => {
     const source = makeSource()
     const layer = new SortLayer()

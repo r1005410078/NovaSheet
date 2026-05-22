@@ -113,6 +113,8 @@ class SortedDataSource implements DataSource {
   private order: number[] = []
   private inverse: number[] = []
   private listeners = new Set<DataSourceListener>()
+  private readonly unsubscribeFromUpstream: () => void
+  private disposed = false
   readonly updateCell?: MutableDataSource['updateCell']
   readonly updateCellByUnderlyingRow?: MutableDataSource['updateCellByUnderlyingRow']
 
@@ -138,7 +140,7 @@ class SortedDataSource implements DataSource {
       }
     }
     this.rebuild()
-    this.upstream.subscribe((event) => this.handleUpstreamEvent(event))
+    this.unsubscribeFromUpstream = this.upstream.subscribe((event) => this.handleUpstreamEvent(event))
   }
 
   getRowCount(): number {
@@ -192,7 +194,14 @@ class SortedDataSource implements DataSource {
     }
   }
 
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.unsubscribeFromUpstream()
+  }
+
   private handleUpstreamEvent(event: DataSourceEvent): void {
+    if (this.disposed) return
     if (event.type === 'rowsChanged') {
       this.emit(event)
       return

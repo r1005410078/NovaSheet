@@ -86,6 +86,39 @@ class SpecOffsetLayer implements ViewLayer<number> {
   }
 }
 
+class DisposableLayer implements ViewLayer<number> {
+  readonly id = 'disposable'
+  disposed = 0
+  private spec = 1
+  private notify: ((change: ViewLayerChange) => void) | null = null
+
+  bindPipeline(notify: (change: ViewLayerChange) => void): void {
+    this.notify = notify
+  }
+
+  getSpec(): number {
+    return this.spec
+  }
+
+  setSpec(spec: number): boolean {
+    this.spec = spec
+    this.notify?.({ layerId: this.id, reason: 'spec-changed' })
+    return true
+  }
+
+  wrap(upstream: DataSource): DataSource {
+    const offset = this.spec
+    const wrapped: DataSource & { dispose(): void } = {
+      ...upstream,
+      resolveUnderlyingRow: (row) => upstream.resolveUnderlyingRow?.(row + offset) ?? row + offset,
+      dispose: () => {
+        this.disposed += 1
+      },
+    }
+    return wrapped
+  }
+}
+
 describe('ViewPipeline', () => {
   it('wraps layers in add order and returns composed source', () => {
     const pipeline = new ViewPipeline(source)
@@ -127,6 +160,25 @@ describe('ViewPipeline', () => {
     })
     layer.setSpec(20)
     expect(events).toEqual([{ oldRow: 10, newRow: 20 }])
+  })
+
+  it('disposes the old composed source after rebuild notifications', () => {
+    const pipeline = new ViewPipeline(source)
+    const layer = new DisposableLayer()
+    pipeline.add(layer)
+    const events: Array<{ oldRow: number; disposedDuringCallback: number }> = []
+    pipeline.subscribe((_change, oldResolveUnderlyingRow) => {
+      events.push({
+        oldRow: oldResolveUnderlyingRow(0),
+        disposedDuringCallback: layer.disposed,
+      })
+    })
+
+    layer.setSpec(2)
+
+    expect(events).toEqual([{ oldRow: 1, disposedDuringCallback: 0 }])
+    expect(layer.disposed).toBe(1)
+    expect(pipeline.getComposed().resolveUnderlyingRow?.(0)).toBe(2)
   })
 
   it('does not notify unsubscribed listeners', () => {
