@@ -17,6 +17,7 @@ export class ViewPipeline {
   private readonly layers: ViewLayer[] = []
   private readonly listeners = new Set<ViewPipelineListener>()
   private composed: DataSource
+  private wrappers: DataSource[] = []
 
   constructor(private readonly source: DataSource) {
     this.composed = source
@@ -26,13 +27,13 @@ export class ViewPipeline {
     if (this.layers.some((existingLayer) => existingLayer.id === layer.id)) {
       throw new Error(`ViewPipeline: duplicate layer id "${layer.id}"`)
     }
-    const oldComposed = this.composed
     layer.bindPipeline((change) => {
       if (this.layers.includes(layer)) this.rebuild(change)
     })
     this.layers.push(layer)
-    this.composed = this.compose()
-    if (oldComposed !== this.source) disposeViewSource(oldComposed)
+    const oldWrappers = this.wrappers
+    this.setComposedGeneration(this.compose())
+    disposeViewSources(oldWrappers)
   }
 
   remove(layerId: string): void {
@@ -48,13 +49,14 @@ export class ViewPipeline {
 
   rebuild(change: ViewLayerChange): void {
     const oldComposed = this.composed
+    const oldWrappers = this.wrappers
     const oldResolveUnderlyingRow = (viewRow: number) =>
       oldComposed.resolveUnderlyingRow?.(viewRow) ?? viewRow
-    this.composed = this.compose()
+    this.setComposedGeneration(this.compose())
     for (const listener of this.listeners) {
       listener(change, oldResolveUnderlyingRow)
     }
-    disposeViewSource(oldComposed)
+    disposeViewSources(oldWrappers)
   }
 
   getComposed(): DataSource {
@@ -79,12 +81,26 @@ export class ViewPipeline {
     }
   }
 
-  private compose(): DataSource {
-    return this.layers.reduce<DataSource>((upstream, layer) => layer.wrap(upstream), this.source)
+  private compose(): { composed: DataSource; wrappers: DataSource[] } {
+    const wrappers: DataSource[] = []
+    const composed = this.layers.reduce<DataSource>((upstream, layer) => {
+      const wrapper = layer.wrap(upstream)
+      wrappers.push(wrapper)
+      return wrapper
+    }, this.source)
+    return { composed, wrappers }
+  }
+
+  private setComposedGeneration(generation: { composed: DataSource; wrappers: DataSource[] }): void {
+    this.composed = generation.composed
+    this.wrappers = generation.wrappers
   }
 }
 
-function disposeViewSource(source: DataSource): void {
-  const disposable = source as { dispose?: () => void }
-  disposable.dispose?.()
+function disposeViewSources(sources: readonly DataSource[]): void {
+  for (let index = sources.length - 1; index >= 0; index -= 1) {
+    const source = sources[index]
+    const disposable = source as { dispose?: () => void }
+    disposable.dispose?.()
+  }
 }

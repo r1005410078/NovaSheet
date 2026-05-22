@@ -119,6 +119,60 @@ class DisposableLayer implements ViewLayer<number> {
   }
 }
 
+class LowerDisposableLayer implements ViewLayer<null> {
+  readonly id = 'lower'
+  disposed = 0
+
+  bindPipeline(): void {}
+
+  getSpec(): null {
+    return null
+  }
+
+  setSpec(): boolean {
+    return false
+  }
+
+  wrap(upstream: DataSource): DataSource {
+    const wrapped: DataSource & { dispose(): void } = {
+      ...upstream,
+      resolveUnderlyingRow: (row) => upstream.resolveUnderlyingRow?.(row + 10) ?? row + 10,
+      dispose: () => {
+        this.disposed += 1
+      },
+    }
+    return wrapped
+  }
+}
+
+class TopPassthroughLayer implements ViewLayer<number> {
+  readonly id = 'top'
+  private spec = 0
+  private notify: ((change: ViewLayerChange) => void) | null = null
+
+  bindPipeline(notify: (change: ViewLayerChange) => void): void {
+    this.notify = notify
+  }
+
+  getSpec(): number {
+    return this.spec
+  }
+
+  setSpec(spec: number): boolean {
+    this.spec = spec
+    this.notify?.({ layerId: this.id, reason: 'spec-changed' })
+    return true
+  }
+
+  wrap(upstream: DataSource): DataSource {
+    const wrapped: DataSource & { dispose(): void } = {
+      ...upstream,
+      dispose: () => {},
+    }
+    return wrapped
+  }
+}
+
 describe('ViewPipeline', () => {
   it('wraps layers in add order and returns composed source', () => {
     const pipeline = new ViewPipeline(source)
@@ -179,6 +233,28 @@ describe('ViewPipeline', () => {
     expect(events).toEqual([{ oldRow: 1, disposedDuringCallback: 0 }])
     expect(layer.disposed).toBe(1)
     expect(pipeline.getComposed().resolveUnderlyingRow?.(0)).toBe(2)
+  })
+
+  it('disposes old nested wrapper sources after rebuild notifications', () => {
+    const pipeline = new ViewPipeline(source)
+    const lower = new LowerDisposableLayer()
+    const top = new TopPassthroughLayer()
+    pipeline.add(lower)
+    pipeline.add(top)
+    lower.disposed = 0
+    const events: Array<{ oldRow: number; disposedDuringCallback: number }> = []
+    pipeline.subscribe((_change, oldResolveUnderlyingRow) => {
+      events.push({
+        oldRow: oldResolveUnderlyingRow(0),
+        disposedDuringCallback: lower.disposed,
+      })
+    })
+
+    top.setSpec(1)
+
+    expect(events).toEqual([{ oldRow: 10, disposedDuringCallback: 0 }])
+    expect(lower.disposed).toBe(1)
+    expect(pipeline.getComposed().resolveUnderlyingRow?.(0)).toBe(10)
   })
 
   it('does not notify unsubscribed listeners', () => {
