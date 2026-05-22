@@ -94,6 +94,14 @@ describe('ViewPipeline', () => {
     expect(pipeline.getComposed().resolveUnderlyingRow?.(0)).toBe(110)
   })
 
+  it('throws when adding duplicate layer ids', () => {
+    const pipeline = new ViewPipeline(source)
+    pipeline.add(new FakeLayer('sort', { sortIndicator: 'asc' }))
+    expect(() => pipeline.add(new FakeLayer('sort', { sortIndicator: 'desc' }))).toThrow(
+      'ViewPipeline: duplicate layer id "sort"',
+    )
+  })
+
   it('notifies subscribers with layer id and old resolver snapshot', () => {
     const pipeline = new ViewPipeline(source)
     const layer = new FakeLayer('a', { filterActive: true })
@@ -139,12 +147,14 @@ describe('ViewPipeline', () => {
     const layer = new FakeLayer('a', { filterActive: true })
     pipeline.add(layer)
     pipeline.remove('a')
+    const composedAfterRemove = pipeline.getComposed()
     const events: string[] = []
     pipeline.subscribe((change) => {
       events.push(change.layerId)
     })
     layer.setSpec('x')
     expect(events).toEqual([])
+    expect(pipeline.getComposed()).toBe(composedAfterRemove)
   })
 
   it('collects header decorations and menu items in layer order', () => {

@@ -23,6 +23,9 @@ export class ViewPipeline {
   }
 
   add(layer: ViewLayer): void {
+    if (this.layers.some((existingLayer) => existingLayer.id === layer.id)) {
+      throw new Error(`ViewPipeline: duplicate layer id "${layer.id}"`)
+    }
     layer.bindPipeline((change) => {
       if (this.layers.includes(layer)) this.rebuild(change)
     })
