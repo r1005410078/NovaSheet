@@ -115,6 +115,9 @@ export type { FillDimensions, FillDirection, FillTarget } from './fill/FillTarge
 export { computeFillWrites } from './fill/FillSeries'
 export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'
 
+// 视图坐标协议（Phase 4.4）
+export { findViewRow, resolveUnderlyingRow } from './view/coordinates'
+
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler, frameScheduler } from './util/raf'
 

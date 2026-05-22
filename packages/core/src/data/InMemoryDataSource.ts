@@ -62,6 +62,10 @@ export class InMemoryDataSource implements DataSource {
     this.emit({ type: 'rowsChanged', startIndex: rowIndex, endIndex: rowIndex })
   }
 
+  updateCellByUnderlyingRow(underlyingRow: number, fieldId: string, value: CellValue): void {
+    this.updateCell(underlyingRow, fieldId, value)
+  }
+
   /**
    * 整体替换数据。先发 rowCountChanged 让 Grid 重建 axis（行数变了），
    * 再发 reset 触发完整 invalidate。

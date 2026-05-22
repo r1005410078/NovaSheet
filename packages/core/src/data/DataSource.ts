@@ -37,6 +37,10 @@ export interface DataSource {
    * 异步源缓存未命中时返回 undefined——Renderer 绘空（M2+ 改绘占位骨架）。
    */
   getCell(rowIndex: number, fieldId: string): CellValue | undefined
+  /** 将视图行号解析为底层数据行号；未装饰数据源默认使用 identity。 */
+  resolveUnderlyingRow?(viewRow: number): number
+  /** 将底层数据行号反查为视图行号；未装饰数据源默认使用 identity。 */
+  findViewRow?(underlyingRow: number): number
   /** 订阅变更事件。返回取消订阅的函数。 */
   subscribe(listener: DataSourceListener): () => void
 }

@@ -63,6 +63,17 @@ describe('InMemoryDataSource — 内存数据源', () => {
     })
   })
 
+  it('updates cells by underlying row with identity semantics', () => {
+    const ds = new InMemoryDataSource({
+      schema: SCHEMA,
+      rows: [{ name: 'A' }, { name: 'B' }],
+    })
+
+    ds.updateCellByUnderlyingRow(1, 'name', 'B2')
+
+    expect(ds.getCell(1, 'name')).toBe('B2')
+  })
+
   it('setRows 发出 reset 与 rowCountChanged', () => {
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows: [{ name: 'A', age: 1 }] })
     const listener = mock(() => {})
