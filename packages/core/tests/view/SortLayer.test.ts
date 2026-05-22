@@ -86,6 +86,26 @@ describe('SortLayer', () => {
     expect(layer.getSpec()).toBeNull()
   })
 
+  it('reports the active direction only for the sorted field', () => {
+    const layer = new SortLayer()
+
+    expect(layer.getDirection('score')).toBeNull()
+    layer.setSpec({ fieldId: 'score', direction: 'desc' })
+
+    expect(layer.getDirection('score')).toBe('desc')
+    expect(layer.getDirection('name')).toBeNull()
+  })
+
+  it('clears an invalid pre-wrap multiSelect spec once schema is known', () => {
+    const layer = new SortLayer()
+
+    expect(layer.setSpec({ fieldId: 'tags', direction: 'asc' })).toBe(true)
+    const sorted = layer.wrap(makeSource())
+
+    expect(layer.getSpec()).toBeNull()
+    expect(sorted.getRows(0, 3)).toEqual(defaultRows())
+  })
+
   it('cycles a field through ascending, descending, and unsorted states', () => {
     const layer = new SortLayer()
 

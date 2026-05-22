@@ -25,6 +25,7 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
   private spec: SortSpec | null = null
   private notify: ((change: ViewLayerChange) => void) | null = null
   private fieldsById = new Map<string, Field>()
+  private schemaKnown = false
 
   bindPipeline(notify: (change: ViewLayerChange) => void): void {
     this.notify = notify
@@ -32,6 +33,10 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
 
   getSpec(): SortSpec | null {
     return this.spec
+  }
+
+  getDirection(fieldId: string): SortDirection | null {
+    return this.spec?.fieldId === fieldId ? this.spec.direction : null
   }
 
   setSpec(spec: SortSpec | null): boolean {
@@ -55,8 +60,10 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
 
   wrap(upstream: DataSource): DataSource {
     this.captureSchema(upstream)
+    if (this.spec && !this.canSortField(this.spec.fieldId)) this.spec = null
     return new SortedDataSource(upstream, () => this.spec, (source) => {
       this.captureSchema(source)
+      if (this.spec && !this.canSortField(this.spec.fieldId)) this.spec = null
       this.notify?.({ layerId: this.id, reason: 'upstream-reset' })
     })
   }
@@ -93,11 +100,12 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
 
   private captureSchema(source: DataSource): void {
     this.fieldsById = new Map(source.getSchema().fields.map((field) => [field.id, field]))
+    this.schemaKnown = true
   }
 
   private canSortField(fieldId: string): boolean {
     const field = this.fieldsById.get(fieldId)
-    return field == null || isSortableField(field)
+    return this.schemaKnown ? field != null && isSortableField(field) : true
   }
 }
 
