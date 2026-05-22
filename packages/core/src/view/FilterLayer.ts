@@ -208,9 +208,17 @@ class FilteredDataSource implements DataSource {
       return
     }
 
+    const previousRowCount = this.getRowCount()
+    const previousSpec = this.getSpec()
     this.onUpstreamReset(this.upstream)
+    const specInvalidated = event.type === 'schemaChanged' && previousSpec != null && this.getSpec() == null
     this.rebuild()
-    this.emit(filterStructuralEvent(event, this.getRowCount()))
+    const newRowCount = this.getRowCount()
+    this.emit(filterStructuralEvent(event, newRowCount))
+    if (specInvalidated && previousRowCount !== newRowCount) {
+      this.emit({ type: 'rowCountChanged', newCount: newRowCount })
+      this.emit({ type: 'reset' })
+    }
   }
 
   private rebuild(): void {

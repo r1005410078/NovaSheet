@@ -301,18 +301,25 @@ describe('FilterLayer', () => {
       [{ score: 1 }, { score: 2 }],
     )
     const layer = new FilterLayer()
-    const filtered = layer.wrap(source)
+    const schemaCapture = layer.wrap(source)
+    ;(schemaCapture as { dispose?: () => void }).dispose?.()
     const events: DataSourceEvent[] = []
-    filtered.subscribe((event) => events.push(event))
 
     expect(layer.setSpec({ fieldId: 'score', op: { kind: 'text-contains', value: '1', caseSensitive: false } })).toBe(
       false,
     )
     expect(layer.setSpec({ fieldId: 'score', op: { kind: 'number-equals', value: 1 } })).toBe(true)
+    const filtered = layer.wrap(source)
+    filtered.subscribe((event) => events.push(event))
+    expect(filtered.getRowCount()).toBe(1)
 
     source.setSchema({ fields: [{ id: 'score', name: 'Score', type: 'text', width: 80 }] })
 
-    expect(events).toEqual([{ type: 'schemaChanged' }])
+    expect(events).toEqual([
+      { type: 'schemaChanged' },
+      { type: 'rowCountChanged', newCount: 2 },
+      { type: 'reset' },
+    ])
     expect(layer.getSpec()).toBeNull()
     expect(filtered.getRowCount()).toBe(2)
   })
