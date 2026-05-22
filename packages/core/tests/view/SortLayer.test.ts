@@ -22,6 +22,9 @@ const schema = {
       width: 120,
       options: { choices: ['A', 'B'] },
     },
+    { id: 'link', name: 'Link', type: 'url', width: 160 },
+    { id: 'due', name: 'Due', type: 'date', width: 120 },
+    { id: 'done', name: 'Done', type: 'checkbox', width: 80 },
   ],
 } as const
 
@@ -71,6 +74,54 @@ describe('SortLayer', () => {
         { name: 'alpha', score: 1, status: 'Todo', tags: [] },
       ]),
     ).toEqual(['alpha', 'Item 2', 'item 10', ''])
+  })
+
+  it('sorts url fields with text collator semantics and null-ish values last', () => {
+    const rows: Row[] = [
+      { name: 'A', score: 1, status: 'Todo', tags: [], link: 'https://x.test/item-10' },
+      { name: 'B', score: 1, status: 'Todo', tags: [], link: 'https://x.test/item-2' },
+      { name: 'C', score: 1, status: 'Todo', tags: [], link: '' },
+      { name: 'D', score: 1, status: 'Todo', tags: [], link: null },
+    ]
+
+    expect(sortedColumn('link', 'asc', rows)).toEqual([
+      'https://x.test/item-2',
+      'https://x.test/item-10',
+      '',
+      null,
+    ])
+    expect(sortedColumn('link', 'desc', rows)).toEqual([
+      'https://x.test/item-10',
+      'https://x.test/item-2',
+      '',
+      null,
+    ])
+  })
+
+  it('sorts date fields by time with invalid and null values last', () => {
+    const earlier = new Date('2024-01-01T00:00:00.000Z')
+    const later = new Date('2024-03-01T00:00:00.000Z')
+    const rows: Row[] = [
+      { name: 'A', score: 1, status: 'Todo', tags: [], due: later },
+      { name: 'B', score: 1, status: 'Todo', tags: [], due: 'not-a-date' },
+      { name: 'C', score: 1, status: 'Todo', tags: [], due: earlier },
+      { name: 'D', score: 1, status: 'Todo', tags: [], due: null },
+    ]
+
+    expect(sortedColumn('due', 'asc', rows)).toEqual([earlier, later, 'not-a-date', null])
+    expect(sortedColumn('due', 'desc', rows)).toEqual([later, earlier, 'not-a-date', null])
+  })
+
+  it('sorts checkbox fields with false before true and non-boolean values last', () => {
+    const rows: Row[] = [
+      { name: 'A', score: 1, status: 'Todo', tags: [], done: true },
+      { name: 'B', score: 1, status: 'Todo', tags: [], done: null },
+      { name: 'C', score: 1, status: 'Todo', tags: [], done: false },
+      { name: 'D', score: 1, status: 'Todo', tags: [], done: 'yes' },
+    ]
+
+    expect(sortedColumn('done', 'asc', rows)).toEqual([false, true, null, 'yes'])
+    expect(sortedColumn('done', 'desc', rows)).toEqual([true, false, null, 'yes'])
   })
 
   it('sorts singleSelect fields by configured choice order', () => {
