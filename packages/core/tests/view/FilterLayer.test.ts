@@ -183,6 +183,19 @@ describe('FilterLayer', () => {
     expect(filteredNames(layer)).toEqual(['Alpha'])
   })
 
+  it('does not treat invalid non-empty date values as empty or between dates', () => {
+    const empty = new FilterLayer()
+    empty.setSpec({ fieldId: 'due', op: { kind: 'is-empty' } })
+    expect(filteredNames(empty)).toEqual([''])
+
+    const between = new FilterLayer()
+    between.setSpec({
+      fieldId: 'due',
+      op: { kind: 'date-between', start: null, end: new Date('2024-12-31T00:00:00.000Z') },
+    })
+    expect(filteredNames(between)).toEqual(['Alpha', 'beta'])
+  })
+
   it('filters select fields with inclusion and multiSelect overlap semantics', () => {
     const single = new FilterLayer()
     single.setSpec({ fieldId: 'status', op: { kind: 'select-in', values: ['Todo', 'Done'] } })
@@ -227,6 +240,16 @@ describe('FilterLayer', () => {
 
     expect(layer.clear('score')).toBe(true)
     expect(layer.getSpec()).toBeNull()
+  })
+
+  it('reports whether a field has the active filter', () => {
+    const layer = new FilterLayer()
+
+    expect(layer.isActive('score')).toBe(false)
+    layer.setSpec({ fieldId: 'score', op: { kind: 'number-equals', value: 5 } })
+
+    expect(layer.isActive('score')).toBe(true)
+    expect(layer.isActive('name')).toBe(false)
   })
 
   it('passes rowsChanged through without re-filtering the current wrapper', () => {

@@ -44,6 +44,10 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
     return this.spec
   }
 
+  isActive(fieldId: string): boolean {
+    return this.spec?.fieldId === fieldId
+  }
+
   setSpec(spec: FilterSpec | null): boolean {
     if (spec && !this.canFilterField(spec.fieldId, spec.op)) return false
     if (sameSpec(this.spec, spec)) return false
@@ -69,12 +73,12 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
   }
 
   headerDecoration(field: Field): HeaderDecoration | null {
-    if (this.spec?.fieldId !== field.id) return null
+    if (!this.isActive(field.id)) return null
     return { filterActive: true }
   }
 
   contextMenuItems(ctx: ColumnHeaderMenuContext): readonly ColumnHeaderMenuItem[] {
-    const active = this.spec?.fieldId === ctx.field.id
+    const active = this.isActive(ctx.field.id)
     return [
       {
         id: 'filter-open',
@@ -349,7 +353,6 @@ function isEmptyValue(value: CellValue | undefined, field: Field): boolean {
   if (value == null) return true
   if (field.type === 'text' || field.type === 'url' || field.type === 'singleSelect') return value === ''
   if (field.type === 'multiSelect') return Array.isArray(value) && value.length === 0
-  if (field.type === 'date') return dateValue(value) == null
   return false
 }
 
