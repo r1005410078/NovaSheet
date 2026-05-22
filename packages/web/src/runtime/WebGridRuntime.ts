@@ -1088,6 +1088,7 @@ export class WebGridRuntime {
       ? this.engine.getRowsAxis().getSize(session.cell.rowIndex)
       : null
 
+    this.paintSync()
     this.cellEditor.open(rect, session.draft, { ...options, multiline })
     return true
   }

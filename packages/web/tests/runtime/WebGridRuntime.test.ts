@@ -433,14 +433,17 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
       },
     }))
 
+    const renderer = makeRenderer()
     const editor = {
-      open: mock(() => {}),
+      open: mock(() => {
+        expect(renderer.render).toHaveBeenCalled()
+      }),
       close: mock(() => {}),
       isOpen: mock(() => false),
       syncRect: mock(() => {}),
       applyTheme: mock(() => {}),
     }
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer })
     runtime.setCellEditor(editor as never)
 
     const keyEvent = {
