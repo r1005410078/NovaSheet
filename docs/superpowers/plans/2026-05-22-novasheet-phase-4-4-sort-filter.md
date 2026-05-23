@@ -567,6 +567,133 @@ git commit -m "feat(web): assemble sort filter view pipeline"
 
 ---
 
+## Task 6.5: View change preserves undo and remaps selection
+
+**Why this task exists:** Task 6 intentionally used the existing `engine.setData()` path for pipeline changes to stay within its allowed files. That satisfies the public API assembly tests, but it clears the undo stack and selection on sort/filter changes. Phase 4.4 requires view changes to preserve undo/redo and remap selection by underlying row, so this follow-up must land before Task 7+ integration work relies on the pipeline.
+
+**Files:**
+- Modify: `packages/core/src/engine/GridEngine.ts`
+- Modify: `packages/core/src/engine/DefaultGridEngine.ts`
+- Modify: `packages/web/src/runtime/WebGridRuntime.ts`
+- Modify: `packages/web/src/backends/Canvas2DBackend.ts`
+- Test: `packages/core/tests/engine/DefaultGridEngine.test.ts`
+- Test: `packages/core/tests/engine/DefaultGridEngine.undo.test.ts`
+- Test: `packages/web/tests/Grid.test.ts`
+
+- [ ] **Step 1: Write failing tests**
+
+Add core tests for a new engine path that swaps view data without clearing undo:
+
+```ts
+it('updates view data without clearing undo stack', () => {
+  const raw = new InMemoryDataSource({ schema, rows })
+  const engine = new DefaultGridEngine({ data: raw })
+  engine.selectCell({ rowIndex: 0, colIndex: 0 })
+  engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+  engine.updateCellEditDraft('edited')
+  expect(engine.commitCellEdit()).toBe(true)
+  expect(engine.canUndo()).toBe(true)
+
+  const sort = new SortLayer()
+  sort.setSpec({ fieldId: 'name', direction: 'desc' })
+  engine.setViewData(sort.wrap(raw))
+
+  expect(engine.canUndo()).toBe(true)
+})
+```
+
+Add core tests for selection remap:
+
+```ts
+it('remaps selection by underlying row when view data changes', () => {
+  const raw = new InMemoryDataSource({ schema, rows })
+  const engine = new DefaultGridEngine({ data: raw })
+  engine.selectCell({ rowIndex: 0, colIndex: 0 })
+  const oldResolve = (viewRow: number) => viewRow
+
+  const sort = new SortLayer()
+  sort.setSpec({ fieldId: 'name', direction: 'desc' })
+  engine.setViewData(sort.wrap(raw), { oldResolveUnderlyingRow: oldResolve })
+
+  expect(engine.getSelection().activeCell?.rowIndex).toBe(/* row where underlying 0 moved */)
+})
+```
+
+Add web tests:
+
+- Write a cell, activate sort through `grid.getSortLayer().setSpec(...)`, then `grid.undo()` still reverts the original cell.
+- Select a visible row, activate sort, and assert the selected underlying row remains selected at its new view row.
+- Activate a filter that hides the selected row and assert selection is cleared.
+
+- [ ] **Step 2: Run tests to verify failure**
+
+Run:
+
+```bash
+bun test packages/core/tests/engine/DefaultGridEngine.test.ts packages/core/tests/engine/DefaultGridEngine.undo.test.ts packages/web/tests/Grid.test.ts
+```
+
+Expected: FAIL because `setViewData` / selection remap path does not exist and Task 6 currently clears undo/selection.
+
+- [ ] **Step 3: Implement narrow engine API**
+
+Add to `GridEngine` and `DefaultGridEngine`:
+
+```ts
+interface SetViewDataOptions {
+  readonly oldResolveUnderlyingRow?: (viewRow: number) => number
+  readonly clearSelection?: boolean
+}
+
+setViewData(data: DataSource, options?: SetViewDataOptions): void
+```
+
+Behavior:
+
+- Replace `this.data` and rebuild row/col axes / viewport sizing like `setData`.
+- Do **not** clear `undoStack`.
+- If `options.oldResolveUnderlyingRow` is provided, remap current selection endpoints:
+  - Convert old anchor/active or selected range endpoints from old view row to underlying row.
+  - Convert underlying row to new view row with `findViewRow(newData, underlyingRow)`.
+  - If all required endpoints map, select the new range/cell with same columns.
+  - If any required endpoint maps to `-1`, clear selection.
+- If no resolver is provided and `clearSelection !== false`, clear selection.
+- End any active edit before replacing data; commit if possible, otherwise cancel.
+
+Keep existing `setData(data)` behavior unchanged for real raw data replacement: it still clears undo stack.
+
+- [ ] **Step 4: Use setViewData on pipeline changes**
+
+In `Canvas2DBackend` pipeline subscriber:
+
+- Use the `oldResolveUnderlyingRow` passed by `ViewPipeline.subscribe`.
+- Call a runtime/backend path that invokes `engine.setViewData(pipeline.getComposed(), { oldResolveUnderlyingRow })`.
+- Keep renderer instance; call existing refresh/spacer path.
+- Emit `viewChange` and layer-specific event after engine/view update.
+
+`grid.setData(newSource)` should continue to call raw-data replacement and clear layer specs / undo stack as before.
+
+- [ ] **Step 5: Run tests**
+
+Run:
+
+```bash
+bun test packages/core/tests/engine/DefaultGridEngine.test.ts packages/core/tests/engine/DefaultGridEngine.undo.test.ts packages/web/tests/Grid.test.ts
+bun run --filter @novasheet/core typecheck
+bun run --filter @novasheet/web typecheck
+```
+
+Expected: PASS.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add packages/core/src/engine/GridEngine.ts packages/core/src/engine/DefaultGridEngine.ts packages/web/src/runtime/WebGridRuntime.ts packages/web/src/backends/Canvas2DBackend.ts packages/core/tests/engine/DefaultGridEngine.test.ts packages/core/tests/engine/DefaultGridEngine.undo.test.ts packages/web/tests/Grid.test.ts
+git commit -m "feat(web): preserve state across view changes"
+```
+
+---
+
 ## Task 7: Column header context menu
 
 **Files:**
