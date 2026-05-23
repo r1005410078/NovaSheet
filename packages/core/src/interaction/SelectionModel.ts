@@ -112,6 +112,72 @@ export class SelectionModel {
   navigate(intent: SelectionNavigationIntent, bounds: GridIndexBounds): CellAddress | null {
     return applySelectionNavigation(this, intent, bounds)
   }
+
+  /** Phase 4.5 — 插入行后平移选区；at 之前的行号不变，at 及之后的行号 +count。 */
+  remapAfterRowsInserted(at: number, count: number): void {
+    if (this.selection.selectedRange == null) return
+    const shift = (r: number) => (r < at ? r : r + count)
+    const range = this.selection.selectedRange
+    this.selection = {
+      activeCell: this.selection.activeCell
+        ? { ...this.selection.activeCell, rowIndex: shift(this.selection.activeCell.rowIndex) }
+        : null,
+      anchorCell: this.selection.anchorCell
+        ? { ...this.selection.anchorCell, rowIndex: shift(this.selection.anchorCell.rowIndex) }
+        : null,
+      extentCell: this.selection.extentCell
+        ? { ...this.selection.extentCell, rowIndex: shift(this.selection.extentCell.rowIndex) }
+        : null,
+      selectedRange: { ...range, startRow: shift(range.startRow), endRow: shift(range.endRow) },
+    }
+  }
+
+  /**
+   * Phase 4.5 — 删除行后收缩选区。
+   * removedSorted 必须是升序的行索引数组（删除前的行号）。
+   * 若选区内所有行均被删除则 clear；否则折叠到存活行并重新映射行号。
+   */
+  remapAfterRowsDeleted(removedSorted: readonly number[]): void {
+    if (this.selection.selectedRange == null) return
+    const removed = new Set(removedSorted)
+    const shift = (r: number): number => {
+      let count = 0
+      for (const x of removedSorted) {
+        if (x < r) count += 1
+        else break
+      }
+      return r - count
+    }
+    const range = this.selection.selectedRange
+    // 整 range 都在 removed 集合内 → clear
+    let allInRemoved = true
+    for (let r = range.startRow; r <= range.endRow; r += 1) {
+      if (!removed.has(r)) {
+        allInRemoved = false
+        break
+      }
+    }
+    if (allInRemoved) {
+      this.selection = { activeCell: null, anchorCell: null, extentCell: null, selectedRange: null }
+      return
+    }
+    // 否则折叠到存活行并重映射
+    const survivors: number[] = []
+    for (let r = range.startRow; r <= range.endRow; r += 1) if (!removed.has(r)) survivors.push(r)
+    const startRow = shift(survivors[0]!)
+    const endRow = shift(survivors[survivors.length - 1]!)
+    const remap = (cell: { rowIndex: number; colIndex: number } | null) => {
+      if (cell == null) return null
+      if (removed.has(cell.rowIndex)) return { ...cell, rowIndex: startRow }
+      return { ...cell, rowIndex: shift(cell.rowIndex) }
+    }
+    this.selection = {
+      activeCell: remap(this.selection.activeCell),
+      anchorCell: remap(this.selection.anchorCell),
+      extentCell: remap(this.selection.extentCell),
+      selectedRange: { ...range, startRow, endRow },
+    }
+  }
 }
 
 function normalizeRange(a: CellAddress, b: CellAddress): CellRange {
