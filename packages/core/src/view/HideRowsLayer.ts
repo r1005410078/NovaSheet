@@ -135,7 +135,9 @@ export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
     const total = upstream.getRowCount()
     const next: number[] = []
     for (let i = 0; i < total; i += 1) {
-      if (!this.hiddenUnderlyingRows.has(i)) next.push(i)
+      // 将 upstream 视图行 i 映射到 raw underlying id，再检查 hidden set
+      const rawUnderlying = upstream.resolveUnderlyingRow?.(i) ?? i
+      if (!this.hiddenUnderlyingRows.has(rawUnderlying)) next.push(i)
     }
     this.visibleRows = next
   }

@@ -138,9 +138,9 @@ describe('HideRowsLayer 与 Sort/Filter 组合', () => {
     const sort = new SortLayer()
     sort.setSpec({ fieldId: 'n', direction: 'desc' })
     const hide = new HideRowsLayer()
-    // sort 视图：row0=n=4, row1=n=3, row2=n=2, row3=n=1
-    // 隐藏 sort 视图的 row2、row3（n=2, n=1）→ 留下 n=4, n=3
-    hide.setHidden([2, 3])
+    // setHidden 接收 raw underlying ids（spec §5.1）
+    // underlying 0=n=1, 1=n=2；隐藏后 Sort desc 留下 n=4, n=3
+    hide.setHidden([0, 1]) // underlying n=1, n=2
     pipeline.add(sort)
     pipeline.add(hide)
 
@@ -148,5 +148,29 @@ describe('HideRowsLayer 与 Sort/Filter 组合', () => {
     expect(composed.getRowCount()).toBe(2)
     expect(composed.getCell(0, 'n')).toBe(4)
     expect(composed.getCell(1, 'n')).toBe(3)
+  })
+
+  it('Hide 状态在 Sort spec 切换后仍然按 raw underlying 生效', () => {
+    const ds = new InMemoryDataSource({
+      schema: { fields: [{ id: 'n', name: 'N', type: 'number' as const, width: 100 }] },
+      rows: [{ n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }],
+    })
+    const pipeline = new ViewPipeline(ds)
+    const sort = new SortLayer()
+    const hide = new HideRowsLayer()
+    pipeline.add(sort)
+    pipeline.add(hide)
+
+    hide.setHidden([0]) // hide raw underlying n=1
+
+    sort.setSpec({ fieldId: 'n', direction: 'asc' })
+    let composed = pipeline.getComposed()
+    expect(composed.getRowCount()).toBe(3)
+    expect(composed.getCell(0, 'n')).toBe(2) // n=1 hidden, ascending: 2,3,4
+
+    sort.setSpec({ fieldId: 'n', direction: 'desc' })
+    composed = pipeline.getComposed()
+    expect(composed.getRowCount()).toBe(3)
+    expect(composed.getCell(0, 'n')).toBe(4) // n=1 still hidden, descending: 4,3,2
   })
 })
