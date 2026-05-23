@@ -28,7 +28,7 @@ function canvas2dDelegate(grid: Grid) {
   return (
     grid as unknown as {
       delegate: {
-        runtime: { refresh: () => void }
+        runtime: { refresh: () => void; viewPipeline?: unknown }
         engine: {
           beginCellEdit: (cell: CellAddress) => boolean
           updateCellEditDraft: (draft: string) => void
@@ -52,6 +52,7 @@ function canvas2dDelegate(grid: Grid) {
           getData: () => DataSource
         }
         highDpi: { resize: (w: number, h: number) => void }
+        getViewPipeline: () => unknown
       }
     }
   ).delegate
@@ -630,6 +631,26 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
     expect(grid.getSortLayer().getSpec()).toBeNull()
     expect(grid.getFilterLayer().getSpec()).toBeNull()
+
+    grid.destroy()
+  })
+
+  it('setData updates runtime header-menu pipeline wiring', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const delegate = canvas2dDelegate(grid)
+    const oldPipeline = delegate.getViewPipeline()
+
+    const newData = new InMemoryDataSource({
+      schema: {
+        fields: [{ id: 'fresh', name: 'Fresh', type: 'text', width: 100 }],
+      },
+      rows: [{ fresh: 'new' }],
+    })
+    grid.setData(newData)
+
+    expect(delegate.getViewPipeline()).not.toBe(oldPipeline)
+    expect(delegate.runtime.viewPipeline).toBe(delegate.getViewPipeline())
 
     grid.destroy()
   })

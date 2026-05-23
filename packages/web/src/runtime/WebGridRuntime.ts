@@ -39,6 +39,7 @@ import {
   computeScrollReveal,
   FrameScheduler,
   getCellContextMenuItems,
+  getColumnHeaderContextMenuItems,
   hitTestCell,
   isMutableDataSource,
   MIN_RESIZE_SIZE,
@@ -218,6 +219,16 @@ export class WebGridRuntime {
   setContextMenuLayer(layer: DomContextMenuLayer): void {
     this.contextMenuLayer = layer
     this.syncContextMenuTheme()
+  }
+
+  setViewContext(opts: {
+    viewPipeline: ViewPipeline
+    sortLayer: SortLayer
+    filterLayer: FilterLayer
+  }): void {
+    this.viewPipeline = opts.viewPipeline
+    this.sortLayer = opts.sortLayer
+    this.filterLayer = opts.filterLayer
   }
 
   setOnContextMenuAction(cb: (action: ContextMenuAction, ctx: ContextMenuContext) => void): void {
@@ -404,8 +415,12 @@ export class WebGridRuntime {
     if (event.y < headerHeight) {
       if (!this.viewPipeline) return
       const fields = frame.data.getSchema().fields
+      const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+      if (event.x < rowHeaderWidth) return
       const scrollX = frame.viewport.scrollX ?? 0
-      const colIndex = frame.colsAxis.positionToIndex(event.x + scrollX)
+      const logicalX = event.x - rowHeaderWidth + scrollX
+      if (logicalX < 0 || logicalX >= frame.colsAxis.getTotalSize()) return
+      const colIndex = frame.colsAxis.positionToIndex(logicalX)
       if (colIndex < 0 || colIndex >= fields.length) return
       const field = fields[colIndex]
       if (!field) return
@@ -419,11 +434,7 @@ export class WebGridRuntime {
         multiSelect,
       }
       this.lastContextMenuContext = ctx
-      const items = this.viewPipeline.collectColumnHeaderMenuItems(ctx).map((item) =>
-        multiSelect && (item.id === 'sort-asc' || item.id === 'sort-desc')
-          ? { ...item, disabled: true }
-          : item,
-      )
+      const items = getColumnHeaderContextMenuItems(ctx, this.viewPipeline)
       this.contextMenuLayer.open({
         clientX: event.clientX ?? event.x,
         clientY: event.clientY ?? event.y,

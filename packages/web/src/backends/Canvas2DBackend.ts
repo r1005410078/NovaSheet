@@ -211,6 +211,11 @@ export class Canvas2DBackend implements GridController {
     this.pipeline.dispose()
     this.pipeline = this.createPipeline(this.rawSource)
     this.subscribePipeline()
+    this.runtime.setViewContext({
+      viewPipeline: this.pipeline,
+      sortLayer: this.sortLayer,
+      filterLayer: this.filterLayer,
+    })
     this.renderer = this.runtime.setData(
       this.pipeline.getComposed(),
       () => this.createRenderer(),

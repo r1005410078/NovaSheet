@@ -528,7 +528,9 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     ],
   }
 
-  function makeHeaderRuntime() {
+  function makeHeaderRuntime(options: { rowHeaderWidth?: number; columnWidth?: number } = {}) {
+    const rowHeaderWidth = options.rowHeaderWidth ?? 0
+    const columnWidth = options.columnWidth ?? 100
     const source = new InMemoryDataSource({
       rows: [
         { name: 'Ada', score: 2 },
@@ -555,13 +557,15 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       } as never,
       colsAxis: {
         getCount: () => headerSchema.fields.length,
-        positionToIndex: (pos: number) => Math.floor(pos / 100),
-        indexToPosition: (i: number) => i * 100,
-        getSize: () => 100,
+        getTotalSize: () => headerSchema.fields.length * columnWidth,
+        positionToIndex: (pos: number) =>
+          Math.max(0, Math.min(headerSchema.fields.length - 1, Math.floor(pos / columnWidth))),
+        indexToPosition: (i: number) => i * columnWidth,
+        getSize: () => columnWidth,
       } as never,
       viewport: {
         contentRect: { width: 400, height: 300 },
-        rowHeaderWidth: 0,
+        rowHeaderWidth,
         scrollX: 0,
         scrollY: 0,
         regions: [
@@ -684,6 +688,22 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       'sort-desc',
       'sort-none',
     ])
+  })
+
+  it('right-click in row-header gutter does not open column header menu', () => {
+    const { runtime, menu } = makeHeaderRuntime({ rowHeaderWidth: 48 })
+
+    runtime.handleHostContextMenu({ x: 24, y: 10, shiftKey: false, clientX: 24, clientY: 10 })
+
+    expect(menu.open).not.toHaveBeenCalled()
+  })
+
+  it('right-click in blank header space right of columns does not open menu', () => {
+    const { runtime, menu } = makeHeaderRuntime({ rowHeaderWidth: 48, columnWidth: 100 })
+
+    runtime.handleHostContextMenu({ x: 260, y: 10, shiftKey: false, clientX: 260, clientY: 10 })
+
+    expect(menu.open).not.toHaveBeenCalled()
   })
 
   it('right-click in body still opens cell menu', () => {

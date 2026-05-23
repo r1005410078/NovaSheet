@@ -24,7 +24,7 @@ export type ContextMenuAction =
   | 'filter-clear'
 
 export interface CellMenuContext {
-  readonly targetKind: 'cell'
+  readonly targetKind?: 'cell'
   readonly cell: CellAddress
   readonly selectedRange: CellRange | null
   readonly hasSelection: boolean

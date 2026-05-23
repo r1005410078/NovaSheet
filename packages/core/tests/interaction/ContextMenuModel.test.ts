@@ -7,6 +7,7 @@ import type { Schema } from '../../src/data/Schema'
 import {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
+  type CellMenuContext,
   type ContextMenuContext,
 } from '../../src/interaction/ContextMenuModel'
 
@@ -19,6 +20,18 @@ const baseCtx: ContextMenuContext = {
 }
 
 describe('getCellContextMenuItems — Phase 4.0', () => {
+  it('keeps the legacy cell context shape assignable for callback users', () => {
+    const legacyCtx = {
+      cell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: null,
+      hasSelection: false,
+      clipboardReady: false,
+    } satisfies CellMenuContext
+    const publicCtx: ContextMenuContext = legacyCtx
+
+    expect(getCellContextMenuItems(publicCtx).map((i) => i.id)).toEqual(['cut', 'copy', 'paste'])
+  })
+
   it('returns Cut / Copy / Paste in order', () => {
     expect(getCellContextMenuItems(baseCtx).map((i) => i.id)).toEqual(['cut', 'copy', 'paste'])
   })

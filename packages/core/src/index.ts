@@ -99,11 +99,13 @@ export {
 } from './interaction/CellEdit'
 export { CellEditModel } from './interaction/CellEditModel'
 export type { CellEditSession } from './interaction/CellEditModel'
-export { getCellContextMenuItems } from './interaction/ContextMenuModel'
+export { getCellContextMenuItems, getColumnHeaderContextMenuItems } from './interaction/ContextMenuModel'
 export type {
+  CellMenuContext,
   ContextMenuAction,
   ContextMenuContext,
   ContextMenuItem,
+  ContextMenuTargetKind,
 } from './interaction/ContextMenuModel'
 export { computeCellRect } from './interaction/CellLayout'
 export type { CellRect } from './interaction/CellLayout'
