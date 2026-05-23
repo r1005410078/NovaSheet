@@ -447,6 +447,51 @@ export class ChunkedAxis {
   }
 
   /**
+   * 在 `beforeIndex` 位置前插入 `count` 行/列，每项尺寸初始化为 `defaultSize`。
+   * 触发全量 rebuild，后接逐项 setSize 恢复非默认尺寸。
+   */
+  insertRange(beforeIndex: number, count: number, defaultSize: number): void {
+    if (count <= 0) return
+    const at = Math.max(0, Math.min(beforeIndex, this.count))
+    const flat = this.flattenSizes()
+    const inserted = Array.from({ length: count }, () => defaultSize)
+    flat.splice(at, 0, ...inserted)
+    this.count += count
+    this.rebuild()
+    for (let i = 0; i < flat.length; i++) {
+      if (flat[i] !== this.defaultSize) this.setSize(i, flat[i]!)
+    }
+  }
+
+  /**
+   * 删除 `removedSortedIndices` 指定的行/列（已排序、无重复）。
+   * 触发全量 rebuild，后接逐项 setSize 恢复非默认尺寸。
+   */
+  deleteRange(removedSortedIndices: readonly number[]): void {
+    if (removedSortedIndices.length === 0) return
+    const flat = this.flattenSizes()
+    const removeSet = new Set(removedSortedIndices)
+    const next = flat.filter((_, i) => !removeSet.has(i))
+    this.count = next.length
+    this.rebuild()
+    for (let i = 0; i < next.length; i++) {
+      if (next[i] !== this.defaultSize) this.setSize(i, next[i]!)
+    }
+  }
+
+  /** 把当前所有 chunk 展平成逐项尺寸 number[]，insertRange/deleteRange 共用。 */
+  private flattenSizes(): number[] {
+    const result: number[] = new Array(this.count)
+    for (let i = 0; i < this.count; i++) {
+      const chunkIdx = i >>> 10
+      const offset = i & 1023
+      const chunk = this.chunks[chunkIdx]!
+      result[i] = chunk.sizes === null ? this.defaultSize : chunk.sizes[offset]!
+    }
+    return result
+  }
+
+  /**
    * 构造期初始化 chunks 与 chunkPrefixSum，仅在构造函数里调用一次。
    *
    * @example
