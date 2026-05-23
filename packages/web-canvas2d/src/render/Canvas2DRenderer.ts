@@ -256,6 +256,7 @@ export class Canvas2DRenderer {
       rowsAxis: this.rowsAxis,
       colsAxis: this.colsAxis,
       viewport: this.viewport.snapshot(),
+      collapsedRowGaps: [],
     })
   }
 

@@ -235,14 +235,27 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   getFrame(): RenderFrame {
+    const vpSnap = this.viewport.snapshot()
+    const allGaps = this.hideRowsLayer.getCollapsedGaps()
+    const [firstVisible, lastVisible] = this.rowsAxis.getVisibleRange(
+      vpSnap.scrollY,
+      vpSnap.scrollY + vpSnap.contentRect.height,
+    )
+    const collapsedRowGaps = allGaps
+      .filter((g) => g.atViewRow >= firstVisible && g.atViewRow <= lastVisible)
+      .map((g) => ({
+        ...g,
+        yPx: this.rowsAxis.indexToPosition(g.atViewRow + 1) - vpSnap.scrollY,
+      }))
     return {
       data: this.data,
       theme: this.theme,
       rowsAxis: this.rowsAxis,
       colsAxis: this.colsAxis,
-      viewport: this.viewport.snapshot(),
+      viewport: vpSnap,
       selection: this.selection.getSelection(),
       cellEdit: this.cellEdit.getSession() ?? undefined,
+      collapsedRowGaps,
     }
   }
 

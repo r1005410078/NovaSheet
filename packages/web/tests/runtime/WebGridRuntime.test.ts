@@ -69,6 +69,7 @@ function makeEngine(): GridEngine {
           },
         ],
       } as never,
+      collapsedRowGaps: [],
     })),
     getRowsTotalSize: () => 280,
     getColsTotalSize: () => 200,
@@ -371,6 +372,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
         scrollX: 0,
         scrollY: 0,
       } as never,
+      collapsedRowGaps: [],
     }))
 
     const host = makeHost()
@@ -439,6 +441,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
         fieldType: 'text' as const,
         draft: 'x',
       },
+      collapsedRowGaps: [],
     }))
 
     const renderer = makeRenderer()
@@ -493,6 +496,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
         scrollX: 0,
         scrollY: 0,
       } as never,
+      collapsedRowGaps: [],
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
 
@@ -594,6 +598,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
           },
         ],
       } as never,
+      collapsedRowGaps: [],
     }))
     const runtime = new WebGridRuntime({
       engine,
@@ -647,6 +652,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
           },
         ],
       } as never,
+      collapsedRowGaps: [],
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.handleHostPointerDown({ x: 50, y: 60, shiftKey: false, button: 2 })
@@ -685,6 +691,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
           },
         ],
       } as never,
+      collapsedRowGaps: [],
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     const editor = {
@@ -873,6 +880,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
           },
         ],
       } as never,
+      collapsedRowGaps: [],
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.setContextMenuLayer(makeContextMenu() as never)
