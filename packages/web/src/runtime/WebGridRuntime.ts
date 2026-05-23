@@ -20,12 +20,15 @@
 import type {
   AutofitRowsResult,
   DataSource,
+  FilterLayer,
   FrozenConfig,
   GridEngine,
   SetViewDataOptions,
+  SortLayer,
   TextMeasurer,
   Theme,
   UndoCommand,
+  ViewPipeline,
 } from '@novasheet/core'
 import {
   autofitRowHeights,
@@ -97,6 +100,10 @@ export interface WebGridRuntimeOptions {
   handleLayer?: DomHandleLayer
   /** Phase 4.3 — DOM fill handle + drag preview layer. */
   fillLayer?: DomFillHandleLayer
+  /** Phase 4.4 — optional view pipeline/layers for column header context menu dispatch. */
+  viewPipeline?: ViewPipeline
+  sortLayer?: SortLayer
+  filterLayer?: FilterLayer
 }
 
 export interface UndoEvent {
@@ -144,6 +151,9 @@ export class WebGridRuntime {
   private lastDragPointer: WebPointerEvent | null = null
   private handleLayer?: DomHandleLayer
   private fillLayer?: DomFillHandleLayer
+  private viewPipeline?: ViewPipeline
+  private sortLayer?: SortLayer
+  private filterLayer?: FilterLayer
   private cellEditor?: DomCellEditor
   private contextMenuLayer?: DomContextMenuLayer
   private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
@@ -192,6 +202,9 @@ export class WebGridRuntime {
     this.measurer = opts.measurer
     this.handleLayer = opts.handleLayer
     this.fillLayer = opts.fillLayer
+    this.viewPipeline = opts.viewPipeline
+    this.sortLayer = opts.sortLayer
+    this.filterLayer = opts.filterLayer
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -388,7 +401,36 @@ export class WebGridRuntime {
 
     const frame = this.engine.getFrame()
     const headerHeight = frame.theme.metrics.headerHeight
-    if (event.y < headerHeight) return
+    if (event.y < headerHeight) {
+      if (!this.viewPipeline) return
+      const fields = frame.data.getSchema().fields
+      const scrollX = frame.viewport.scrollX ?? 0
+      const colIndex = frame.colsAxis.positionToIndex(event.x + scrollX)
+      if (colIndex < 0 || colIndex >= fields.length) return
+      const field = fields[colIndex]
+      if (!field) return
+      const selection = this.engine.getSelection()
+      const range = selection.selectedRange
+      const multiSelect = range !== null && range.startCol !== range.endCol
+      const ctx: ContextMenuContext = {
+        targetKind: 'columnHeader',
+        field,
+        colIndex,
+        multiSelect,
+      }
+      this.lastContextMenuContext = ctx
+      const items = this.viewPipeline.collectColumnHeaderMenuItems(ctx).map((item) =>
+        multiSelect && (item.id === 'sort-asc' || item.id === 'sort-desc')
+          ? { ...item, disabled: true }
+          : item,
+      )
+      this.contextMenuLayer.open({
+        clientX: event.clientX ?? event.x,
+        clientY: event.clientY ?? event.y,
+        items,
+      })
+      return
+    }
 
     const hit = hitTestCell(frame, event)
     if (!hit) return
@@ -413,6 +455,7 @@ export class WebGridRuntime {
     // 也走这条 OR 路径，保留 4.0 兼容
     const dataMutable = isMutableDataSource(this.engine.getData())
     const ctx: ContextMenuContext = {
+      targetKind: 'cell',
       cell: hit,
       selectedRange: newSelection.selectedRange,
       hasSelection: newSelection.activeCell !== null,
@@ -428,9 +471,33 @@ export class WebGridRuntime {
   }
 
   handleContextMenuSelected(id: ContextMenuAction): void {
+    const ctx = this.lastContextMenuContext
+    if (ctx?.targetKind === 'columnHeader') {
+      if (id === 'sort-asc') {
+        this.sortLayer?.setSpec({ fieldId: ctx.field.id, direction: 'asc' })
+        return
+      }
+      if (id === 'sort-desc') {
+        this.sortLayer?.setSpec({ fieldId: ctx.field.id, direction: 'desc' })
+        return
+      }
+      if (id === 'sort-none') {
+        if (this.sortLayer?.getSpec()?.fieldId === ctx.field.id) this.sortLayer.setSpec(null)
+        return
+      }
+      if (id === 'filter-clear') {
+        this.filterLayer?.clear(ctx.field.id)
+        return
+      }
+      if (id === 'filter-open') {
+        this.onContextMenuAction?.(id, ctx)
+        return
+      }
+    }
+
     // Phase 4.1：consumer 传了 callback 完全接管；没传走默认引擎
     if (this.onContextMenuAction) {
-      if (this.lastContextMenuContext) this.onContextMenuAction(id, this.lastContextMenuContext)
+      if (ctx) this.onContextMenuAction(id, ctx)
       return
     }
     if (id === 'copy') {

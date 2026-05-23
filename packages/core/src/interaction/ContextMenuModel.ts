@@ -6,15 +6,36 @@
  */
 
 import type { CellAddress, CellRange } from './SelectionModel'
+import type {
+  ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext,
+} from '../view/ViewLayer'
+import type { ViewPipeline } from '../view/ViewPipeline'
 
-export type ContextMenuAction = 'cut' | 'copy' | 'paste'
+export type ContextMenuTargetKind = 'cell' | 'columnHeader'
 
-export interface ContextMenuContext {
+export type ContextMenuAction =
+  | 'cut'
+  | 'copy'
+  | 'paste'
+  | 'sort-asc'
+  | 'sort-desc'
+  | 'sort-none'
+  | 'filter-open'
+  | 'filter-clear'
+
+export interface CellMenuContext {
+  readonly targetKind: 'cell'
   readonly cell: CellAddress
   readonly selectedRange: CellRange | null
   readonly hasSelection: boolean
   readonly clipboardReady: boolean
 }
+
+export interface ColumnHeaderMenuContext extends PipelineColumnHeaderMenuContext {
+  readonly multiSelect?: boolean
+}
+
+export type ContextMenuContext = CellMenuContext | ColumnHeaderMenuContext
 
 export interface ContextMenuItem {
   readonly id: ContextMenuAction
@@ -24,11 +45,22 @@ export interface ContextMenuItem {
 }
 
 export function getCellContextMenuItems(
-  ctx: ContextMenuContext,
+  ctx: CellMenuContext,
 ): readonly ContextMenuItem[] {
   return [
     { id: 'cut', label: 'Cut', disabled: !ctx.hasSelection },
     { id: 'copy', label: 'Copy', disabled: !ctx.hasSelection, separatorAfter: true },
     { id: 'paste', label: 'Paste', disabled: !ctx.clipboardReady },
   ]
+}
+
+export function getColumnHeaderContextMenuItems(
+  ctx: ColumnHeaderMenuContext,
+  pipeline: ViewPipeline,
+): readonly ContextMenuItem[] {
+  const items = pipeline.collectColumnHeaderMenuItems(ctx)
+  if (!ctx.multiSelect) return items
+  return items.map((item) =>
+    item.id === 'sort-asc' || item.id === 'sort-desc' ? { ...item, disabled: true } : item,
+  )
 }

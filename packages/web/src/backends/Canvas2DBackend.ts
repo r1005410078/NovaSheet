@@ -164,6 +164,9 @@ export class Canvas2DBackend implements GridController {
       measurer: this.measurer,
       handleLayer: this.handleLayer,
       fillLayer: this.fillHandleLayer,
+      viewPipeline: this.pipeline,
+      sortLayer: this.sortLayer,
+      filterLayer: this.filterLayer,
       onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
     })
 

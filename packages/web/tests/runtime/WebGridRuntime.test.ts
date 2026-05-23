@@ -1,4 +1,10 @@
 import { describe, expect, it, mock, spyOn } from 'bun:test'
+import {
+  FilterLayer,
+  InMemoryDataSource,
+  SortLayer,
+  ViewPipeline,
+} from '@novasheet/core'
 import type {
   CellAddress,
   DataSource,
@@ -506,13 +512,84 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
 describe('WebGridRuntime contextmenu — Phase 4.0', () => {
   function makeContextMenu() {
     return {
-      open: mock(() => {}),
+      open: mock((_options: unknown) => {}),
       close: mock(() => {}),
       isOpen: mock(() => false),
       applyTheme: mock(() => {}),
       destroy: mock(() => {}),
       attach: mock(() => {}),
     }
+  }
+
+  const headerSchema: Schema = {
+    fields: [
+      { id: 'name', name: 'Name', type: 'text', width: 100 },
+      { id: 'score', name: 'Score', type: 'number', width: 100 },
+    ],
+  }
+
+  function makeHeaderRuntime() {
+    const source = new InMemoryDataSource({
+      rows: [
+        { name: 'Ada', score: 2 },
+        { name: 'Grace', score: 1 },
+      ],
+      schema: headerSchema,
+    })
+    const filterLayer = new FilterLayer()
+    const sortLayer = new SortLayer()
+    const pipeline = new ViewPipeline(source)
+    pipeline.add(filterLayer)
+    pipeline.add(sortLayer)
+
+    const engine = makeEngine()
+    engine.getData = mock(() => pipeline.getComposed() as never)
+    engine.getFrame = mock(() => ({
+      data: pipeline.getComposed(),
+      theme: { metrics: { headerHeight: 32 } } as Theme,
+      rowsAxis: {
+        getCount: () => 2,
+        positionToIndex: (pos: number) => Math.floor(pos / 28),
+        indexToPosition: (i: number) => i * 28,
+        getSize: () => 28,
+      } as never,
+      colsAxis: {
+        getCount: () => headerSchema.fields.length,
+        positionToIndex: (pos: number) => Math.floor(pos / 100),
+        indexToPosition: (i: number) => i * 100,
+        getSize: () => 100,
+      } as never,
+      viewport: {
+        contentRect: { width: 400, height: 300 },
+        rowHeaderWidth: 0,
+        scrollX: 0,
+        scrollY: 0,
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            colBand: 'center',
+            rowRange: [0, 1],
+            colRange: [0, 1],
+            rect: { x: 0, y: 32, width: 200, height: 268 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+    }))
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      viewPipeline: pipeline,
+      sortLayer,
+      filterLayer,
+    })
+    const menu = makeContextMenu()
+    runtime.setContextMenuLayer(menu as never)
+    return { engine, runtime, menu, sortLayer, filterLayer }
   }
 
   it('drag-select 进行中不开菜单', () => {
@@ -593,21 +670,49 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     expect(menu.open).toHaveBeenCalled()
   })
 
-  it('命中 header band 不开菜单', () => {
-    const engine = makeEngine()
-    engine.getFrame = mock(() => ({
-      data: {} as never,
-      theme: { metrics: { headerHeight: 32 } } as never,
-      rowsAxis: { indexToPosition: () => 0, getSize: () => 28, positionToIndex: (pos: number) => Math.floor(pos / 28) } as never,
-      colsAxis: { indexToPosition: () => 0, getSize: () => 100, positionToIndex: (pos: number) => Math.floor(pos / 100) } as never,
-      viewport: { regions: [] } as never,
-    }))
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-    const menu = makeContextMenu()
-    runtime.setContextMenuLayer(menu as never)
-    // y < headerHeight (32) means header band
-    runtime.handleHostContextMenu({ x: 50, y: 10, shiftKey: false, clientX: 50, clientY: 10 })
-    expect(menu.open).not.toHaveBeenCalled()
+  it('right-click within header opens column header menu', () => {
+    const { runtime, menu } = makeHeaderRuntime()
+
+    runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 150, clientY: 10 })
+
+    expect(menu.open).toHaveBeenCalledTimes(1)
+    const options = menu.open.mock.calls[0]![0] as { items: readonly { id: string }[] }
+    expect(options.items.map((item) => item.id)).toEqual([
+      'filter-open',
+      'filter-clear',
+      'sort-asc',
+      'sort-desc',
+      'sort-none',
+    ])
+  })
+
+  it('right-click in body still opens cell menu', () => {
+    const { runtime, menu } = makeHeaderRuntime()
+
+    runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
+
+    expect(menu.open).toHaveBeenCalledTimes(1)
+    const options = menu.open.mock.calls[0]![0] as { items: readonly { id: string }[] }
+    expect(options.items.map((item) => item.id)).toEqual(['cut', 'copy', 'paste'])
+  })
+
+  it('column header menu actions update sort and filter layers', () => {
+    const { runtime, sortLayer, filterLayer } = makeHeaderRuntime()
+    filterLayer.setSpec({ fieldId: 'score', op: { kind: 'number-equals', value: 2 } })
+
+    runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 150, clientY: 10 })
+    runtime.handleContextMenuSelected('sort-asc')
+    expect(sortLayer.getSpec()).toEqual({ fieldId: 'score', direction: 'asc' })
+
+    runtime.handleContextMenuSelected('sort-desc')
+    expect(sortLayer.getSpec()).toEqual({ fieldId: 'score', direction: 'desc' })
+
+    runtime.handleContextMenuSelected('sort-none')
+    expect(sortLayer.getSpec()).toBeNull()
+
+    expect(filterLayer.getSpec()).not.toBeNull()
+    runtime.handleContextMenuSelected('filter-clear')
+    expect(filterLayer.getSpec()).toBeNull()
   })
 
   it('range 外右键调 selectCell；range 内不动 selection', () => {
