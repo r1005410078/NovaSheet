@@ -28,9 +28,9 @@
 | `viewChange / sortChange / filterChange` 事件           | 是       | 三种粒度同时暴露                                                                |
 | 多列复合排序 / 多列复合筛选                             | 否       | Phase 5+ 在同协议上叠加                                                         |
 | 服务端排序 / 服务端筛选                                 | 否       | 协议预留，Phase 5+ 引入 server source 时再做参考实现                            |
-| 自定义 predicate / 外部插件注册                         | 否       | 协议先内部稳定一版，4.5 后再开放                                                |
+| 自定义 predicate / 外部插件注册                         | 否       | 协议先内部稳定一版，Phase 5+ 再评估                                             |
 | Excel 风格按值勾选 distinct 列表（text 类）             | 否       | 可作为 `FilterLayer` 的第二种 op (`in-set`) 增量加入                            |
-| 列头 DOM overlay 层（点击/hover）                       | 否       | Phase 4.5 列拖拽重排时引入                                                      |
+| 列头 DOM overlay 层（点击/hover）                       | 否       | Phase 4.7 列拖拽重排时引入                                                      |
 
 ### 1.2 术语
 
@@ -796,7 +796,7 @@ grid.on('filterChange', (e: { spec: FilterSpec | null })    => void)
 | 自定义 predicate / 外部插件注册                | 不交付 | `ViewPipeline.add()` 开放为 public API；定义插件注册流程                           |
 | 服务端排序 / 筛选                              | 不交付 | Phase 5+：`@novasheet/server-source` 实现 `ViewLayer`，spec 下推                   |
 | 分组 / 透视（grouping / pivot）                | 不交付 | Phase 6+：新增 `GroupLayer`；`resolveUnderlyingRow` 返回 -1 表示聚合行             |
-| 列头 DOM overlay 层（点击命中 / hover effect） | 不交付 | Phase 4.5 列拖拽重排时引入                                                         |
+| 列头 DOM overlay 层（点击命中 / hover effect） | 不交付 | Phase 4.7 列拖拽重排时引入                                                         |
 | 行号列上的筛选 / 排序入口                      | 不交付 | 仅顶部列头支持右键菜单                                                             |
 | 持久化 view 状态到 storage                     | 不交付 | Grid 消费者自行用事件保存 / 恢复                                                   |
 
@@ -804,7 +804,7 @@ grid.on('filterChange', (e: { spec: FilterSpec | null })    => void)
 
 - `headerDecoration` 与 `contextMenuItems` 现在返回纯数据结构；未来加新装饰类型（如「列宽自适应锁」「列固定」）时增字段不破坏旧 layer。
 - `wrap` 的 `upstream → DataSource` 签名足够泛——grouping layer 未来返回的 DataSource 的 `getRowCount` 包含聚合行；`resolveUnderlyingRow(viewRow) === -1` 识别非数据行，引擎不需改逻辑。
-- `MutableDataSource.updateCellByUnderlyingRow` 是 4.4 加的 optional；4.5 行插入 / 删除若需稳定 row id 而非 rowIndex，再演进到 `updateCellByRowKey(key)`。
+- `MutableDataSource.updateCellByUnderlyingRow` 是 4.4 加的 optional；Phase 4.5 行 insert / delete 经评估继续走 index-based + LIFO 撤销栈，不引入 `updateCellByRowKey(key)`；稳定 row key 留待 Phase 6+ 协同 / 多视图时再评估。
 
 ---
 

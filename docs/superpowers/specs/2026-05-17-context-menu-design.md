@@ -4,7 +4,9 @@
 - **Status**: Approved
 - **Scope**: 单元格区域右键菜单 shell + Cut / Copy / Paste 三个菜单项。菜单 **可打开、可关闭、可选中项**；选中通过 `onContextMenuAction` 回调外抛——4.0 不动剪贴板，4.1 在回调里挂上 `cut/copy/paste` 引擎。
 - **Out of scope（明确推迟）**：
-  - 列头 / 行头右键菜单 → Phase 4.5（与「插入 / 删除 / 隐藏行列」一起）
+  - 列头右键菜单的排序 / 筛选项 → Phase 4.4 已接管（sort / filter 菜单）
+  - 行头右键菜单 → Phase 4.5（行 insert / delete / hide）
+  - 列头右键菜单的结构项 → Phase 4.6（列 insert / delete / hide）
   - 剪贴板真正读写 + 快捷键 → Phase 4.1
   - 触摸 long-press → Phase 4.0.1（如需）
   - 菜单插件 / i18n 框架 → 路线图后续，4.0 硬编码中英 label
@@ -32,11 +34,12 @@ Phase 3 已有选择、键盘导航、resize。下一个用户期待的电子表
 
 ## 3. Non-Goals（4.0）
 
-- 列头 / 行头右键菜单（4.5）
+- 列头右键菜单（4.4 sort/filter 已接管，4.6 加结构项）
+- 行头右键菜单（4.5）
 - 触摸 long-press、native `<menu>` 元素
 - 命令注册 / 用户扩展项 API
-- 多级 / 子菜单（4.5 配合插入操作再上）
-- 排序 / 筛选 / 插入 / 删除菜单项（散在 4.4 / 4.5）
+- 多级 / 子菜单（4.5 / 4.6 暂不引入；如有需要 Phase 5+ 再评估）
+- 排序 / 筛选菜单项（4.4）· 行结构项（4.5）· 列结构项（4.6）
 
 ---
 
@@ -47,7 +50,7 @@ Phase 3 已有选择、键盘导航、resize。下一个用户期待的电子表
 | 事件          | 命中                             | 行为                                                                     |
 | ------------- | -------------------------------- | ------------------------------------------------------------------------ |
 | `contextmenu` | body cell                        | `preventDefault`；按 §4.2 更新 selection；菜单在 pointer 处打开          |
-| `contextmenu` | 列头 / 行号列                    | `preventDefault`（不弹浏览器菜单），**4.0 不打开自己的菜单**（4.5 接管） |
+| `contextmenu` | 列头 / 行号列                    | `preventDefault`（不弹浏览器菜单），**4.0 不打开自己的菜单**（列头 4.4 接管 sort/filter；4.6 加结构项；行号列 4.5 接管） |
 | `contextmenu` | resize handle                    | handle 内部 `stopPropagation`——浏览器菜单和我们的菜单都不弹              |
 | `contextmenu` | 已打开的菜单内部                 | `preventDefault`——不嵌套二级浏览器菜单                                   |
 | `contextmenu` | drag-select / resize-drag 进行中 | `preventDefault`，**不开**                                               |
@@ -223,7 +226,7 @@ class Grid {
 | `--ns-menu-border`           | `colors.gridLineStrong`               | 已存在                                                          |
 | `--ns-menu-text`             | `colors.text`                         | 已存在                                                          |
 | `--ns-menu-text-disabled`    | `colors.headerText`                   | 已存在，承担次级文本色                                          |
-| `--ns-menu-item-hover`       | `colors.menuItemHover` ← **新增**     | 默认值取 `colors.hoverRowBg`；为 4.5 column-header 风格扩展留口 |
+| `--ns-menu-item-hover`       | `colors.menuItemHover` ← **新增**     | 默认值取 `colors.hoverRowBg`；为 4.5 行头 / 4.6 列头扩展风格留口 |
 | `--ns-menu-separator`        | `colors.gridLine`                     | 已存在                                                          |
 | `--ns-menu-shadow`           | `metrics.menuShadow` ← **新增**       | string，例如 `'0 4px 12px rgba(15,23,42,.12)'`                  |
 | `--ns-menu-padding-y` / `-x` | `metrics.menuPaddingY / X` ← **新增** | 数字 px                                                         |
@@ -290,7 +293,7 @@ class Grid {
 | R4  | 第三方页面有自己的 contextmenu listener stopping propagation                          | container 元素 `addEventListener('contextmenu', ..., { capture: true })` 抢前；文档里提示 host 不要再 stopPropagation |
 | R5  | a11y 焦点恢复目标在不同浏览器表现差异                                                 | 4.0 只承诺"回 scroll-host"，不试图记忆精细 focus 位置                                                                 |
 | OQ1 | 菜单项 label 是否要 i18n？（目前硬编码 Cut/Copy/Paste）                               | 4.0 硬编码英文；Storybook 用中文 alias 展示；i18n 框架后续                                                            |
-| OQ2 | `getCellContextMenuItems` 是否暴露给 consumer 自定义？                                | 4.0 不暴露；4.5 配合命令注册一起设计                                                                                  |
+| OQ2 | `getCellContextMenuItems` 是否暴露给 consumer 自定义？                                | 4.0 不暴露；Phase 5+ 配合命令注册一起设计                                                                            |
 | OQ3 | clipboardReady 是真正的 `navigator.clipboard.read` 异步探测，还是 consumer 手工标记？ | 4.0 留 `setClipboardReady` 手工口；4.1 引擎接入后内部自动维护                                                         |
 
 ---
@@ -313,7 +316,7 @@ Phase 4 子阶段总览以 README `§路线图` 为单点真实来源；本 spec
 ## 11. Spec self-review
 
 - [x] 4.0 交付物明确：菜单 shell + 三项 + `onContextMenuAction` 回调；剪贴板真正语义放 4.1
-- [x] 头区菜单显式归 4.5
+- [x] 头区菜单：列头 sort/filter 归 4.4 · 行头归 4.5 · 列头结构项归 4.6
 - [x] 与 selection / resize / edit 状态机的交叉一次性列清（§4.6）
 - [x] Public API 列出（types、Grid facade 新方法、option callback）
 - [x] 关闭条件、定位 clamp、焦点恢复都有具体规则
