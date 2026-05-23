@@ -66,6 +66,16 @@ describe('FilterPopover', () => {
     document.body.removeChild(container)
   })
 
+  it('labels number range inputs with clear placeholders', () => {
+    const { container, popover } = openPopover({ id: 'score', name: 'Score', type: 'number', width: 100 })
+
+    expect((document.body.querySelector('[data-ns-filter-min]') as HTMLInputElement).placeholder).toBe('Min')
+    expect((document.body.querySelector('[data-ns-filter-max]') as HTMLInputElement).placeholder).toBe('Max')
+
+    popover.destroy()
+    document.body.removeChild(container)
+  })
+
   it('select-in hides when choices are empty and defaults to is-not-empty', () => {
     const { container, popover, onApply } = openPopover({
       id: 'status',

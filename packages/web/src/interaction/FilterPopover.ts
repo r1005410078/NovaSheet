@@ -204,6 +204,7 @@ export class FilterPopover {
   private numberInput(kind: 'min' | 'max', value: string, setValue: (value: string) => void): HTMLInputElement {
     const input = document.createElement('input')
     input.type = 'number'
+    input.placeholder = kind === 'min' ? 'Min' : 'Max'
     input.setAttribute(`data-ns-filter-${kind}`, '')
     input.value = value
     input.addEventListener('input', () => {
@@ -216,6 +217,7 @@ export class FilterPopover {
   private dateInput(kind: 'start' | 'end', value: string, setValue: (value: string) => void): HTMLInputElement {
     const input = document.createElement('input')
     input.type = 'date'
+    input.placeholder = kind === 'start' ? 'Start' : 'End'
     input.setAttribute(`data-ns-filter-${kind}`, '')
     input.value = value
     input.addEventListener('input', () => {
