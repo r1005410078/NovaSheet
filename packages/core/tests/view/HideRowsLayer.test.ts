@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { HideRowsLayer, type CollapsedGap } from '../../src/view/HideRowsLayer'
 import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
+import type { Row } from '../../src/data/Schema'
 
 const schema = { fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 100 }] }
 
@@ -71,6 +72,36 @@ describe('HideRowsLayer 响应 upstream 事件', () => {
     layer.wrap(ds)
     ds.deleteRows([3]) // 3 被删；2 不动；7 → 6
     expect(layer.getHiddenUnderlyingRows()).toEqual(new Set([2, 6]))
+  })
+})
+
+describe('HideRowsLayer.wrap — getRows', () => {
+  it('getRows 跨 hidden gap 返回正确视图行数（不含 hidden）', () => {
+    const ds = mk(10)
+    const layer = new HideRowsLayer()
+    layer.setHidden([3, 4, 5])
+    const composed = layer.wrap(ds)
+    const rows = composed.getRows(0, 4) as Row[] // view rows 0..4 = underlying [0,1,2,6,7]
+    expect(rows).toHaveLength(5)
+    expect(rows[0]!.a).toBe('r0')
+    expect(rows[2]!.a).toBe('r2')
+    expect(rows[3]!.a).toBe('r6')
+    expect(rows[4]!.a).toBe('r7')
+  })
+})
+
+describe('HideRowsLayer.wrap — subscribe', () => {
+  it('subscribe 收到 upstream 事件转发，listener 隔离独立', () => {
+    const ds = mk(5)
+    const layer = new HideRowsLayer()
+    const composed = layer.wrap(ds)
+    const events: { type: string }[] = []
+    const unsubscribe = composed.subscribe((e) => events.push({ type: e.type }))
+    ds.insertRows!(0, 2)
+    expect(events.some((e) => e.type === 'rowsInserted')).toBe(true)
+    unsubscribe()
+    ds.insertRows!(0, 1)
+    expect(events.filter((e) => e.type === 'rowsInserted')).toHaveLength(1) // 未再收
   })
 })
 

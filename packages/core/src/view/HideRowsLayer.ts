@@ -1,4 +1,6 @@
-import type { DataSource, DataSourceEvent } from '../data/DataSource'
+import { isMutableDataSource } from '../data/MutableDataSource'
+import type { MutableDataSource } from '../data/MutableDataSource'
+import type { DataSource, DataSourceEvent, DataSourceListener } from '../data/DataSource'
 import type { Row } from '../data/Schema'
 import type { ViewLayer, ViewLayerChange } from './ViewLayer'
 
@@ -22,8 +24,7 @@ export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
 
   private hiddenUnderlyingRows = new Set<number>()
   private visibleRows: number[] = []
-  private upstream: DataSource | null = null
-  private unsubscribe: (() => void) | null = null
+  private currentUpstream: DataSource | null = null
   private notify: ((change: ViewLayerChange) => void) | null = null
 
   bindPipeline(notify: (change: ViewLayerChange) => void): void {
@@ -81,32 +82,13 @@ export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
   }
 
   wrap(upstream: DataSource): DataSource {
-    this.unsubscribe?.()
-    this.upstream = upstream
-    this.unsubscribe = upstream.subscribe((event) => this.onUpstreamEvent(event))
-    this.rebuildVisible()
-    const layer = this
-    return {
-      getRowCount: () => layer.visibleRows.length,
-      getSchema: () => upstream.getSchema(),
-      getRows: (start, end) =>
-        upstream.getRows(layer.visibleRows[start]!, layer.visibleRows[end]!) as Row[],
-      getCell: (rowIndex, fieldId) => upstream.getCell(layer.visibleRows[rowIndex]!, fieldId),
-      subscribe: (listener) => upstream.subscribe(listener),
-      resolveUnderlyingRow: (viewRow) => {
-        const upstreamRow = layer.visibleRows[viewRow]
-        if (upstreamRow == null) return viewRow
-        return upstream.resolveUnderlyingRow?.(upstreamRow) ?? upstreamRow
-      },
-      findViewRow: (underlyingRow) => {
-        const upstreamView = upstream.findViewRow?.(underlyingRow) ?? underlyingRow
-        const idx = layer.visibleRows.indexOf(upstreamView)
-        return idx >= 0 ? idx : -1
-      },
-    }
+    this.currentUpstream = upstream
+    this.rebuildVisibleFor(upstream)
+    return new HiddenDataSource(upstream, this)
   }
 
-  private onUpstreamEvent(event: DataSourceEvent): void {
+  /** Called by HiddenDataSource when an upstream event arrives. */
+  _handleUpstreamEvent(event: DataSourceEvent, upstream: DataSource): void {
     let changed = false
     switch (event.type) {
       case 'rowsInserted': {
@@ -140,20 +122,16 @@ export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
         break
     }
     if (changed) {
-      this.rebuildVisible()
-      this.notify?.({
-        layerId: this.id,
-        reason: event.type === 'reset' ? 'upstream-reset' : 'spec-changed',
-      })
+      this.rebuildVisibleFor(upstream)
+      this.notify?.({ layerId: this.id, reason: event.type === 'reset' ? 'upstream-reset' : 'spec-changed' })
     }
   }
 
-  private rebuildVisible(): void {
-    const upstream = this.upstream
-    if (upstream == null) {
-      this.visibleRows = []
-      return
-    }
+  getVisibleRows(): readonly number[] {
+    return this.visibleRows
+  }
+
+  private rebuildVisibleFor(upstream: DataSource): void {
     const total = upstream.getRowCount()
     const next: number[] = []
     for (let i = 0; i < total; i += 1) {
@@ -162,12 +140,129 @@ export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
     this.visibleRows = next
   }
 
+  private rebuildVisible(): void {
+    if (this.currentUpstream != null) {
+      this.rebuildVisibleFor(this.currentUpstream)
+    }
+  }
+
   private makeGap(run: number[]): CollapsedGap {
     const first = run[0]!
     // atViewRow = 紧邻 hidden run 之前的最后一个 visible underlying 行在 visibleRows 中的索引
     const upperUnderlying = first - 1
     const atViewRow = upperUnderlying < 0 ? -1 : this.visibleRows.indexOf(upperUnderlying)
     return { atViewRow, hiddenCount: run.length, hiddenIds: run.slice() }
+  }
+}
+
+/** Internal DataSource wrapper produced by HideRowsLayer.wrap(). Not exported. */
+class HiddenDataSource implements DataSource {
+  private listeners = new Set<DataSourceListener>()
+  private readonly unsubscribeFromUpstream: () => void
+  readonly updateCell?: MutableDataSource['updateCell']
+  readonly updateCellByUnderlyingRow?: MutableDataSource['updateCellByUnderlyingRow']
+  readonly insertRows?: MutableDataSource['insertRows']
+  readonly deleteRows?: MutableDataSource['deleteRows']
+
+  constructor(
+    private readonly upstream: DataSource,
+    private readonly layer: HideRowsLayer,
+  ) {
+    const mutableUpstream = isMutableDataSource(this.upstream) ? this.upstream : null
+    if (mutableUpstream) {
+      this.updateCell = (rowIndex, fieldId, value) => {
+        const upstreamRow = this.layer.getVisibleRows()[rowIndex]
+        if (upstreamRow == null) return
+        mutableUpstream.updateCell(upstreamRow, fieldId, value)
+      }
+      this.updateCellByUnderlyingRow = (underlyingRow, fieldId, value) => {
+        if (mutableUpstream.updateCellByUnderlyingRow) {
+          mutableUpstream.updateCellByUnderlyingRow(underlyingRow, fieldId, value)
+          return
+        }
+        const upstreamRow = this.upstream.findViewRow?.(underlyingRow) ?? underlyingRow
+        mutableUpstream.updateCell(upstreamRow, fieldId, value)
+      }
+      // insertRows / deleteRows use underlying coordinates (spec §7.1)
+      if (mutableUpstream.insertRows) {
+        this.insertRows = (beforeUnderlyingRow, count) =>
+          mutableUpstream.insertRows!(beforeUnderlyingRow, count)
+      }
+      if (mutableUpstream.deleteRows) {
+        this.deleteRows = (underlyingRowIds) => mutableUpstream.deleteRows!(underlyingRowIds)
+      }
+    }
+    this.unsubscribeFromUpstream = this.upstream.subscribe((event) =>
+      this.handleUpstreamEvent(event),
+    )
+  }
+
+  getRowCount(): number {
+    return this.layer.getVisibleRows().length
+  }
+
+  getSchema() {
+    return this.upstream.getSchema()
+  }
+
+  getRows(startIndex: number, endIndex: number): Row[] {
+    const visibleRows = this.layer.getVisibleRows()
+    const start = Math.max(0, startIndex)
+    const end = Math.min(visibleRows.length - 1, endIndex)
+    if (end < start) return []
+    const rows: Row[] = []
+    for (let viewRow = start; viewRow <= end; viewRow += 1) {
+      const upstreamRow = visibleRows[viewRow]
+      if (upstreamRow == null) continue
+      const upstreamRows = this.upstream.getRows(upstreamRow, upstreamRow)
+      if (upstreamRows instanceof Promise) {
+        throw new Error('HideRowsLayer requires synchronous upstream rows')
+      }
+      const row = upstreamRows[0]
+      if (row) rows.push(row)
+    }
+    return rows
+  }
+
+  getCell(rowIndex: number, fieldId: string) {
+    const upstreamRow = this.layer.getVisibleRows()[rowIndex]
+    if (upstreamRow == null) return undefined
+    return this.upstream.getCell(upstreamRow, fieldId)
+  }
+
+  resolveUnderlyingRow(viewRow: number): number {
+    const upstreamRow = this.layer.getVisibleRows()[viewRow]
+    if (upstreamRow == null) return viewRow
+    return this.upstream.resolveUnderlyingRow?.(upstreamRow) ?? upstreamRow
+  }
+
+  findViewRow(underlyingRow: number): number {
+    const upstreamView = this.upstream.findViewRow?.(underlyingRow) ?? underlyingRow
+    const idx = this.layer.getVisibleRows().indexOf(upstreamView)
+    return idx >= 0 ? idx : -1
+  }
+
+  subscribe(listener: DataSourceListener): () => void {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  dispose(): void {
+    this.unsubscribeFromUpstream()
+    this.listeners.clear()
+  }
+
+  private handleUpstreamEvent(event: DataSourceEvent): void {
+    this.layer._handleUpstreamEvent(event, this.upstream)
+    this.emit(event)
+  }
+
+  private emit(event: DataSourceEvent): void {
+    for (const listener of this.listeners) {
+      listener(event)
+    }
   }
 }
 
