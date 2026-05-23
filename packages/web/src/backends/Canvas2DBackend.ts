@@ -46,6 +46,7 @@ import { DomCellEditor } from '../interaction/DomCellEditor'
 import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import { DomHandleLayer } from '../interaction/DomHandleLayer'
+import { FilterPopover } from '../interaction/FilterPopover'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
 /**
@@ -71,6 +72,7 @@ export class Canvas2DBackend implements GridController {
   private fillHandleLayer: DomFillHandleLayer
   private cellEditor: DomCellEditor
   private contextMenuLayer!: DomContextMenuLayer
+  private filterPopover!: FilterPopover
   private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
@@ -185,6 +187,12 @@ export class Canvas2DBackend implements GridController {
     })
     this.contextMenuLayer.attach()
     this.runtime.setContextMenuLayer(this.contextMenuLayer)
+    this.filterPopover = new FilterPopover(this.container, {
+      onApply: (op) => this.runtime.handleFilterPopoverApply(op),
+      onCancel: () => this.host.focusScrollHost(),
+    })
+    this.filterPopover.attach()
+    this.runtime.setFilterPopover(this.filterPopover)
     this.runtime.setClipboardAdapter(this.clipboardAdapter)
     if (gridOptions?.onContextMenuAction) {
       this.runtime.setOnContextMenuAction(gridOptions.onContextMenuAction)
@@ -289,6 +297,7 @@ export class Canvas2DBackend implements GridController {
     this.unsubscribePipeline()
     this.pipeline.dispose()
     this.contextMenuLayer.destroy()
+    this.filterPopover.destroy()
     this.runtime.destroy()
     this.fillHandleLayer.destroy()
     this.handleLayer.destroy()

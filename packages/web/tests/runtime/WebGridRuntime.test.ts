@@ -521,6 +521,16 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     }
   }
 
+  function makeFilterPopover() {
+    return {
+      open: mock((_anchor: unknown, _options: unknown) => {}),
+      close: mock(() => {}),
+      isOpen: mock(() => false),
+      destroy: mock(() => {}),
+      attach: mock(() => {}),
+    }
+  }
+
   const headerSchema: Schema = {
     fields: [
       { id: 'name', name: 'Name', type: 'text', width: 100 },
@@ -751,6 +761,61 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     expect(filterLayer.getSpec()).not.toBeNull()
     runtime.handleContextMenuSelected('filter-clear')
     expect(filterLayer.getSpec()).toBeNull()
+  })
+
+  it('filter-open closes context menu and opens filter popover for the header field', () => {
+    const { runtime, menu, filterLayer } = makeHeaderRuntime()
+    const popover = makeFilterPopover()
+    runtime.setFilterPopover(popover as never)
+    filterLayer.setSpec({ fieldId: 'score', op: { kind: 'number-between', min: 1, max: null } })
+
+    runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 160, clientY: 20 })
+    runtime.handleContextMenuSelected('filter-open')
+
+    expect(menu.close).toHaveBeenCalled()
+    expect(popover.open).toHaveBeenCalledWith(
+      { clientX: 160, clientY: 20 },
+      {
+        field: headerSchema.fields[1],
+        op: { kind: 'number-between', min: 1, max: null },
+      },
+    )
+  })
+
+  it('filter popover Apply updates and clears the active field filter', () => {
+    const { runtime, filterLayer } = makeHeaderRuntime()
+    runtime.setFilterPopover(makeFilterPopover() as never)
+
+    runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 160, clientY: 20 })
+    runtime.handleContextMenuSelected('filter-open')
+    runtime.handleFilterPopoverApply({ kind: 'number-between', min: 1, max: 3 })
+    expect(filterLayer.getSpec()).toEqual({
+      fieldId: 'score',
+      op: { kind: 'number-between', min: 1, max: 3 },
+    })
+
+    runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 160, clientY: 20 })
+    runtime.handleContextMenuSelected('filter-open')
+    runtime.handleFilterPopoverApply(null)
+    expect(filterLayer.getSpec()).toBeNull()
+  })
+
+  it('filter popover open gates grid keyboard handling', () => {
+    const { runtime, engine } = makeHeaderRuntime()
+    const popover = makeFilterPopover()
+    popover.isOpen = mock(() => true)
+    runtime.setFilterPopover(popover as never)
+
+    expect(
+      runtime.handleHostKeyDown({
+        key: 'ArrowDown',
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+      }),
+    ).toBe(false)
+    expect(engine.navigateSelection).not.toHaveBeenCalled()
   })
 
   it('range 外右键调 selectCell；range 内不动 selection', () => {

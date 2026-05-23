@@ -21,6 +21,7 @@ import type {
   AutofitRowsResult,
   DataSource,
   FilterLayer,
+  FilterOp,
   FrozenConfig,
   GridEngine,
   SetViewDataOptions,
@@ -61,6 +62,7 @@ import type { DomCellEditor } from '../interaction/DomCellEditor'
 import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
+import type { FilterPopover } from '../interaction/FilterPopover'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -157,9 +159,12 @@ export class WebGridRuntime {
   private filterLayer?: FilterLayer
   private cellEditor?: DomCellEditor
   private contextMenuLayer?: DomContextMenuLayer
+  private filterPopover?: FilterPopover
   private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
   private clipboardReady = false
   private lastContextMenuContext: ContextMenuContext | null = null
+  private lastContextMenuPoint: { clientX: number; clientY: number } | null = null
+  private filterPopoverFieldId: string | null = null
   // Phase 4.1 — 剪贴板
   private clipboardAdapter?: WebClipboardAdapter
   private clipboardCache: { range: CellRange; rows: readonly Row[]; tsvHash: number } | null = null
@@ -219,6 +224,10 @@ export class WebGridRuntime {
   setContextMenuLayer(layer: DomContextMenuLayer): void {
     this.contextMenuLayer = layer
     this.syncContextMenuTheme()
+  }
+
+  setFilterPopover(popover: FilterPopover): void {
+    this.filterPopover = popover
   }
 
   setViewContext(opts: {
@@ -431,6 +440,7 @@ export class WebGridRuntime {
         multiSelect: field.type === 'multiSelect',
       }
       this.lastContextMenuContext = ctx
+      this.lastContextMenuPoint = { clientX: event.clientX ?? event.x, clientY: event.clientY ?? event.y }
       const items = getColumnHeaderContextMenuItems(ctx, this.viewPipeline)
       this.contextMenuLayer.open({
         clientX: event.clientX ?? event.x,
@@ -470,6 +480,7 @@ export class WebGridRuntime {
       clipboardReady: dataMutable || this.clipboardReady,
     }
     this.lastContextMenuContext = ctx
+    this.lastContextMenuPoint = { clientX: event.clientX ?? event.x, clientY: event.clientY ?? event.y }
     const items = getCellContextMenuItems(ctx)
     this.contextMenuLayer.open({
       clientX: event.clientX ?? event.x,
@@ -498,7 +509,7 @@ export class WebGridRuntime {
         return
       }
       if (id === 'filter-open') {
-        this.onContextMenuAction?.(id, ctx)
+        this.openFilterPopover(ctx)
         return
       }
     }
@@ -519,6 +530,30 @@ export class WebGridRuntime {
     if (id === 'paste') {
       void this.handleClipboardPaste()
     }
+  }
+
+  handleFilterPopoverApply(op: FilterOp | null): void {
+    const fieldId = this.filterPopoverFieldId
+    if (!fieldId) return
+    if (op) this.filterLayer?.setSpec({ fieldId, op })
+    else this.filterLayer?.clear(fieldId)
+    this.filterPopoverFieldId = null
+  }
+
+  private openFilterPopover(ctx: Extract<ContextMenuContext, { targetKind: 'columnHeader' }>): void {
+    if (!this.filterPopover) {
+      this.onContextMenuAction?.('filter-open', ctx)
+      return
+    }
+    const point = this.lastContextMenuPoint ?? { clientX: 0, clientY: 0 }
+    const currentSpec = this.filterLayer?.getSpec()
+    this.filterPopoverFieldId = ctx.field.id
+    this.contextMenuLayer?.close()
+    this.fillLayer?.hidePreview()
+    this.filterPopover.open(point, {
+      field: ctx.field,
+      op: currentSpec?.fieldId === ctx.field.id ? currentSpec.op : null,
+    })
   }
 
   openContextMenuAt(rowIndex: number, fieldId: string): void {
@@ -906,6 +941,7 @@ export class WebGridRuntime {
   /** Phase 3.3 / 3.5 — 导航；选中后直接键入进入编辑（Sheets 式）。 */
   handleHostKeyDown(event: WebKeyboardEvent): boolean {
     if (this.destroyed) return false
+    if (this.filterPopover?.isOpen()) return false
     if (this.engine.isCellEditing()) return false
 
     // Phase 4.1 — Ctrl+X / C / V（Mac 上 Cmd）剪贴板快捷键；Shift / Alt 组合不抢
