@@ -561,7 +561,7 @@ describe('ChunkedAxis.insertRange', () => {
     axis.insertRange(5, 3, DEFAULT_SIZE)
     expect(axis.getCount()).toBe(13)
     expect(axis.getSize(5)).toBe(DEFAULT_SIZE)
-    expect(axis.indexToPosition(13)).toBe(13 * DEFAULT_SIZE)
+    expect(axis.getTotalSize()).toBe(13 * DEFAULT_SIZE)
   })
 
   it('在已 setSize 的行之后插入，前段尺寸保留', () => {
