@@ -588,6 +588,20 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
     grid.destroy()
   })
 
+  it('stops delivering events after unsubscribe', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const handler = mock((_event: { layerId: 'sort' | 'filter' }) => {})
+
+    const unsubscribe = grid.on('viewChange', handler)
+    unsubscribe()
+    grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'asc' })
+
+    expect(handler).not.toHaveBeenCalled()
+
+    grid.destroy()
+  })
+
   it('setData clears sort and filter specs', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
@@ -605,5 +619,36 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
     expect(grid.getFilterLayer().getSpec()).toBeNull()
 
     grid.destroy()
+  })
+
+  it('disposes replaced and destroyed pipelines so old sources cannot emit view changes', () => {
+    const el = document.createElement('div')
+    const oldSource = makeData()
+    const currentSource = new InMemoryDataSource({
+      schema: SCHEMA,
+      rows: [{ name: 'current', age: 1 }],
+    })
+    const grid = new Grid(el, { data: oldSource })
+    const handler = mock((_event: { layerId: 'sort' | 'filter' }) => {})
+
+    grid.on('viewChange', handler)
+    grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'asc' })
+    grid.getFilterLayer().setSpec({
+      fieldId: 'name',
+      op: { kind: 'text-contains', value: 'n', caseSensitive: false },
+    })
+    expect(handler).toHaveBeenCalledTimes(2)
+
+    grid.setData(currentSource)
+    oldSource.setRows([{ name: 'stale', age: 99 }])
+    expect(handler).toHaveBeenCalledTimes(2)
+
+    grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'desc' })
+    expect(handler).toHaveBeenCalledTimes(3)
+
+    grid.destroy()
+    currentSource.setRows([{ name: 'after destroy', age: 2 }])
+    oldSource.setRows([{ name: 'old after destroy', age: 3 }])
+    expect(handler).toHaveBeenCalledTimes(3)
   })
 })

@@ -18,17 +18,21 @@ export class ViewPipeline {
   private readonly listeners = new Set<ViewPipelineListener>()
   private composed: DataSource
   private wrappers: DataSource[] = []
+  private disposed = false
 
   constructor(private readonly source: DataSource) {
     this.composed = source
   }
 
   add(layer: ViewLayer): void {
+    if (this.disposed) {
+      throw new Error('ViewPipeline: cannot add layer after dispose')
+    }
     if (this.layers.some((existingLayer) => existingLayer.id === layer.id)) {
       throw new Error(`ViewPipeline: duplicate layer id "${layer.id}"`)
     }
     layer.bindPipeline((change) => {
-      if (this.layers.includes(layer)) this.rebuild(change)
+      if (!this.disposed && this.layers.includes(layer)) this.rebuild(change)
     })
     this.layers.push(layer)
     const oldWrappers = this.wrappers
@@ -37,6 +41,7 @@ export class ViewPipeline {
   }
 
   remove(layerId: string): void {
+    if (this.disposed) return
     const layerIndex = this.layers.findIndex((layer) => layer.id === layerId)
     if (layerIndex === -1) return
     this.layers.splice(layerIndex, 1)
@@ -48,6 +53,7 @@ export class ViewPipeline {
   }
 
   rebuild(change: ViewLayerChange): void {
+    if (this.disposed) return
     const oldComposed = this.composed
     const oldWrappers = this.wrappers
     const oldResolveUnderlyingRow = (viewRow: number) =>
@@ -75,10 +81,20 @@ export class ViewPipeline {
   }
 
   subscribe(listener: ViewPipelineListener): () => void {
+    if (this.disposed) return () => {}
     this.listeners.add(listener)
     return () => {
       this.listeners.delete(listener)
     }
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.listeners.clear()
+    disposeViewSources(this.wrappers)
+    this.wrappers = []
+    this.composed = this.source
   }
 
   private compose(): { composed: DataSource; wrappers: DataSource[] } {

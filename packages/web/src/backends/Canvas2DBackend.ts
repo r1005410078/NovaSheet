@@ -205,6 +205,7 @@ export class Canvas2DBackend implements GridController {
 
     this.rawSource = data
     this.unsubscribePipeline()
+    this.pipeline.dispose()
     this.pipeline = this.createPipeline(this.rawSource)
     this.subscribePipeline()
     this.renderer = this.runtime.setData(
@@ -278,6 +279,7 @@ export class Canvas2DBackend implements GridController {
 
   destroy(): void {
     this.unsubscribePipeline()
+    this.pipeline.dispose()
     this.contextMenuLayer.destroy()
     this.runtime.destroy()
     this.fillHandleLayer.destroy()

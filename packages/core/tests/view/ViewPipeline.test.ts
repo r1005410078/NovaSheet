@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { DataSource } from '../../src/data/DataSource'
+import type { DataSource, DataSourceListener } from '../../src/data/DataSource'
 import type {
   ColumnHeaderMenuContext,
   HeaderDecoration,
@@ -197,6 +197,72 @@ class IdentityLayer implements ViewLayer<number> {
   }
 }
 
+class SourceEventLayer implements ViewLayer<number> {
+  readonly id = 'source-event'
+  disposed = 0
+  private spec = 0
+  private notify: ((change: ViewLayerChange) => void) | null = null
+
+  bindPipeline(notify: (change: ViewLayerChange) => void): void {
+    this.notify = notify
+  }
+
+  getSpec(): number {
+    return this.spec
+  }
+
+  setSpec(spec: number): boolean {
+    this.spec = spec
+    this.notify?.({ layerId: this.id, reason: 'spec-changed' })
+    return true
+  }
+
+  wrap(upstream: DataSource): DataSource {
+    const unsubscribe = upstream.subscribe(() => {
+      this.notify?.({ layerId: this.id, reason: 'upstream-reset' })
+    })
+    const wrapped: DataSource & { dispose(): void } = {
+      ...upstream,
+      dispose: () => {
+        this.disposed += 1
+        unsubscribe()
+      },
+    }
+    return wrapped
+  }
+}
+
+class MutableTestSource implements DataSource {
+  private listeners = new Set<DataSourceListener>()
+
+  getRowCount(): number {
+    return 1
+  }
+
+  getSchema() {
+    return { fields: [{ id: 'name', name: 'Name', type: 'text' as const, width: 120 }] }
+  }
+
+  getRows() {
+    return [{ name: 'A' }]
+  }
+
+  getCell() {
+    return 'A'
+  }
+
+  subscribe(listener: DataSourceListener): () => void {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  emitReset(): void {
+    for (const listener of this.listeners) listener({ type: 'reset' })
+  }
+}
+
 describe('ViewPipeline', () => {
   it('wraps layers in add order and returns composed source', () => {
     const pipeline = new ViewPipeline(source)
@@ -309,6 +375,24 @@ describe('ViewPipeline', () => {
     })
     unsubscribe()
     layer.setSpec('x')
+    expect(events).toEqual([])
+  })
+
+  it('dispose clears listeners and disposes current wrappers', () => {
+    const rawSource = new MutableTestSource()
+    const pipeline = new ViewPipeline(rawSource)
+    const layer = new SourceEventLayer()
+    const events: string[] = []
+    pipeline.add(layer)
+    pipeline.subscribe((change) => {
+      events.push(change.layerId)
+    })
+
+    pipeline.dispose()
+    rawSource.emitReset()
+    layer.setSpec(1)
+
+    expect(layer.disposed).toBe(1)
     expect(events).toEqual([])
   })
 
