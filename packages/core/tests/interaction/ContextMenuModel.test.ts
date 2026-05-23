@@ -66,11 +66,11 @@ describe('getCellContextMenuItems — Phase 4.0', () => {
     ).toBe(false)
   })
 
-  it('labels are stable English strings', () => {
+  it('labels are stable Chinese strings', () => {
     const items = getCellContextMenuItems(baseCtx)
-    expect(items.find((i) => i.id === 'cut')!.label).toBe('Cut')
-    expect(items.find((i) => i.id === 'copy')!.label).toBe('Copy')
-    expect(items.find((i) => i.id === 'paste')!.label).toBe('Paste')
+    expect(items.find((i) => i.id === 'cut')!.label).toBe('剪切')
+    expect(items.find((i) => i.id === 'copy')!.label).toBe('复制')
+    expect(items.find((i) => i.id === 'paste')!.label).toBe('粘贴')
   })
 })
 

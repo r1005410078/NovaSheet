@@ -79,19 +79,19 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
     return [
       {
         id: 'sort-asc',
-        label: 'Sort ascending',
+        label: '升序排序',
         disabled,
         checked: activeDirection === 'asc',
       },
       {
         id: 'sort-desc',
-        label: 'Sort descending',
+        label: '降序排序',
         disabled,
         checked: activeDirection === 'desc',
       },
       {
         id: 'sort-none',
-        label: 'Clear sort',
+        label: '清除排序',
         disabled: activeDirection == null,
         checked: false,
       },

@@ -47,7 +47,7 @@ export class DomContextMenuLayer {
     this.menu = doc.createElement('div')
     this.menu.setAttribute('data-novasheet-context-menu', '')
     this.menu.setAttribute('role', 'menu')
-    this.menu.setAttribute('aria-label', 'Cell actions')
+    this.menu.setAttribute('aria-label', '单元格操作')
     this.menu.addEventListener('contextmenu', this.onMenuContextMenu)
     this.menu.addEventListener('keydown', this.onMenuKeyDown)
     doc.addEventListener('pointerdown', this.onDocumentPointerDown, true)

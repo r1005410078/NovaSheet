@@ -349,16 +349,16 @@ describe('FilterLayer', () => {
 
     expect(layer.headerDecoration(field)).toBeNull()
     expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 2 })).toEqual([
-      { id: 'filter-open', label: 'Filter...', disabled: false, checked: false },
-      { id: 'filter-clear', label: 'Clear filter', disabled: true, checked: false },
+      { id: 'filter-open', label: '筛选...', disabled: false, checked: false },
+      { id: 'filter-clear', label: '清除筛选', disabled: true, checked: false },
     ])
 
     layer.setSpec({ fieldId: 'score', op: { kind: 'number-equals', value: 5 } })
 
     expect(layer.headerDecoration(field)).toEqual({ filterActive: true })
     expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 2 })).toEqual([
-      { id: 'filter-open', label: 'Filter...', disabled: false, checked: true },
-      { id: 'filter-clear', label: 'Clear filter', disabled: false, checked: false },
+      { id: 'filter-open', label: '筛选...', disabled: false, checked: true },
+      { id: 'filter-clear', label: '清除筛选', disabled: false, checked: false },
     ])
   })
 

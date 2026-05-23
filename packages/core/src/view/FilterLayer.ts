@@ -82,13 +82,13 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
     return [
       {
         id: 'filter-open',
-        label: 'Filter...',
+        label: '筛选...',
         disabled: !isFilterableField(ctx.field),
         checked: active,
       },
       {
         id: 'filter-clear',
-        label: 'Clear filter',
+        label: '清除筛选',
         disabled: !active,
         checked: false,
       },

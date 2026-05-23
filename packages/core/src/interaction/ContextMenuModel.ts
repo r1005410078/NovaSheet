@@ -48,9 +48,9 @@ export function getCellContextMenuItems(
   ctx: CellMenuContext,
 ): readonly ContextMenuItem[] {
   return [
-    { id: 'cut', label: 'Cut', disabled: !ctx.hasSelection },
-    { id: 'copy', label: 'Copy', disabled: !ctx.hasSelection, separatorAfter: true },
-    { id: 'paste', label: 'Paste', disabled: !ctx.clipboardReady },
+    { id: 'cut', label: '剪切', disabled: !ctx.hasSelection },
+    { id: 'copy', label: '复制', disabled: !ctx.hasSelection, separatorAfter: true },
+    { id: 'paste', label: '粘贴', disabled: !ctx.clipboardReady },
   ]
 }
 

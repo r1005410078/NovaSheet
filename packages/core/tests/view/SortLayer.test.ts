@@ -371,18 +371,18 @@ describe('SortLayer', () => {
 
     expect(layer.headerDecoration(field)).toBeNull()
     expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 1 })).toEqual([
-      { id: 'sort-asc', label: 'Sort ascending', disabled: false, checked: false },
-      { id: 'sort-desc', label: 'Sort descending', disabled: false, checked: false },
-      { id: 'sort-none', label: 'Clear sort', disabled: true, checked: false },
+      { id: 'sort-asc', label: '升序排序', disabled: false, checked: false },
+      { id: 'sort-desc', label: '降序排序', disabled: false, checked: false },
+      { id: 'sort-none', label: '清除排序', disabled: true, checked: false },
     ])
 
     layer.setSpec({ fieldId: 'score', direction: 'desc' })
 
     expect(layer.headerDecoration(field)).toEqual({ sortIndicator: 'desc' })
     expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 1 })).toEqual([
-      { id: 'sort-asc', label: 'Sort ascending', disabled: false, checked: false },
-      { id: 'sort-desc', label: 'Sort descending', disabled: false, checked: true },
-      { id: 'sort-none', label: 'Clear sort', disabled: false, checked: false },
+      { id: 'sort-asc', label: '升序排序', disabled: false, checked: false },
+      { id: 'sort-desc', label: '降序排序', disabled: false, checked: true },
+      { id: 'sort-none', label: '清除排序', disabled: false, checked: false },
     ])
   })
 })

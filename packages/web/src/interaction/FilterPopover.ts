@@ -110,12 +110,12 @@ export class FilterPopover {
     const actions = document.createElement('div')
     const apply = document.createElement('button')
     apply.type = 'button'
-    apply.textContent = 'Apply'
+    apply.textContent = '应用'
     apply.setAttribute('data-ns-filter-apply', '')
     apply.addEventListener('click', () => this.apply())
     const clear = document.createElement('button')
     clear.type = 'button'
-    clear.textContent = 'Clear'
+    clear.textContent = '清除'
     clear.setAttribute('data-ns-filter-clear', '')
     clear.addEventListener('click', () => {
       this.callbacks.onApply(null)
@@ -123,7 +123,7 @@ export class FilterPopover {
     })
     const cancel = document.createElement('button')
     cancel.type = 'button'
-    cancel.textContent = 'Cancel'
+    cancel.textContent = '取消'
     cancel.setAttribute('data-ns-filter-cancel', '')
     cancel.addEventListener('click', () => this.closeInternal(true))
     actions.append(apply, clear, cancel)
@@ -186,7 +186,7 @@ export class FilterPopover {
     if (draft.kind === 'checkbox-equals') {
       const select = document.createElement('select')
       select.setAttribute('data-ns-filter-value', '')
-      for (const [label, value] of [['Checked', 'true'], ['Unchecked', 'false']] as const) {
+      for (const [label, value] of [['已勾选', 'true'], ['未勾选', 'false']] as const) {
         const option = document.createElement('option')
         option.value = value
         option.textContent = label
@@ -204,7 +204,7 @@ export class FilterPopover {
   private numberInput(kind: 'min' | 'max', value: string, setValue: (value: string) => void): HTMLInputElement {
     const input = document.createElement('input')
     input.type = 'number'
-    input.placeholder = kind === 'min' ? 'Min' : 'Max'
+    input.placeholder = kind === 'min' ? '最小值' : '最大值'
     input.setAttribute(`data-ns-filter-${kind}`, '')
     input.value = value
     input.addEventListener('input', () => {
@@ -217,7 +217,7 @@ export class FilterPopover {
   private dateInput(kind: 'start' | 'end', value: string, setValue: (value: string) => void): HTMLInputElement {
     const input = document.createElement('input')
     input.type = 'date'
-    input.placeholder = kind === 'start' ? 'Start' : 'End'
+    input.placeholder = kind === 'start' ? '开始日期' : '结束日期'
     input.setAttribute(`data-ns-filter-${kind}`, '')
     input.value = value
     input.addEventListener('input', () => {

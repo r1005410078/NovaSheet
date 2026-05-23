@@ -10,9 +10,9 @@ function makeContainer(): HTMLElement {
 }
 
 const sampleItems = [
-  { id: 'cut' as const, label: 'Cut', disabled: false },
-  { id: 'copy' as const, label: 'Copy', disabled: false, separatorAfter: true },
-  { id: 'paste' as const, label: 'Paste', disabled: true },
+  { id: 'cut' as const, label: '剪切', disabled: false },
+  { id: 'copy' as const, label: '复制', disabled: false, separatorAfter: true },
+  { id: 'paste' as const, label: '粘贴', disabled: true },
 ]
 
 describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
@@ -36,7 +36,7 @@ describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
     expect(layer.isOpen()).toBe(true)
     const buttons = document.body.querySelectorAll('[data-ns-action]')
     expect(buttons.length).toBe(3)
-    expect((buttons[0] as HTMLElement).textContent).toBe('Cut')
+    expect((buttons[0] as HTMLElement).textContent).toBe('剪切')
     expect((buttons[2] as HTMLElement).getAttribute('aria-disabled')).toBe('true')
     expect(document.body.querySelector('[role="separator"]')).toBeTruthy()
     layer.destroy()

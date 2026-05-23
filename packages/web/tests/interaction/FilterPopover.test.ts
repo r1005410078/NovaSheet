@@ -69,8 +69,19 @@ describe('FilterPopover', () => {
   it('labels number range inputs with clear placeholders', () => {
     const { container, popover } = openPopover({ id: 'score', name: 'Score', type: 'number', width: 100 })
 
-    expect((document.body.querySelector('[data-ns-filter-min]') as HTMLInputElement).placeholder).toBe('Min')
-    expect((document.body.querySelector('[data-ns-filter-max]') as HTMLInputElement).placeholder).toBe('Max')
+    expect((document.body.querySelector('[data-ns-filter-min]') as HTMLInputElement).placeholder).toBe('最小值')
+    expect((document.body.querySelector('[data-ns-filter-max]') as HTMLInputElement).placeholder).toBe('最大值')
+
+    popover.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('renders action buttons with Chinese labels', () => {
+    const { container, popover } = openPopover({ id: 'name', name: 'Name', type: 'text', width: 100 })
+
+    expect(applyButton().textContent).toBe('应用')
+    expect((document.body.querySelector('[data-ns-filter-clear]') as HTMLButtonElement).textContent).toBe('清除')
+    expect((document.body.querySelector('[data-ns-filter-cancel]') as HTMLButtonElement).textContent).toBe('取消')
 
     popover.destroy()
     document.body.removeChild(container)
