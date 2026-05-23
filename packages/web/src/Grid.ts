@@ -216,6 +216,11 @@ export class Grid {
     return this.delegate.onFill(handler)
   }
 
+  /** Phase 4.5 — 取消隐藏指定底层行 ID，触发视图刷新。 */
+  unhideRows(underlyingRowIds: readonly number[]): void {
+    this.delegate.unhideRows(underlyingRowIds)
+  }
+
   getSortLayer(): SortLayer {
     return this.delegate.getSortLayer()
   }

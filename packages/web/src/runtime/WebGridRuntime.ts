@@ -62,6 +62,7 @@ import type { DomCellEditor } from '../interaction/DomCellEditor'
 import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
+import type { HideToggleHandle } from '../handle/HideToggleHandle'
 import type { FilterPopover } from '../interaction/FilterPopover'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
@@ -117,6 +118,8 @@ export interface WebGridRuntimeOptions {
   sortLayer?: SortLayer
   /** Phase 4.4 — filter 状态层。 */
   filterLayer?: FilterLayer
+  /** Phase 4.5 — DOM hide-toggle 点击区 layer。 */
+  hideToggleHandle?: HideToggleHandle
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -194,6 +197,8 @@ export class WebGridRuntime {
   private sortLayer?: SortLayer
   /** 当前 filter 状态层。 */
   private filterLayer?: FilterLayer
+  /** Phase 4.5 — DOM hide-toggle 点击区 layer。 */
+  private hideToggleHandle?: HideToggleHandle
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
   /** DOM 右键菜单 layer。 */
@@ -275,6 +280,7 @@ export class WebGridRuntime {
     this.viewPipeline = opts.viewPipeline
     this.sortLayer = opts.sortLayer
     this.filterLayer = opts.filterLayer
+    this.hideToggleHandle = opts.hideToggleHandle
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -371,6 +377,13 @@ export class WebGridRuntime {
   /** 返回当前 redo 栈是否可重做。 */
   canRedo(): boolean {
     return this.engine.canRedo()
+  }
+
+  /** Phase 4.5 — 取消隐藏指定底层行，刷新视图。 */
+  unhideRows(underlyingRowIds: readonly number[]): void {
+    if (this.destroyed) return
+    this.engine.unhideRows(underlyingRowIds)
+    this.afterEngineMutation()
   }
 
   /** 执行一次 undo，并在成功后刷新视图与通知 consumer。 */
@@ -1170,6 +1183,7 @@ export class WebGridRuntime {
       this.renderer.render(frame)
       this.syncResizeHandles()
       this.syncFillHandle()
+      this.syncHideToggleHandles()
       this.syncCellEditorPosition()
     })
   }
@@ -1180,6 +1194,7 @@ export class WebGridRuntime {
     this.renderer.render(frame)
     this.syncResizeHandles()
     this.syncFillHandle()
+    this.syncHideToggleHandles()
     this.syncCellEditorPosition()
   }
 
@@ -1195,6 +1210,15 @@ export class WebGridRuntime {
     if (!this.handleLayer || this.resizeDrag) return
     const frame = this.engine.getFrame()
     this.handleLayer.sync(computeResizeHandles(frame))
+  }
+
+  /** 根据当前 frame 同步 hide-toggle handle layer。 */
+  private syncHideToggleHandles(): void {
+    if (!this.hideToggleHandle) return
+    const frame = this.engine.getFrame()
+    this.hideToggleHandle.update(frame.collapsedRowGaps, {
+      rowHeaderWidth: frame.viewport.rowHeaderWidth,
+    })
   }
 
   /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。 */

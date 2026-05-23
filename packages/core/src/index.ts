@@ -49,7 +49,7 @@ export type {
   GridEngineOptions,
   SetViewDataOptions,
 } from './engine/GridEngine'
-export type { RenderFrame } from './render/RenderFrame'
+export type { RenderFrame, RenderFrameCollapsedGap } from './render/RenderFrame'
 export type { ViewportSnapshot } from './layout/Viewport'
 
 // 交互层（Phase 3）

@@ -105,4 +105,7 @@ export interface GridEngine {
 
   /** Phase 4.3 — 提交一次填充柄写入为 1 步 undo;无写入时返回 null。 */
   commitFill(source: CellRange, fill: CellRange, direction: FillDirection): FillCommitResult | null
+
+  /** Phase 4.5 — 将指定底层行 ID 列表从隐藏集移除并触发 invalidate。 */
+  unhideRows(underlyingRowIds: readonly number[]): void
 }

@@ -46,6 +46,7 @@ import { DomCellEditor } from '../interaction/DomCellEditor'
 import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import { DomHandleLayer } from '../interaction/DomHandleLayer'
+import { HideToggleHandle } from '../handle/HideToggleHandle'
 import { FilterPopover } from '../interaction/FilterPopover'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
@@ -70,6 +71,7 @@ export class Canvas2DBackend implements GridController {
   private host: DomGridHost
   private handleLayer: DomHandleLayer
   private fillHandleLayer: DomFillHandleLayer
+  private hideToggleHandle: HideToggleHandle
   private cellEditor: DomCellEditor
   private contextMenuLayer!: DomContextMenuLayer
   private filterPopover!: FilterPopover
@@ -143,6 +145,10 @@ export class Canvas2DBackend implements GridController {
     })
     this.fillHandleLayer.attach()
 
+    this.hideToggleHandle = new HideToggleHandle(this.container, {
+      onUnhide: (ids) => this.runtime.unhideRows(ids),
+    })
+
     this.host = new DomGridHost({
       container: this.container,
       scheduler: this.scheduler,
@@ -165,6 +171,7 @@ export class Canvas2DBackend implements GridController {
       measurer: this.measurer,
       handleLayer: this.handleLayer,
       fillLayer: this.fillHandleLayer,
+      hideToggleHandle: this.hideToggleHandle,
       viewPipeline: this.pipeline,
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
@@ -297,6 +304,7 @@ export class Canvas2DBackend implements GridController {
     this.contextMenuLayer.destroy()
     this.filterPopover.destroy()
     this.runtime.destroy()
+    this.hideToggleHandle.destroy()
     this.fillHandleLayer.destroy()
     this.handleLayer.destroy()
     this.cellEditor.destroy()
@@ -336,6 +344,10 @@ export class Canvas2DBackend implements GridController {
   onFill(handler: (event: FillEvent) => void): () => void {
     this.runtime.setOnFill(handler)
     return () => this.runtime.setOnFill(() => {})
+  }
+
+  unhideRows(underlyingRowIds: readonly number[]): void {
+    this.runtime.unhideRows(underlyingRowIds)
   }
 
   getSortLayer(): SortLayer {

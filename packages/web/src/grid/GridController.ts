@@ -84,6 +84,8 @@ export interface GridController {
   setOnUndo(cb: (event: UndoEvent) => void): void
   setOnRedo(cb: (event: RedoEvent) => void): void
   onFill(handler: (event: FillEvent) => void): () => void
+  /** Phase 4.5 — 取消隐藏指定底层行 ID。 */
+  unhideRows(underlyingRowIds: readonly number[]): void
   getSortLayer(): SortLayer
   getFilterLayer(): FilterLayer
   getViewPipeline(): ViewPipeline
