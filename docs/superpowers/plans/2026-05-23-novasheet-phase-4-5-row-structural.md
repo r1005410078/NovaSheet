@@ -577,7 +577,8 @@ describe('ChunkedAxis.insertRange', () => {
     axis.insertRange(1023, 4, DEFAULT_SIZE)
     expect(axis.getCount()).toBe(2054)
     expect(axis.getSize(1023)).toBe(DEFAULT_SIZE)
-    expect(axis.indexToPosition(2054)).toBe(2054 * DEFAULT_SIZE)
+    // indexToPosition clamps to [0, count-1]，用 getTotalSize() 校验总尺寸
+    expect(axis.getTotalSize()).toBe(2054 * DEFAULT_SIZE)
   })
 })
 
