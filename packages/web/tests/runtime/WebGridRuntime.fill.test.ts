@@ -195,6 +195,7 @@ function makeEngine(selection: GridSelection = {
   }
   return {
     setData: mock(() => {}),
+    setViewData: mock(() => {}),
     setTheme: mock(() => {}),
     setFrozen: mock(() => {}),
     setViewportSize: mock(() => {}),

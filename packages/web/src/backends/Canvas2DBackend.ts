@@ -368,17 +368,20 @@ export class Canvas2DBackend implements GridController {
   }
 
   private subscribePipeline(): void {
-    this.unsubscribePipeline = this.pipeline.subscribe((change) =>
-      this.handlePipelineChange(change),
+    this.unsubscribePipeline = this.pipeline.subscribe((change, oldResolveUnderlyingRow) =>
+      this.handlePipelineChange(change, oldResolveUnderlyingRow),
     )
   }
 
-  private handlePipelineChange(change: ViewLayerChange): void {
+  private handlePipelineChange(
+    change: ViewLayerChange,
+    oldResolveUnderlyingRow: (viewRow: number) => number,
+  ): void {
     if (this.suppressPipelineEvents) return
     if (change.layerId !== 'sort' && change.layerId !== 'filter') return
 
     const data = this.pipeline.getComposed()
-    this.runtime.updateData(data, (renderer) => {
+    this.runtime.updateViewData(data, { oldResolveUnderlyingRow }, (renderer) => {
       const canvasRenderer = renderer as Canvas2DRenderer
       canvasRenderer.setData(data)
     })

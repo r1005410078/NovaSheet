@@ -29,7 +29,7 @@ import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { findViewRow, resolveUnderlyingRow } from '../view/coordinates'
-import type { FillCommitResult, GridEngine, GridEngineOptions } from './GridEngine'
+import type { FillCommitResult, GridEngine, GridEngineOptions, SetViewDataOptions } from './GridEngine'
 
 /**
  * `GridEngine` 默认实现。
@@ -77,6 +77,22 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   setData(data: DataSource): void {
+    this.rebuildData(data)
+    this.undoStack.clear()
+  }
+
+  setViewData(data: DataSource, options: SetViewDataOptions = {}): void {
+    this.finishActiveEdit()
+    const selection = this.selection.getSelection()
+    this.rebuildData(data)
+    if (options.oldResolveUnderlyingRow) {
+      this.remapSelection(selection, options.oldResolveUnderlyingRow)
+      return
+    }
+    if (options.clearSelection !== false) this.selection.clear()
+  }
+
+  private rebuildData(data: DataSource): void {
     this.data = data
     this.rowsAxis = new ChunkedAxis({
       count: this.data.getRowCount(),
@@ -95,7 +111,6 @@ export class DefaultGridEngine implements GridEngine {
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
     this.applySheetChrome()
     this.applyFieldWidths()
-    this.undoStack.clear()
   }
 
   setTheme(theme: Theme): void {
@@ -448,6 +463,75 @@ export class DefaultGridEngine implements GridEngine {
     const viewRow = findViewRow(this.data, rowIndex)
     if (viewRow === -1) return
     this.selection.selectCell({ rowIndex: viewRow, colIndex })
+  }
+
+  private finishActiveEdit(): void {
+    if (!this.cellEdit.isEditing()) return
+    if (!this.commitCellEdit()) this.cancelCellEdit()
+  }
+
+  private remapSelection(
+    selection: GridSelection,
+    oldResolveUnderlyingRow: (viewRow: number) => number,
+  ): void {
+    if (
+      !selection.activeCell ||
+      !selection.anchorCell ||
+      !selection.extentCell ||
+      !selection.selectedRange
+    ) {
+      this.selection.clear()
+      return
+    }
+
+    const activeCell = this.remapCell(selection.activeCell, oldResolveUnderlyingRow)
+    const anchorCell = this.remapCell(selection.anchorCell, oldResolveUnderlyingRow)
+    const extentCell = this.remapCell(selection.extentCell, oldResolveUnderlyingRow)
+    const rangeStart = this.remapRangeEndpoint(
+      selection.selectedRange.startRow,
+      selection.selectedRange.startCol,
+      oldResolveUnderlyingRow,
+    )
+    const rangeEnd = this.remapRangeEndpoint(
+      selection.selectedRange.endRow,
+      selection.selectedRange.endCol,
+      oldResolveUnderlyingRow,
+    )
+
+    if (!activeCell || !anchorCell || !extentCell || !rangeStart || !rangeEnd) {
+      this.selection.clear()
+      return
+    }
+
+    this.selection.setSelection({
+      activeCell,
+      anchorCell,
+      extentCell,
+      selectedRange: {
+        startRow: Math.min(rangeStart.rowIndex, rangeEnd.rowIndex),
+        endRow: Math.max(rangeStart.rowIndex, rangeEnd.rowIndex),
+        startCol: Math.min(rangeStart.colIndex, rangeEnd.colIndex),
+        endCol: Math.max(rangeStart.colIndex, rangeEnd.colIndex),
+      },
+    })
+  }
+
+  private remapCell(
+    cell: CellAddress,
+    oldResolveUnderlyingRow: (viewRow: number) => number,
+  ): CellAddress | null {
+    return this.remapRangeEndpoint(cell.rowIndex, cell.colIndex, oldResolveUnderlyingRow)
+  }
+
+  private remapRangeEndpoint(
+    rowIndex: number,
+    colIndex: number,
+    oldResolveUnderlyingRow: (viewRow: number) => number,
+  ): CellAddress | null {
+    const underlyingRow = oldResolveUnderlyingRow(rowIndex)
+    const viewRow = findViewRow(this.data, underlyingRow)
+    if (viewRow === -1) return null
+    return { rowIndex: viewRow, colIndex }
   }
 
   private resolveDefaultRowHeight(): number {

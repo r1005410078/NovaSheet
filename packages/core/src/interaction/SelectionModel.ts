@@ -49,6 +49,10 @@ export class SelectionModel {
     return this.selection
   }
 
+  setSelection(selection: GridSelection): void {
+    this.selection = selection
+  }
+
   selectCell(cell: CellAddress, options: SelectCellOptions = {}): void {
     const isExtending = options.extend && this.selection.anchorCell && this.selection.activeCell
     const active = isExtending ? this.selection.activeCell! : cell

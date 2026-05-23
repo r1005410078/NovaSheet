@@ -148,6 +148,17 @@ describe('DefaultGridEngine — undo/redo scaffolding', () => {
     expect(engine.canUndo()).toBe(false)
     expect(engine.canRedo()).toBe(false)
   })
+
+  it('setViewData does not clear undo stack', () => {
+    const engine = makeEngine()
+    engine.commitRowResize(0, 24, 50)
+    expect(engine.canUndo()).toBe(true)
+
+    const data2 = new InMemoryDataSource({ schema, rows: [{ a: 'p', b: 9 }] })
+    engine.setViewData(data2)
+    expect(engine.canUndo()).toBe(true)
+    expect(engine.canRedo()).toBe(false)
+  })
 })
 
 describe('DefaultGridEngine — editCell undo/redo', () => {

@@ -1,5 +1,12 @@
 import { describe, expect, it, mock, spyOn } from 'bun:test'
-import { InMemoryDataSource, denseGridTheme, type Schema } from '@novasheet/core'
+import {
+  InMemoryDataSource,
+  denseGridTheme,
+  type CellAddress,
+  type DataSource,
+  type GridSelection,
+  type Schema,
+} from '@novasheet/core'
 import { Grid } from '../src/Grid'
 
 const SCHEMA: Schema = {
@@ -23,6 +30,11 @@ function canvas2dDelegate(grid: Grid) {
       delegate: {
         runtime: { refresh: () => void }
         engine: {
+          beginCellEdit: (cell: CellAddress) => boolean
+          updateCellEditDraft: (draft: string) => void
+          commitCellEdit: () => boolean
+          selectCell: (cell: CellAddress) => void
+          getSelection: () => GridSelection
           getFrame: () => {
             viewport: {
               regions: Array<{ id: string; scrollOffsetX: number }>
@@ -37,6 +49,7 @@ function canvas2dDelegate(grid: Grid) {
             setScroll: (x: number, y: number) => void
             setSize: (w: number, h: number) => void
           }
+          getData: () => DataSource
         }
         highDpi: { resize: (w: number, h: number) => void }
       }
@@ -650,5 +663,36 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
     currentSource.setRows([{ name: 'after destroy', age: 2 }])
     oldSource.setRows([{ name: 'old after destroy', age: 3 }])
     expect(handler).toHaveBeenCalledTimes(3)
+  })
+
+  it('preserves undo across sort view changes', () => {
+    const el = document.createElement('div')
+    const data = makeData()
+    const grid = new Grid(el, { data })
+    const { engine } = canvas2dDelegate(grid)
+
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('edited')
+    expect(engine.commitCellEdit()).toBe(true)
+    expect(data.getCell(0, 'name')).toBe('edited')
+
+    grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'desc' })
+    grid.undo()
+
+    expect(data.getCell(0, 'name')).toBe('n0')
+    grid.destroy()
+  })
+
+  it('remaps selection to the same underlying row across sort view changes', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const { engine } = canvas2dDelegate(grid)
+
+    engine.selectCell({ rowIndex: 0, colIndex: 1 })
+    grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'desc' })
+
+    expect(engine.getSelection().activeCell).toEqual({ rowIndex: 49, colIndex: 1 })
+    expect(engine.getData().resolveUnderlyingRow?.(49)).toBe(0)
+    grid.destroy()
   })
 })

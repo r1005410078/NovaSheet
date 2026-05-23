@@ -22,6 +22,7 @@ import type {
   DataSource,
   FrozenConfig,
   GridEngine,
+  SetViewDataOptions,
   TextMeasurer,
   Theme,
   UndoCommand,
@@ -499,10 +500,13 @@ export class WebGridRuntime {
     return this.renderer
   }
 
-  updateData(data: DataSource, patchRenderer?: (renderer: WebRenderer) => void): void {
-    this.engine.setData(data)
+  updateViewData(
+    data: DataSource,
+    options?: SetViewDataOptions,
+    patchRenderer?: (renderer: WebRenderer) => void,
+  ): void {
+    this.engine.setViewData(data, options)
     patchRenderer?.(this.renderer)
-    this.engine.clearSelection()
     this.clipboardCache = null
     this.afterEngineMutation()
   }

@@ -16,6 +16,7 @@ import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 function makeEngine(): GridEngine {
   return {
     setData: mock(() => {}),
+    setViewData: mock(() => {}),
     setTheme: mock(() => {}),
     setFrozen: mock(() => {}),
     setViewportSize: mock(() => {}),

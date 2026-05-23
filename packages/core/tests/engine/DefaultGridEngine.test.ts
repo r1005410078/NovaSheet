@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'bun:test'
-import { DefaultGridEngine, InMemoryDataSource, denseGridTheme, type Schema } from '../../src'
+import {
+  DefaultGridEngine,
+  InMemoryDataSource,
+  denseGridTheme,
+  type DataSource,
+  type DataSourceListener,
+  type Row,
+  type Schema,
+} from '../../src'
 
 const SCHEMA: Schema = {
   fields: [
@@ -15,6 +23,49 @@ function makeData(rows = 10) {
   })
 }
 
+class OrderedViewDataSource implements DataSource {
+  constructor(
+    private readonly source: InMemoryDataSource,
+    private readonly order: readonly number[],
+  ) {}
+
+  getRowCount(): number {
+    return this.order.length
+  }
+
+  getSchema(): Schema {
+    return this.source.getSchema()
+  }
+
+  getRows(startIndex: number, endIndex: number): Row[] {
+    const rows: Row[] = []
+    for (let viewRow = startIndex; viewRow <= endIndex; viewRow += 1) {
+      const underlyingRow = this.order[viewRow]
+      if (underlyingRow == null) continue
+      const [row] = this.source.getRows(underlyingRow, underlyingRow)
+      if (row) rows.push(row)
+    }
+    return rows
+  }
+
+  getCell(rowIndex: number, fieldId: string) {
+    const underlyingRow = this.order[rowIndex]
+    return underlyingRow == null ? undefined : this.source.getCell(underlyingRow, fieldId)
+  }
+
+  resolveUnderlyingRow(viewRow: number): number {
+    return this.order[viewRow] ?? -1
+  }
+
+  findViewRow(underlyingRow: number): number {
+    return this.order.indexOf(underlyingRow)
+  }
+
+  subscribe(_listener: DataSourceListener): () => void {
+    return () => {}
+  }
+}
+
 describe('DefaultGridEngine — 默认引擎', () => {
   it('用默认主题与 schema 列宽初始化', () => {
     const engine = new DefaultGridEngine({ data: makeData(5) })
@@ -26,6 +77,12 @@ describe('DefaultGridEngine — 默认引擎', () => {
   it('setData 重建行列轴', () => {
     const engine = new DefaultGridEngine({ data: makeData(5) })
     engine.setData(makeData(100))
+    expect(engine.getRowsAxis().getCount()).toBe(100)
+  })
+
+  it('setViewData 重建行列轴', () => {
+    const engine = new DefaultGridEngine({ data: makeData(5) })
+    engine.setViewData(makeData(100))
     expect(engine.getRowsAxis().getCount()).toBe(100)
   })
 
@@ -74,6 +131,45 @@ describe('DefaultGridEngine — 默认引擎', () => {
       },
     })
     expect(engine.getFrame().selection).toEqual(engine.getSelection())
+  })
+
+  it('setViewData after sort remaps active selection to the same underlying row', () => {
+    const source = makeData(3)
+    const oldView = new OrderedViewDataSource(source, [0, 1, 2])
+    const newView = new OrderedViewDataSource(source, [2, 1, 0])
+    const engine = new DefaultGridEngine({ data: oldView })
+
+    engine.selectCell({ rowIndex: 0, colIndex: 1 })
+    engine.setViewData(newView, {
+      oldResolveUnderlyingRow: (viewRow) => oldView.resolveUnderlyingRow(viewRow),
+    })
+
+    expect(engine.getSelection().activeCell).toEqual({ rowIndex: 2, colIndex: 1 })
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 2,
+      endRow: 2,
+      startCol: 1,
+      endCol: 1,
+    })
+  })
+
+  it('setViewData clears selection when the selected underlying row is filtered out', () => {
+    const source = makeData(3)
+    const oldView = new OrderedViewDataSource(source, [0, 1, 2])
+    const newView = new OrderedViewDataSource(source, [0, 1])
+    const engine = new DefaultGridEngine({ data: oldView })
+
+    engine.selectCell({ rowIndex: 2, colIndex: 1 })
+    engine.setViewData(newView, {
+      oldResolveUnderlyingRow: (viewRow) => oldView.resolveUnderlyingRow(viewRow),
+    })
+
+    expect(engine.getSelection()).toEqual({
+      activeCell: null,
+      anchorCell: null,
+      extentCell: null,
+      selectedRange: null,
+    })
   })
 
   it('Phase 3.5 — begin / commit 单元格编辑', () => {

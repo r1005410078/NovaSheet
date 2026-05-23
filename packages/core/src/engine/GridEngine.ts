@@ -43,8 +43,14 @@ export interface FillCommitResult {
   readonly writes: readonly CellWrite[]
 }
 
+export interface SetViewDataOptions {
+  readonly oldResolveUnderlyingRow?: (viewRow: number) => number
+  readonly clearSelection?: boolean
+}
+
 export interface GridEngine {
   setData(data: DataSource): void
+  setViewData(data: DataSource, options?: SetViewDataOptions): void
   setTheme(theme: Theme): void
   setFrozen(config: Partial<FrozenConfig>): void
   setFrozen(rows: number, cols: number): void
