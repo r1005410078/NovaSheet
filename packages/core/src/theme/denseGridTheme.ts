@@ -43,6 +43,7 @@ export const denseGridTheme: Theme = {
     selectionBg: 'rgba(9,105,218,0.10)',
     selectionBorder: '#0969da',
     menuItemHover: '#f6f8fa',
+    hideIndicator: '#6b7280',
   },
   cell: {
     textAlignByType: {
@@ -80,6 +81,8 @@ export const denseGridTheme: Theme = {
     sortAsc: simpleIcon('M8 3l4 4H9.5v6h-3V7H4z'),
     sortDesc: simpleIcon('M8 13l-4-4h2.5V3h3v6H12z'),
     filter: simpleIcon('M2.5 3h11L9.5 7.5V13l-3 1V7.5z'),
+    hideBoundaryUp: 'M0 6 L4 0 L8 6 Z',
+    hideBoundaryDown: 'M0 0 L4 6 L8 0 Z',
   },
   scrollbar: {
     trackWidth: 10,
@@ -91,6 +94,10 @@ export const denseGridTheme: Theme = {
   frozenSeparator: {
     color: '#d0d7de',
     width: 1,
+  },
+  dimensions: {
+    hideTriangleOffset: 4,
+    hideTrianglePadX: 6,
   },
   emptyState: {
     viewBoxWidth: 80,
