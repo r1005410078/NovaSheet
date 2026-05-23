@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import type { Field, FilterOp } from '@novasheet/core'
+import { denseGridTheme, type Field, type FilterOp } from '@novasheet/core'
 import { FilterPopover } from '../../src/interaction/FilterPopover'
 
 function makeContainer(): HTMLElement {
@@ -35,6 +35,20 @@ describe('FilterPopover', () => {
     valueInput().dispatchEvent(new Event('input', { bubbles: true }))
 
     expect(applyButton().disabled).toBe(false)
+    popover.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('injects themed popover stylesheet and variables', () => {
+    const { container, popover } = openPopover({ id: 'name', name: 'Name', type: 'text', width: 100 })
+
+    popover.applyTheme(denseGridTheme)
+
+    expect(document.getElementById('novasheet-filter-popover-style')).toBeTruthy()
+    const layer = document.body.querySelector('[data-novasheet-filter-popover-layer]') as HTMLElement
+    expect(layer.style.getPropertyValue('--ns-filter-popover-bg')).toBe(denseGridTheme.colors.background)
+    expect(layer.style.getPropertyValue('--ns-filter-popover-font')).toBe(denseGridTheme.metrics.fontFamily)
+
     popover.destroy()
     document.body.removeChild(container)
   })

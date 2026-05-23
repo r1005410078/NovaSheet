@@ -1,4 +1,5 @@
-import type { Field, FilterOp } from '@novasheet/core'
+import type { Field, FilterOp, Theme } from '@novasheet/core'
+import { applyFilterPopoverTheme, ensureFilterPopoverStylesheet } from '../host/filter-popover-style'
 
 export interface FilterPopoverCallbacks {
   onApply: (op: FilterOp | null) => void
@@ -52,7 +53,13 @@ export class FilterPopover {
     doc.addEventListener('pointerdown', this.onDocumentPointerDown, true)
     this.layer.appendChild(this.popover)
     doc.body.appendChild(this.layer)
+    ensureFilterPopoverStylesheet(doc)
     this.attached = true
+  }
+
+  applyTheme(theme: Theme): void {
+    if (!this.attached || this.destroyed) return
+    applyFilterPopoverTheme(this.layer, theme)
   }
 
   isOpen(): boolean {

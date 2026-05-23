@@ -526,6 +526,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       open: mock((_anchor: unknown, _options: unknown) => {}),
       close: mock(() => {}),
       isOpen: mock(() => false),
+      applyTheme: mock(() => {}),
       destroy: mock(() => {}),
       attach: mock(() => {}),
     }

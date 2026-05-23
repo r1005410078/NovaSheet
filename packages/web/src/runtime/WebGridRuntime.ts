@@ -228,6 +228,7 @@ export class WebGridRuntime {
 
   setFilterPopover(popover: FilterPopover): void {
     this.filterPopover = popover
+    this.syncFilterPopoverTheme()
   }
 
   setViewContext(opts: {
@@ -627,6 +628,8 @@ export class WebGridRuntime {
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
     this.syncCellEditorTheme()
+    this.syncContextMenuTheme()
+    this.syncFilterPopoverTheme()
     this.afterEngineMutation()
   }
 
@@ -1184,6 +1187,10 @@ export class WebGridRuntime {
 
   private syncContextMenuTheme(): void {
     this.contextMenuLayer?.applyTheme(this.engine.getTheme())
+  }
+
+  private syncFilterPopoverTheme(): void {
+    this.filterPopover?.applyTheme(this.engine.getTheme())
   }
 
   private openCellEditor(
