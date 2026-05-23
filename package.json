@@ -11,7 +11,7 @@
     "build": "bun run typecheck && bun run --filter '*' build",
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
-    "lint": "eslint packages",
+    "lint": "oxlint packages",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "storybook": "bun run --filter @novasheet/storybook storybook",
     "build-storybook": "bun run --filter @novasheet/storybook build-storybook"
@@ -20,10 +20,8 @@
     "esbuild"
   ],
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^7.8.0",
-    "@typescript-eslint/parser": "^7.8.0",
-    "eslint": "^8.57.0",
+    "oxlint": "^1.66.0",
     "prettier": "^3.2.5",
-    "typescript": "^5.4.5"
+    "typescript": "^6.0.3"
   }
 }
