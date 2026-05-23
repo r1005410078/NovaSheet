@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { HideRowsLayer, type CollapsedGap } from '../../src/view/HideRowsLayer'
 import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
+import { SortLayer } from '../../src/view/SortLayer'
+import { ViewPipeline } from '../../src/view/ViewPipeline'
 import type { Row } from '../../src/data/Schema'
 
 const schema = { fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 100 }] }
@@ -123,5 +125,28 @@ describe('HideRowsLayer.wrap — resolveUnderlyingRow 越界', () => {
     const composed = layer.wrap(ds)
     expect(composed.resolveUnderlyingRow?.(999)).toBe(-1)
     expect(composed.resolveUnderlyingRow?.(-1)).toBe(-1)
+  })
+})
+
+describe('HideRowsLayer 与 Sort/Filter 组合', () => {
+  it('Sort desc + Hide underlying {0,1} → view 看不到这两行', () => {
+    const ds = new InMemoryDataSource({
+      schema: { fields: [{ id: 'n', name: 'N', type: 'number' as const, width: 100 }] },
+      rows: [{ n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }],
+    })
+    const pipeline = new ViewPipeline(ds)
+    const sort = new SortLayer()
+    sort.setSpec({ fieldId: 'n', direction: 'desc' })
+    const hide = new HideRowsLayer()
+    // sort 视图：row0=n=4, row1=n=3, row2=n=2, row3=n=1
+    // 隐藏 sort 视图的 row2、row3（n=2, n=1）→ 留下 n=4, n=3
+    hide.setHidden([2, 3])
+    pipeline.add(sort)
+    pipeline.add(hide)
+
+    const composed = pipeline.getComposed()
+    expect(composed.getRowCount()).toBe(2)
+    expect(composed.getCell(0, 'n')).toBe(4)
+    expect(composed.getCell(1, 'n')).toBe(3)
   })
 })
