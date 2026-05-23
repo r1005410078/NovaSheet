@@ -114,3 +114,14 @@ describe('HideRowsLayer.bindPipeline 通知', () => {
     expect(events).toContainEqual({ layerId: 'hide-rows', reason: 'spec-changed' })
   })
 })
+
+describe('HideRowsLayer.wrap — resolveUnderlyingRow 越界', () => {
+  it('viewRow 越界返回 -1', () => {
+    const ds = mk(5)
+    const layer = new HideRowsLayer()
+    layer.setHidden([1, 2])
+    const composed = layer.wrap(ds)
+    expect(composed.resolveUnderlyingRow?.(999)).toBe(-1)
+    expect(composed.resolveUnderlyingRow?.(-1)).toBe(-1)
+  })
+})

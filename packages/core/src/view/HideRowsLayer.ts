@@ -157,6 +157,7 @@ export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
 
 /** Internal DataSource wrapper produced by HideRowsLayer.wrap(). Not exported. */
 class HiddenDataSource implements DataSource {
+  private disposed = false
   private listeners = new Set<DataSourceListener>()
   private readonly unsubscribeFromUpstream: () => void
   readonly updateCell?: MutableDataSource['updateCell']
@@ -232,7 +233,7 @@ class HiddenDataSource implements DataSource {
 
   resolveUnderlyingRow(viewRow: number): number {
     const upstreamRow = this.layer.getVisibleRows()[viewRow]
-    if (upstreamRow == null) return viewRow
+    if (upstreamRow == null) return -1
     return this.upstream.resolveUnderlyingRow?.(upstreamRow) ?? upstreamRow
   }
 
@@ -250,11 +251,14 @@ class HiddenDataSource implements DataSource {
   }
 
   dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
     this.unsubscribeFromUpstream()
     this.listeners.clear()
   }
 
   private handleUpstreamEvent(event: DataSourceEvent): void {
+    if (this.disposed) return
     this.layer._handleUpstreamEvent(event, this.upstream)
     this.emit(event)
   }
