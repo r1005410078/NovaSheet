@@ -448,7 +448,14 @@ export class ChunkedAxis {
 
   /**
    * 在 `beforeIndex` 位置前插入 `count` 行/列，每项尺寸初始化为 `defaultSize`。
-   * 触发全量 rebuild，后接逐项 setSize 恢复非默认尺寸。
+   *
+   * 实现路径：`flattenSizes()` 展平 → splice 插入 → `rebuild()` 全量重置为
+   * `this.defaultSize` → 遍历 `flat`，对 `flat[i] !== this.defaultSize` 的项调
+   * `setSize` 恢复。`defaultSize` 参数与 `this.defaultSize` 可以不同——新插入项
+   * 会通过 setSize 路径正确写入指定尺寸。Task 10（DefaultGridEngine）调用时
+   * 通常传入 `theme.dimensions.rowHeight`，与 `this.defaultSize` 一致。
+   *
+   * `beforeIndex` clamp 到 `[0, this.count]`；`count <= 0` no-op。
    */
   insertRange(beforeIndex: number, count: number, defaultSize: number): void {
     if (count <= 0) return
@@ -464,8 +471,13 @@ export class ChunkedAxis {
   }
 
   /**
-   * 删除 `removedSortedIndices` 指定的行/列（已排序、无重复）。
-   * 触发全量 rebuild，后接逐项 setSize 恢复非默认尺寸。
+   * 删除 `removedSortedIndices` 指定的行/列。**约定**：调用方保证升序、无重复、
+   * 所有索引落在 `[0, this.count)` 内。越界索引会被 `Array.filter` 静默忽略，
+   * 不影响最终 count；不会抛错。空数组 no-op。
+   *
+   * 实现路径：`flattenSizes()` → filter → `rebuild()` → 逐项 `setSize` 恢复
+   * 非默认尺寸。Task 10（DefaultGridEngine）传入的 `underlyingRowIds` 由
+   * `InMemoryDataSource.deleteRows` 校验过升序，本方法不重复校验。
    */
   deleteRange(removedSortedIndices: readonly number[]): void {
     if (removedSortedIndices.length === 0) return
