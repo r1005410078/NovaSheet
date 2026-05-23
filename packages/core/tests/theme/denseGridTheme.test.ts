@@ -17,6 +17,12 @@ describe('denseGridTheme — 默认主题', () => {
     }
   })
 
+  it('声明排序和筛选列头状态图标', () => {
+    expect(denseGridTheme.icons.sortAsc).toBeDefined()
+    expect(denseGridTheme.icons.sortDesc).toBeDefined()
+    expect(denseGridTheme.icons.filter).toBeDefined()
+  })
+
   it('按字段类型提供文本对齐', () => {
     expect(denseGridTheme.cell.textAlignByType.text).toBe('left')
     expect(denseGridTheme.cell.textAlignByType.number).toBe('right')

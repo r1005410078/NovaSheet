@@ -9,8 +9,9 @@
  * 主 header 之后再绘一次（M3 才会启用，因为 M1 没有冻结列）。
  */
 
-import { columnIndexToLetter, type Axis, type Schema, type Theme } from '@novasheet/core'
+import { columnIndexToLetter, type Axis, type IconDef, type Schema, type Theme, type ViewPipeline } from '@novasheet/core'
 import { snapLineInside } from '../paint/line-snap'
+import { paintSvgPath } from '../paint/svg-path'
 
 /** 表头绘制所需参数 */
 export interface HeaderPaintParams {
@@ -32,6 +33,8 @@ export interface HeaderPaintParams {
   scrollOffsetX?: number
   /** true 时绘制 A/B/… 列标（Excel 门面） */
   columnLetters?: boolean
+  /** Phase 4.4 — 提供列头排序/筛选状态装饰。 */
+  viewPipeline?: Pick<ViewPipeline, 'collectHeaderDecorations'>
 }
 
 /**
@@ -84,14 +87,69 @@ export class HeaderPainter {
         ctx.textAlign = 'left'
       } else {
         const field = schema.fields[c]!
+        const icons = this.collectStateIcons(params.viewPipeline, field)
+        const iconReserve = this.measureIconReserve(icons.length)
         const textX = colLeft + padX
-        ctx.fillText(field.name, textX, y)
+        const maxTextWidth = Math.max(0, colWidth - padX * 2 - iconReserve)
+        ctx.fillText(field.name, textX, y, maxTextWidth)
+        this.paintStateIcons(ctx, icons, {
+          colLeft,
+          colWidth,
+          y,
+          padX,
+        })
       }
     }
 
     this.paintHeaderGridLines(ctx, { colsAxis, colRange, x, width, scrollOffsetX, headerHeight })
 
     ctx.restore()
+  }
+
+  private collectStateIcons(
+    viewPipeline: Pick<ViewPipeline, 'collectHeaderDecorations'> | undefined,
+    field: Schema['fields'][number],
+  ): IconDef[] {
+    const decoration = viewPipeline?.collectHeaderDecorations(field)
+    const icons: IconDef[] = []
+    if (decoration?.filterActive) icons.push(this.theme.icons.filter)
+    if (decoration?.sortIndicator === 'asc') icons.push(this.theme.icons.sortAsc)
+    if (decoration?.sortIndicator === 'desc') icons.push(this.theme.icons.sortDesc)
+    return icons
+  }
+
+  private measureIconReserve(count: number): number {
+    if (count === 0) return 0
+    const { headerIconSize, headerIconGap } = this.theme.metrics
+    return count * headerIconSize + count * headerIconGap
+  }
+
+  private paintStateIcons(
+    ctx: CanvasRenderingContext2D,
+    icons: readonly IconDef[],
+    params: {
+      colLeft: number
+      colWidth: number
+      y: number
+      padX: number
+    },
+  ): void {
+    if (icons.length === 0) return
+    const { headerIconSize, headerIconGap } = this.theme.metrics
+    const totalWidth = icons.length * headerIconSize + (icons.length - 1) * headerIconGap
+    let iconX = params.colLeft + params.colWidth - params.padX - totalWidth
+    const iconY = params.y - headerIconSize / 2
+
+    for (const icon of icons) {
+      paintSvgPath(
+        ctx,
+        icon.path,
+        { width: 16, height: 16 },
+        { x: iconX, y: iconY, width: headerIconSize, height: headerIconSize },
+        { fill: this.theme.colors.headerText },
+      )
+      iconX += headerIconSize + headerIconGap
+    }
   }
 
   private paintHeaderGridLines(

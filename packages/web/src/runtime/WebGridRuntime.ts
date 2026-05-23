@@ -996,7 +996,7 @@ export class WebGridRuntime {
     if (this.destroyed) return
     this.scheduler.schedule('renderer:flush', () => {
       if (this.destroyed) return
-      const frame = this.engine.getFrame()
+      const frame = this.getRenderFrame()
       this.renderer.render(frame)
       this.syncResizeHandles()
       this.syncFillHandle()
@@ -1005,11 +1005,17 @@ export class WebGridRuntime {
   }
 
   private paintSync(): void {
-    const frame = this.engine.getFrame()
+    const frame = this.getRenderFrame()
     this.renderer.render(frame)
     this.syncResizeHandles()
     this.syncFillHandle()
     this.syncCellEditorPosition()
+  }
+
+  private getRenderFrame(): ReturnType<GridEngine['getFrame']> {
+    const frame = this.engine.getFrame()
+    if (!this.viewPipeline) return frame
+    return { ...frame, viewPipeline: this.viewPipeline }
   }
 
   private syncResizeHandles(): void {

@@ -38,6 +38,10 @@ export interface ThemeMetrics {
   readonly menuPaddingX: number
   /** 菜单垂直内边距（px） */
   readonly menuPaddingY: number
+  /** 列头状态图标尺寸（px） */
+  readonly headerIconSize: number
+  /** 列头状态图标间距（px） */
+  readonly headerIconGap: number
 }
 
 /** 色板——所有 fillStyle / strokeStyle 都从这里取。 */
@@ -80,6 +84,12 @@ export interface ThemeCell {
 export interface ThemeIcons {
   /** 各字段类型对应的图标定义 */
   readonly byFieldType: Readonly<Record<FieldType, IconDef>>
+  /** 升序排序状态图标 */
+  readonly sortAsc: IconDef
+  /** 降序排序状态图标 */
+  readonly sortDesc: IconDef
+  /** 筛选激活状态图标 */
+  readonly filter: IconDef
 }
 
 /** 滚动条样式（`DomGridHost` 通过 CSS 变量应用到原生 scroll-host）。 */

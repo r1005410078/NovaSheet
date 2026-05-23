@@ -28,6 +28,8 @@ export const denseGridTheme: Theme = {
     menuShadow: '0 4px 12px rgba(15, 23, 42, 0.12)',
     menuPaddingX: 8,
     menuPaddingY: 4,
+    headerIconSize: 16,
+    headerIconGap: 4,
   },
   colors: {
     background: '#ffffff',
@@ -65,6 +67,9 @@ export const denseGridTheme: Theme = {
       checkbox: simpleIcon('M3 2.5A1.5 1.5 0 011.5 4v8A1.5 1.5 0 003 13.5h10A1.5 1.5 0 0014.5 12V4A1.5 1.5 0 0013 2.5H3zm4.25 7.31l4.94-4.94L11.13 3.81 7.25 7.69 5.81 6.25 4.75 7.31l2.5 2.5z'),
       url: simpleIcon('M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM2 8h12a6 6 0 01-6 6V2a6 6 0 016 6H2z'),
     },
+    sortAsc: simpleIcon('M8 3l4 4H9.5v6h-3V7H4z'),
+    sortDesc: simpleIcon('M8 13l-4-4h2.5V3h3v6H12z'),
+    filter: simpleIcon('M2.5 3h11L9.5 7.5V13l-3 1V7.5z'),
   },
   scrollbar: {
     trackWidth: 10,

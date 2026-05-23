@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis, denseGridTheme, type Schema } from '@novasheet/core'
+import { ChunkedAxis, denseGridTheme, type Schema, type ViewPipeline } from '@novasheet/core'
 import { HeaderPainter } from '../../src/painters/HeaderPainter'
 import { createRecordingContext } from '../helpers/recording-context'
 
@@ -44,6 +44,31 @@ describe('HeaderPainter — 列头', () => {
     expect(texts).toContain('Name')
     expect(texts).toContain('Age')
     expect(texts).toContain('Active')
+  })
+
+  it('绘制排序筛选状态图标并为文字预留空间', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    const viewPipeline = {
+      collectHeaderDecorations: (field: { id: string }) =>
+        field.id === 'name' ? { sortIndicator: 'asc' as const, filterActive: true } : {},
+    } as Pick<ViewPipeline, 'collectHeaderDecorations'>
+
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA,
+      colsAxis,
+      colRange: [0, 2],
+      width: 400,
+      viewPipeline,
+    })
+
+    expect(ops.filter((o) => o.op === 'fillPath')).toHaveLength(2)
+    const nameTxt = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === 'Name',
+    )
+    expect(nameTxt).toBeDefined()
+    expect(nameTxt!.args[3]).toBeLessThan(100 - denseGridTheme.metrics.cellPaddingX * 2)
   })
 
   it('列头文字使用 headerText 色', () => {

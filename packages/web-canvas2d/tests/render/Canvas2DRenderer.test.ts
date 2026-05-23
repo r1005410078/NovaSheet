@@ -110,6 +110,25 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(carol!.args[2]).toBe(46)
   })
 
+  it('render forwards frame.viewPipeline to header painter', () => {
+    const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
+    ops.length = 0
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      viewPipeline: {
+        collectHeaderDecorations: (field: { id: string }) =>
+          field.id === 'name' ? { sortIndicator: 'desc' as const, filterActive: true } : {},
+      },
+    })
+
+    expect(ops.filter((o) => o.op === 'fillPath')).toHaveLength(2)
+  })
+
   it('编辑中的 cell 内容交给 DOM editor，不再由 canvas 重复绘制', () => {
     const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
 

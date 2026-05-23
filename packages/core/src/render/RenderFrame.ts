@@ -11,6 +11,7 @@ import type { GridSelection } from '../interaction/SelectionModel'
 import type { Axis } from '../layout/ChunkedAxis'
 import type { ViewportSnapshot } from '../layout/Viewport'
 import type { Theme } from '../theme/Theme'
+import type { ViewPipeline } from '../view/ViewPipeline'
 
 export interface RenderFrame {
   data: DataSource
@@ -19,6 +20,8 @@ export interface RenderFrame {
   colsAxis: Axis
   viewport: ViewportSnapshot
   selection?: GridSelection
+  /** Phase 4.4 — view 管线提供列头排序/筛选装饰。 */
+  viewPipeline?: Pick<ViewPipeline, 'collectHeaderDecorations'>
   /** Phase 3.5 — 正在编辑的单元格（若有）。 */
   cellEdit?: CellEditSession
 }
