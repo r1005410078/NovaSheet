@@ -53,10 +53,7 @@ export function ensureScrollbarStylesheet(doc: Document = document): void {
 }
 
 /** 将 Theme `scrollbar` token 写入 scroll-host 的 CSS 变量。 */
-export function applyScrollbarTheme(
-  scrollHost: HTMLElement,
-  scrollbar: ThemeScrollbar,
-): void {
+export function applyScrollbarTheme(scrollHost: HTMLElement, scrollbar: ThemeScrollbar): void {
   ensureScrollbarStylesheet(scrollHost.ownerDocument)
   const size = `${scrollbar.trackWidth}px`
   scrollHost.style.setProperty('--ns-scrollbar-size', size)

@@ -65,11 +65,15 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
   wrap(upstream: DataSource): DataSource {
     this.captureSchema(upstream)
     this.clearInvalidSpec()
-    return new FilteredDataSource(upstream, () => this.spec, (source) => {
-      this.captureSchema(source)
-      this.clearInvalidSpec()
-      this.notify?.({ layerId: this.id, reason: 'upstream-reset' })
-    })
+    return new FilteredDataSource(
+      upstream,
+      () => this.spec,
+      (source) => {
+        this.captureSchema(source)
+        this.clearInvalidSpec()
+        this.notify?.({ layerId: this.id, reason: 'upstream-reset' })
+      },
+    )
   }
 
   headerDecoration(field: Field): HeaderDecoration | null {
@@ -141,7 +145,9 @@ class FilteredDataSource implements DataSource {
       }
     }
     this.rebuild()
-    this.unsubscribeFromUpstream = this.upstream.subscribe((event) => this.handleUpstreamEvent(event))
+    this.unsubscribeFromUpstream = this.upstream.subscribe((event) =>
+      this.handleUpstreamEvent(event),
+    )
   }
 
   getRowCount(): number {
@@ -211,7 +217,8 @@ class FilteredDataSource implements DataSource {
     const previousRowCount = this.getRowCount()
     const previousSpec = this.getSpec()
     this.onUpstreamReset(this.upstream)
-    const specInvalidated = event.type === 'schemaChanged' && previousSpec != null && this.getSpec() == null
+    const specInvalidated =
+      event.type === 'schemaChanged' && previousSpec != null && this.getSpec() == null
     this.rebuild()
     const newRowCount = this.getRowCount()
     this.emit(filterStructuralEvent(event, newRowCount))
@@ -227,7 +234,8 @@ class FilteredDataSource implements DataSource {
     const field = spec
       ? this.upstream.getSchema().fields.find((candidate) => candidate.id === spec.fieldId)
       : null
-    const predicate = spec && field && isCompatibleFilterOp(field, spec.op) ? buildPredicate(field, spec.op) : null
+    const predicate =
+      spec && field && isCompatibleFilterOp(field, spec.op) ? buildPredicate(field, spec.op) : null
 
     this.order = []
     for (let upstreamRow = 0; upstreamRow < rowCount; upstreamRow += 1) {
@@ -310,13 +318,19 @@ function isCompatibleFilterOp(field: Field, op: FilterOp): boolean {
 function buildPredicate(field: Field, op: FilterOp): FilterPredicate {
   switch (op.kind) {
     case 'text-contains':
-      return buildTextPredicate(op.value, op.caseSensitive, (cell, expected) => cell.includes(expected))
+      return buildTextPredicate(op.value, op.caseSensitive, (cell, expected) =>
+        cell.includes(expected),
+      )
     case 'text-equals':
       return buildTextPredicate(op.value, op.caseSensitive, (cell, expected) => cell === expected)
     case 'number-between':
       return (value) => {
         const number = numberValue(value)
-        return number != null && (op.min == null || number >= op.min) && (op.max == null || number <= op.max)
+        return (
+          number != null &&
+          (op.min == null || number >= op.min) &&
+          (op.max == null || number <= op.max)
+        )
       }
     case 'number-equals':
       return (value) => numberValue(value) === op.value
@@ -359,7 +373,8 @@ function buildTextPredicate(
 
 function isEmptyValue(value: CellValue | undefined, field: Field): boolean {
   if (value == null) return true
-  if (field.type === 'text' || field.type === 'url' || field.type === 'singleSelect') return value === ''
+  if (field.type === 'text' || field.type === 'url' || field.type === 'singleSelect')
+    return value === ''
   if (field.type === 'multiSelect') return Array.isArray(value) && value.length === 0
   return false
 }
@@ -370,7 +385,9 @@ function textValue(value: CellValue | undefined): string | null {
 }
 
 function multiSelectValue(value: CellValue | undefined): readonly string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : []
 }
 
 function numberValue(value: CellValue | undefined): number | null {
@@ -379,7 +396,8 @@ function numberValue(value: CellValue | undefined): number | null {
 
 function dateValue(value: CellValue | undefined): number | null {
   if (value == null) return null
-  const time = value instanceof Date ? value.getTime() : new Date(value as string | number).getTime()
+  const time =
+    value instanceof Date ? value.getTime() : new Date(value as string | number).getTime()
   return Number.isNaN(time) ? null : time
 }
 

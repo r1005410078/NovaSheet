@@ -133,7 +133,7 @@ describe('FrozenRegions — M3 冻结区域', () => {
         scrollX: 50,
         scrollY: 0,
         headerHeight: 32,
-      rowHeaderWidth: 0,
+        rowHeaderWidth: 0,
       })
       .find((region) => region.id === 'main')!
 

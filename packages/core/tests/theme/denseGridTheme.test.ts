@@ -11,7 +11,15 @@ describe('denseGridTheme — 默认主题', () => {
   })
 
   it('声明 7 种字段类型图标', () => {
-    const types = ['text', 'number', 'singleSelect', 'multiSelect', 'date', 'checkbox', 'url'] as const
+    const types = [
+      'text',
+      'number',
+      'singleSelect',
+      'multiSelect',
+      'date',
+      'checkbox',
+      'url',
+    ] as const
     for (const t of types) {
       expect(denseGridTheme.icons.byFieldType[t]).toBeDefined()
     }

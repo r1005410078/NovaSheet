@@ -11,6 +11,7 @@
 **Spec reference:** [docs/superpowers/specs/2026-05-17-novasheet-cross-platform-rendering-architecture.md](../specs/2026-05-17-novasheet-cross-platform-rendering-architecture.md)
 
 **Out of scope:**
+
 - WebGL / WebGPU renderers (future, after this refactor proves the boundary)
 - Full `RenderCommand[]` (spec §5 decision: stay with RenderFrame engine-snapshot for now)
 - New features (no M3 scope, no React wrapper)
@@ -166,6 +167,7 @@ packages/core/tests/
 ### Task 1: Create empty `@novasheet/web` and `@novasheet/web-canvas2d` packages
 
 **Files:**
+
 - Create: `packages/web/package.json`
 - Create: `packages/web/tsconfig.json`
 - Create: `packages/web/tsconfig.build.json`
@@ -306,6 +308,7 @@ export {}
 - [ ] **Step 6: Repeat Steps 1-5 for `packages/web-canvas2d/`**
 
 Same files, with these substitutions in `package.json`:
+
 - `"name": "@novasheet/web-canvas2d"`
 - Add `"@novasheet/web": "workspace:*"` to `dependencies`
 
@@ -349,6 +352,7 @@ git commit -m "chore(refactor): scaffold empty @novasheet/web and @novasheet/web
 ### Task 2: Add `Axis` and `MutableAxis` interfaces alongside `ChunkedAxis`
 
 **Files:**
+
 - Modify: `packages/core/src/layout/ChunkedAxis.ts` (add interface exports)
 
 This is purely additive. No test changes — `ChunkedAxis` already satisfies the interface shape.
@@ -425,6 +429,7 @@ git commit -m "feat(core): add Axis + MutableAxis interfaces alongside ChunkedAx
 ### Task 3: Move `ScrollMapper` from `@novasheet/core` to `@novasheet/web`
 
 **Files:**
+
 - Create: `packages/web/src/scroll/ScrollMapper.ts` (moved from core)
 - Modify: `packages/web/src/index.ts` (re-export)
 - Delete: `packages/core/src/scroll/ScrollMapper.ts`
@@ -442,6 +447,7 @@ grep -rln "from.*ScrollMapper\|from '@novasheet/core'.*ScrollMapper" packages/ a
 ```
 
 Expected matches (verify before proceeding):
+
 - `packages/core/src/Grid.ts` (imports `ScrollMapper`)
 - `packages/core/src/index.ts` (re-exports `ScrollMapper, SAFE_MAX`)
 - `packages/core/tests/scroll/ScrollMapper.test.ts` (the test itself)
@@ -478,11 +484,13 @@ git mv packages/core/tests/scroll/ScrollMapper.test.ts packages/web/tests/scroll
 Edit the moved file's import to use a relative path within `@novasheet/web`:
 
 Find:
+
 ```ts
 import { ScrollMapper, SAFE_MAX } from '../../src/scroll/ScrollMapper'
 ```
 
 Replace with (same path — file moved with the structure):
+
 ```ts
 import { ScrollMapper, SAFE_MAX } from '../../src/scroll/ScrollMapper'
 ```
@@ -528,11 +536,13 @@ preload = [
 - [ ] **Step 7: Update `packages/core/src/Grid.ts` to import ScrollMapper from `@novasheet/web`**
 
 Find:
+
 ```ts
 import { ScrollMapper } from './scroll/ScrollMapper'
 ```
 
 Replace with:
+
 ```ts
 import { ScrollMapper } from '@novasheet/web'
 ```
@@ -552,6 +562,7 @@ Add `@novasheet/web` to `packages/core/package.json` dependencies:
 - [ ] **Step 8: Remove ScrollMapper from `packages/core/src/index.ts`**
 
 Delete this section:
+
 ```ts
 // 滚动层
 export { ScrollMapper, SAFE_MAX } from './scroll/ScrollMapper'
@@ -596,6 +607,7 @@ Grid is removed from core entirely."
 ### Task 4: Move `NativeScroller` from `@novasheet/core` to `@novasheet/web`
 
 **Files:**
+
 - Create: `packages/web/src/scroll/NativeScroller.ts` (moved from core)
 - Modify: `packages/web/src/index.ts` (re-export)
 - Delete: `packages/core/src/scroll/NativeScroller.ts`
@@ -613,11 +625,13 @@ cp packages/core/src/scroll/NativeScroller.ts packages/web/src/scroll/NativeScro
 Edit the moved `packages/web/src/scroll/NativeScroller.ts` import:
 
 Find:
+
 ```ts
 import type { FrameScheduler } from '../util/raf'
 ```
 
 Replace with:
+
 ```ts
 import type { FrameScheduler } from '@novasheet/core'
 ```
@@ -638,6 +652,7 @@ export { FrameScheduler, frameScheduler } from './util/raf'
 - [ ] **Step 2: Update `packages/web/src/index.ts`**
 
 Append:
+
 ```ts
 export { NativeScroller } from './scroll/NativeScroller'
 export type { ScrollListener } from './scroll/NativeScroller'
@@ -654,12 +669,14 @@ git mv packages/core/tests/helpers/global-stub.ts packages/web/tests/helpers/glo
 - [ ] **Step 4: Update test imports in `packages/web/tests/scroll/NativeScroller.test.ts`**
 
 Find:
+
 ```ts
 import { NativeScroller } from '../../src/scroll/NativeScroller'
 import { FrameScheduler } from '../../src/util/raf'
 ```
 
 Replace with:
+
 ```ts
 import { NativeScroller } from '../../src/scroll/NativeScroller'
 import { FrameScheduler } from '@novasheet/core'
@@ -685,11 +702,13 @@ grep -rln "from.*helpers/global-stub" packages/core/tests/
 Expected files: `packages/core/tests/render/HighDPI.test.ts`, `packages/core/tests/util/raf.test.ts`.
 
 For each file, change:
+
 ```ts
 import { stubGlobal, unstubAllGlobals } from '../helpers/global-stub'
 ```
 
 To:
+
 ```ts
 import { stubGlobal, unstubAllGlobals } from '@novasheet/web/tests/helpers/global-stub'
 ```
@@ -724,11 +743,13 @@ rmdir packages/core/src/scroll 2>/dev/null
 - [ ] **Step 7: Update `packages/core/src/Grid.ts` import**
 
 Find:
+
 ```ts
 import { NativeScroller } from './scroll/NativeScroller'
 ```
 
 Replace with:
+
 ```ts
 import { NativeScroller } from '@novasheet/web'
 ```
@@ -764,6 +785,7 @@ will be deleted in later tasks as HighDPI.test + raf.test relocate."
 ### Task 5: Move Canvas2D painters (`CellPainter`, `GridLinesPainter`, `HeaderPainter`) to `@novasheet/web-canvas2d`
 
 **Files:**
+
 - Create: `packages/web-canvas2d/src/painters/CellPainter.ts`
 - Create: `packages/web-canvas2d/src/painters/GridLinesPainter.ts`
 - Create: `packages/web-canvas2d/src/painters/HeaderPainter.ts`
@@ -795,6 +817,7 @@ cp packages/core/src/render/HeaderPainter.ts packages/web-canvas2d/src/painters/
 For each of the three painter files in `packages/web-canvas2d/src/painters/`, update imports to use `@novasheet/core`:
 
 Find patterns like:
+
 ```ts
 import type { CellValue, Field } from '../data/Schema'
 import type { QuadrantRect } from '../layout/FrozenRegions'
@@ -804,6 +827,7 @@ import type { Schema } from '../data/Schema'
 ```
 
 Replace ALL with:
+
 ```ts
 import type { CellValue, Field, QuadrantRect, Schema, Theme } from '@novasheet/core'
 import type { Axis } from '@novasheet/core'
@@ -836,6 +860,7 @@ git mv packages/core/tests/render/HeaderPainter.test.ts packages/web-canvas2d/te
 - [ ] **Step 4: Update test file imports**
 
 For `packages/web-canvas2d/tests/painters/CellPainter.test.ts`:
+
 - `import { CellPainter } from '../../src/render/CellPainter'` → `import { CellPainter } from '../../src/painters/CellPainter'`
 - `import { ChunkedAxis } from '../../src/layout/ChunkedAxis'` → `import { ChunkedAxis } from '@novasheet/core'`
 - `import { denseGridTheme } from '../../src/theme/denseGridTheme'` → `import { denseGridTheme } from '@novasheet/core'`
@@ -845,6 +870,7 @@ For `packages/web-canvas2d/tests/painters/CellPainter.test.ts`:
 Same pattern for the other two painter tests and `recording-context.test.ts`.
 
 For `recording-context.test.ts`, just update the import to point to the new path:
+
 - `import { createRecordingContext } from './recording-context'` → keep (same directory).
 
 - [ ] **Step 5: Make sure `ChunkedAxis` is exported from `@novasheet/core`**
@@ -873,7 +899,10 @@ GlobalRegistrator.register()
 
 const { createRecordingContext } = await import('./helpers/recording-context')
 
-HTMLCanvasElement.prototype.getContext = function getContext(this: HTMLCanvasElement, type: string) {
+HTMLCanvasElement.prototype.getContext = function getContext(
+  this: HTMLCanvasElement,
+  type: string,
+) {
   if (type !== '2d') return null
   return createRecordingContext(this.width || 800, this.height || 600).ctx as never
 } as never
@@ -971,6 +1000,7 @@ re-export. Resolved in Task 6 when Renderer moves."
 ### Task 6: Move `Renderer` (renamed `Canvas2DRenderer`) + `HighDPI` to `@novasheet/web-canvas2d`
 
 **Files:**
+
 - Create: `packages/web-canvas2d/src/render/Canvas2DRenderer.ts` (moved from `packages/core/src/render/Renderer.ts`, renamed)
 - Create: `packages/web-canvas2d/src/surface/HighDPI.ts` (moved from `packages/core/src/render/HighDPI.ts`)
 - Delete: `packages/core/src/render/Renderer.ts`
@@ -1028,12 +1058,14 @@ git mv packages/core/tests/render/HighDPI.test.ts packages/web-canvas2d/tests/re
 - [ ] **Step 5: Update test imports**
 
 In `packages/web-canvas2d/tests/render/Canvas2DRenderer.test.ts`:
+
 - `import { Renderer } from '../../src/render/Renderer'` → `import { Canvas2DRenderer } from '../../src/render/Canvas2DRenderer'`
 - All other `from '../../src/...'` imports for layout/data/theme → `from '@novasheet/core'`
 - Replace all references to `Renderer` (class name) with `Canvas2DRenderer`
 - `import { createRecordingContext } from '../helpers/recording-context'` — same path, still works
 
 In `packages/web-canvas2d/tests/render/HighDPI.test.ts`:
+
 - `import { HighDPI } from '../../src/render/HighDPI'` → `import { HighDPI } from '../../src/surface/HighDPI'`
 - `import { createRecordingContext } from '../helpers/recording-context'` — same path
 - Uses `stubGlobal` from `'../helpers/global-stub'` — same path (now resolves to web-canvas2d copy)
@@ -1058,12 +1090,14 @@ export { HighDPI } from './surface/HighDPI'
 - [ ] **Step 7: Update `packages/core/src/Grid.ts`**
 
 Find:
+
 ```ts
 import { Renderer } from './render/Renderer'
 import { HighDPI } from './render/HighDPI'
 ```
 
 Replace with:
+
 ```ts
 import { Canvas2DRenderer as Renderer, HighDPI } from '@novasheet/web-canvas2d'
 ```
@@ -1112,6 +1146,7 @@ engine + runtime + facade happens in Task 8 + 9."
 ### Task 7: Move `WebRenderer` interface to `@novasheet/web`
 
 **Files:**
+
 - Create: `packages/web/src/render/WebRenderer.ts`
 - Modify: `packages/web/src/index.ts` (re-export)
 - Modify: `packages/web-canvas2d/src/render/Canvas2DRenderer.ts` (implement WebRenderer)
@@ -1199,12 +1234,14 @@ export type { WebRenderer } from './render/WebRenderer'
 In `packages/web-canvas2d/src/render/Canvas2DRenderer.ts`:
 
 Add import:
+
 ```ts
 import type { WebRenderer } from '@novasheet/web'
 import type { RenderFrame } from '@novasheet/core'
 ```
 
 Change class declaration:
+
 ```ts
 export class Canvas2DRenderer implements WebRenderer {
   ...
@@ -1275,6 +1312,7 @@ they become load-bearing in Task 9 when WebGridRuntime drives the renderer."
 ### Task 8: Extract `DefaultGridEngine` from `packages/core/src/Grid.ts`
 
 **Files:**
+
 - Create: `packages/core/src/engine/GridEngine.ts` (interface)
 - Create: `packages/core/src/engine/DefaultGridEngine.ts` (extracted from Grid.ts)
 - Modify: `packages/core/src/Grid.ts` (delegates to DefaultGridEngine for engine state)
@@ -1336,12 +1374,15 @@ export interface GridEngine {
 - [ ] **Step 2: Create `packages/core/src/engine/DefaultGridEngine.ts`**
 
 Extract from current `packages/core/src/Grid.ts` the non-DOM parts. Specifically the fields:
+
 - `data, theme, explicitDefaultRowHeight, rowsAxis, colsAxis, frozen, viewport, scrollMapper`
 
 And the methods (sans DOM):
+
 - `setData, setTheme, setRowHeight, setColumnWidth, setFrozen, resolveDefaultRowHeight, averageColWidth, applyFieldWidths`
 
 Plus new methods to satisfy `GridEngine`:
+
 - `setViewportSize` (delegates to viewport.setSize)
 - `setHeaderHeight` (delegates to viewport.setHeaderHeight)
 - `setScroll` (delegates to viewport.setScroll)
@@ -1459,14 +1500,24 @@ export class DefaultGridEngine implements GridEngine {
     }
   }
 
-  getRowsTotalSize(): number { return this.rowsAxis.getTotalSize() }
-  getColsTotalSize(): number { return this.colsAxis.getTotalSize() }
+  getRowsTotalSize(): number {
+    return this.rowsAxis.getTotalSize()
+  }
+  getColsTotalSize(): number {
+    return this.colsAxis.getTotalSize()
+  }
   getColumnIndex(fieldId: string): number {
     return this.data.getSchema().fields.findIndex((f) => f.id === fieldId)
   }
-  getTheme(): Theme { return this.theme }
-  getRowsAxis(): Axis { return this.rowsAxis }
-  getColsAxis(): Axis { return this.colsAxis }
+  getTheme(): Theme {
+    return this.theme
+  }
+  getRowsAxis(): Axis {
+    return this.rowsAxis
+  }
+  getColsAxis(): Axis {
+    return this.colsAxis
+  }
 
   private resolveDefaultRowHeight(): number {
     return this.explicitDefaultRowHeight ?? this.theme.metrics.rowHeight
@@ -1505,6 +1556,7 @@ export type { GridEngine, GridEngineOptions } from './engine/GridEngine'
 Replace the engine-state fields and methods in Grid.ts with delegation to a held `engine: DefaultGridEngine`. The DOM/scroll/renderer parts stay in Grid for now (they move in Task 9 + 10).
 
 Pattern:
+
 ```ts
 class Grid {
   private engine: DefaultGridEngine
@@ -1562,6 +1614,7 @@ This is a careful refactor — preserve every existing test's behavior. Read all
 - [ ] **Step 5: Create `packages/core/tests/engine/DefaultGridEngine.test.ts`**
 
 Extract from `packages/core/tests/Grid.test.ts` the assertions that test ENGINE STATE (not DOM). Specifically:
+
 - `setData` updates row count
 - `setTheme` propagates headerHeight
 - `setRowHeight` updates axis
@@ -1571,6 +1624,7 @@ Extract from `packages/core/tests/Grid.test.ts` the assertions that test ENGINE 
 Don't move tests that touch DOM (those stay in `Grid.test.ts` until Task 10 when they move to web-canvas2d).
 
 Template:
+
 ```ts
 import { describe, expect, it } from 'bun:test'
 import { DefaultGridEngine, InMemoryDataSource, denseGridTheme, type Schema } from '../../src'
@@ -1675,6 +1729,7 @@ pass via the delegation layer."
 > full work; split it at Step 3 if needed.
 
 **Files:**
+
 - Create: `packages/web/src/host/WebHost.ts` (interface)
 - Create: `packages/web/src/host/DomGridHost.ts` (the scrollHost/spacer/canvas-bearing host)
 - Create: `packages/web/src/runtime/WebGridRuntime.ts` (orchestrator)
@@ -1693,6 +1748,7 @@ Create `packages/web/src/host/WebHost.ts` with the contracts from spec §6 (with
 - [ ] **Step 2: Implement `DomGridHost`**
 
 Create `packages/web/src/host/DomGridHost.ts`. Extract from current `Grid.ts`:
+
 - DOM creation (scrollHost, scrollSpacer, canvas appendChild)
 - ResizeObserver wiring
 - DPR watcher (`matchMedia` self-re-registering)
@@ -1738,7 +1794,9 @@ export class DomGridHost implements WebHost {
     this.scrollHost.scrollTo({ top: scrollTop, left: scrollLeft })
   }
 
-  getDpr(): number { return this.currentDpr }
+  getDpr(): number {
+    return this.currentDpr
+  }
   getContainerSize(): { width: number; height: number } {
     return {
       width: this.container.clientWidth || this.container.getBoundingClientRect().width || 400,
@@ -1759,6 +1817,7 @@ export class DomGridHost implements WebHost {
 - [ ] **Step 3: Implement `WebGridRuntime`**
 
 Create `packages/web/src/runtime/WebGridRuntime.ts`. The orchestrator wires:
+
 - `GridEngine` (state)
 - `WebHost` (DOM lifecycle)
 - `WebRenderer` (drawing)
@@ -1809,7 +1868,9 @@ export class WebGridRuntime {
     this.invalidate()
   }
 
-  refresh(): void { this.invalidate() }
+  refresh(): void {
+    this.invalidate()
+  }
 
   scrollToRow(rowIndex: number, align: 'start' | 'center' | 'end' = 'start'): void {
     // ... lifted from current Grid.scrollToRow
@@ -1835,8 +1896,12 @@ export class WebGridRuntime {
     })
   }
 
-  private resizeSpacer(): void { /* ... lifted */ }
-  private remapScroll(): void { /* ... lifted */ }
+  private resizeSpacer(): void {
+    /* ... lifted */
+  }
+  private remapScroll(): void {
+    /* ... lifted */
+  }
 
   // Public handlers wired by Grid facade as DomGridHost callbacks.
   // These exist so the public Grid can construct the host BEFORE the runtime
@@ -1863,7 +1928,10 @@ export class WebGridRuntime {
     this.invalidate()
   }
 
-  private mapScrollToLogical(scrollTop: number, scrollLeft: number): { logicalX: number; logicalY: number } {
+  private mapScrollToLogical(
+    scrollTop: number,
+    scrollLeft: number,
+  ): { logicalX: number; logicalY: number } {
     // ... lifted from current Grid; uses ScrollMapper + engine.getRowsTotalSize() etc.
   }
 }
@@ -1874,6 +1942,7 @@ export class WebGridRuntime {
 - [ ] **Step 4: Update `packages/web/src/index.ts`**
 
 Append:
+
 ```ts
 export type { WebHost, WebHostOptions } from './host/WebHost'
 export { DomGridHost } from './host/DomGridHost'
@@ -1884,6 +1953,7 @@ export type { WebGridRuntimeOptions } from './runtime/WebGridRuntime'
 - [ ] **Step 5: Move tests**
 
 Tests for the new code:
+
 - `packages/web/tests/host/DomGridHost.test.ts` — DOM lifecycle, ResizeObserver wiring, originalPosition restore, destroy idempotency
 - `packages/web/tests/runtime/WebGridRuntime.test.ts` — scroll mapping, scrollToRow/Cell, invalidate scheduling, destroy
 
@@ -1913,6 +1983,7 @@ to @novasheet/web-canvas2d in Task 10."
 ### Task 10: Create public `Grid` facade in `@novasheet/web-canvas2d` and delete `core/Grid.ts`
 
 **Files:**
+
 - Create: `packages/web-canvas2d/src/Grid.ts` (the public facade)
 - Modify: `packages/web-canvas2d/src/index.ts` (export Grid as primary surface)
 - Delete: `packages/core/src/Grid.ts`
@@ -2039,6 +2110,7 @@ git mv packages/core/tests/Grid.test.ts packages/web-canvas2d/tests/Grid.test.ts
 ```
 
 Update the moved file's imports:
+
 - `import { Grid } from '../src/Grid'` → `import { Grid } from '../src/Grid'`
 - `import { InMemoryDataSource, denseGridTheme, type Schema } from '../src/...'` → `import { InMemoryDataSource, denseGridTheme, type Schema } from '@novasheet/core'`
 - `import { spyOn } from 'bun:test'` — keep
@@ -2046,6 +2118,7 @@ Update the moved file's imports:
 The relative `../src/Grid` now points to `packages/web-canvas2d/src/Grid.ts` — good.
 
 Some tests reference internal Grid fields via `as unknown as { invalidate: ... }` patterns. If the new Grid facade doesn't have those private fields (because invalidate moved to runtime), those tests need slight adaptation:
+
 - `spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')` → `spyOn((grid as unknown as { runtime: { refresh: () => void } }).runtime, 'refresh')`
 
 OR add a passthrough `private invalidate()` on the public Grid for test compatibility — only if many tests depend on it. Inspect.
@@ -2059,12 +2132,14 @@ rm packages/core/src/Grid.ts
 - [ ] **Step 5: Remove Grid export from `packages/core/src/index.ts`**
 
 Delete these lines:
+
 ```ts
 export { Grid } from './Grid'
 export type { GridOptions } from './Grid'
 ```
 
 Add a comment marker:
+
 ```ts
 // Note: Grid is exported by @novasheet/web-canvas2d (consumer-facing facade).
 // Programmatic engine access: use DefaultGridEngine here.
@@ -2073,6 +2148,7 @@ Add a comment marker:
 - [ ] **Step 6: Remove dependencies on @novasheet/web + web-canvas2d from core**
 
 Edit `packages/core/package.json` and remove:
+
 ```json
 "dependencies": {
   "@novasheet/web": "workspace:*",       // ← remove
@@ -2117,6 +2193,7 @@ same methods."
 ### Task 11: Update Storybook to import from `@novasheet/web-canvas2d`
 
 **Files:**
+
 - Modify: `apps/storybook/package.json` (swap `@novasheet/core` dep for `@novasheet/web-canvas2d`; keep `@novasheet/core` as transitive)
 - Modify: `apps/storybook/src/grid-host.ts` (import Grid from web-canvas2d)
 - Modify: `apps/storybook/src/stories/Scroll.stories.ts` (import Grid type from web-canvas2d)
@@ -2136,11 +2213,13 @@ same methods."
 - [ ] **Step 2: Update `apps/storybook/src/grid-host.ts`**
 
 Find:
+
 ```ts
 import { Grid, type GridOptions } from '@novasheet/core'
 ```
 
 Replace with:
+
 ```ts
 import { Grid, type GridOptions } from '@novasheet/web-canvas2d'
 ```
@@ -2148,11 +2227,13 @@ import { Grid, type GridOptions } from '@novasheet/web-canvas2d'
 - [ ] **Step 3: Update `apps/storybook/src/stories/Scroll.stories.ts`**
 
 Find:
+
 ```ts
 import { Grid, InMemoryDataSource, type Schema } from '@novasheet/core'
 ```
 
 Replace with:
+
 ```ts
 import { Grid } from '@novasheet/web-canvas2d'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
@@ -2215,6 +2296,7 @@ the same as before, just from a different package."
 ### Task 12: Doc updates + final integration + tag
 
 **Files:**
+
 - Modify: `CLAUDE.md` (toolchain, current state, architectural invariants)
 - Modify: `README.md` (architecture diagram, quick start)
 
@@ -2232,6 +2314,7 @@ Replace the relevant section to reflect the 3-package layout:
 **Next milestone:** **M3 Frozen + Dynamic sizing** — not yet planned. Same scope as before (per spec §4 + §5.3 + §5.7) but now lives across packages: `FrozenRegions` stays in `@novasheet/core`, FrozenPainter (M3) lands in `@novasheet/web-canvas2d/painters/`.
 
 **Architecture invariants refresh:**
+
 - Renderer reads ONLY from `RenderFrame` (from engine.getFrame()) — unchanged in spirit, new in shape
 - All mutations go through `DefaultGridEngine` or its facade `Grid` — unchanged
 - Theme is the ONLY source of visual values — unchanged
@@ -2243,19 +2326,19 @@ Replace the relevant section to reflect the 3-package layout:
 Replace the table with package-aware locations:
 
 ```markdown
-| Topic | Location |
-|---|---|
-| Public types & API for consumers | `packages/web-canvas2d/src/index.ts` (Grid) + `packages/core/src/index.ts` (DataSource, Theme, Schema types) |
-| Engine state coordinator | `packages/core/src/engine/DefaultGridEngine.ts` |
-| Algorithm core | `packages/core/src/layout/ChunkedAxis.ts` (also exports `Axis`/`MutableAxis` interfaces) |
-| Per-frame logic | `packages/web-canvas2d/src/render/Canvas2DRenderer.ts` |
-| Theme tokens | `packages/core/src/theme/denseGridTheme.ts` |
-| DataSource ABC | `packages/core/src/data/DataSource.ts` |
-| DOM host | `packages/web/src/host/DomGridHost.ts` |
-| Scroll math + spec scroll constants | `packages/web/src/scroll/ScrollMapper.ts` (SAFE_MAX = 6_000_000) |
-| Tests | each `packages/<pkg>/tests/` mirrors its `src/` |
-| Test helpers — RecordingContext | `packages/web-canvas2d/tests/helpers/recording-context.ts` |
-| Test helpers — global-stub | `packages/web/tests/helpers/global-stub.ts` + duplicated in `packages/web-canvas2d/tests/helpers/` |
+| Topic                               | Location                                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Public types & API for consumers    | `packages/web-canvas2d/src/index.ts` (Grid) + `packages/core/src/index.ts` (DataSource, Theme, Schema types) |
+| Engine state coordinator            | `packages/core/src/engine/DefaultGridEngine.ts`                                                              |
+| Algorithm core                      | `packages/core/src/layout/ChunkedAxis.ts` (also exports `Axis`/`MutableAxis` interfaces)                     |
+| Per-frame logic                     | `packages/web-canvas2d/src/render/Canvas2DRenderer.ts`                                                       |
+| Theme tokens                        | `packages/core/src/theme/denseGridTheme.ts`                                                                  |
+| DataSource ABC                      | `packages/core/src/data/DataSource.ts`                                                                       |
+| DOM host                            | `packages/web/src/host/DomGridHost.ts`                                                                       |
+| Scroll math + spec scroll constants | `packages/web/src/scroll/ScrollMapper.ts` (SAFE_MAX = 6_000_000)                                             |
+| Tests                               | each `packages/<pkg>/tests/` mirrors its `src/`                                                              |
+| Test helpers — RecordingContext     | `packages/web-canvas2d/tests/helpers/recording-context.ts`                                                   |
+| Test helpers — global-stub          | `packages/web/tests/helpers/global-stub.ts` + duplicated in `packages/web-canvas2d/tests/helpers/`           |
 ```
 
 - [ ] **Step 3: Update CLAUDE.md "Things explicitly NOT" list**
@@ -2388,6 +2471,7 @@ When all tasks above pass, the following should be true:
 - [ ] Spec §12 acceptance criteria 1-8 all green
 
 **What's intentionally NOT working yet:**
+
 - WebGL / WebGPU renderers (next milestones)
 - React wrapper (M4)
 - M3 frozen quadrant rendering (the FrozenRegions stub returns only `main`)

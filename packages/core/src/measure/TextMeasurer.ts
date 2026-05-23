@@ -190,10 +190,7 @@ export function wrapText(text: string, options: WrapOptions, measurer: TextMeasu
     const truncated = lines.slice(0, maxLines)
     // 末行追加 `…`，若放不下就再砍字符
     let lastLine = truncated[maxLines - 1] ?? ''
-    while (
-      lastLine.length > 0 &&
-      measurer.measureWidth(lastLine + ellipsis, font) > maxWidth
-    ) {
+    while (lastLine.length > 0 && measurer.measureWidth(lastLine + ellipsis, font) > maxWidth) {
       lastLine = lastLine.slice(0, -1)
     }
     truncated[maxLines - 1] = `${lastLine}${ellipsis}`

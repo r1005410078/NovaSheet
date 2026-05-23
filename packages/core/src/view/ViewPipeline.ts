@@ -111,7 +111,10 @@ export class ViewPipeline {
     return { composed, wrappers }
   }
 
-  private setComposedGeneration(generation: { composed: DataSource; wrappers: DataSource[] }): void {
+  private setComposedGeneration(generation: {
+    composed: DataSource
+    wrappers: DataSource[]
+  }): void {
     this.composed = generation.composed
     this.wrappers = generation.wrappers
   }

@@ -15,6 +15,7 @@
 ## File Map
 
 **新建:**
+
 - `packages/core/src/undo/UndoCommand.ts` — discriminated-union 类型
 - `packages/core/src/undo/UndoStack.ts` — 双栈 + 容量 + clear
 - `packages/core/tests/undo/UndoStack.test.ts`
@@ -24,11 +25,12 @@
 - `apps/storybook/src/stories/Undo.stories.ts`
 
 **修改:**
+
 - `packages/core/src/clipboard/ApplyPaste.ts` — 加 `onWrite` 回调(向后兼容,可选参数)
 - `packages/core/src/engine/GridEngine.ts` — 接口加 undo/redo/canUndo/canRedo/commitRowResize/commitColumnResize/commitPaste
 - `packages/core/src/engine/DefaultGridEngine.ts` — 实现栈集成 + 5 个 mutation 入口注入 push
 - `packages/core/src/index.ts` — 导出 UndoCommand / CellWrite
-- `packages/web/src/runtime/WebGridRuntime.ts` — keydown 路由、resize 路径切 commit*、paste 走 engine.commitPaste、onUndo/onRedo 事件
+- `packages/web/src/runtime/WebGridRuntime.ts` — keydown 路由、resize 路径切 commit\*、paste 走 engine.commitPaste、onUndo/onRedo 事件
 - `packages/web/src/Grid.ts` — public API
 - `packages/web/src/grid/GridController.ts` — controller 接口加 undo/redo/canUndo/canRedo + 事件 setter(setOnUndo/setOnRedo)
 - `packages/web/src/backends/Canvas2DBackend.ts` — 委派
@@ -40,6 +42,7 @@
 ## Task 1: UndoCommand 类型 + UndoStack 数据结构
 
 **Files:**
+
 - Create: `packages/core/src/undo/UndoCommand.ts`
 - Create: `packages/core/src/undo/UndoStack.ts`
 - Create: `packages/core/tests/undo/UndoStack.test.ts`
@@ -278,6 +281,7 @@ git commit -m "feat(core): UndoStack data structure + UndoCommand union"
 ## Task 2: Engine 集成 UndoStack + canUndo/canRedo + setData 清栈 + undo/redo 占位
 
 **Files:**
+
 - Modify: `packages/core/src/engine/GridEngine.ts`
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 - Create: `packages/core/tests/engine/DefaultGridEngine.undo.test.ts`
@@ -394,7 +398,7 @@ Add field in class body (next to other private fields):
 Inside `setData()` at the end, before the final `applyFieldWidths()`, add:
 
 ```ts
-    this.undoStack.clear()
+this.undoStack.clear()
 ```
 
 (Place it after the call to `applyFieldWidths()` so the clear happens last — but order doesn't matter since clear just empties arrays. Put it on the last line of `setData()`.)
@@ -480,6 +484,7 @@ git commit -m "feat(core): GridEngine undo/redo scaffolding + commit*Resize push
 ## Task 3: editCell undo/redo dispatch
 
 **Files:**
+
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 - Modify: `packages/core/tests/engine/DefaultGridEngine.undo.test.ts` (add tests)
 
@@ -663,6 +668,7 @@ git commit -m "feat(core): undo/redo for cell edit commit"
 ## Task 4: clearRange undo/redo dispatch
 
 **Files:**
+
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 - Modify: `packages/core/tests/engine/DefaultGridEngine.undo.test.ts`
 
@@ -847,6 +853,7 @@ git commit -m "feat(core): undo/redo for clearRange"
 ## Task 5: paste undo/redo dispatch via engine.commitPaste
 
 **Files:**
+
 - Modify: `packages/core/src/clipboard/ApplyPaste.ts` (add `onWrite` callback)
 - Modify: `packages/core/src/engine/GridEngine.ts` (interface)
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts` (commitPaste 方法 + dispatch)
@@ -868,17 +875,18 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
       typed: false,
     }
   }
-  function targetRect(startRow: number, endRow: number, startCol: number, endCol: number): PasteTargetRect {
+  function targetRect(
+    startRow: number,
+    endRow: number,
+    startCol: number,
+    endCol: number,
+  ): PasteTargetRect {
     return { startRow, endRow, startCol, endCol, tile: { rows: 1, cols: 1 } }
   }
 
   it('commitPaste 写入 + push paste 命令', () => {
     const engine = makeEngine()
-    engine.commitPaste(
-      pasteSource([['p', 99]]),
-      targetRect(0, 0, 0, 1),
-      ['a', 'b'],
-    )
+    engine.commitPaste(pasteSource([['p', 99]]), targetRect(0, 0, 0, 1), ['a', 'b'])
     expect(engine.getData().getCell(0, 'a')).toBe('p')
     expect(engine.getData().getCell(0, 'b')).toBe(99)
     expect(engine.canUndo()).toBe(true)
@@ -886,11 +894,7 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
 
   it('undo commitPaste 恢复 before;redo 恢复 after', () => {
     const engine = makeEngine()
-    engine.commitPaste(
-      pasteSource([['p', 99]]),
-      targetRect(0, 0, 0, 1),
-      ['a', 'b'],
-    )
+    engine.commitPaste(pasteSource([['p', 99]]), targetRect(0, 0, 0, 1), ['a', 'b'])
     engine.undo()
     expect(engine.getData().getCell(0, 'a')).toBe('x')
     expect(engine.getData().getCell(0, 'b')).toBe(1)
@@ -903,14 +907,16 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
     const engine = makeEngine()
     let skippedCount = 0
     engine.commitPaste(
-      pasteSource([['p', 'not-a-number']]),  // b 列是 number,'not-a-number' 会被跳过
+      pasteSource([['p', 'not-a-number']]), // b 列是 number,'not-a-number' 会被跳过
       targetRect(0, 0, 0, 1),
       ['a', 'b'],
-      (skipped) => { skippedCount = skipped.length },
+      (skipped) => {
+        skippedCount = skipped.length
+      },
     )
     expect(skippedCount).toBe(1)
     expect(engine.getData().getCell(0, 'a')).toBe('p')
-    expect(engine.getData().getCell(0, 'b')).toBe(1)  // 未变
+    expect(engine.getData().getCell(0, 'b')).toBe(1) // 未变
     engine.undo()
     expect(engine.getData().getCell(0, 'a')).toBe('x')
     expect(engine.getData().getCell(0, 'b')).toBe(1)
@@ -919,8 +925,8 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
   it('全部跳过 → 不 push', () => {
     const engine = makeEngine()
     engine.commitPaste(
-      pasteSource([['', 'not-a-number']]),  // 空字符串可能被接受为 text;改成全 number 列 + 非数字
-      targetRect(0, 0, 1, 1),  // 只针对 b 列
+      pasteSource([['', 'not-a-number']]), // 空字符串可能被接受为 text;改成全 number 列 + 非数字
+      targetRect(0, 0, 1, 1), // 只针对 b 列
       ['a', 'b'],
     )
     // b 列接收 'not-a-number' → SKIP;before/after 均空 → 不 push
@@ -932,11 +938,7 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
 注意第 4 个 test 中的细节:`commitPaste` 只在 `target` 范围内写,所以 `startCol=1, endCol=1` 表示只动 b 列。需要根据 `source.cells` 的形状与 target 一致来调整。实际写时 source 的 cell 内容 `[localR][localC]` 寻址,所以 source 至少要有一格;target 跨度也要和 source 对应。让 source 也只有一格:
 
 ```ts
-    engine.commitPaste(
-      pasteSource([['not-a-number']]),
-      targetRect(0, 0, 1, 1),
-      ['a', 'b'],
-    )
+engine.commitPaste(pasteSource([['not-a-number']]), targetRect(0, 0, 1, 1), ['a', 'b'])
 ```
 
 并把 sourceFieldIds 改成 `['b']`。验证 `applyPaste` 寻址用 `fieldIdsAtCols[c]` 取 target 列对应的 fieldId,所以传 `['a', 'b']`(因为 c=1 对应 fieldId='b')。
@@ -978,9 +980,9 @@ export function applyPaste(
 In the body, before each `data.updateCell(r, fieldId, value)` call, insert:
 
 ```ts
-        const beforeValue = data.getCell(r, fieldId) ?? null
-        onWrite?.({ rowIndex: r, fieldId, before: beforeValue, after: value as CellValue })
-        data.updateCell(r, fieldId, value as CellValue)
+const beforeValue = data.getCell(r, fieldId) ?? null
+onWrite?.({ rowIndex: r, fieldId, before: beforeValue, after: value as CellValue })
+data.updateCell(r, fieldId, value as CellValue)
 ```
 
 Apply this to **both** call sites: the `source.typed` branch and the `coerced` branch. The signatures `value as CellValue` differ slightly between branches — pass the typed `rawValue as CellValue` in the typed branch, and `coerced as CellValue` in the coerced branch. Use the existing local variables to match.
@@ -988,35 +990,35 @@ Apply this to **both** call sites: the `source.typed` branch and the `coerced` b
 Concretely, replace:
 
 ```ts
-      if (source.typed) {
-        data.updateCell(r, fieldId, rawValue as CellValue)
-        continue
-      }
+if (source.typed) {
+  data.updateCell(r, fieldId, rawValue as CellValue)
+  continue
+}
 ```
 
 with:
 
 ```ts
-      if (source.typed) {
-        const beforeValue = data.getCell(r, fieldId) ?? null
-        onWrite?.({ rowIndex: r, fieldId, before: beforeValue, after: rawValue as CellValue })
-        data.updateCell(r, fieldId, rawValue as CellValue)
-        continue
-      }
+if (source.typed) {
+  const beforeValue = data.getCell(r, fieldId) ?? null
+  onWrite?.({ rowIndex: r, fieldId, before: beforeValue, after: rawValue as CellValue })
+  data.updateCell(r, fieldId, rawValue as CellValue)
+  continue
+}
 ```
 
 And replace:
 
 ```ts
-      data.updateCell(r, fieldId, coerced as CellValue)
+data.updateCell(r, fieldId, coerced as CellValue)
 ```
 
 with:
 
 ```ts
-      const beforeValue = data.getCell(r, fieldId) ?? null
-      onWrite?.({ rowIndex: r, fieldId, before: beforeValue, after: coerced as CellValue })
-      data.updateCell(r, fieldId, coerced as CellValue)
+const beforeValue = data.getCell(r, fieldId) ?? null
+onWrite?.({ rowIndex: r, fieldId, before: beforeValue, after: coerced as CellValue })
+data.updateCell(r, fieldId, coerced as CellValue)
 ```
 
 - [ ] **Step 4: Add engine.commitPaste**
@@ -1150,6 +1152,7 @@ git commit -m "feat(core): undo/redo for paste via engine.commitPaste + applyPas
 ## Task 6: resizeRow / resizeColumn undo/redo dispatch
 
 **Files:**
+
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 - Modify: `packages/core/tests/engine/DefaultGridEngine.undo.test.ts`
 
@@ -1330,6 +1333,7 @@ git commit -m "feat(core): undo/redo for row/col resize + capacity + setData cle
 ## Task 7: WebGridRuntime undo/redo + onUndo/onRedo events
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Create: `packages/web/tests/runtime/WebGridRuntime.undo.test.ts`
 
@@ -1502,6 +1506,7 @@ git commit -m "feat(web): WebGridRuntime undo/redo methods + onUndo/onRedo event
 ## Task 8: Keyboard routing — Cmd/Ctrl+Z / Cmd+Shift+Z / Ctrl+Y
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/tests/runtime/WebGridRuntime.undo.test.ts`
 
@@ -1515,7 +1520,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     const { engine, runtime } = setup()
     engine.commitRowResize(0, 24, 50)
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+      key: 'z',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
     })
     expect(handled).toBe(true)
     expect(engine.getRowsAxis().getSize(0)).toBe(24)
@@ -1525,7 +1534,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     const { engine, runtime } = setup()
     engine.commitRowResize(0, 24, 50)
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: false, ctrlKey: true, metaKey: false, altKey: false,
+      key: 'z',
+      shiftKey: false,
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
     })
     expect(handled).toBe(true)
   })
@@ -1533,7 +1546,11 @@ describe('WebGridRuntime — keyboard routing', () => {
   it('Cmd+Z 在空栈时返回 false(不 preventDefault)', () => {
     const { runtime } = setup()
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+      key: 'z',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
     })
     expect(handled).toBe(false)
   })
@@ -1543,7 +1560,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     engine.commitRowResize(0, 24, 50)
     runtime.undo()
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: true, ctrlKey: false, metaKey: true, altKey: false,
+      key: 'z',
+      shiftKey: true,
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
     })
     expect(handled).toBe(true)
     expect(engine.getRowsAxis().getSize(0)).toBe(50)
@@ -1554,7 +1575,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     engine.commitRowResize(0, 24, 50)
     runtime.undo()
     const handled = runtime.handleHostKeyDown({
-      key: 'y', shiftKey: false, ctrlKey: true, metaKey: false, altKey: false,
+      key: 'y',
+      shiftKey: false,
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
     })
     expect(handled).toBe(true)
     expect(engine.getRowsAxis().getSize(0)).toBe(50)
@@ -1567,7 +1592,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     engine.selectCell({ rowIndex: 0, colIndex: 0 })
     engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+      key: 'z',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
     })
     expect(handled).toBe(false)
     // engine 未受影响,resize 仍生效
@@ -1591,38 +1620,38 @@ Modify `packages/web/src/runtime/WebGridRuntime.ts` `handleHostKeyDown`:
 In the existing `if (mod && !event.shiftKey && !event.altKey)` block(line ~676),增加对 `z` / `y` 的分支:
 
 ```ts
-    if (mod && !event.shiftKey && !event.altKey) {
-      const k = event.key.toLowerCase()
-      if (k === 'c') {
-        void this.handleClipboardCopy()
-        return true
-      }
-      if (k === 'x') {
-        void this.handleClipboardCut()
-        return true
-      }
-      if (k === 'v') {
-        void this.handleClipboardPaste()
-        return true
-      }
-      if (k === 'z') {
-        if (!this.engine.canUndo()) return false
-        this.undo()
-        return true
-      }
-      if (k === 'y' && event.ctrlKey && !event.metaKey) {
-        if (!this.engine.canRedo()) return false
-        this.redo()
-        return true
-      }
-    }
+if (mod && !event.shiftKey && !event.altKey) {
+  const k = event.key.toLowerCase()
+  if (k === 'c') {
+    void this.handleClipboardCopy()
+    return true
+  }
+  if (k === 'x') {
+    void this.handleClipboardCut()
+    return true
+  }
+  if (k === 'v') {
+    void this.handleClipboardPaste()
+    return true
+  }
+  if (k === 'z') {
+    if (!this.engine.canUndo()) return false
+    this.undo()
+    return true
+  }
+  if (k === 'y' && event.ctrlKey && !event.metaKey) {
+    if (!this.engine.canRedo()) return false
+    this.redo()
+    return true
+  }
+}
 
-    // Cmd/Ctrl+Shift+Z — redo
-    if (mod && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z') {
-      if (!this.engine.canRedo()) return false
-      this.redo()
-      return true
-    }
+// Cmd/Ctrl+Shift+Z — redo
+if (mod && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z') {
+  if (!this.engine.canRedo()) return false
+  this.redo()
+  return true
+}
 ```
 
 注意:`Ctrl+Y` 只在 Windows 风格(ctrlKey)生效,排除 Mac `Cmd+Y`(Mac `Cmd+Y` 是其他系统快捷,不该被我们抢)。
@@ -1650,9 +1679,10 @@ git commit -m "feat(web): Cmd/Ctrl+Z, Cmd+Shift+Z, Ctrl+Y keyboard routing for u
 
 ---
 
-## Task 9: Resize pointer-up + keyboard arrow → engine.commit* APIs
+## Task 9: Resize pointer-up + keyboard arrow → engine.commit\* APIs
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/tests/runtime/WebGridRuntime.undo.test.ts`
 
@@ -1784,6 +1814,7 @@ git commit -m "feat(web): resize pointerup + keyboard arrow route through engine
 ## Task 10: Paste route through engine.commitPaste
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/tests/runtime/WebGridRuntime.test.ts`(或 clipboard 测试)
 
@@ -1800,12 +1831,7 @@ grep -n "applyPaste" packages/web/src/runtime/WebGridRuntime.ts
 Modify `packages/web/src/runtime/WebGridRuntime.ts` — 找到 `handleClipboardPaste` 中 `applyPaste(...)` 的调用,把它替换为:
 
 ```ts
-    this.engine.commitPaste(
-      source,
-      target,
-      fieldIdsAtCols,
-      (skipped) => this.onPasteSkipped?.(skipped),
-    )
+this.engine.commitPaste(source, target, fieldIdsAtCols, (skipped) => this.onPasteSkipped?.(skipped))
 ```
 
 (`source`、`target`、`fieldIdsAtCols` 的变量名以现有代码为准;变量类型不变。)
@@ -1874,6 +1900,7 @@ git commit -m "feat(web): paste routes through engine.commitPaste"
 ## Task 11: Grid facade public API + controller interface + backend delegation
 
 **Files:**
+
 - Modify: `packages/web/src/grid/GridController.ts`
 - Modify: `packages/web/src/backends/Canvas2DBackend.ts`
 - Modify: `packages/web/src/Grid.ts`
@@ -2033,8 +2060,8 @@ Import `UndoEvent` / `RedoEvent` from `../runtime/WebGridRuntime`(单一源头)�
 构造函数末尾(其他 `if (options.onCopy) ...` 之后):
 
 ```ts
-    if (options.onUndo) this.runtime.setOnUndo(options.onUndo)
-    if (options.onRedo) this.runtime.setOnRedo(options.onRedo)
+if (options.onUndo) this.runtime.setOnUndo(options.onUndo)
+if (options.onRedo) this.runtime.setOnRedo(options.onRedo)
 ```
 
 - [ ] **Step 5: Implement in Grid facade**
@@ -2073,7 +2100,14 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
     onRedo: _y,
     ...engineOptions
   } = options
-  void _r; void _a; void _c; void _x; void _v; void _s; void _u; void _y
+  void _r
+  void _a
+  void _c
+  void _x
+  void _v
+  void _s
+  void _u
+  void _y
   return engineOptions
 }
 ```
@@ -2081,15 +2115,15 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
 In Grid constructor 的 Canvas2DBackend 实例化中,把 `onUndo / onRedo` 透传:
 
 ```ts
-        this.delegate = new Canvas2DBackend(container, engineOptions, {
-          onContextMenuAction: options.onContextMenuAction,
-          onCopy: options.onCopy,
-          onCut: options.onCut,
-          onPaste: options.onPaste,
-          onPasteSkipped: options.onPasteSkipped,
-          onUndo: options.onUndo,
-          onRedo: options.onRedo,
-        })
+this.delegate = new Canvas2DBackend(container, engineOptions, {
+  onContextMenuAction: options.onContextMenuAction,
+  onCopy: options.onCopy,
+  onCut: options.onCut,
+  onPaste: options.onPaste,
+  onPasteSkipped: options.onPasteSkipped,
+  onUndo: options.onUndo,
+  onRedo: options.onRedo,
+})
 ```
 
 Add new public methods(在 `destroy()` 之前):
@@ -2161,6 +2195,7 @@ git commit -m "feat(web): Grid facade undo/redo + canUndo/canRedo + onUndo/onRed
 ## Task 12: Storybook story + README sign-off
 
 **Files:**
+
 - Create: `apps/storybook/src/stories/Undo.stories.ts`
 - Modify: `README.md`
 
@@ -2198,9 +2233,20 @@ function makeDataSource() {
   })
 }
 
-function makeShell(): { root: HTMLElement; gridContainer: HTMLElement; undoBtn: HTMLButtonElement; redoBtn: HTMLButtonElement; log: HTMLElement } {
+function makeShell(): {
+  root: HTMLElement
+  gridContainer: HTMLElement
+  undoBtn: HTMLButtonElement
+  redoBtn: HTMLButtonElement
+  log: HTMLElement
+} {
   const root = document.createElement('div')
-  Object.assign(root.style, { display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' })
+  Object.assign(root.style, {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    padding: '8px',
+  })
 
   const toolbar = document.createElement('div')
   toolbar.style.display = 'flex'
@@ -2288,6 +2334,7 @@ bun run --filter @novasheet/storybook storybook
 ```
 
 打开 Storybook,导航到 "Phase 4.2 / Undo & Redo":
+
 - 编辑一个 cell(键入 + Enter)→ Undo 变可用 → 点 Undo,还原
 - 拖一列宽度 → Undo 变可用 → 撤销
 - 选择多 cell,Cmd/Ctrl+X 剪切 → Undo
@@ -2348,8 +2395,8 @@ git commit -m "feat(storybook,docs): Phase 4.2 undo/redo story + README sign-off
    - §1 范围(edit/cut/paste/resize)→ Task 3/4/5/6 覆盖
    - §2 UndoCommand union → Task 1
    - §3 UndoStack 容量 + clear → Task 1 + Task 2 + Task 6 capacity test
-   - §4 engine 集成 + commit*Resize/Paste → Task 2/3/4/5/6
-   - §4.4 防递归(undo 内部不经过 commit*)→ Task 3 测试 + 实现走 `applyEditCellWrite`(私有)
+   - §4 engine 集成 + commit\*Resize/Paste → Task 2/3/4/5/6
+   - §4.4 防递归(undo 内部不经过 commit\*)→ Task 3 测试 + 实现走 `applyEditCellWrite`(私有)
    - §5.1 键盘路由 → Task 8
    - §5.2 runtime API + 事件 → Task 7
    - §5.3 resize 路径切换 → Task 9

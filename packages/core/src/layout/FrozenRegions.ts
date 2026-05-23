@@ -203,7 +203,10 @@ export class FrozenRegions {
   getRegions(vp: ViewportRect): RenderRegion[] {
     const contentHeight = Math.max(0, vp.height - vp.headerHeight)
     const topRows = Math.max(0, Math.min(Math.floor(this.config.topRows), this.rowsAxis.getCount()))
-    const leftCols = Math.max(0, Math.min(Math.floor(this.config.leftCols), this.colsAxis.getCount()))
+    const leftCols = Math.max(
+      0,
+      Math.min(Math.floor(this.config.leftCols), this.colsAxis.getCount()),
+    )
     const rightCols = Math.max(
       0,
       Math.min(Math.floor(this.config.rightCols), Math.max(0, this.colsAxis.getCount() - leftCols)),

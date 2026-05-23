@@ -164,13 +164,13 @@ Wrapper 的唯一职责：在 `useEffect` 里创建/销毁 Grid 实例，把 pro
 
 ### 关键边界
 
-| 模块 | 输入 | 输出 | 单测策略 |
-|---|---|---|---|
-| `data/` | 用户数据 | `getRow(i)`, `getCells(range)`, `schema` | 纯数据测试 |
-| `layout/` | rowCount, defaultHeight, override map | `rowToY`, `yToRow`, `getVisibleRange` | 表格驱动数学测试 |
-| `scroll/` | 容器尺寸, totalHeight | `scrollTop ↔ logicalY` | 数学函数测试 + 边界 case |
-| `render/` | viewport + data + theme + ctx | 像素 | 屏快照（Playwright + 像素对比）+ 单 painter unit |
-| `Grid` | 全部以上 | 公共 API | 集成测试（happy-dom + canvas mock） |
+| 模块      | 输入                                  | 输出                                     | 单测策略                                         |
+| --------- | ------------------------------------- | ---------------------------------------- | ------------------------------------------------ |
+| `data/`   | 用户数据                              | `getRow(i)`, `getCells(range)`, `schema` | 纯数据测试                                       |
+| `layout/` | rowCount, defaultHeight, override map | `rowToY`, `yToRow`, `getVisibleRange`    | 表格驱动数学测试                                 |
+| `scroll/` | 容器尺寸, totalHeight                 | `scrollTop ↔ logicalY`                   | 数学函数测试 + 边界 case                         |
+| `render/` | viewport + data + theme + ctx         | 像素                                     | 屏快照（Playwright + 像素对比）+ 单 painter unit |
+| `Grid`    | 全部以上                              | 公共 API                                 | 集成测试（happy-dom + canvas mock）              |
 
 **核心原则**：渲染层只读 layout / data / theme 的快照；所有写操作走 Grid facade，由它通知各层。状态单一来源。
 
@@ -182,21 +182,21 @@ Wrapper 的唯一职责：在 `useEffect` 里创建/销毁 Grid 实例，把 pro
 
 ```ts
 export type FieldType =
-  | 'text'           // Phase 1 实绘（专门路径）
-  | 'number'         // Phase 1 实绘（专门路径：右对齐 + 千分位）
-  | 'singleSelect'   // Phase 1 走 fallback（toString → text）
-  | 'multiSelect'    // Phase 1 走 fallback（数组 join(', ') → text）
-  | 'date'           // Phase 1 走 fallback（Date → ISO 字符串 → text）
-  | 'checkbox'       // Phase 1 走 fallback（boolean → 'true'/'false' → text）
-  | 'url'            // Phase 1 走 fallback（按 text 绘）
+  | 'text' // Phase 1 实绘（专门路径）
+  | 'number' // Phase 1 实绘（专门路径：右对齐 + 千分位）
+  | 'singleSelect' // Phase 1 走 fallback（toString → text）
+  | 'multiSelect' // Phase 1 走 fallback（数组 join(', ') → text）
+  | 'date' // Phase 1 走 fallback（Date → ISO 字符串 → text）
+  | 'checkbox' // Phase 1 走 fallback（boolean → 'true'/'false' → text）
+  | 'url' // Phase 1 走 fallback（按 text 绘）
 
 export interface Field {
-  readonly id: string                // 稳定 ID，重排不变
+  readonly id: string // 稳定 ID，重排不变
   readonly name: string
   readonly type: FieldType
-  width: number                      // 受 ResizeColumn 影响
-  hidden?: boolean                   // Phase 1 不暴露 UI，类型先留
-  options?: Record<string, unknown>  // type-specific 配置
+  width: number // 受 ResizeColumn 影响
+  hidden?: boolean // Phase 1 不暴露 UI，类型先留
+  options?: Record<string, unknown> // type-specific 配置
 }
 
 export interface Schema {
@@ -272,6 +272,7 @@ export class InMemoryDataSource implements DataSource {
 **内部存储**：行式 `Row[]`，简单直接。
 
 **推荐上限**取决于「行数 × 列数 × 平均值大小」三者乘积，而非纯行数。安全基线：
+
 - 30 万行 × 10 列（平均每行 ~200 字节）→ ~60 MB 堆，OK
 - 10 万行 × 50 列（平均每行 ~1 KB）→ ~100 MB 堆，临界
 - 超过上述规模：使用 Phase 2 分页 DataSource
@@ -283,10 +284,10 @@ playground 的 1M 行 mock 数据走列式 TypedArray 生成器（playground 内
 ```ts
 export interface GridOptions {
   data: DataSource
-  theme?: Theme                // 缺省 = denseGridTheme
-  frozenRows?: number          // 缺省 0；Header 行不算入 frozenRows
-  frozenCols?: number          // 缺省 0
-  defaultRowHeight?: number    // 优先级见下
+  theme?: Theme // 缺省 = denseGridTheme
+  frozenRows?: number // 缺省 0；Header 行不算入 frozenRows
+  frozenCols?: number // 缺省 0
+  defaultRowHeight?: number // 优先级见下
 }
 
 export class Grid {
@@ -323,21 +324,21 @@ export class Grid {
 ### 数据结构
 
 ```ts
-const CHUNK_SIZE = 1024  // 调优常量
+const CHUNK_SIZE = 1024 // 调优常量
 
 interface Chunk {
-  totalSize: number              // 本块所有项尺寸之和
-  sizes: Float32Array | null     // 仅当本块有非默认项时分配；null = 全默认
+  totalSize: number // 本块所有项尺寸之和
+  sizes: Float32Array | null // 仅当本块有非默认项时分配；null = 全默认
 }
 
 class ChunkedAxis {
   private defaultSize: number
   private count: number
-  private chunks: Chunk[]                // 长度 = ⌈count / CHUNK_SIZE⌉
-  private chunkPrefixSum: Float64Array   // 长度 = chunks.length + 1
-                                         // chunkPrefixSum[i] = 前 i 个 chunk 累计尺寸
-  private totalSize: number              // = chunkPrefixSum[chunks.length]
-  private version: number                // mutate 递增，供 Renderer 判脏
+  private chunks: Chunk[] // 长度 = ⌈count / CHUNK_SIZE⌉
+  private chunkPrefixSum: Float64Array // 长度 = chunks.length + 1
+  // chunkPrefixSum[i] = 前 i 个 chunk 累计尺寸
+  private totalSize: number // = chunkPrefixSum[chunks.length]
+  private version: number // mutate 递增，供 Renderer 判脏
 }
 ```
 
@@ -399,15 +400,15 @@ version++
 
 ### 复杂度总表（n = 1,000,000, n_chunks = 977）
 
-| 操作 | Worst | Typical (chunk 全默认) | 单次实测目标 |
-|---|---|---|---|
-| `indexToPosition` | O(CHUNK_SIZE) | O(1) | < 1 μs |
-| `positionToIndex` | O(log n_chunks + CHUNK_SIZE) | O(log n_chunks) | ~3 μs |
-| `getVisibleRange` | 2 × positionToIndex | 2 × O(log n_chunks) | ~6 μs |
-| `setSize` (mutate) | O(n_chunks) prefix 更新 | 同左 | ~3 μs |
-| `setDefaultSize` | O(n_chunks) | O(n_chunks) | ~5 μs |
-| 内存基线（全默认） | n_chunks × 16B + prefixSum | ~30 KB | — |
-| 内存（每 100 chunk dirty） | + 100 × 4KB | ~430 KB | — |
+| 操作                       | Worst                        | Typical (chunk 全默认) | 单次实测目标 |
+| -------------------------- | ---------------------------- | ---------------------- | ------------ |
+| `indexToPosition`          | O(CHUNK_SIZE)                | O(1)                   | < 1 μs       |
+| `positionToIndex`          | O(log n_chunks + CHUNK_SIZE) | O(log n_chunks)        | ~3 μs        |
+| `getVisibleRange`          | 2 × positionToIndex          | 2 × O(log n_chunks)    | ~6 μs        |
+| `setSize` (mutate)         | O(n_chunks) prefix 更新      | 同左                   | ~3 μs        |
+| `setDefaultSize`           | O(n_chunks)                  | O(n_chunks)            | ~5 μs        |
+| 内存基线（全默认）         | n_chunks × 16B + prefixSum   | ~30 KB                 | —            |
+| 内存（每 100 chunk dirty） | + 100 × 4KB                  | ~430 KB                | —            |
 
 每帧渲染调用：2 次 `getVisibleRange` + ~30 次 `indexToPosition` → 总开销 < 50 μs（< 0.3% 帧预算）。
 
@@ -415,14 +416,13 @@ version++
 
 ```ts
 class FrozenRegions {
-  constructor(rowsAxis: ChunkedAxis, colsAxis: ChunkedAxis,
-              frozenRows: number, frozenCols: number)
+  constructor(rowsAxis: ChunkedAxis, colsAxis: ChunkedAxis, frozenRows: number, frozenCols: number)
 
   getQuadrants(viewportRect): {
-    topLeft:    { rowRange, colRange, rect }  // 冻结行 ∩ 冻结列
-    topRight:   { rowRange, colRange, rect }  // 冻结行 ∩ 滚动列
-    bottomLeft: { rowRange, colRange, rect }  // 滚动行 ∩ 冻结列
-    main:       { rowRange, colRange, rect }  // 滚动行 ∩ 滚动列
+    topLeft: { rowRange; colRange; rect } // 冻结行 ∩ 冻结列
+    topRight: { rowRange; colRange; rect } // 冻结行 ∩ 滚动列
+    bottomLeft: { rowRange; colRange; rect } // 滚动行 ∩ 冻结列
+    main: { rowRange; colRange; rect } // 滚动行 ∩ 滚动列
   }
 }
 ```
@@ -440,7 +440,9 @@ class Viewport {
   setScroll(logicalX: number, logicalY: number): void
   setSize(width: number, height: number): void
 
-  snapshot(): ViewportSnapshot { quadrants, dpr, contentRect, version }
+  snapshot(): ViewportSnapshot {
+    ;(quadrants, dpr, contentRect, version)
+  }
 }
 ```
 
@@ -460,7 +462,7 @@ class HighDPI {
     canvas.style.height = cssHeight + 'px'
     canvas.width = Math.round(cssWidth * dpr)
     canvas.height = Math.round(cssHeight * dpr)
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)  // 之后按 CSS 像素坐标
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0) // 之后按 CSS 像素坐标
   }
 }
 ```
@@ -474,8 +476,8 @@ function watchDpr(onChange: () => void) {
   const handler = () => {
     mq.removeEventListener('change', handler)
     currentDpr = window.devicePixelRatio
-    onChange()                          // 触发 HighDPI.resize + Renderer.invalidate
-    watchDpr(onChange)                  // 重新注册新 dppx 的 listener
+    onChange() // 触发 HighDPI.resize + Renderer.invalidate
+    watchDpr(onChange) // 重新注册新 dppx 的 listener
   }
   mq.addEventListener('change', handler, { once: true })
 }
@@ -491,23 +493,25 @@ function watchDpr(onChange: () => void) {
 ```ts
 // util/raf.ts
 class FrameScheduler {
-  private pendingTasks = new Map<string, () => void>()  // key 去重
+  private pendingTasks = new Map<string, () => void>() // key 去重
   private rafHandle: number | null = null
 
   schedule(key: string, task: () => void): void {
-    this.pendingTasks.set(key, task)                     // 同 key 后写覆盖
+    this.pendingTasks.set(key, task) // 同 key 后写覆盖
     if (this.rafHandle === null) {
       this.rafHandle = requestAnimationFrame(() => this.flush())
     }
   }
 
-  cancel(key: string): void { this.pendingTasks.delete(key) }
+  cancel(key: string): void {
+    this.pendingTasks.delete(key)
+  }
 
   private flush(): void {
     const tasks = Array.from(this.pendingTasks.values())
     this.pendingTasks.clear()
     this.rafHandle = null
-    for (const task of tasks) task()                     // 同帧执行所有任务
+    for (const task of tasks) task() // 同帧执行所有任务
   }
 }
 export const frameScheduler = new FrameScheduler()
@@ -528,6 +532,7 @@ private flush(): void {
 `invalidate()` 触发来源：Scroller、ChunkedAxis 变更、DataSource 事件、Theme 切换、容器 resize、DPR 变化。同帧多次 invalidate 自动合并（map key 去重）。
 
 **任务顺序**：scheduler 按插入顺序执行；约定 key 命名前缀决定阶段：
+
 1. `scroll:read` — NativeScroller 读 scrollTop → Viewport.setScroll
 2. `renderer:flush` — Renderer.paint
 3. `handle:layout` — HandleLayout 更新 DOM handle 位置
@@ -645,14 +650,14 @@ ctx.fillRect(...)
 
 ### 5.8 性能预算
 
-| 阶段 | 预算 | 实测目标 |
-|---|---|---|
-| 清屏 | < 0.5 ms | ~0.2 ms |
-| 600 cell 绘制（含 measureText 缓存命中） | < 4 ms | ~3 ms |
-| Grid lines（合并 Path2D） | < 0.5 ms | ~0.3 ms |
-| Header（~20 列） | < 0.5 ms | ~0.4 ms |
-| Frozen 投影 + 边界 | < 0.5 ms | ~0.2 ms |
-| **单帧总计** | **< 8 ms** | 留一半余量 |
+| 阶段                                     | 预算       | 实测目标   |
+| ---------------------------------------- | ---------- | ---------- |
+| 清屏                                     | < 0.5 ms   | ~0.2 ms    |
+| 600 cell 绘制（含 measureText 缓存命中） | < 4 ms     | ~3 ms      |
+| Grid lines（合并 Path2D）                | < 0.5 ms   | ~0.3 ms    |
+| Header（~20 列）                         | < 0.5 ms   | ~0.4 ms    |
+| Frozen 投影 + 边界                       | < 0.5 ms   | ~0.2 ms    |
+| **单帧总计**                             | **< 8 ms** | 留一半余量 |
 
 ---
 
@@ -679,12 +684,12 @@ ctx.fillRect(...)
 
 **层级与事件路由**
 
-| 层 | pointer-events | 职责 |
-|---|---|---|
-| `<scroll-host>` | auto（默认） | 接收所有滚轮 / 触控板 / 触摸滚动；浏览器原生处理 |
-| `<canvas>` | **none** | 纯绘制层，永不接收事件；滚动事件穿透到下层 scroll-host |
-| `<handle-layer>` 容器 | **none** | 不阻挡滚动事件 |
-| `<handle>` 单个节点 | **auto** | 仅在 handle 实际位置上接收 pointer 事件 + 键盘事件 |
+| 层                    | pointer-events | 职责                                                   |
+| --------------------- | -------------- | ------------------------------------------------------ |
+| `<scroll-host>`       | auto（默认）   | 接收所有滚轮 / 触控板 / 触摸滚动；浏览器原生处理       |
+| `<canvas>`            | **none**       | 纯绘制层，永不接收事件；滚动事件穿透到下层 scroll-host |
+| `<handle-layer>` 容器 | **none**       | 不阻挡滚动事件                                         |
+| `<handle>` 单个节点   | **auto**       | 仅在 handle 实际位置上接收 pointer 事件 + 键盘事件     |
 
 **handle 节点定位**：每帧 Renderer.flush 后，按 visible columns/rows 的 layout 坐标更新 handle 的 `style.left/top/width/height`（CSS 变量批量设置）。8 CSS px 宽（列）或 8 CSS px 高（行）的不可见命中区。
 
@@ -715,8 +720,8 @@ class ScrollMapper {
     const maxScroll = spacerSize - viewportSize
     const maxLogical = contentSize - viewportSize
     if (maxScroll <= 0) return 0
-    const clamped = Math.max(0, Math.min(maxScroll, scrollTop))   // 防 iOS 橡皮筋/浮点越界
-    if (contentSize <= spacerSize) return clamped                 // 直通（数据小）
+    const clamped = Math.max(0, Math.min(maxScroll, scrollTop)) // 防 iOS 橡皮筋/浮点越界
+    if (contentSize <= spacerSize) return clamped // 直通（数据小）
     return (clamped / maxScroll) * maxLogical
   }
 
@@ -778,15 +783,15 @@ Phase 1 使用浏览器原生滚动条（不做隐藏式 overlay）。Theme `scr
 
 ### 6.6 边界与极端 case
 
-| Case | 行为 |
-|---|---|
-| scrollTop 超出 maxScroll | clamp 到 maxScroll |
-| 数据集 rowCount 变小 | 重算 spacerSize，浏览器 clamp scrollTop，下帧重绘 |
-| 容器尺寸变化 | ResizeObserver → viewport.setSize → recompute spacer + invalidate |
-| DPR 变化 | HighDPI.resize + invalidate |
-| iOS 橡皮筋越界 | 浏览器自处理，mapper 直通 clamp |
-| 触控板 / 滚轮 | 浏览器原生处理 → scroll 事件 |
-| 滚到底精确对齐 | logicalToScroll(maxLogical) = maxScroll，等价对齐 |
+| Case                     | 行为                                                              |
+| ------------------------ | ----------------------------------------------------------------- |
+| scrollTop 超出 maxScroll | clamp 到 maxScroll                                                |
+| 数据集 rowCount 变小     | 重算 spacerSize，浏览器 clamp scrollTop，下帧重绘                 |
+| 容器尺寸变化             | ResizeObserver → viewport.setSize → recompute spacer + invalidate |
+| DPR 变化                 | HighDPI.resize + invalidate                                       |
+| iOS 橡皮筋越界           | 浏览器自处理，mapper 直通 clamp                                   |
+| 触控板 / 滚轮            | 浏览器原生处理 → scroll 事件                                      |
+| 滚到底精确对齐           | logicalToScroll(maxLogical) = maxScroll，等价对齐                 |
 
 ### 6.7 精度损失评估
 
@@ -899,23 +904,30 @@ export const NovaSheet = forwardRef<NovaSheetHandle, NovaSheetProps>(
         gridRef.current?.destroy()
         gridRef.current = null
       }
-    }, [])  // 空依赖，下面 effects 单独同步
+    }, []) // 空依赖，下面 effects 单独同步
 
-    useEffect(() => { gridRef.current?.setData(props.data) }, [props.data])
-    useEffect(() => { props.theme && gridRef.current?.setTheme(props.theme) },
-              [props.theme])
+    useEffect(() => {
+      gridRef.current?.setData(props.data)
+    }, [props.data])
+    useEffect(() => {
+      props.theme && gridRef.current?.setTheme(props.theme)
+    }, [props.theme])
     useEffect(() => {
       gridRef.current?.setFrozen(props.frozenRows ?? 0, props.frozenCols ?? 0)
     }, [props.frozenRows, props.frozenCols])
 
-    useImperativeHandle(ref, () => ({
-      scrollToRow: (i, a) => gridRef.current?.scrollToRow(i, a),
-      scrollToCell: (i, f) => gridRef.current?.scrollToCell(i, f),
-      refresh: () => gridRef.current?.refresh(),
-    }), [])
+    useImperativeHandle(
+      ref,
+      () => ({
+        scrollToRow: (i, a) => gridRef.current?.scrollToRow(i, a),
+        scrollToCell: (i, f) => gridRef.current?.scrollToCell(i, f),
+        refresh: () => gridRef.current?.refresh(),
+      }),
+      [],
+    )
 
     return <div ref={containerRef} className={props.className} style={props.style} />
-  }
+  },
 )
 ```
 
@@ -945,19 +957,19 @@ export function useNovaSheet(props: NovaSheetProps) {
 
 ### 8.1 工具链
 
-| 选项 | 选择 | 理由 |
-|---|---|---|
-| 包管理 / 工作区 | pnpm + workspaces | 大型 monorepo 标配 |
-| TypeScript | 5.4+，strict + verbatimModuleSyntax | 类型基线高 |
-| 构建（库） | tsup | 零配置出 ESM/CJS/d.ts |
-| 构建（playground） | Vite | HMR + 现代默认 |
-| 测试运行器 | Vitest | 与 Vite 同心智 |
-| Canvas 单测 | 自实现「ctx 调用录制器」 | jsdom canvas 是空 mock；录制 ctx 方法序列做断言 |
-| 像素回归 | Playwright + 截图 diff | 跨真实浏览器 |
-| 基准测试 | Vitest bench | 避免引入额外基准工具 |
-| Lint | ESLint + typescript-eslint | 一套覆盖 monorepo |
-| Format | Prettier | — |
-| Git hook | simple-git-hooks + lint-staged | 仅 staged lint |
+| 选项               | 选择                                | 理由                                            |
+| ------------------ | ----------------------------------- | ----------------------------------------------- |
+| 包管理 / 工作区    | pnpm + workspaces                   | 大型 monorepo 标配                              |
+| TypeScript         | 5.4+，strict + verbatimModuleSyntax | 类型基线高                                      |
+| 构建（库）         | tsup                                | 零配置出 ESM/CJS/d.ts                           |
+| 构建（playground） | Vite                                | HMR + 现代默认                                  |
+| 测试运行器         | Vitest                              | 与 Vite 同心智                                  |
+| Canvas 单测        | 自实现「ctx 调用录制器」            | jsdom canvas 是空 mock；录制 ctx 方法序列做断言 |
+| 像素回归           | Playwright + 截图 diff              | 跨真实浏览器                                    |
+| 基准测试           | Vitest bench                        | 避免引入额外基准工具                            |
+| Lint               | ESLint + typescript-eslint          | 一套覆盖 monorepo                               |
+| Format             | Prettier                            | —                                               |
+| Git hook           | simple-git-hooks + lint-staged      | 仅 staged lint                                  |
 
 ### 8.2 仓库结构
 
@@ -1023,15 +1035,15 @@ novasheet/
 
 ### 8.4 性能预算汇总
 
-| 路径 | 目标（一帧 16.67ms） |
-|---|---|
-| Scroll → invalidate → flush 全链路 | < 8 ms |
-| ChunkedAxis 单帧总调用 | < 0.1 ms |
-| Renderer.paint（600 cells + 网格 + header + frozen） | < 5 ms |
-| ResizeObserver 重算 spacer + invalidate | < 1 ms |
-| 初始 mount 到首帧 | < 100 ms |
-| 内存（不含数据） | < 50 MB |
-| 1M 行 × 10 列 滚动 | 稳定 60fps（Chrome / FF / Safari / iOS） |
+| 路径                                                 | 目标（一帧 16.67ms）                     |
+| ---------------------------------------------------- | ---------------------------------------- |
+| Scroll → invalidate → flush 全链路                   | < 8 ms                                   |
+| ChunkedAxis 单帧总调用                               | < 0.1 ms                                 |
+| Renderer.paint（600 cells + 网格 + header + frozen） | < 5 ms                                   |
+| ResizeObserver 重算 spacer + invalidate              | < 1 ms                                   |
+| 初始 mount 到首帧                                    | < 100 ms                                 |
+| 内存（不含数据）                                     | < 50 MB                                  |
+| 1M 行 × 10 列 滚动                                   | 稳定 60fps（Chrome / FF / Safari / iOS） |
 
 CI 不强卡这些数（运行环境不稳）；playground 内置 stats overlay（FPS、单帧耗时、内存）便于本地验证。
 
@@ -1041,16 +1053,16 @@ CI 不强卡这些数（运行环境不稳）；playground 内置 stats overlay�
 
 ### 9.1 关键风险
 
-| 风险 | 严重度 | 缓解 |
-|---|---|---|
-| iOS Safari 高频 scroll 丢帧 | 高 | RAF 节流 + passive listener；早期真机测 |
-| 长文本 `measureText` 慢，LRU 缓存命中率低 | 中 | 按 (font + text) 作 key；测命中率，必要时降字号挡位 |
-| Strict Mode 双 mount 泄漏 | 高 | 专项测试，destroy 幂等 100% |
-| 极大数据 prefix sum 增量更新成本累积 | 低 | n_chunks ≈ 977，~3μs；千万行级再转 Fenwick over chunks |
-| Theme 切换运行时绘制不一致 | 中 | Theme 不可变；setTheme 触发完整 invalidate；像素一致性测试 |
-| ResizeObserver 与 DPR 监听重复触发 | 低 | invalidate 幂等（dirty flag） |
-| 1M 行 mock 数据 OOM | 中 | playground 列式 TypedArray 生成器；InMemoryDataSource 文档明确上限 |
-| iOS Safari 快速滑动时 scroll 事件被节流到 ~30Hz，Canvas 内容落后视觉 1-2 帧 | 中 | 已知 quirk；Phase 1 接受。Phase 2+ 可探索 `visualViewport` + 预测性渲染 |
+| 风险                                                                        | 严重度 | 缓解                                                                    |
+| --------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------- |
+| iOS Safari 高频 scroll 丢帧                                                 | 高     | RAF 节流 + passive listener；早期真机测                                 |
+| 长文本 `measureText` 慢，LRU 缓存命中率低                                   | 中     | 按 (font + text) 作 key；测命中率，必要时降字号挡位                     |
+| Strict Mode 双 mount 泄漏                                                   | 高     | 专项测试，destroy 幂等 100%                                             |
+| 极大数据 prefix sum 增量更新成本累积                                        | 低     | n_chunks ≈ 977，~3μs；千万行级再转 Fenwick over chunks                  |
+| Theme 切换运行时绘制不一致                                                  | 中     | Theme 不可变；setTheme 触发完整 invalidate；像素一致性测试              |
+| ResizeObserver 与 DPR 监听重复触发                                          | 低     | invalidate 幂等（dirty flag）                                           |
+| 1M 行 mock 数据 OOM                                                         | 中     | playground 列式 TypedArray 生成器；InMemoryDataSource 文档明确上限      |
+| iOS Safari 快速滑动时 scroll 事件被节流到 ~30Hz，Canvas 内容落后视觉 1-2 帧 | 中     | 已知 quirk；Phase 1 接受。Phase 2+ 可探索 `visualViewport` + 预测性渲染 |
 
 ### 9.2 未决项（实现前 sanity check 即可定）
 
@@ -1094,15 +1106,15 @@ CI 不强卡这些数（运行环境不稳）；playground 内置 stats overlay�
 
 ## 附录 A · 关键架构决策记录（ADR-style）
 
-| # | 决策 | 选项 | 选择 | 理由 |
-|---|---|---|---|---|
-| 1 | 渲染层 Canvas 形态 | 单 Canvas / 多层 Canvas / OffscreenCanvas | **单 Canvas** | 简单可控、足够快；Phase 2 再升级 |
-| 2 | 滚动机制 | 原生 / 自绘 / 混合 | **原生 + 非线性映射** | 原生键盘、触控惯性、a11y、滚动条样式开箱即用；精度损失只在拖拽时感知，可接受 |
-| 3 | 行高布局 | BIT / 分块 / 完整数组 | **分块（ChunkedAxis）** | 内存自适应、与未来分页对齐、局部失效支持排序/筛选 |
-| 4 | 数据源 | 同步内存 / 异步分页 | **DataSource 接口同/异步双兼容；Phase 1 内置同步实现** | 一次设计撑到 Phase N，无需重写 |
-| 5 | 主题 | 硬编码 / Token | **Theme Token 必须** | 引擎内零硬编码视觉值，Phase 2+ 可发布独立 theme 包 |
-| 6 | 框架包装 | 无 / React / Vue / 多 | **TS 核心 + React Wrapper** | 当前明确以 React 为首要集成目标，核心保持框架无关以便扩展 |
-| 7 | Canvas 单测 | jsdom mock / 像素 diff / 指令录制 | **指令录制** | 跨平台稳定、可重复、CI 友好 |
+| #   | 决策               | 选项                                      | 选择                                                   | 理由                                                                         |
+| --- | ------------------ | ----------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| 1   | 渲染层 Canvas 形态 | 单 Canvas / 多层 Canvas / OffscreenCanvas | **单 Canvas**                                          | 简单可控、足够快；Phase 2 再升级                                             |
+| 2   | 滚动机制           | 原生 / 自绘 / 混合                        | **原生 + 非线性映射**                                  | 原生键盘、触控惯性、a11y、滚动条样式开箱即用；精度损失只在拖拽时感知，可接受 |
+| 3   | 行高布局           | BIT / 分块 / 完整数组                     | **分块（ChunkedAxis）**                                | 内存自适应、与未来分页对齐、局部失效支持排序/筛选                            |
+| 4   | 数据源             | 同步内存 / 异步分页                       | **DataSource 接口同/异步双兼容；Phase 1 内置同步实现** | 一次设计撑到 Phase N，无需重写                                               |
+| 5   | 主题               | 硬编码 / Token                            | **Theme Token 必须**                                   | 引擎内零硬编码视觉值，Phase 2+ 可发布独立 theme 包                           |
+| 6   | 框架包装           | 无 / React / Vue / 多                     | **TS 核心 + React Wrapper**                            | 当前明确以 React 为首要集成目标，核心保持框架无关以便扩展                    |
+| 7   | Canvas 单测        | jsdom mock / 像素 diff / 指令录制         | **指令录制**                                           | 跨平台稳定、可重复、CI 友好                                                  |
 
 ---
 

@@ -23,7 +23,13 @@ describe('computePasteTarget', () => {
       2,
       { rowCount: 10, colCount: 3 },
     )
-    expect(t).toEqual({ startRow: 2, endRow: 4, startCol: 1, endCol: 2, tile: { rows: 1, cols: 1 } })
+    expect(t).toEqual({
+      startRow: 2,
+      endRow: 4,
+      startCol: 1,
+      endCol: 2,
+      tile: { rows: 1, cols: 1 },
+    })
   })
 
   it('一对一选区 → 用 selectedRange 本身', () => {
@@ -34,7 +40,13 @@ describe('computePasteTarget', () => {
       2,
       { rowCount: 10, colCount: 3 },
     )
-    expect(t).toEqual({ startRow: 1, endRow: 3, startCol: 0, endCol: 1, tile: { rows: 1, cols: 1 } })
+    expect(t).toEqual({
+      startRow: 1,
+      endRow: 3,
+      startCol: 0,
+      endCol: 1,
+      tile: { rows: 1, cols: 1 },
+    })
   })
 
   it('整数倍 tile：4×4 选区 × 2×2 源 → tile 2×2', () => {
@@ -45,7 +57,13 @@ describe('computePasteTarget', () => {
       2,
       { rowCount: 10, colCount: 4 },
     )
-    expect(t).toEqual({ startRow: 0, endRow: 3, startCol: 0, endCol: 3, tile: { rows: 2, cols: 2 } })
+    expect(t).toEqual({
+      startRow: 0,
+      endRow: 3,
+      startCol: 0,
+      endCol: 3,
+      tile: { rows: 2, cols: 2 },
+    })
   })
 
   it('mismatch：从 selection 左上角填，多余 source 丢，不足 target 不动', () => {
@@ -56,7 +74,13 @@ describe('computePasteTarget', () => {
       2,
       { rowCount: 10, colCount: 3 },
     )
-    expect(t).toEqual({ startRow: 0, endRow: 1, startCol: 0, endCol: 1, tile: { rows: 1, cols: 1 } })
+    expect(t).toEqual({
+      startRow: 0,
+      endRow: 1,
+      startCol: 0,
+      endCol: 1,
+      tile: { rows: 1, cols: 1 },
+    })
   })
 
   it('超出 grid 边界 → 裁切', () => {
@@ -67,7 +91,13 @@ describe('computePasteTarget', () => {
       3,
       { rowCount: 10, colCount: 3 },
     )
-    expect(t).toEqual({ startRow: 8, endRow: 9, startCol: 2, endCol: 2, tile: { rows: 1, cols: 1 } })
+    expect(t).toEqual({
+      startRow: 8,
+      endRow: 9,
+      startCol: 2,
+      endCol: 2,
+      tile: { rows: 1, cols: 1 },
+    })
   })
 })
 

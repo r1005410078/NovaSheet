@@ -15,6 +15,7 @@
 ## File Structure
 
 **Create:**
+
 - `packages/core/src/clipboard/TsvFormat.ts` — serialize / parse
 - `packages/core/src/clipboard/ApplyPaste.ts` — target rect + coerce + apply
 - `packages/core/src/clipboard/types.ts` — PasteSkippedCell / ClipboardAction
@@ -26,6 +27,7 @@
 - `apps/storybook/src/stories/snippets/clipboard.basic.snippet.ts`
 
 **Modify:**
+
 - `packages/core/src/index.ts` — re-export
 - `packages/core/src/engine/DefaultGridEngine.ts` — `clearRange(range)` 方法
 - `packages/core/src/engine/GridEngine.ts` — 接口加 `clearRange`
@@ -44,6 +46,7 @@
 ## Task 1: Core types + TsvFormat（serialize + parse）
 
 **Files:**
+
 - Create: `packages/core/src/clipboard/types.ts`
 - Create: `packages/core/src/clipboard/TsvFormat.ts`
 - Create: `packages/core/tests/clipboard/TsvFormat.test.ts`
@@ -115,11 +118,7 @@ describe('parseTsvToCells', () => {
   })
 
   it('checkbox：true/1/yes → true；false/0/no → false；其它 → null', () => {
-    const out = parseTsvToCells(
-      'true\n1\nyes\nfalse\n0\nno\nmaybe',
-      ['done'],
-      schema,
-    )
+    const out = parseTsvToCells('true\n1\nyes\nfalse\n0\nno\nmaybe', ['done'], schema)
     expect(out).toEqual([[true], [true], [true], [false], [false], [false], [null]])
   })
 
@@ -178,13 +177,8 @@ function serializeValue(v: CellValue | undefined): string {
   return String(v)
 }
 
-export function serializeRowsToTsv(
-  rows: readonly Row[],
-  fieldIds: readonly string[],
-): string {
-  return rows
-    .map((row) => fieldIds.map((fid) => serializeValue(row[fid])).join('\t'))
-    .join('\n')
+export function serializeRowsToTsv(rows: readonly Row[], fieldIds: readonly string[]): string {
+  return rows.map((row) => fieldIds.map((fid) => serializeValue(row[fid])).join('\t')).join('\n')
 }
 
 type ParsedCellValue = string | number | boolean | null
@@ -236,6 +230,7 @@ export type { ClipboardAction, PasteSkippedCell } from './clipboard/types'
 bun test packages/core/tests/clipboard/TsvFormat.test.ts
 bun run --filter @novasheet/core typecheck
 ```
+
 Expected: ~13 tests pass; typecheck clean.
 
 - [ ] **Step 7: Commit**
@@ -252,6 +247,7 @@ git commit -m "feat(core): Phase 4.1 TSV serialize + parse + clipboard types"
 ## Task 2: Core ApplyPaste（target rect + per-cell apply）
 
 **Files:**
+
 - Create: `packages/core/src/clipboard/ApplyPaste.ts`
 - Create: `packages/core/tests/clipboard/ApplyPaste.test.ts`
 - Modify: `packages/core/src/index.ts`
@@ -285,7 +281,13 @@ describe('computePasteTarget', () => {
       2,
       { rowCount: 10, colCount: 3 },
     )
-    expect(t).toEqual({ startRow: 2, endRow: 4, startCol: 1, endCol: 2, tile: { rows: 1, cols: 1 } })
+    expect(t).toEqual({
+      startRow: 2,
+      endRow: 4,
+      startCol: 1,
+      endCol: 2,
+      tile: { rows: 1, cols: 1 },
+    })
   })
 
   it('一对一选区 → 用 selectedRange 本身', () => {
@@ -296,7 +298,13 @@ describe('computePasteTarget', () => {
       2,
       { rowCount: 10, colCount: 3 },
     )
-    expect(t).toEqual({ startRow: 1, endRow: 3, startCol: 0, endCol: 1, tile: { rows: 1, cols: 1 } })
+    expect(t).toEqual({
+      startRow: 1,
+      endRow: 3,
+      startCol: 0,
+      endCol: 1,
+      tile: { rows: 1, cols: 1 },
+    })
   })
 
   it('整数倍 tile：4×4 选区 × 2×2 源 → tile 2×2', () => {
@@ -307,7 +315,13 @@ describe('computePasteTarget', () => {
       2,
       { rowCount: 10, colCount: 4 },
     )
-    expect(t).toEqual({ startRow: 0, endRow: 3, startCol: 0, endCol: 3, tile: { rows: 2, cols: 2 } })
+    expect(t).toEqual({
+      startRow: 0,
+      endRow: 3,
+      startCol: 0,
+      endCol: 3,
+      tile: { rows: 2, cols: 2 },
+    })
   })
 
   it('mismatch：从 selection 左上角填，多余 source 丢，不足 target 不动', () => {
@@ -318,7 +332,13 @@ describe('computePasteTarget', () => {
       2,
       { rowCount: 10, colCount: 3 },
     )
-    expect(t).toEqual({ startRow: 0, endRow: 1, startCol: 0, endCol: 1, tile: { rows: 1, cols: 1 } })
+    expect(t).toEqual({
+      startRow: 0,
+      endRow: 1,
+      startCol: 0,
+      endCol: 1,
+      tile: { rows: 1, cols: 1 },
+    })
   })
 
   it('超出 grid 边界 → 裁切', () => {
@@ -330,7 +350,13 @@ describe('computePasteTarget', () => {
       { rowCount: 10, colCount: 3 },
     )
     // colCount=3 → endCol 最大 2；rowCount=10 → endRow 最大 9
-    expect(t).toEqual({ startRow: 8, endRow: 9, startCol: 2, endCol: 2, tile: { rows: 1, cols: 1 } })
+    expect(t).toEqual({
+      startRow: 8,
+      endRow: 9,
+      startCol: 2,
+      endCol: 2,
+      tile: { rows: 1, cols: 1 },
+    })
   })
 })
 
@@ -354,7 +380,13 @@ describe('applyPaste', () => {
       sourceFieldIds: ['a', 'b'],
       typed: true,
     }
-    applyPaste(source, { startRow: 0, endRow: 0, startCol: 0, endCol: 1, tile: { rows: 1, cols: 1 } }, schema, fields, data as never)
+    applyPaste(
+      source,
+      { startRow: 0, endRow: 0, startCol: 0, endCol: 1, tile: { rows: 1, cols: 1 } },
+      schema,
+      fields,
+      data as never,
+    )
     expect(data.writes).toEqual([
       { row: 0, field: 'a', value: 'hello' },
       { row: 0, field: 'b', value: 42 },
@@ -492,7 +524,7 @@ export function applyPaste(
   source: ApplyPasteSource,
   target: PasteTargetRect,
   schema: Schema,
-  fieldIdsAtCols: readonly string[],  // schema.fields[colIdx].id 映射，传入避免每次重算
+  fieldIdsAtCols: readonly string[], // schema.fields[colIdx].id 映射，传入避免每次重算
   data: MutableDataSource,
   onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
 ): void {
@@ -586,6 +618,7 @@ git commit -m "feat(core): Phase 4.1 computePasteTarget + applyPaste with type c
 ## Task 3: engine.clearRange
 
 **Files:**
+
 - Modify: `packages/core/src/engine/GridEngine.ts`
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 - Modify: `packages/core/tests/engine/DefaultGridEngine.test.ts`
@@ -597,10 +630,12 @@ import type { CellRange } from '../../src/interaction/SelectionModel'
 
 it('clearRange 对 MutableDataSource 把每个 cell 置 null', () => {
   const data = new InMemoryDataSource({
-    schema: { fields: [
-      { id: 'a', name: 'A', type: 'text', width: 100 },
-      { id: 'b', name: 'B', type: 'number', width: 100 },
-    ]},
+    schema: {
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: 100 },
+        { id: 'b', name: 'B', type: 'number', width: 100 },
+      ],
+    },
     rows: [
       { a: 'x', b: 1 },
       { a: 'y', b: 2 },
@@ -673,6 +708,7 @@ git commit -m "feat(core): engine.clearRange for Phase 4.1 cut"
 ## Task 4: WebClipboardAdapter（navigator.clipboard 封装）
 
 **Files:**
+
 - Create: `packages/web/src/clipboard/WebClipboardAdapter.ts`
 - Create: `packages/web/tests/clipboard/WebClipboardAdapter.test.ts`
 
@@ -705,13 +741,15 @@ describe('WebClipboardAdapter', () => {
   it('clipboard API 不存在时：write/readText silent fallback', async () => {
     stubGlobal('navigator', {} as never)
     const adapter = new WebClipboardAdapter()
-    expect(await adapter.writeText('x')).toBe(false)  // 表示未成功写
+    expect(await adapter.writeText('x')).toBe(false) // 表示未成功写
     expect(await adapter.readText()).toBe(null)
     unstubAllGlobals()
   })
 
   it('writeText 抛错（如权限）→ 返回 false，不抛', async () => {
-    const writeText = mock(async () => { throw new Error('denied') })
+    const writeText = mock(async () => {
+      throw new Error('denied')
+    })
     stubGlobal('navigator', { clipboard: { writeText } } as never)
     const adapter = new WebClipboardAdapter()
     expect(await adapter.writeText('x')).toBe(false)
@@ -771,10 +809,12 @@ git commit -m "feat(web): WebClipboardAdapter (navigator.clipboard wrapper)"
 ## Task 5: Runtime clipboard methods（copy/cut/paste + 内部缓存 + hash）
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/tests/runtime/WebGridRuntime.test.ts`
 
 要点：
+
 - 新字段：`clipboardAdapter`, `clipboardCache`（snapshot + tsvHash）
 - 三个 async 方法：`handleClipboardCopy()` / `handleClipboardCut()` / `handleClipboardPaste()`
 - TSV hash 用 FNV-1a（小函数挂在 module-private）
@@ -802,12 +842,15 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
     }))
     const data = {
       getCell: (r: number, f: string) => (f === 'a' ? `r${r}` : r * 10),
-      getSchema: () => ({ fields: [
-        { id: 'a', name: 'A', type: 'text', width: 100 },
-        { id: 'b', name: 'B', type: 'number', width: 100 },
-      ]}),
+      getSchema: () => ({
+        fields: [
+          { id: 'a', name: 'A', type: 'text', width: 100 },
+          { id: 'b', name: 'B', type: 'number', width: 100 },
+        ],
+      }),
       getRowCount: () => 5,
-      getRows: () => [], subscribe: () => () => {},
+      getRows: () => [],
+      subscribe: () => () => {},
       updateCell: mock(() => {}),
     }
     engine.getData = mock(() => data as never)
@@ -830,7 +873,9 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
     const data = {
       getCell: () => 'x',
       getSchema: () => ({ fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] }),
-      getRowCount: () => 5, getRows: () => [], subscribe: () => () => {},
+      getRowCount: () => 5,
+      getRows: () => [],
+      subscribe: () => () => {},
       updateCell: mock(() => {}),
     }
     engine.getData = mock(() => data as never)
@@ -839,7 +884,12 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
     runtime.setClipboardAdapter(adapter as never)
     await runtime.handleClipboardCut()
     expect(adapter.writeText).toHaveBeenCalledWith('x')
-    expect(engine.clearRange).toHaveBeenCalledWith({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+    expect(engine.clearRange).toHaveBeenCalledWith({
+      startRow: 0,
+      endRow: 0,
+      startCol: 0,
+      endCol: 0,
+    })
   })
 
   it('paste 内部缓存命中走 typed=true 路径', async () => {
@@ -858,7 +908,9 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
     const data = {
       getCell: () => 'x',
       getSchema: () => ({ fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] }),
-      getRowCount: () => 5, getRows: () => [], subscribe: () => () => {},
+      getRowCount: () => 5,
+      getRows: () => [],
+      subscribe: () => () => {},
       updateCell: mock(() => {}),
     }
     engine.getData = mock(() => data as never)
@@ -877,6 +929,7 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
 - [ ] **Step 3: Implement in WebGridRuntime.ts**
 
 新增 imports：
+
 ```ts
 import {
   serializeRowsToTsv,
@@ -892,6 +945,7 @@ import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
 ```
 
 新字段：
+
 ```ts
 private clipboardAdapter?: WebClipboardAdapter
 private clipboardCache: { range: CellRange; rows: Row[]; tsvHash: number } | null = null
@@ -902,6 +956,7 @@ private onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
 ```
 
 Setters：
+
 ```ts
 setClipboardAdapter(adapter: WebClipboardAdapter): void { this.clipboardAdapter = adapter }
 setOnCopy(cb: (r: CellRange) => void): void { this.onCopy = cb }
@@ -911,6 +966,7 @@ setOnPasteSkipped(cb: (c: readonly PasteSkippedCell[]) => void): void { this.onP
 ```
 
 Hash helper（同文件 module-private 或单独 util）：
+
 ```ts
 function fnv1a(s: string): number {
   let h = 0x811c9dc5
@@ -923,6 +979,7 @@ function fnv1a(s: string): number {
 ```
 
 Method `snapshotSelection()`（private helper）：
+
 ```ts
 private snapshotSelection(): { range: CellRange; rows: Row[]; tsv: string } | null {
   const sel = this.engine.getSelection()
@@ -943,6 +1000,7 @@ private snapshotSelection(): { range: CellRange; rows: Row[]; tsv: string } | nu
 ```
 
 Async methods：
+
 ```ts
 async handleClipboardCopy(): Promise<boolean> {
   if (this.destroyed) return false
@@ -1035,6 +1093,7 @@ git commit -m "feat(web): WebGridRuntime clipboard methods + internal typed cach
 ## Task 6: Ctrl+X / C / V 快捷键路由
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/tests/runtime/WebGridRuntime.test.ts`
 
@@ -1043,20 +1102,38 @@ git commit -m "feat(web): WebGridRuntime clipboard methods + internal typed cach
 ```ts
 it('Ctrl+C 在 grid 持焦点时调 copy', async () => {
   // setup engine + adapter mock
-  const handled = runtime.handleHostKeyDown({ key: 'c', ctrlKey: true, shiftKey: false, metaKey: false, altKey: false })
+  const handled = runtime.handleHostKeyDown({
+    key: 'c',
+    ctrlKey: true,
+    shiftKey: false,
+    metaKey: false,
+    altKey: false,
+  })
   expect(handled).toBe(true)
-  await Promise.resolve()  // 等微任务
+  await Promise.resolve() // 等微任务
   expect(adapter.writeText).toHaveBeenCalled()
 })
 
 it('Cmd+C（macOS）同样工作', async () => {
-  runtime.handleHostKeyDown({ key: 'c', ctrlKey: false, metaKey: true, shiftKey: false, altKey: false })
+  runtime.handleHostKeyDown({
+    key: 'c',
+    ctrlKey: false,
+    metaKey: true,
+    shiftKey: false,
+    altKey: false,
+  })
   // 同上断言
 })
 
 it('编辑中 Ctrl+C 不被拦截（返回 false）', () => {
   engine.isCellEditing = mock(() => true)
-  const handled = runtime.handleHostKeyDown({ key: 'c', ctrlKey: true, shiftKey: false, metaKey: false, altKey: false })
+  const handled = runtime.handleHostKeyDown({
+    key: 'c',
+    ctrlKey: true,
+    shiftKey: false,
+    metaKey: false,
+    altKey: false,
+  })
   expect(handled).toBe(false)
 })
 
@@ -1105,6 +1182,7 @@ git commit -m "feat(web): keyboard Ctrl/Cmd+X/C/V routes to clipboard handlers"
 ## Task 7: 4.0 menu 默认走 4.1 引擎
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/tests/runtime/WebGridRuntime.test.ts`
 
@@ -1136,7 +1214,7 @@ const ctx: ContextMenuContext = {
   cell: hit,
   selectedRange: newSelection.selectedRange,
   hasSelection: newSelection.activeCell !== null,
-  clipboardReady: isMutableDataSource(this.engine.getData()),  // 4.1 改：mutable 即 enabled
+  clipboardReady: isMutableDataSource(this.engine.getData()), // 4.1 改：mutable 即 enabled
 }
 ```
 
@@ -1173,6 +1251,7 @@ git commit -m "feat(web): menu default dispatch to clipboard engine; Paste enabl
 ## Task 8: Canvas2DBackend 装配 + Grid facade
 
 **Files:**
+
 - Modify: `packages/web/src/grid/GridController.ts`
 - Modify: `packages/web/src/backends/Canvas2DBackend.ts`
 - Modify: `packages/web/src/Grid.ts`
@@ -1195,7 +1274,9 @@ it('grid.copy() 写到 navigator.clipboard.writeText', async () => {
   const grid = new Grid(container, { data })
   // 模拟选区 — 先点 (0, 0)
   const sh = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
-  sh.dispatchEvent(new PointerEvent('pointerdown', { clientX: 10, clientY: 50, button: 0, bubbles: true }))
+  sh.dispatchEvent(
+    new PointerEvent('pointerdown', { clientX: 10, clientY: 50, button: 0, bubbles: true }),
+  )
   sh.dispatchEvent(new PointerEvent('pointerup', { clientX: 10, clientY: 50, bubbles: true }))
   await grid.copy()
   expect(writeText).toHaveBeenCalledWith('hello')
@@ -1214,6 +1295,7 @@ it('onContextMenuAction 不传时点 Cut 默认走 grid.cut()', async () => {
 - [ ] **Step 3: Extend GridController + Canvas2DBackend + Grid**
 
 `GridController.ts`:
+
 ```ts
 copy(): Promise<boolean>
 cut(): Promise<boolean>
@@ -1221,6 +1303,7 @@ paste(): Promise<boolean>
 ```
 
 `Canvas2DBackend.ts` 构造里：
+
 ```ts
 this.clipboardAdapter = new WebClipboardAdapter()
 this.runtime.setClipboardAdapter(this.clipboardAdapter)
@@ -1231,6 +1314,7 @@ if (gridOptions?.onPasteSkipped) this.runtime.setOnPasteSkipped(gridOptions.onPa
 ```
 
 转发：
+
 ```ts
 copy(): Promise<boolean> { return this.runtime.handleClipboardCopy() }
 cut(): Promise<boolean> { return this.runtime.handleClipboardCut() }
@@ -1240,6 +1324,7 @@ paste(): Promise<boolean> { return this.runtime.handleClipboardPaste() }
 `Grid.ts` GridOptions 加 4 个回调；class 加 3 个 async 转发方法。
 
 `web/index.ts` 加：
+
 ```ts
 export type { ClipboardAction, PasteSkippedCell } from '@novasheet/core'
 ```
@@ -1263,6 +1348,7 @@ git commit -m "feat(web): Phase 4.1 Grid facade — copy/cut/paste + onCopy/onCu
 ## Task 9: Storybook + README
 
 **Files:**
+
 - Create: `apps/storybook/src/stories/snippets/clipboard.basic.snippet.ts`
 - Create: `apps/storybook/src/stories/Clipboard.stories.ts`
 - Modify: `README.md`
@@ -1318,7 +1404,10 @@ type Story = StoryObj
 
 export const Basic: Story = {
   name: '基础剪贴板',
-  ...docsStory(basicSrc, '选区后用 Ctrl/Cmd+C/X/V 或右键菜单；打开 console 看 onCopy/onPaste 输出。'),
+  ...docsStory(
+    basicSrc,
+    '选区后用 Ctrl/Cmd+C/X/V 或右键菜单；打开 console 看 onCopy/onPaste 输出。',
+  ),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 50) })
@@ -1370,6 +1459,7 @@ git commit -m "feat(storybook,docs): Phase 4.1 clipboard stories + README sign-o
 ## Self-Review
 
 **Spec 覆盖：**
+
 - §4.1 Cut（立即清）→ Task 3 + Task 5
 - §4.2 Copy → Task 5
 - §4.3 Paste（target rect + coerce + skip event）→ Task 2 + Task 5
@@ -1385,17 +1475,20 @@ git commit -m "feat(storybook,docs): Phase 4.1 clipboard stories + README sign-o
 - §7 TSV format → Task 1
 
 **Type 一致性：**
+
 - `Row` 从 `@novasheet/core` 导出（已存在）
 - `MutableDataSource` / `isMutableDataSource` 已存在
 - `CellRange` 来自 SelectionModel
 - `ContextMenuAction` 沿用 4.0 已导出类型
 
 **Placeholder scan：**
+
 - 无 TBD / TODO
 - Task 4 的 Clipboard 类型在某些 TS lib.dom.d.ts 里有定义；如果 typecheck 报错可改 `globalThis as any`，但 4.1 plan 保留 strict cast
 - Task 5 部分测试只列断言要点（"// ...略"）—— 实现前需补全；实现 subagent 自己写
 
 **Naming：**
+
 - `clipboardCache`（runtime 内部）
 - `WebClipboardAdapter`（web 类）
 - `serializeRowsToTsv` / `parseTsvToCells`（core 函数）

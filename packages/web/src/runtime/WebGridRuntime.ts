@@ -476,11 +476,8 @@ export class WebGridRuntime {
       colCount: fields.length,
     })
 
-    this.engine.commitPaste(
-      source,
-      target,
-      fieldIdsAtCols,
-      (skipped) => this.onPasteSkipped?.(skipped),
+    this.engine.commitPaste(source, target, fieldIdsAtCols, (skipped) =>
+      this.onPasteSkipped?.(skipped),
     )
     this.afterEngineMutation()
     const targetRange: CellRange = {
@@ -524,7 +521,10 @@ export class WebGridRuntime {
         multiSelect: field.type === 'multiSelect',
       }
       this.lastContextMenuContext = ctx
-      this.lastContextMenuPoint = { clientX: event.clientX ?? event.x, clientY: event.clientY ?? event.y }
+      this.lastContextMenuPoint = {
+        clientX: event.clientX ?? event.x,
+        clientY: event.clientY ?? event.y,
+      }
       const items = getColumnHeaderContextMenuItems(ctx, this.viewPipeline)
       this.contextMenuLayer.open({
         clientX: event.clientX ?? event.x,
@@ -564,7 +564,10 @@ export class WebGridRuntime {
       clipboardReady: dataMutable || this.clipboardReady,
     }
     this.lastContextMenuContext = ctx
-    this.lastContextMenuPoint = { clientX: event.clientX ?? event.x, clientY: event.clientY ?? event.y }
+    this.lastContextMenuPoint = {
+      clientX: event.clientX ?? event.x,
+      clientY: event.clientY ?? event.y,
+    }
     const items = getCellContextMenuItems(ctx)
     this.contextMenuLayer.open({
       clientX: event.clientX ?? event.x,
@@ -627,7 +630,9 @@ export class WebGridRuntime {
   }
 
   /** 打开列头 filter popover；未注入 popover 时回退到外部 action 回调。 */
-  private openFilterPopover(ctx: Extract<ContextMenuContext, { targetKind: 'columnHeader' }>): void {
+  private openFilterPopover(
+    ctx: Extract<ContextMenuContext, { targetKind: 'columnHeader' }>,
+  ): void {
     if (!this.filterPopover) {
       this.onContextMenuAction?.('filter-open', ctx)
       return
@@ -832,9 +837,7 @@ export class WebGridRuntime {
     if (startSize === null) return
 
     const edge =
-      handle.kind === 'column'
-        ? handle.x + handle.width / 2
-        : handle.y + handle.height / 2
+      handle.kind === 'column' ? handle.x + handle.width / 2 : handle.y + handle.height / 2
     this.resizeDrag = {
       handle,
       pointerId,
@@ -903,7 +906,9 @@ export class WebGridRuntime {
       colCount: data.getSchema().fields.length,
     })
     if (this.fillDrag.target) {
-      this.fillLayer?.showPreview(computeRangeOverlayRects(this.engine.getFrame(), this.fillDrag.target.fill))
+      this.fillLayer?.showPreview(
+        computeRangeOverlayRects(this.engine.getFrame(), this.fillDrag.target.fill),
+      )
     } else {
       this.fillLayer?.hidePreview()
     }
@@ -921,7 +926,12 @@ export class WebGridRuntime {
     // 填充可能写入 wrap 文本；只对实际 touched rows 重算行高，避免拖一次就全表 autofit。
     const autofit = this.autofitRows({ rows: uniqueRows(result.writes.map((w) => w.rowIndex)) })
     if (autofit.changedRows === 0) this.afterEngineMutation()
-    this.onFill?.({ source: target.source, fill: target.fill, result: target.result, direction: target.direction })
+    this.onFill?.({
+      source: target.source,
+      fill: target.fill,
+      result: target.result,
+      direction: target.direction,
+    })
   }
 
   /** 将 client 坐标转换成 host 内部 pointer 坐标。 */
@@ -1333,10 +1343,7 @@ export class WebGridRuntime {
   }
 
   /** 打开指定单元格编辑器，并按需全选原内容。 */
-  private openCellEditor(
-    cell: CellAddress,
-    options: { selectAll?: boolean } = {},
-  ): boolean {
+  private openCellEditor(cell: CellAddress, options: { selectAll?: boolean } = {}): boolean {
     if (!this.cellEditor || this.resizeDrag) return false
     if (!this.engine.beginCellEdit(cell)) return false
     return this.showCellEditor(options)

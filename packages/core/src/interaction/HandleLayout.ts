@@ -68,10 +68,7 @@ function appendColumnHandles(
       if (!field) continue
 
       const right =
-        region.rect.x +
-        colsAxis.indexToPosition(c) +
-        colsAxis.getSize(c) -
-        region.scrollOffsetX
+        region.rect.x + colsAxis.indexToPosition(c) + colsAxis.getSize(c) - region.scrollOffsetX
 
       out.push({
         kind: 'column',

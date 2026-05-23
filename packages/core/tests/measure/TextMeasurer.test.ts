@@ -90,11 +90,7 @@ describe('wrapText', () => {
   })
 
   it('硬换行符强制分行', () => {
-    const result = wrapText(
-      'a\nb',
-      { font: '12px x', maxWidth: 100, lineHeight: 18 },
-      fixedWidth,
-    )
+    const result = wrapText('a\nb', { font: '12px x', maxWidth: 100, lineHeight: 18 }, fixedWidth)
     expect(result.lines).toEqual(['a', 'b'])
   })
 

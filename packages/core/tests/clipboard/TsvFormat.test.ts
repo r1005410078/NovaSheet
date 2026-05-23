@@ -62,11 +62,7 @@ describe('parseTsvToCells', () => {
   })
 
   it('checkbox：true/1/yes → true；false/0/no/空 → false；其它保留 raw string（让 applyPaste 决定 SKIP）', () => {
-    const out = parseTsvToCells(
-      'true\n1\nyes\nfalse\n0\nno\nmaybe',
-      ['done'],
-      schema,
-    )
+    const out = parseTsvToCells('true\n1\nyes\nfalse\n0\nno\nmaybe', ['done'], schema)
     expect(out).toEqual([[true], [true], [true], [false], [false], [false], ['maybe']])
   })
 

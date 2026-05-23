@@ -137,7 +137,14 @@ describe('DomGridHost — contextmenu', () => {
     // pin scroll-host bounding rect: (10, 5)
     scrollHost.getBoundingClientRect = () =>
       ({
-        x: 10, y: 5, left: 10, top: 5, width: 300, height: 200, right: 310, bottom: 205,
+        x: 10,
+        y: 5,
+        left: 10,
+        top: 5,
+        width: 300,
+        height: 200,
+        right: 310,
+        bottom: 205,
         toJSON: () => ({}),
       }) as DOMRect
     const evt = new MouseEvent('contextmenu', {
@@ -179,7 +186,11 @@ describe('DomGridHost — keyboard events', () => {
     host.attach()
 
     const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLDivElement
-    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+    const event = new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
     const prevented = !scrollHost.dispatchEvent(event)
 
     expect(onKeyDown).toHaveBeenCalledWith({

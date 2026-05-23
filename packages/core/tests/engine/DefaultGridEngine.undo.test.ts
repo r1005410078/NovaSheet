@@ -242,7 +242,10 @@ describe('DefaultGridEngine — editCell undo/redo', () => {
     expect(sel.activeCell).toEqual({ rowIndex: 0, colIndex: 0 })
     // 折叠后,selectedRange 应该是单 cell
     expect(sel.selectedRange).toEqual({
-      startRow: 0, endRow: 0, startCol: 0, endCol: 0,
+      startRow: 0,
+      endRow: 0,
+      startCol: 0,
+      endCol: 0,
     })
   })
 
@@ -314,7 +317,9 @@ describe('DefaultGridEngine — clearRange undo/redo', () => {
   it('clearRange 跳过原本就 null 的 cell:undo 只恢复非空格', () => {
     const engine = makeEngine()
     // 手动把 (0,1) 设为 null,模拟混合状态
-    const data = engine.getData() as unknown as { updateCell(rowIndex: number, fieldId: string, value: null): void }
+    const data = engine.getData() as unknown as {
+      updateCell(rowIndex: number, fieldId: string, value: null): void
+    }
     data.updateCell(0, 'b', null)
     expect(engine.getData().getCell(0, 'a')).toBe('x')
     expect(engine.getData().getCell(0, 'b')).toBeNull()
@@ -372,17 +377,18 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
       typed: false,
     }
   }
-  function targetRect(startRow: number, endRow: number, startCol: number, endCol: number): PasteTargetRect {
+  function targetRect(
+    startRow: number,
+    endRow: number,
+    startCol: number,
+    endCol: number,
+  ): PasteTargetRect {
     return { startRow, endRow, startCol, endCol, tile: { rows: 1, cols: 1 } }
   }
 
   it('commitPaste 写入 + push paste 命令', () => {
     const engine = makeEngine()
-    engine.commitPaste(
-      pasteSource([['p', 99]], ['a', 'b']),
-      targetRect(0, 0, 0, 1),
-      ['a', 'b'],
-    )
+    engine.commitPaste(pasteSource([['p', 99]], ['a', 'b']), targetRect(0, 0, 0, 1), ['a', 'b'])
     expect(engine.getData().getCell(0, 'a')).toBe('p')
     expect(engine.getData().getCell(0, 'b')).toBe(99)
     expect(engine.canUndo()).toBe(true)
@@ -390,11 +396,7 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
 
   it('undo commitPaste 恢复 before;redo 恢复 after', () => {
     const engine = makeEngine()
-    engine.commitPaste(
-      pasteSource([['p', 99]], ['a', 'b']),
-      targetRect(0, 0, 0, 1),
-      ['a', 'b'],
-    )
+    engine.commitPaste(pasteSource([['p', 99]], ['a', 'b']), targetRect(0, 0, 0, 1), ['a', 'b'])
     engine.undo()
     expect(engine.getData().getCell(0, 'a')).toBe('x')
     expect(engine.getData().getCell(0, 'b')).toBe(1)
@@ -410,11 +412,13 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
       pasteSource([['p', 'not-a-number']], ['a', 'b']),
       targetRect(0, 0, 0, 1),
       ['a', 'b'],
-      (skipped) => { skippedCount = skipped.length },
+      (skipped) => {
+        skippedCount = skipped.length
+      },
     )
     expect(skippedCount).toBe(1)
     expect(engine.getData().getCell(0, 'a')).toBe('p')
-    expect(engine.getData().getCell(0, 'b')).toBe(1)  // 未变
+    expect(engine.getData().getCell(0, 'b')).toBe(1) // 未变
     engine.undo()
     expect(engine.getData().getCell(0, 'a')).toBe('x')
     expect(engine.getData().getCell(0, 'b')).toBe(1)
@@ -423,11 +427,7 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
   it('全部跳过 → 不 push', () => {
     const engine = makeEngine()
     // 单格 source 落在 b 列(number),'not-a-number' 会被跳过
-    engine.commitPaste(
-      pasteSource([['not-a-number']], ['b']),
-      targetRect(0, 0, 1, 1),
-      ['a', 'b'],
-    )
+    engine.commitPaste(pasteSource([['not-a-number']], ['b']), targetRect(0, 0, 1, 1), ['a', 'b'])
     expect(engine.canUndo()).toBe(false)
   })
 
@@ -458,11 +458,10 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
     const engine = new DefaultGridEngine({ data: composed })
     expect(composed.resolveUnderlyingRow?.(0)).toBe(2)
 
-    engine.commitPaste(
-      pasteSource([['pasted', 99]], ['a', 'b']),
-      targetRect(0, 0, 0, 1),
-      ['a', 'b'],
-    )
+    engine.commitPaste(pasteSource([['pasted', 99]], ['a', 'b']), targetRect(0, 0, 0, 1), [
+      'a',
+      'b',
+    ])
     const cmd = engine.undo()
     expect(cmd?.kind).toBe('paste')
     if (cmd?.kind !== 'paste') return
@@ -484,11 +483,7 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
     hiddenOnReplay.findViewRow = () => -1
     const engine = new DefaultGridEngine({ data: hiddenOnReplay })
 
-    engine.commitPaste(
-      pasteSource([['pasted']], ['a']),
-      targetRect(0, 0, 0, 0),
-      ['a', 'b'],
-    )
+    engine.commitPaste(pasteSource([['pasted']], ['a']), targetRect(0, 0, 0, 0), ['a', 'b'])
     engine.undo()
     expect(source.writesByUnderlying.at(-1)).toEqual({
       row: 2,
@@ -502,11 +497,7 @@ describe('DefaultGridEngine — commitPaste undo/redo', () => {
     const engine = new DefaultGridEngine({ data: view })
     engine.selectCell({ rowIndex: 1, colIndex: 1 })
 
-    engine.commitPaste(
-      pasteSource([['pasted']], ['a']),
-      targetRect(0, 0, 0, 0),
-      ['a', 'b'],
-    )
+    engine.commitPaste(pasteSource([['pasted']], ['a']), targetRect(0, 0, 0, 0), ['a', 'b'])
     view.setOrder([])
     engine.undo()
 

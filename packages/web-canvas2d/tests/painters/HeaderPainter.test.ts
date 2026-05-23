@@ -23,12 +23,13 @@ describe('HeaderPainter — 列头', () => {
     })
     const bgFill = ops.find(
       (o) =>
-        o.op === 'fillRect' &&
-        o.args[1] === 0 &&
-        o.args[3] === denseGridTheme.metrics.headerHeight,
+        o.op === 'fillRect' && o.args[1] === 0 && o.args[3] === denseGridTheme.metrics.headerHeight,
     )
     expect(bgFill).toBeDefined()
-    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.headerBackground })
+    expect(ops).toContainEqual({
+      op: 'set:fillStyle',
+      value: denseGridTheme.colors.headerBackground,
+    })
   })
 
   it('绘制可见列名字段名', () => {
@@ -40,7 +41,9 @@ describe('HeaderPainter — 列头', () => {
       colRange: [0, 2],
       width: 400,
     })
-    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
     expect(texts).toContain('Name')
     expect(texts).toContain('Age')
     expect(texts).toContain('Active')
@@ -122,7 +125,9 @@ describe('HeaderPainter — 列头', () => {
       width: 400,
     })
     expect(ops.some((o) => o.op === 'stroke')).toBe(true)
-    const strokeStyle = ops.find((o) => o.op === 'set:strokeStyle' && o.value === denseGridTheme.colors.gridLine)
+    const strokeStyle = ops.find(
+      (o) => o.op === 'set:strokeStyle' && o.value === denseGridTheme.colors.gridLine,
+    )
     expect(strokeStyle).toBeDefined()
   })
 
@@ -136,7 +141,9 @@ describe('HeaderPainter — 列头', () => {
       width: 400,
       columnLetters: true,
     })
-    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
     expect(texts).toEqual(['A', 'B', 'C'])
   })
 

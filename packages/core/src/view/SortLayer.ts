@@ -61,11 +61,15 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
   wrap(upstream: DataSource): DataSource {
     this.captureSchema(upstream)
     if (this.spec && !this.canSortField(this.spec.fieldId)) this.spec = null
-    return new SortedDataSource(upstream, () => this.spec, (source) => {
-      this.captureSchema(source)
-      if (this.spec && !this.canSortField(this.spec.fieldId)) this.spec = null
-      this.notify?.({ layerId: this.id, reason: 'upstream-reset' })
-    })
+    return new SortedDataSource(
+      upstream,
+      () => this.spec,
+      (source) => {
+        this.captureSchema(source)
+        if (this.spec && !this.canSortField(this.spec.fieldId)) this.spec = null
+        this.notify?.({ layerId: this.id, reason: 'upstream-reset' })
+      },
+    )
   }
 
   headerDecoration(field: Field): HeaderDecoration | null {
@@ -140,7 +144,9 @@ class SortedDataSource implements DataSource {
       }
     }
     this.rebuild()
-    this.unsubscribeFromUpstream = this.upstream.subscribe((event) => this.handleUpstreamEvent(event))
+    this.unsubscribeFromUpstream = this.upstream.subscribe((event) =>
+      this.handleUpstreamEvent(event),
+    )
   }
 
   getRowCount(): number {
@@ -261,9 +267,11 @@ function compareByFieldType(
   field: Field,
 ): number {
   const type = field.type
-  if (type === 'number') return compareNullable(numberValue(left), numberValue(right), compareNumbers)
+  if (type === 'number')
+    return compareNullable(numberValue(left), numberValue(right), compareNumbers)
   if (type === 'date') return compareNullable(dateValue(left), dateValue(right), compareNumbers)
-  if (type === 'checkbox') return compareNullable(checkboxValue(left), checkboxValue(right), compareNumbers)
+  if (type === 'checkbox')
+    return compareNullable(checkboxValue(left), checkboxValue(right), compareNumbers)
   if (type === 'singleSelect') return compareSingleSelect(left, right, field)
   return compareTextLike(left, right)
 }
@@ -287,7 +295,11 @@ function compareTextLike(left: CellValue | undefined, right: CellValue | undefin
   return compareNullable(textValue(left), textValue(right), (a, b) => collator.compare(a, b))
 }
 
-function compareSingleSelect(left: CellValue | undefined, right: CellValue | undefined, field: Field): number {
+function compareSingleSelect(
+  left: CellValue | undefined,
+  right: CellValue | undefined,
+  field: Field,
+): number {
   const choices = Array.isArray(field.options?.choices)
     ? field.options.choices.filter((choice): choice is string => typeof choice === 'string')
     : []
@@ -328,7 +340,8 @@ function numberValue(value: CellValue | undefined): number | null {
 
 function dateValue(value: CellValue | undefined): number | null {
   if (value == null) return null
-  const time = value instanceof Date ? value.getTime() : new Date(value as string | number).getTime()
+  const time =
+    value instanceof Date ? value.getTime() : new Date(value as string | number).getTime()
   return Number.isNaN(time) ? null : time
 }
 

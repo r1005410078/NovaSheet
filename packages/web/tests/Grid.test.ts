@@ -216,9 +216,7 @@ describe('Grid — 浏览器门面', () => {
     const grid = new Grid(el, { data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     expect(host.style.getPropertyValue('--ns-scrollbar-size')).toBe('10px')
-    expect(host.style.getPropertyValue('--ns-scrollbar-thumb')).toBe(
-      'rgba(31, 35, 40, 0.28)',
-    )
+    expect(host.style.getPropertyValue('--ns-scrollbar-thumb')).toBe('rgba(31, 35, 40, 0.28)')
     grid.destroy()
   })
 
@@ -277,7 +275,9 @@ describe('Grid — 浏览器门面', () => {
 
     grid.setFrozen({ topRows: 1, leftCols: 1, rightCols: 1 })
 
-    const regionIds = canvas2dDelegate(grid).engine.getFrame().viewport.regions.map((region) => region.id)
+    const regionIds = canvas2dDelegate(grid)
+      .engine.getFrame()
+      .viewport.regions.map((region) => region.id)
     expect(regionIds).toContain('middleRight')
     expect(regionIds).toContain('topRight')
     expect(spy).toHaveBeenCalled()
@@ -588,7 +588,13 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
     const handler = mock((_event: { spec: unknown }) => {})
 
     grid.on('sortChange', handler)
-    delegate.runtime.handleHostContextMenu({ x: 210, y: 10, shiftKey: false, clientX: 210, clientY: 10 })
+    delegate.runtime.handleHostContextMenu({
+      x: 210,
+      y: 10,
+      shiftKey: false,
+      clientX: 210,
+      clientY: 10,
+    })
     delegate.runtime.handleContextMenuSelected('sort-asc')
 
     expect(handler).toHaveBeenCalledWith({ spec: { fieldId: 'age', direction: 'asc' } })

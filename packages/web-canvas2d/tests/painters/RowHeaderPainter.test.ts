@@ -13,7 +13,9 @@ describe('RowHeaderPainter', () => {
       rect: { x: 0, y: 32, width: 44, height: 120 },
       scrollOffsetY: 0,
     })
-    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
     expect(texts).toContain('1')
     expect(texts).toContain('2')
     expect(texts).toContain('3')

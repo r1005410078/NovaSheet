@@ -10,21 +10,21 @@
 
 提供 Sheets/Excel 风格的填充柄:选区右下角出现小手柄,用户拖拽后把当前选区填充到相邻目标区域。Phase 4.3 交付 **基础复制 + 序列外推**,不交付公式语义。
 
-| 能力 | 是否交付 | 说明 |
-| --- | --- | --- |
-| 选区右下角填充柄 | 是 | DOM overlay,不在 canvas 上接 pointer |
-| 向下 / 向右 / 向上 / 向左拖拽填充 | 是 | 只允许沿一个主方向扩展,与表格软件一致 |
-| 拖拽目标区域预览 | 是 | 用更轻的 DOM 虚线框显示即将写入的 fill range |
-| 单值复制 | 是 | 单格或单样本无法推导序列时复制 |
-| 数字等差序列 | 是 | `1,2 -> 3,4`;单个数字默认复制 |
-| 文本尾号序列 | 是 | `Item 1, Item 2 -> Item 3`;单个文本默认复制 |
-| Date 按毫秒差序列 | 是 | 两个 Date 可推导毫秒差;常见日期表现为按天填充;单个 Date 默认复制 |
-| 填充后 wrap 文本自动行高 | 是 | 只对本次 fill 实际写入的行做 autofit |
-| checkbox / select / array / url / 普通文本复制 | 是 | 不做语义外推 |
-| Undo / Redo | 是 | 一次拖拽提交为一条 undo 命令 |
-| 公式引用外推 | 否 | 当前没有公式模型/解析器,避免假支持 |
-| 非相邻区域填充 / Ctrl modifier 复制切换 | 否 | 后续增强 |
-| 双击 fill handle 自动填充到数据末尾 | 否 | 后续增强 |
+| 能力                                           | 是否交付 | 说明                                                             |
+| ---------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| 选区右下角填充柄                               | 是       | DOM overlay,不在 canvas 上接 pointer                             |
+| 向下 / 向右 / 向上 / 向左拖拽填充              | 是       | 只允许沿一个主方向扩展,与表格软件一致                            |
+| 拖拽目标区域预览                               | 是       | 用更轻的 DOM 虚线框显示即将写入的 fill range                     |
+| 单值复制                                       | 是       | 单格或单样本无法推导序列时复制                                   |
+| 数字等差序列                                   | 是       | `1,2 -> 3,4`;单个数字默认复制                                    |
+| 文本尾号序列                                   | 是       | `Item 1, Item 2 -> Item 3`;单个文本默认复制                      |
+| Date 按毫秒差序列                              | 是       | 两个 Date 可推导毫秒差;常见日期表现为按天填充;单个 Date 默认复制 |
+| 填充后 wrap 文本自动行高                       | 是       | 只对本次 fill 实际写入的行做 autofit                             |
+| checkbox / select / array / url / 普通文本复制 | 是       | 不做语义外推                                                     |
+| Undo / Redo                                    | 是       | 一次拖拽提交为一条 undo 命令                                     |
+| 公式引用外推                                   | 否       | 当前没有公式模型/解析器,避免假支持                               |
+| 非相邻区域填充 / Ctrl modifier 复制切换        | 否       | 后续增强                                                         |
+| 双击 fill handle 自动填充到数据末尾            | 否       | 后续增强                                                         |
 
 ### 1.1 术语
 
@@ -171,7 +171,12 @@ export function computeFillWrites(input: ComputeFillWritesInput): readonly FillW
 export type UndoCommand =
   | { kind: 'editCell'; rowIndex: number; fieldId: string; before: CellValue; after: CellValue }
   | { kind: 'clearRange'; range: CellRange; before: ReadonlyArray<CellWrite> }
-  | { kind: 'paste'; target: CellRange; before: ReadonlyArray<CellWrite>; after: ReadonlyArray<CellWrite> }
+  | {
+      kind: 'paste'
+      target: CellRange
+      before: ReadonlyArray<CellWrite>
+      after: ReadonlyArray<CellWrite>
+    }
   | { kind: 'resizeRow'; rowIndex: number; before: number; after: number }
   | { kind: 'resizeColumn'; colIndex: number; before: number; after: number }
   | {

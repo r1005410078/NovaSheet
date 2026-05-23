@@ -50,26 +50,26 @@ Phase 4.0 交付了菜单 shell + `onContextMenuAction` 回调；4.0 内部不�
 
 ### 4.1 Cut
 
-| 触发 | 条件 | 行为 |
-|---|---|---|
+| 触发           | 条件                                    | 行为                                                                    |
+| -------------- | --------------------------------------- | ----------------------------------------------------------------------- |
 | Ctrl+X / Cmd+X | grid 持焦点 + selection 非空 + 非编辑中 | snapshot 选区 + 写系统剪贴板 + 内部缓存 + **立即清原格** + emit `onCut` |
-| 菜单 Cut 项 | 同上 | 同上 |
+| 菜单 Cut 项    | 同上                                    | 同上                                                                    |
 
 清原格语义：对 selectedRange 每个 cell 调 `data.updateCell(row, fieldId, null)`。
 
 ### 4.2 Copy
 
-| 触发 | 条件 | 行为 |
-|---|---|---|
+| 触发           | 条件                                    | 行为                                                               |
+| -------------- | --------------------------------------- | ------------------------------------------------------------------ |
 | Ctrl+C / Cmd+C | grid 持焦点 + selection 非空 + 非编辑中 | snapshot + 写系统剪贴板 + 内部缓存 + emit `onCopy`；**不修改数据** |
-| 菜单 Copy 项 | 同上 | 同上 |
+| 菜单 Copy 项   | 同上                                    | 同上                                                               |
 
 ### 4.3 Paste
 
-| 触发 | 条件 | 行为 |
-|---|---|---|
+| 触发           | 条件                                                   | 行为                                                       |
+| -------------- | ------------------------------------------------------ | ---------------------------------------------------------- |
 | Ctrl+V / Cmd+V | grid 持焦点 + active cell + 非编辑中 + DataSource 可写 | 读剪贴板 → 决定 source → 计算 target → 逐格 coerce + write |
-| 菜单 Paste 项 | 同上 | 同上 |
+| 菜单 Paste 项  | 同上                                                   | 同上                                                       |
 
 #### Source 决定
 
@@ -82,12 +82,12 @@ Phase 4.0 交付了菜单 shell + `onContextMenuAction` 回调；4.0 内部不�
 
 记 source 为 `R0 × C0` 个格，active cell 为 `(r, c)`，当前 selectedRange 大小 `Rs × Cs`：
 
-| 情况 | target rect |
-|---|---|
-| `Rs × Cs == 1 × 1`（单格选区） | active cell 起，向右下扩 `R0 × C0` |
-| `Rs == R0 && Cs == C0`（一对一） | selectedRange 原样 |
-| `Rs % R0 == 0 && Cs % C0 == 0`（整数倍） | 在 selectedRange 内**铺砌** tile |
-| 其它（非倍数 / 超出） | 从 selectedRange 左上角填，多出的 source 丢弃；不足的 target 不动 |
+| 情况                                     | target rect                                                       |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| `Rs × Cs == 1 × 1`（单格选区）           | active cell 起，向右下扩 `R0 × C0`                                |
+| `Rs == R0 && Cs == C0`（一对一）         | selectedRange 原样                                                |
+| `Rs % R0 == 0 && Cs % C0 == 0`（整数倍） | 在 selectedRange 内**铺砌** tile                                  |
+| 其它（非倍数 / 超出）                    | 从 selectedRange 左上角填，多出的 source 丢弃；不足的 target 不动 |
 
 边界裁剪：target rect 超出 grid 范围时按 `rowCount / colCount` 裁切，超出部分丢弃。
 
@@ -95,14 +95,14 @@ Phase 4.0 交付了菜单 shell + `onContextMenuAction` 回调；4.0 内部不�
 
 按 target cell 对应字段的 `type`：
 
-| Field type | 字符串 value 处理 |
-|---|---|
-| `text` | 直接 set |
-| `number` | `Number(trim)`；`NaN` 或空 → **跳过 + 记 onPasteSkipped** |
-| `singleSelect` / `multiSelect` | 4.1 只接 string 形式（后续 Phase 6 字段编辑器再扩） |
-| `date` | `Date.parse(trim)`；非法 → 跳过 |
-| `checkbox` | `'true' / '1' / 'yes'` → true；`'false' / '0' / 'no' / ''` → false；其它跳过 |
-| `url` | text 同样处理 |
+| Field type                     | 字符串 value 处理                                                            |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| `text`                         | 直接 set                                                                     |
+| `number`                       | `Number(trim)`；`NaN` 或空 → **跳过 + 记 onPasteSkipped**                    |
+| `singleSelect` / `multiSelect` | 4.1 只接 string 形式（后续 Phase 6 字段编辑器再扩）                          |
+| `date`                         | `Date.parse(trim)`；非法 → 跳过                                              |
+| `checkbox`                     | `'true' / '1' / 'yes'` → true；`'false' / '0' / 'no' / ''` → false；其它跳过 |
+| `url`                          | text 同样处理                                                                |
 
 内部缓存命中时**不走 coerce**——已是原始类型，直接 `updateCell`。
 
@@ -117,6 +117,7 @@ Phase 4.0 交付了菜单 shell + `onContextMenuAction` 回调；4.0 内部不�
 ### 4.5 编辑中的特殊处理
 
 cell editor 打开期间：
+
 - **Ctrl+C/X/V 不被 runtime 拦截** —— textarea / input 走浏览器原生剪贴板（编辑器内文本片段操作）
 - 菜单也不开（Phase 4.0 spec §4.1 已经 commit edit 后才开）
 
@@ -172,10 +173,12 @@ class Grid {
 ### 5.1 与 4.0 menu 的衔接
 
 `onContextMenuAction` 在 4.1 之后的解析：
+
 1. consumer 传了 callback → 完全由 consumer 处理（4.0 行为保留，最大灵活）
 2. consumer **没传** → runtime 内部 dispatch：`'cut' → grid.cut()`、`'copy' → grid.copy()`、`'paste' → grid.paste()`
 
 Paste 菜单项的 `disabled` 计算从此变成：
+
 - `data` 不是 `MutableDataSource` → disabled
 - 否则 → enabled（不再依赖 `clipboardReady`；外部剪贴板有内容 vs 没有，4.1 不预知，点了才知道）
 
@@ -185,15 +188,15 @@ Paste 菜单项的 `disabled` 计算从此变成：
 
 ### 6.1 包内位置
 
-| 件 | 包 | 备注 |
-|---|---|---|
-| `TsvFormat.ts`（serialize / parse） | `@novasheet/core/clipboard` | 纯函数，平台无关 |
-| `ClipboardModel.ts`（snapshot + cache） | `@novasheet/core/clipboard` | 内部 Map<gridId, snapshot> 类型 |
-| `ApplyPaste.ts`（target rect + coerce + write） | `@novasheet/core/clipboard` | 调 `MutableDataSource.updateCell` |
-| `WebClipboardAdapter.ts`（navigator.clipboard 封装 + 浏览器 fallback） | `@novasheet/web/clipboard` | 异步 read/write 接口 |
-| `WebGridRuntime` 扩展 | `@novasheet/web/runtime` | keydown 路由 Ctrl+X/C/V + 内部缓存 + onContextMenuAction 默认实现 |
-| `Canvas2DBackend` 装配 | `@novasheet/web/backends` | 注入 adapter + 接 runtime |
-| Storybook story | `apps/storybook` | 显示 copy / cut / paste + skip 反馈 |
+| 件                                                                     | 包                          | 备注                                                              |
+| ---------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------- |
+| `TsvFormat.ts`（serialize / parse）                                    | `@novasheet/core/clipboard` | 纯函数，平台无关                                                  |
+| `ClipboardModel.ts`（snapshot + cache）                                | `@novasheet/core/clipboard` | 内部 Map<gridId, snapshot> 类型                                   |
+| `ApplyPaste.ts`（target rect + coerce + write）                        | `@novasheet/core/clipboard` | 调 `MutableDataSource.updateCell`                                 |
+| `WebClipboardAdapter.ts`（navigator.clipboard 封装 + 浏览器 fallback） | `@novasheet/web/clipboard`  | 异步 read/write 接口                                              |
+| `WebGridRuntime` 扩展                                                  | `@novasheet/web/runtime`    | keydown 路由 Ctrl+X/C/V + 内部缓存 + onContextMenuAction 默认实现 |
+| `Canvas2DBackend` 装配                                                 | `@novasheet/web/backends`   | 注入 adapter + 接 runtime                                         |
+| Storybook story                                                        | `apps/storybook`            | 显示 copy / cut / paste + skip 反馈                               |
 
 依赖方向不变：`core ← web ← web-canvas2d`。Core 的 clipboard 模块不依赖 `navigator.clipboard`。
 
@@ -275,31 +278,31 @@ Ctrl+V 或 menu Paste
 
 ## 8. Testing
 
-| 测试 | 文件 |
-|---|---|
-| TSV serialize / parse round-trip（全 7 种 field type） | `packages/core/tests/clipboard/TsvFormat.test.ts` |
-| `parseTsvToCells` 类型 coerce 边界（空串 / NaN / 非法日期 / "true"） | 同上 |
-| `computePasteTarget` 四种 case（单格 / 一对一 / 整数倍 tile / mismatched） | `packages/core/tests/clipboard/ApplyPaste.test.ts` |
-| `applyPaste` 跳过 callback 计数 | 同上 |
-| `engine.clearRange` 对 MutableDataSource 工作 | `packages/core/tests/engine/DefaultGridEngine.test.ts` |
-| `WebClipboardAdapter` mock navigator.clipboard | `packages/web/tests/clipboard/` |
-| keyboard Ctrl+X/C/V routing；editor 中不拦截 | `packages/web/tests/runtime/WebGridRuntime.test.ts` |
-| menu `'copy'` action 走默认引擎（consumer 不传 onContextMenuAction） | `packages/web/tests/Grid.test.ts` |
-| Storybook 手动验证 | `apps/storybook/src/stories/Clipboard.stories.ts` |
+| 测试                                                                       | 文件                                                   |
+| -------------------------------------------------------------------------- | ------------------------------------------------------ |
+| TSV serialize / parse round-trip（全 7 种 field type）                     | `packages/core/tests/clipboard/TsvFormat.test.ts`      |
+| `parseTsvToCells` 类型 coerce 边界（空串 / NaN / 非法日期 / "true"）       | 同上                                                   |
+| `computePasteTarget` 四种 case（单格 / 一对一 / 整数倍 tile / mismatched） | `packages/core/tests/clipboard/ApplyPaste.test.ts`     |
+| `applyPaste` 跳过 callback 计数                                            | 同上                                                   |
+| `engine.clearRange` 对 MutableDataSource 工作                              | `packages/core/tests/engine/DefaultGridEngine.test.ts` |
+| `WebClipboardAdapter` mock navigator.clipboard                             | `packages/web/tests/clipboard/`                        |
+| keyboard Ctrl+X/C/V routing；editor 中不拦截                               | `packages/web/tests/runtime/WebGridRuntime.test.ts`    |
+| menu `'copy'` action 走默认引擎（consumer 不传 onContextMenuAction）       | `packages/web/tests/Grid.test.ts`                      |
+| Storybook 手动验证                                                         | `apps/storybook/src/stories/Clipboard.stories.ts`      |
 
 ---
 
 ## 9. Risks / Open Questions
 
-| # | 风险 / 问题 | 4.1 应对 |
-|---|---|---|
-| R1 | Safari `navigator.clipboard.readText` 需要用户手势 + HTTPS；不行就抛 | catch 后 warn + treat as empty clipboard；不影响 grid 其它功能 |
-| R2 | 包含 `\t` / `\n` 的 text 在 round-trip 会拆格 | spec §7.1 已声明；后续 RFC 4180 升级 |
-| R3 | 大区域复制（10K rows × 100 cols）TSV 字符串可能 MB 级，writeText 慢 | 4.1 不优化；后续可加阈值 + chunked 或异步进度 |
-| R4 | Sheets 风格 Cut 立即清——若 paste 失败（如外部 paste 进了别的应用），原数据丢失 | 用户接受 trade-off；后续 4.2 Undo 兜底 |
-| OQ1 | `onPasteSkipped` 仅 type 还是含 readonly？ | 4.1 含 `'type' \| 'readonly'` 两种 reason，便于 consumer toast |
-| OQ2 | TSV hash 用什么算法 | FNV-1a 32-bit string hash（轻量、足够区分） |
-| OQ3 | Multi-Grid 同 page，复制 A 粘贴 B 走系统剪贴板，是否走类型缓存命中？ | 否——hash 相同但 cache 在 A 里不在 B 里，B 走 TSV parse 路径，可能丢类型；接受 |
+| #   | 风险 / 问题                                                                    | 4.1 应对                                                                      |
+| --- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| R1  | Safari `navigator.clipboard.readText` 需要用户手势 + HTTPS；不行就抛           | catch 后 warn + treat as empty clipboard；不影响 grid 其它功能                |
+| R2  | 包含 `\t` / `\n` 的 text 在 round-trip 会拆格                                  | spec §7.1 已声明；后续 RFC 4180 升级                                          |
+| R3  | 大区域复制（10K rows × 100 cols）TSV 字符串可能 MB 级，writeText 慢            | 4.1 不优化；后续可加阈值 + chunked 或异步进度                                 |
+| R4  | Sheets 风格 Cut 立即清——若 paste 失败（如外部 paste 进了别的应用），原数据丢失 | 用户接受 trade-off；后续 4.2 Undo 兜底                                        |
+| OQ1 | `onPasteSkipped` 仅 type 还是含 readonly？                                     | 4.1 含 `'type' \| 'readonly'` 两种 reason，便于 consumer toast                |
+| OQ2 | TSV hash 用什么算法                                                            | FNV-1a 32-bit string hash（轻量、足够区分）                                   |
+| OQ3 | Multi-Grid 同 page，复制 A 粘贴 B 走系统剪贴板，是否走类型缓存命中？           | 否——hash 相同但 cache 在 A 里不在 B 里，B 走 TSV parse 路径，可能丢类型；接受 |
 
 ---
 

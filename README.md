@@ -21,29 +21,29 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ### 已交付
 
-| 里程碑     | 能力                                                                                                                                            |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| M1         | Canvas 单帧渲染 · Theme Token · DataSource · ChunkedAxis · Cell / Header / GridLines painter · `FrameScheduler` · Grid facade（`destroy` 幂等） |
-| M2         | 原生滚动（`NativeScroller` + `ScrollMapper` 非线性 `scrollTop` 映射）· `scrollToRow` / `scrollToCell` · 1M+ 行虚拟滚动                          |
-| M3         | 顶 / 左 / 右冻结（`FrozenRegions` + 分区域绘制 + 冻结分隔线）· `frozen` 配置 / `setFrozen()` · 动态行高 / 多行文本 autofit                    |
-| Phase 2    | Canvas 交互绘制分层：background / content / grid / overlay · overlay 层入口预留                                      |
-| Phase 3.1  | `SelectionModel` · `hitTestCell` · 点击单元格选中 · overlay 层绘制选区填充与 active cell 边框                    |
-| Phase 3.2  | Shift + 点击扩展选区 · pointer 拖拽框选 · 拖选边缘自动滚动 · Excel 行列头联动高亮 · 多格 selectedRange overlay 绘制 |
-| Phase 3.3  | 方向键 / Tab / Enter 移动 active cell · Shift + 方向键扩展选区 · 滚动跟随焦点格                         |
-| Phase 3.4  | DOM resize handle：列头拖列宽、行号列拖行高（最小 20px）· 冻结区与普通区同步                           |
-| Phase 3.5  | 基础编辑：选中即打字（Sheets 式）· F2/双击原位编辑 · Esc 取消 · Enter 提交下移 · text/number 列      |
-| Phase 4.0  | 单元格右键菜单 ✅ · body 右键打开 Cut / Copy / Paste（portal 到 body 避祖先 transform）· `onContextMenuAction(action, ctx)` 外抛 · ARIA + 键盘导航 |
-| Phase 4.1  | 剪贴板 ✅ · Ctrl/Cmd+X/C/V 快捷键 + 菜单同一引擎 · 系统剪贴板 TSV + 内部类型缓存（hash 验证）· Excel/Sheets 双向互通 · 类型不匹配跳过 + `onPasteSkipped` 事件 · `grid.copy()/cut()/paste()` 编程 API |
-| Phase 4.2  | Undo / Redo ✅ · UndoStack(深 100) · cell edit / Cut / Paste / resize 进栈 · `Grid.undo() / redo() / canUndo() / canRedo()` |
-| Phase 4.3  | 填充柄 ✅ · 选区右下角 DOM fill handle · 四方向拖拽 · 单值复制 / 数字等差 / 文本尾号 / Date 序列 · fill 进 undo/redo |
-| Phase 4.4  | 排序 / 筛选 ✅ · ViewLayer / ViewPipeline · 列头右键排序筛选菜单 · Header sort/filter 图标 · DOM FilterPopover · selection / undo 按底层行语义保持 |
+| 里程碑    | 能力                                                                                                                                                                                                 |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1        | Canvas 单帧渲染 · Theme Token · DataSource · ChunkedAxis · Cell / Header / GridLines painter · `FrameScheduler` · Grid facade（`destroy` 幂等）                                                      |
+| M2        | 原生滚动（`NativeScroller` + `ScrollMapper` 非线性 `scrollTop` 映射）· `scrollToRow` / `scrollToCell` · 1M+ 行虚拟滚动                                                                               |
+| M3        | 顶 / 左 / 右冻结（`FrozenRegions` + 分区域绘制 + 冻结分隔线）· `frozen` 配置 / `setFrozen()` · 动态行高 / 多行文本 autofit                                                                           |
+| Phase 2   | Canvas 交互绘制分层：background / content / grid / overlay · overlay 层入口预留                                                                                                                      |
+| Phase 3.1 | `SelectionModel` · `hitTestCell` · 点击单元格选中 · overlay 层绘制选区填充与 active cell 边框                                                                                                        |
+| Phase 3.2 | Shift + 点击扩展选区 · pointer 拖拽框选 · 拖选边缘自动滚动 · Excel 行列头联动高亮 · 多格 selectedRange overlay 绘制                                                                                  |
+| Phase 3.3 | 方向键 / Tab / Enter 移动 active cell · Shift + 方向键扩展选区 · 滚动跟随焦点格                                                                                                                      |
+| Phase 3.4 | DOM resize handle：列头拖列宽、行号列拖行高（最小 20px）· 冻结区与普通区同步                                                                                                                         |
+| Phase 3.5 | 基础编辑：选中即打字（Sheets 式）· F2/双击原位编辑 · Esc 取消 · Enter 提交下移 · text/number 列                                                                                                      |
+| Phase 4.0 | 单元格右键菜单 ✅ · body 右键打开 Cut / Copy / Paste（portal 到 body 避祖先 transform）· `onContextMenuAction(action, ctx)` 外抛 · ARIA + 键盘导航                                                   |
+| Phase 4.1 | 剪贴板 ✅ · Ctrl/Cmd+X/C/V 快捷键 + 菜单同一引擎 · 系统剪贴板 TSV + 内部类型缓存（hash 验证）· Excel/Sheets 双向互通 · 类型不匹配跳过 + `onPasteSkipped` 事件 · `grid.copy()/cut()/paste()` 编程 API |
+| Phase 4.2 | Undo / Redo ✅ · UndoStack(深 100) · cell edit / Cut / Paste / resize 进栈 · `Grid.undo() / redo() / canUndo() / canRedo()`                                                                          |
+| Phase 4.3 | 填充柄 ✅ · 选区右下角 DOM fill handle · 四方向拖拽 · 单值复制 / 数字等差 / 文本尾号 / Date 序列 · fill 进 undo/redo                                                                                 |
+| Phase 4.4 | 排序 / 筛选 ✅ · ViewLayer / ViewPipeline · 列头右键排序筛选菜单 · Header sort/filter 图标 · DOM FilterPopover · selection / undo 按底层行语义保持                                                   |
 
 ### 暂未交付
 
-| 阶段                 | 内容                                                                               |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| Phase 4.5+           | 行列结构操作 · 单元格合并 / 格式化 · 公式 / 导入导出 · 多视图 |
-| 低优先级验证项       | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机验证             |
+| 阶段           | 内容                                                                    |
+| -------------- | ----------------------------------------------------------------------- |
+| Phase 4.5+     | 行列结构操作 · 单元格合并 / 格式化 · 公式 / 导入导出 · 多视图           |
+| 低优先级验证项 | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机验证 |
 
 架构细节见 [docs/architecture.md](docs/architecture.md)。
 
@@ -107,13 +107,13 @@ grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 
 无需额外 API：挂载 `Grid` 后，**先点击表格**获得焦点，即可使用：
 
-| 操作 | 效果 |
-|------|------|
+| 操作                     | 效果                              |
+| ------------------------ | --------------------------------- |
 | 单击 / Shift+单击 / 拖拽 | 单选、扩展选区、框选（3.1 / 3.2） |
-| ↑↓←→ | 移动 active cell |
-| Shift + ↑↓←→ | 扩展选区 |
-| Tab / Shift+Tab | 右移 / 左移（末列换行） |
-| Enter / Shift+Enter | 下移 / 上移 |
+| ↑↓←→                     | 移动 active cell                  |
+| Shift + ↑↓←→             | 扩展选区                          |
+| Tab / Shift+Tab          | 右移 / 左移（末列换行）           |
+| Enter / Shift+Enter      | 下移 / 上移                       |
 
 焦点格滚出视口时会自动滚入可见区域。完整说明见 Storybook **表格/选择与键盘**。
 
@@ -243,30 +243,31 @@ Phase 2 先整理交互绘制的层级边界，为选区、hover、active cell�
 
 Phase 3 聚焦“用户能像表格一样操作当前画布”，不承载复杂数据结构能力：
 
-| 子阶段    | 范围                     | 交付内容                                                                                                                                      |
-| --------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 3.1 | 选择模型 / 点击高亮      | 引入 `SelectionModel` / active cell / selected range；点击单元格后 overlay 层绘制选区填充与活动单元格边框。                                  |
-| Phase 3.2 | Shift / 拖拽扩展选择 ✅  | 基于 3.1 的 anchor / extent 扩展区域选择；支持 Shift + 点击、Shift + 方向键的数据状态、鼠标拖拽框选、拖选边缘自动滚动，以及 Excel 行列头联动高亮。 |
-| Phase 3.3 | 键盘导航 ✅              | 方向键、Tab、Enter 移动 active cell；Shift + 方向键扩展 selected range；滚动跟随 active cell。                                                |
-| Phase 3.4 | 行高 / 列宽 resize ✅    | DOM handle 层（列头 / 行号列命中区）；拖拽调整行高列宽；冻结与普通区每帧 sync。                                      |
-| Phase 3.5 | 基础编辑 ✅              | 选中后直接键入进入编辑（Sheets 式）；F2 / 双击在原内容末尾编辑；Esc 取消；编辑中 Enter 提交并下移。                                        |
+| 子阶段    | 范围                    | 交付内容                                                                                                                                           |
+| --------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 3.1 | 选择模型 / 点击高亮     | 引入 `SelectionModel` / active cell / selected range；点击单元格后 overlay 层绘制选区填充与活动单元格边框。                                        |
+| Phase 3.2 | Shift / 拖拽扩展选择 ✅ | 基于 3.1 的 anchor / extent 扩展区域选择；支持 Shift + 点击、Shift + 方向键的数据状态、鼠标拖拽框选、拖选边缘自动滚动，以及 Excel 行列头联动高亮。 |
+| Phase 3.3 | 键盘导航 ✅             | 方向键、Tab、Enter 移动 active cell；Shift + 方向键扩展 selected range；滚动跟随 active cell。                                                     |
+| Phase 3.4 | 行高 / 列宽 resize ✅   | DOM handle 层（列头 / 行号列命中区）；拖拽调整行高列宽；冻结与普通区每帧 sync。                                                                    |
+| Phase 3.5 | 基础编辑 ✅             | 选中后直接键入进入编辑（Sheets 式）；F2 / 双击在原内容末尾编辑；Esc 取消；编辑中 Enter 提交并下移。                                                |
 
 ### Phase 4 剪贴板与结构操作
 
 设计文档：
+
 - [Phase 4.0 右键菜单](docs/superpowers/specs/2026-05-17-context-menu-design.md)
 - [Phase 4.1 剪贴板](docs/superpowers/specs/2026-05-18-clipboard-design.md)
 - [Phase 4.2 Undo / Redo](docs/superpowers/specs/2026-05-21-undo-redo-design.md)
 - [Phase 4.3 填充柄](docs/superpowers/specs/2026-05-21-fill-handle-design.md)
 
-| 子阶段    | 范围                         | 交付内容                                                                                    |
-| --------- | ---------------------------- | ------------------------------------------------------------------------------------------- |
-| Phase 4.0 ✅ | 单元格右键菜单               | DOM `ContextMenuLayer`（portal 到 body 避开祖先 transform）；Cut / Copy / Paste 条目；Paste 默认 disabled，`Grid.setClipboardReady(true)` 启用；选中项走 `onContextMenuAction(action, ctx)` 回调；ARIA menu pattern + ↑↓/Home/End/Enter/Esc/Tab。 |
-| Phase 4.1 ✅ | 剪贴板                  | TSV 序列化 + 内部类型缓存（FNV-1a hash 验证）；Ctrl/Cmd+X/C/V 与菜单同一引擎；Cut 立即清（Sheets 风格）；Excel/Sheets 双向互通；类型不匹配跳过 + `onPasteSkipped` 事件。 |
-| Phase 4.2 ✅ | Undo / Redo                  | UndoStack(深 100)+ discriminated-union UndoCommand；cell edit / Cut / Paste / Row+Col resize 进栈；`Cmd/Ctrl+Z`、`Cmd+Shift+Z`、`Ctrl+Y` 键盘；编辑中 Cmd/Ctrl+Z 交给浏览器 input 原生；Undo/Redo 后选区恢复到受影响范围；`Grid.undo() / redo() / canUndo() / canRedo()` + `onUndo / onRedo` 事件。 |
-| Phase 4.3 ✅ | 填充柄 | 选区右下角 DOM fill handle；支持向下/上/右/左拖拽；单值复制、数字等差、文本尾号、Date 序列；拖拽 preview；一次 fill 进 undo/redo；`Grid.onFill()` 事件。 |
-| Phase 4.4 ✅ | 排序 / 筛选                  | `ViewLayer` / `ViewPipeline` 组合视图；列头右键排序 / 筛选菜单；Canvas header sort/filter 图标；DOM `FilterPopover`；排序筛选下 selection / undo / redo 以底层行语义保持。 |
-| Phase 4.5 | 行列结构 + 头区右键菜单      | 插入 / 删除 / 隐藏行列；**列头 / 行头** context menu（依赖本阶段 API）。                  |
+| 子阶段       | 范围                    | 交付内容                                                                                                                                                                                                                                                                                            |
+| ------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 4.0 ✅ | 单元格右键菜单          | DOM `ContextMenuLayer`（portal 到 body 避开祖先 transform）；Cut / Copy / Paste 条目；Paste 默认 disabled，`Grid.setClipboardReady(true)` 启用；选中项走 `onContextMenuAction(action, ctx)` 回调；ARIA menu pattern + ↑↓/Home/End/Enter/Esc/Tab。                                                   |
+| Phase 4.1 ✅ | 剪贴板                  | TSV 序列化 + 内部类型缓存（FNV-1a hash 验证）；Ctrl/Cmd+X/C/V 与菜单同一引擎；Cut 立即清（Sheets 风格）；Excel/Sheets 双向互通；类型不匹配跳过 + `onPasteSkipped` 事件。                                                                                                                            |
+| Phase 4.2 ✅ | Undo / Redo             | UndoStack(深 100)+ discriminated-union UndoCommand；cell edit / Cut / Paste / Row+Col resize 进栈；`Cmd/Ctrl+Z`、`Cmd+Shift+Z`、`Ctrl+Y` 键盘；编辑中 Cmd/Ctrl+Z 交给浏览器 input 原生；Undo/Redo 后选区恢复到受影响范围；`Grid.undo() / redo() / canUndo() / canRedo()` + `onUndo / onRedo` 事件。 |
+| Phase 4.3 ✅ | 填充柄                  | 选区右下角 DOM fill handle；支持向下/上/右/左拖拽；单值复制、数字等差、文本尾号、Date 序列；拖拽 preview；一次 fill 进 undo/redo；`Grid.onFill()` 事件。                                                                                                                                            |
+| Phase 4.4 ✅ | 排序 / 筛选             | `ViewLayer` / `ViewPipeline` 组合视图；列头右键排序 / 筛选菜单；Canvas header sort/filter 图标；DOM `FilterPopover`；排序筛选下 selection / undo / redo 以底层行语义保持。                                                                                                                          |
+| Phase 4.5    | 行列结构 + 头区右键菜单 | 插入 / 删除 / 隐藏行列；**列头 / 行头** context menu（依赖本阶段 API）。                                                                                                                                                                                                                            |
 
 Phase 3.1 会先把“后续 Shift 扩展选择、拖拽选择的基础状态”建好，但不会一次性交付全部选择手势。这个基础状态主要包括：
 

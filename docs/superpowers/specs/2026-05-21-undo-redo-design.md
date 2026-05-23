@@ -10,16 +10,16 @@
 
 提供 Sheets/Excel 风格的撤销 / 重做,覆盖用户能从 UI 触发的全部数据写入与几何 resize:
 
-| 操作 | 入口 | 是否进 undo 栈 |
-| --- | --- | --- |
-| Cell edit commit(Enter / blur 提交) | `engine.commitCellEdit()` | 是 |
-| Cut(包括 Backspace / Delete 清除选区,4.1 已经走同路径) | `engine.clearRange(range)` | 是 |
-| Paste | `engine.applyPaste(target, payload)` | 是 |
-| Row height resize(拖拽 pointerup / handle 键盘 arrow) | 新 `engine.commitRowResize(row, old, new)` | 是 |
-| Column width resize(同上) | 新 `engine.commitColumnResize(col, old, new)` | 是 |
-| `engine.setRowHeight` / `setColumnWidth` 直调 | preview / autofit 路径 | 否 |
-| 滚动 / 选区移动 / 主题切换 / 冻结切换 / 视口尺寸变化 | 现有接口 | 否 |
-| Fill handle / 排序 / 行列结构变更 | 后续 Phase 4.3-4.5 | 不在 4.2 范围 |
+| 操作                                                   | 入口                                          | 是否进 undo 栈 |
+| ------------------------------------------------------ | --------------------------------------------- | -------------- |
+| Cell edit commit(Enter / blur 提交)                    | `engine.commitCellEdit()`                     | 是             |
+| Cut(包括 Backspace / Delete 清除选区,4.1 已经走同路径) | `engine.clearRange(range)`                    | 是             |
+| Paste                                                  | `engine.applyPaste(target, payload)`          | 是             |
+| Row height resize(拖拽 pointerup / handle 键盘 arrow)  | 新 `engine.commitRowResize(row, old, new)`    | 是             |
+| Column width resize(同上)                              | 新 `engine.commitColumnResize(col, old, new)` | 是             |
+| `engine.setRowHeight` / `setColumnWidth` 直调          | preview / autofit 路径                        | 否             |
+| 滚动 / 选区移动 / 主题切换 / 冻结切换 / 视口尺寸变化   | 现有接口                                      | 否             |
+| Fill handle / 排序 / 行列结构变更                      | 后续 Phase 4.3-4.5                            | 不在 4.2 范围  |
 
 ### 1.1 非目标(明确不做)
 
@@ -50,7 +50,12 @@ export type CellWrite = {
 export type UndoCommand =
   | { kind: 'editCell'; rowIndex: number; fieldId: string; before: CellValue; after: CellValue }
   | { kind: 'clearRange'; range: CellRange; before: ReadonlyArray<CellWrite> }
-  | { kind: 'paste'; target: CellRange; before: ReadonlyArray<CellWrite>; after: ReadonlyArray<CellWrite> }
+  | {
+      kind: 'paste'
+      target: CellRange
+      before: ReadonlyArray<CellWrite>
+      after: ReadonlyArray<CellWrite>
+    }
   | { kind: 'resizeRow'; rowIndex: number; before: number; after: number }
   | { kind: 'resizeColumn'; colIndex: number; before: number; after: number }
 ```
@@ -76,9 +81,9 @@ export class UndoStack {
   private redo: UndoCommand[] = []
   private readonly capacity = 100
 
-  push(cmd: UndoCommand): void  // push undo + clear redo + 超出容量挤掉最早
-  popUndo(): UndoCommand | undefined  // pop undo + push redo
-  popRedo(): UndoCommand | undefined  // pop redo + push undo
+  push(cmd: UndoCommand): void // push undo + clear redo + 超出容量挤掉最早
+  popUndo(): UndoCommand | undefined // pop undo + push redo
+  popRedo(): UndoCommand | undefined // pop redo + push undo
   canUndo(): boolean
   canRedo(): boolean
   clear(): void
@@ -116,14 +121,14 @@ commitColumnResize(colIndex: number, oldWidth: number, newWidth: number): void
 
 ### 4.2 改造现有 mutation 入口
 
-| 入口 | 原行为 | 改造 |
-| --- | --- | --- |
-| `commitCellEdit()` | `data.updateCell(row, fieldId, parsed)` | 写入前 `before = data.getCell(...)`;`isMutableDataSource` 守卫不变;写入后 push `editCell` |
-| `clearRange(range)` | 双循环 `data.updateCell(r, fieldId, null)` | 先扫一遍收集非 null cell 为 `before: CellWrite[]`,空数组则不 push;否则写入 + push `clearRange` |
-| `applyPaste(target, payload)` | 见 4.1 spec | 现有"跳过类型不匹配"逻辑保留;只把**实际写入**的格子收进 before/after,push `paste`(若 length === 0 则不 push) |
-| `setRowHeight` / `setColumnWidth` | `axis.setSize` | **不变**——保持非记录,autofit / preview 继续使用 |
-| **新** `commitRowResize(row, old, new)` | — | `if (old === new) return;` `rowsAxis.setSize(row, new);` push `resizeRow` |
-| **新** `commitColumnResize(col, old, new)` | — | 对称,使用 `colsAxis.setSize(col, new)` |
+| 入口                                       | 原行为                                     | 改造                                                                                                         |
+| ------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `commitCellEdit()`                         | `data.updateCell(row, fieldId, parsed)`    | 写入前 `before = data.getCell(...)`;`isMutableDataSource` 守卫不变;写入后 push `editCell`                    |
+| `clearRange(range)`                        | 双循环 `data.updateCell(r, fieldId, null)` | 先扫一遍收集非 null cell 为 `before: CellWrite[]`,空数组则不 push;否则写入 + push `clearRange`               |
+| `applyPaste(target, payload)`              | 见 4.1 spec                                | 现有"跳过类型不匹配"逻辑保留;只把**实际写入**的格子收进 before/after,push `paste`(若 length === 0 则不 push) |
+| `setRowHeight` / `setColumnWidth`          | `axis.setSize`                             | **不变**——保持非记录,autofit / preview 继续使用                                                              |
+| **新** `commitRowResize(row, old, new)`    | —                                          | `if (old === new) return;` `rowsAxis.setSize(row, new);` push `resizeRow`                                    |
+| **新** `commitColumnResize(col, old, new)` | —                                          | 对称,使用 `colsAxis.setSize(col, new)`                                                                       |
 
 ### 4.3 undo / redo 反向执行
 
@@ -151,12 +156,12 @@ undo/redo 内部直接调 `data.updateCell` / `axis.setSize`,**不经过** `comm
 
 ### 5.1 键盘路由(`WebGridRuntime` keydown)
 
-| 组合键 | 行为 |
-| --- | --- |
+| 组合键                                   | 行为                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------- |
 | `Cmd/Ctrl+Z`,非 Shift,**非 cellEditing** | `if (canUndo()) { runtime.undo(); preventDefault }`;空栈不 preventDefault |
-| `Cmd/Ctrl+Z`,非 Shift,**cellEditing** | 不拦截,交给 input 原生 undo |
-| `Cmd/Ctrl+Shift+Z`,非 cellEditing | `redo()` |
-| `Ctrl+Y`(非 Mac 风格),非 cellEditing | `redo()` |
+| `Cmd/Ctrl+Z`,非 Shift,**cellEditing**    | 不拦截,交给 input 原生 undo                                               |
+| `Cmd/Ctrl+Shift+Z`,非 cellEditing        | `redo()`                                                                  |
+| `Ctrl+Y`(非 Mac 风格),非 cellEditing     | `redo()`                                                                  |
 
 `Cmd+Y` 在 Mac 是其他系统快捷,不做 redo;`Cmd+Shift+Z` 才是 Mac 上的 redo。
 
@@ -224,13 +229,13 @@ export type RedoEvent = { command: UndoCommand }
 
 ### 6.2 No-op 情况
 
-| 场景 | 行为 |
-| --- | --- |
-| editCell 写入相同值 | **仍 push**(与 Sheets/Excel 一致) |
-| clearRange 范围全空 | 不 push(before 为空数组) |
-| applyPaste 全部跳过 | 不 push(before/after 均为空);4.1 的 `onPasteSkipped` 事件不受影响,正常 emit |
-| commitRowResize 前后尺寸相等 | 不 push |
-| undo / redo 空栈 | 返回 `undefined`,不发事件,**不 preventDefault** —— 给宿主页面机会处理 |
+| 场景                         | 行为                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| editCell 写入相同值          | **仍 push**(与 Sheets/Excel 一致)                                           |
+| clearRange 范围全空          | 不 push(before 为空数组)                                                    |
+| applyPaste 全部跳过          | 不 push(before/after 均为空);4.1 的 `onPasteSkipped` 事件不受影响,正常 emit |
+| commitRowResize 前后尺寸相等 | 不 push                                                                     |
+| undo / redo 空栈             | 返回 `undefined`,不发事件,**不 preventDefault** —— 给宿主页面机会处理       |
 
 ### 6.3 Strict Mode mount → destroy → mount
 
@@ -247,6 +252,7 @@ export type RedoEvent = { command: UndoCommand }
 ### 7.1 单元测试
 
 **packages/core/tests/undo/UndoStack.test.ts**
+
 - push / popUndo / popRedo 基础对偶
 - push 新 cmd 后 redo 清空
 - 容量 100:第 101 条挤掉第 1 条
@@ -254,6 +260,7 @@ export type RedoEvent = { command: UndoCommand }
 - `canUndo` / `canRedo` 与栈非空一致
 
 **packages/core/tests/engine/DefaultGridEngine.undo.test.ts**
+
 - editCell push + undo 还原 + active 回到该 cell + canRedo
 - editCell 写入相同值仍 push(行为锁定)
 - clearRange 部分非空:undo 恢复;空 cell 不进 before
@@ -268,6 +275,7 @@ export type RedoEvent = { command: UndoCommand }
 ### 7.2 集成测试
 
 **packages/web/tests/runtime/WebGridRuntime.undo.test.ts**
+
 - Cmd+Z 路由:cellEditing 时不 preventDefault;not editing 时调 undo
 - Cmd+Shift+Z / Ctrl+Y 路由 redo
 - 空栈 Cmd+Z 不 preventDefault
@@ -276,6 +284,7 @@ export type RedoEvent = { command: UndoCommand }
 - onUndo / onRedo 事件触发,payload.command.kind 正确
 
 **packages/web/tests/Grid.undo.test.ts**
+
 - Grid.undo / redo / canUndo / canRedo 委派 runtime
 - onUndo / onRedo 返回 unsubscribe
 - 端到端流:edit → cut → paste → 3 次 undo 回到初态;再 3 次 redo 回到末态
@@ -283,6 +292,7 @@ export type RedoEvent = { command: UndoCommand }
 ### 7.3 Storybook
 
 **apps/storybook/stories/Grid/Undo.stories.ts**
+
 - Toolbar 外置 Undo / Redo 按钮,绑定 `Grid.canUndo()` / `canRedo()`
 - 状态显示最近一次 UndoEvent.command.kind
 - 鼓励用户用键盘 + 按钮交叉验证
@@ -292,6 +302,7 @@ export type RedoEvent = { command: UndoCommand }
 ## 8. 文件清单
 
 **新增:**
+
 - `packages/core/src/undo/UndoStack.ts`
 - `packages/core/src/undo/UndoCommand.ts`
 - `packages/core/tests/undo/UndoStack.test.ts`
@@ -301,6 +312,7 @@ export type RedoEvent = { command: UndoCommand }
 - `apps/storybook/stories/Grid/Undo.stories.ts`
 
 **修改:**
+
 - `packages/core/src/engine/GridEngine.ts` — 接口加 undo/redo/canUndo/canRedo/commitRowResize/commitColumnResize
 - `packages/core/src/engine/DefaultGridEngine.ts` — 实现 + 5 个 mutation 入口注入 push
 - `packages/core/src/index.ts` — 导出 UndoCommand / CellWrite

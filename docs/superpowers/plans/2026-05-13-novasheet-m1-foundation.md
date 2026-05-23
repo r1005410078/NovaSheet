@@ -11,6 +11,7 @@
 **Spec reference:** [docs/superpowers/specs/2026-05-13-novasheet-phase1-canvas-grid-design.md](../specs/2026-05-13-novasheet-phase1-canvas-grid-design.md)
 
 **Out of scope for M1 (covered in later milestones):**
+
 - Scrolling / virtualization (M2)
 - Frozen rows / cols, dynamic row height (M3)
 - Resize interaction, React wrapper (M4)
@@ -107,6 +108,7 @@ NovaSheet/
 ### Task 1: Repo & tooling bootstrap
 
 **Files:**
+
 - Create: `.gitignore`
 - Create: `.editorconfig`
 - Create: `.prettierrc`
@@ -257,6 +259,7 @@ git commit -m "chore: bootstrap monorepo with pnpm, ts, eslint, prettier"
 ### Task 2: Create `@novasheet/core` package skeleton + test helper
 
 **Files:**
+
 - Create: `packages/core/package.json`
 - Create: `packages/core/tsconfig.json`
 - Create: `packages/core/tsup.config.ts`
@@ -422,7 +425,10 @@ export type RecordedOp =
 
 const CHAR_WIDTH = 7 // deterministic default for measureText
 
-export function createRecordingContext(width = 800, height = 600): {
+export function createRecordingContext(
+  width = 800,
+  height = 600,
+): {
   canvas: HTMLCanvasElement
   ctx: CanvasRenderingContext2D
   ops: RecordedOp[]
@@ -439,36 +445,94 @@ export function createRecordingContext(width = 800, height = 600): {
 
   const ctx = {
     canvas,
-    get fillStyle() { return _fillStyle },
-    set fillStyle(v) { _fillStyle = v; ops.push({ op: 'set:fillStyle', value: v }) },
-    get strokeStyle() { return _strokeStyle },
-    set strokeStyle(v) { _strokeStyle = v; ops.push({ op: 'set:strokeStyle', value: v }) },
-    get font() { return _font },
-    set font(v) { _font = v; ops.push({ op: 'set:font', value: v }) },
-    get textBaseline() { return _textBaseline },
-    set textBaseline(v) { _textBaseline = v; ops.push({ op: 'set:textBaseline', value: v }) },
-    get textAlign() { return _textAlign },
-    set textAlign(v) { _textAlign = v; ops.push({ op: 'set:textAlign', value: v }) },
-    get lineWidth() { return _lineWidth },
-    set lineWidth(v) { _lineWidth = v; ops.push({ op: 'set:lineWidth', value: v }) },
+    get fillStyle() {
+      return _fillStyle
+    },
+    set fillStyle(v) {
+      _fillStyle = v
+      ops.push({ op: 'set:fillStyle', value: v })
+    },
+    get strokeStyle() {
+      return _strokeStyle
+    },
+    set strokeStyle(v) {
+      _strokeStyle = v
+      ops.push({ op: 'set:strokeStyle', value: v })
+    },
+    get font() {
+      return _font
+    },
+    set font(v) {
+      _font = v
+      ops.push({ op: 'set:font', value: v })
+    },
+    get textBaseline() {
+      return _textBaseline
+    },
+    set textBaseline(v) {
+      _textBaseline = v
+      ops.push({ op: 'set:textBaseline', value: v })
+    },
+    get textAlign() {
+      return _textAlign
+    },
+    set textAlign(v) {
+      _textAlign = v
+      ops.push({ op: 'set:textAlign', value: v })
+    },
+    get lineWidth() {
+      return _lineWidth
+    },
+    set lineWidth(v) {
+      _lineWidth = v
+      ops.push({ op: 'set:lineWidth', value: v })
+    },
 
-    save() { ops.push({ op: 'save' }) },
-    restore() { ops.push({ op: 'restore' }) },
-    beginPath() { ops.push({ op: 'beginPath' }) },
-    clip() { ops.push({ op: 'clip' }) },
-    rect(x: number, y: number, w: number, h: number) { ops.push({ op: 'rect', args: [x, y, w, h] }) },
-    fillRect(x: number, y: number, w: number, h: number) { ops.push({ op: 'fillRect', args: [x, y, w, h] }) },
-    clearRect(x: number, y: number, w: number, h: number) { ops.push({ op: 'clearRect', args: [x, y, w, h] }) },
+    save() {
+      ops.push({ op: 'save' })
+    },
+    restore() {
+      ops.push({ op: 'restore' })
+    },
+    beginPath() {
+      ops.push({ op: 'beginPath' })
+    },
+    clip() {
+      ops.push({ op: 'clip' })
+    },
+    rect(x: number, y: number, w: number, h: number) {
+      ops.push({ op: 'rect', args: [x, y, w, h] })
+    },
+    fillRect(x: number, y: number, w: number, h: number) {
+      ops.push({ op: 'fillRect', args: [x, y, w, h] })
+    },
+    clearRect(x: number, y: number, w: number, h: number) {
+      ops.push({ op: 'clearRect', args: [x, y, w, h] })
+    },
     fillText(text: string, x: number, y: number, maxWidth?: number) {
-      ops.push({ op: 'fillText', args: maxWidth === undefined ? [text, x, y] : [text, x, y, maxWidth] })
+      ops.push({
+        op: 'fillText',
+        args: maxWidth === undefined ? [text, x, y] : [text, x, y, maxWidth],
+      })
     },
     strokeText(text: string, x: number, y: number, maxWidth?: number) {
-      ops.push({ op: 'strokeText', args: maxWidth === undefined ? [text, x, y] : [text, x, y, maxWidth] })
+      ops.push({
+        op: 'strokeText',
+        args: maxWidth === undefined ? [text, x, y] : [text, x, y, maxWidth],
+      })
     },
-    moveTo(x: number, y: number) { ops.push({ op: 'moveTo', args: [x, y] }) },
-    lineTo(x: number, y: number) { ops.push({ op: 'lineTo', args: [x, y] }) },
-    stroke() { ops.push({ op: 'stroke' }) },
-    fill() { ops.push({ op: 'fill' }) },
+    moveTo(x: number, y: number) {
+      ops.push({ op: 'moveTo', args: [x, y] })
+    },
+    lineTo(x: number, y: number) {
+      ops.push({ op: 'lineTo', args: [x, y] })
+    },
+    stroke() {
+      ops.push({ op: 'stroke' })
+    },
+    fill() {
+      ops.push({ op: 'fill' })
+    },
     setTransform(a: number, b: number, c: number, d: number, e: number, f: number) {
       ops.push({ op: 'setTransform', args: [a, b, c, d, e, f] })
     },
@@ -501,6 +565,7 @@ git commit -m "feat(core): scaffold @novasheet/core package with vitest + record
 ### Task 3: Schema, Field, CellValue, Row types
 
 **Files:**
+
 - Create: `packages/core/src/data/Schema.ts`
 - Create: `packages/core/src/types.ts`
 - Test: `packages/core/tests/data/Schema.test.ts`
@@ -515,7 +580,15 @@ import type { Field, FieldType, Schema } from '../../src/data/Schema'
 
 describe('Schema types', () => {
   it('FieldType covers all 7 Phase 1 types', () => {
-    const types: FieldType[] = ['text', 'number', 'singleSelect', 'multiSelect', 'date', 'checkbox', 'url']
+    const types: FieldType[] = [
+      'text',
+      'number',
+      'singleSelect',
+      'multiSelect',
+      'date',
+      'checkbox',
+      'url',
+    ]
     expect(types).toHaveLength(7)
   })
 
@@ -596,6 +669,7 @@ git commit -m "feat(core): add Schema/Field/FieldType/CellValue/Row types"
 ### Task 4: DataSource interface + InMemoryDataSource
 
 **Files:**
+
 - Create: `packages/core/src/data/DataSource.ts`
 - Create: `packages/core/src/data/InMemoryDataSource.ts`
 - Test: `packages/core/tests/data/InMemoryDataSource.test.ts`
@@ -620,7 +694,10 @@ describe('InMemoryDataSource', () => {
   it('reports row count and schema', () => {
     const ds = new InMemoryDataSource({
       schema: SCHEMA,
-      rows: [{ name: 'A', age: 1 }, { name: 'B', age: 2 }],
+      rows: [
+        { name: 'A', age: 1 },
+        { name: 'B', age: 2 },
+      ],
     })
     expect(ds.getRowCount()).toBe(2)
     expect(ds.getSchema()).toBe(SCHEMA)
@@ -674,7 +751,10 @@ describe('InMemoryDataSource', () => {
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows: [{ name: 'A', age: 1 }] })
     const listener = vi.fn()
     ds.subscribe(listener)
-    ds.setRows([{ name: 'X', age: 9 }, { name: 'Y', age: 8 }])
+    ds.setRows([
+      { name: 'X', age: 9 },
+      { name: 'Y', age: 8 },
+    ])
     expect(ds.getRowCount()).toBe(2)
     expect(listener).toHaveBeenCalledWith({ type: 'rowCountChanged', newCount: 2 })
     expect(listener).toHaveBeenCalledWith({ type: 'reset' })
@@ -812,6 +892,7 @@ git commit -m "feat(core): add DataSource interface and InMemoryDataSource"
 ### Task 5: Theme interface + denseGridTheme
 
 **Files:**
+
 - Create: `packages/core/src/theme/Theme.ts`
 - Create: `packages/core/src/theme/denseGridTheme.ts`
 - Test: `packages/core/tests/theme/denseGridTheme.test.ts`
@@ -834,7 +915,15 @@ describe('denseGridTheme', () => {
   })
 
   it('declares all 7 field-type icons', () => {
-    const types = ['text', 'number', 'singleSelect', 'multiSelect', 'date', 'checkbox', 'url'] as const
+    const types = [
+      'text',
+      'number',
+      'singleSelect',
+      'multiSelect',
+      'date',
+      'checkbox',
+      'url',
+    ] as const
     for (const t of types) {
       expect(denseGridTheme.icons.byFieldType[t]).toBeDefined()
     }
@@ -963,12 +1052,22 @@ export const denseGridTheme: Theme = {
   icons: {
     byFieldType: {
       text: simpleIcon('M3 4h10v1.5H3zM3 8h10v1.5H3zM3 12h7v1.5H3z'),
-      number: simpleIcon('M5 3l-.5 3h2L7 3h1.5L8 6h2v1.5H7.75l-.25 2H10V11H7.25L6.75 14h-1.5l.5-3h-2L3.25 14h-1.5l.5-3H0V9.5h2.5l.25-2H0V6h3l.5-3z'),
-      singleSelect: simpleIcon('M8 1a7 7 0 100 14A7 7 0 008 1zm0 12.5A5.5 5.5 0 118 2.5a5.5 5.5 0 010 11zM8 4.5A3.5 3.5 0 118 11.5 3.5 3.5 0 018 4.5z'),
+      number: simpleIcon(
+        'M5 3l-.5 3h2L7 3h1.5L8 6h2v1.5H7.75l-.25 2H10V11H7.25L6.75 14h-1.5l.5-3h-2L3.25 14h-1.5l.5-3H0V9.5h2.5l.25-2H0V6h3l.5-3z',
+      ),
+      singleSelect: simpleIcon(
+        'M8 1a7 7 0 100 14A7 7 0 008 1zm0 12.5A5.5 5.5 0 118 2.5a5.5 5.5 0 010 11zM8 4.5A3.5 3.5 0 118 11.5 3.5 3.5 0 018 4.5z',
+      ),
       multiSelect: simpleIcon('M2 3h12v2H2zM2 7h12v2H2zM2 11h8v2H2z'),
-      date: simpleIcon('M4 1v1.5H3A1.5 1.5 0 001.5 4v9A1.5 1.5 0 003 14.5h10A1.5 1.5 0 0014.5 13V4A1.5 1.5 0 0013 2.5h-1V1h-1.5v1.5h-5V1H4zm-1 5h10v7H3V6z'),
-      checkbox: simpleIcon('M3 2.5A1.5 1.5 0 011.5 4v8A1.5 1.5 0 003 13.5h10A1.5 1.5 0 0014.5 12V4A1.5 1.5 0 0013 2.5H3zm4.25 7.31l4.94-4.94L11.13 3.81 7.25 7.69 5.81 6.25 4.75 7.31l2.5 2.5z'),
-      url: simpleIcon('M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM2 8h12a6 6 0 01-6 6V2a6 6 0 016 6H2z'),
+      date: simpleIcon(
+        'M4 1v1.5H3A1.5 1.5 0 001.5 4v9A1.5 1.5 0 003 14.5h10A1.5 1.5 0 0014.5 13V4A1.5 1.5 0 0013 2.5h-1V1h-1.5v1.5h-5V1H4zm-1 5h10v7H3V6z',
+      ),
+      checkbox: simpleIcon(
+        'M3 2.5A1.5 1.5 0 011.5 4v8A1.5 1.5 0 003 13.5h10A1.5 1.5 0 0014.5 12V4A1.5 1.5 0 0013 2.5H3zm4.25 7.31l4.94-4.94L11.13 3.81 7.25 7.69 5.81 6.25 4.75 7.31l2.5 2.5z',
+      ),
+      url: simpleIcon(
+        'M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM2 8h12a6 6 0 01-6 6V2a6 6 0 016 6H2z',
+      ),
     },
   },
   scrollbar: {
@@ -997,6 +1096,7 @@ git commit -m "feat(core): add Theme interface and denseGridTheme default"
 This task covers the simplest case: every chunk is `sizes: null` (all rows/cols at default size). Tasks 7-8 add mutation and traversal.
 
 **Files:**
+
 - Create: `packages/core/src/util/BinarySearch.ts`
 - Create: `packages/core/src/util/ChunkArray.ts`
 - Create: `packages/core/src/layout/ChunkedAxis.ts`
@@ -1222,6 +1322,7 @@ git commit -m "feat(core): add ChunkedAxis all-default fast path + binary search
 ### Task 7: ChunkedAxis — setSize + lazy chunk materialization
 
 **Files:**
+
 - Modify: `packages/core/src/layout/ChunkedAxis.ts`
 - Modify: `packages/core/tests/layout/ChunkedAxis.test.ts`
 
@@ -1248,9 +1349,7 @@ describe('ChunkedAxis (mutation)', () => {
     // indexToPosition(2001) = sum of sizes for rows 0..2000
     //   = 2001 default rows × 28 + delta(row 100: 100-28=72) + delta(row 2000: 200-28=172)
     //   = 56028 + 72 + 172 = 56272
-    expect(axis.indexToPosition(2001)).toBe(
-      101 * 28 + (100 - 28) + (2000 - 101) * 28 + 200,
-    )
+    expect(axis.indexToPosition(2001)).toBe(101 * 28 + (100 - 28) + (2000 - 101) * 28 + 200)
     expect(axis.getTotalSize()).toBe(3000 * 28 + (100 - 28) + (200 - 28))
   })
 
@@ -1338,6 +1437,7 @@ git commit -m "feat(core): add ChunkedAxis.setSize with lazy chunk materializati
 ### Task 8: ChunkedAxis — getVisibleRange + setDefaultSize
 
 **Files:**
+
 - Modify: `packages/core/src/layout/ChunkedAxis.ts`
 - Modify: `packages/core/tests/layout/ChunkedAxis.test.ts`
 
@@ -1442,6 +1542,7 @@ git commit -m "feat(core): add ChunkedAxis.getVisibleRange and setDefaultSize"
 ### Task 9: FrameScheduler
 
 **Files:**
+
 - Create: `packages/core/src/util/raf.ts`
 - Test: `packages/core/tests/util/raf.test.ts`
 
@@ -1584,6 +1685,7 @@ git commit -m "feat(core): add FrameScheduler with key-dedup and insertion-order
 ### Task 10: HighDPI
 
 **Files:**
+
 - Create: `packages/core/src/render/HighDPI.ts`
 - Test: `packages/core/tests/render/HighDPI.test.ts`
 
@@ -1699,6 +1801,7 @@ git commit -m "feat(core): add HighDPI canvas sizing"
 For M1 the Viewport produces a single `main` quadrant covering the whole visible area. `FrozenRegions` is a stub that always returns just `main`; M3 will extend it with the other 3 quadrants.
 
 **Files:**
+
 - Create: `packages/core/src/layout/FrozenRegions.ts`
 - Create: `packages/core/src/layout/Viewport.ts`
 - Test: `packages/core/tests/layout/Viewport.test.ts`
@@ -1935,6 +2038,7 @@ git commit -m "feat(core): add FrozenRegions stub and Viewport snapshot"
 ### Task 12: GridLinesPainter
 
 **Files:**
+
 - Create: `packages/core/src/render/GridLinesPainter.ts`
 - Test: `packages/core/tests/render/GridLinesPainter.test.ts`
 
@@ -1964,7 +2068,9 @@ describe('GridLinesPainter', () => {
     })
     const strokeCount = ops.filter((o) => o.op === 'stroke').length
     expect(strokeCount).toBe(1)
-    expect(ops.some((o) => o.op === 'set:strokeStyle' && o.value === denseGridTheme.colors.gridLine)).toBe(true)
+    expect(
+      ops.some((o) => o.op === 'set:strokeStyle' && o.value === denseGridTheme.colors.gridLine),
+    ).toBe(true)
     expect(ops.some((o) => o.op === 'moveTo')).toBe(true)
     expect(ops.some((o) => o.op === 'lineTo')).toBe(true)
   })
@@ -2053,8 +2159,12 @@ export class GridLinesPainter {
   }
 
   /** M1: no scroll, scroll offset = 0. Renderer will pass adjusted rect later. */
-  private scrollOffsetX(_rect: QuadrantRect): number { return 0 }
-  private scrollOffsetY(_rect: QuadrantRect): number { return 0 }
+  private scrollOffsetX(_rect: QuadrantRect): number {
+    return 0
+  }
+  private scrollOffsetY(_rect: QuadrantRect): number {
+    return 0
+  }
 }
 ```
 
@@ -2077,6 +2187,7 @@ git commit -m "feat(core): add GridLinesPainter with Path2D-style batched stroke
 ### Task 13: CellPainter — text + number + fallback
 
 **Files:**
+
 - Create: `packages/core/src/render/CellPainter.ts`
 - Test: `packages/core/tests/render/CellPainter.test.ts`
 
@@ -2103,7 +2214,9 @@ describe('CellPainter', () => {
       rect: { x: 0, y: 0, width: 100, height: 28 },
       field: makeField(),
     })
-    const sequence = ops.map((o) => o.op).filter((op) => ['save', 'beginPath', 'rect', 'clip', 'restore'].includes(op))
+    const sequence = ops
+      .map((o) => o.op)
+      .filter((op) => ['save', 'beginPath', 'rect', 'clip', 'restore'].includes(op))
     expect(sequence).toEqual(['save', 'beginPath', 'rect', 'clip', 'restore'])
   })
 
@@ -2346,6 +2459,7 @@ git commit -m "feat(core): add CellPainter (text/number specialized, fallback fo
 ### Task 14: HeaderPainter
 
 **Files:**
+
 - Create: `packages/core/src/render/HeaderPainter.ts`
 - Test: `packages/core/tests/render/HeaderPainter.test.ts`
 
@@ -2381,12 +2495,13 @@ describe('HeaderPainter', () => {
     })
     const bgFill = ops.find(
       (o) =>
-        o.op === 'fillRect' &&
-        o.args[1] === 0 &&
-        o.args[3] === denseGridTheme.metrics.headerHeight,
+        o.op === 'fillRect' && o.args[1] === 0 && o.args[3] === denseGridTheme.metrics.headerHeight,
     )
     expect(bgFill).toBeDefined()
-    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.headerBackground })
+    expect(ops).toContainEqual({
+      op: 'set:fillStyle',
+      value: denseGridTheme.colors.headerBackground,
+    })
   })
 
   it('renders each visible field name', () => {
@@ -2398,7 +2513,9 @@ describe('HeaderPainter', () => {
       colRange: [0, 2],
       width: 400,
     })
-    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
     expect(texts).toContain('Name')
     expect(texts).toContain('Age')
     expect(texts).toContain('Active')
@@ -2488,6 +2605,7 @@ git commit -m "feat(core): add HeaderPainter for column field names"
 ### Task 15: Renderer — single-quadrant frame paint
 
 **Files:**
+
 - Create: `packages/core/src/render/Renderer.ts`
 - Test: `packages/core/tests/render/Renderer.test.ts`
 
@@ -2524,14 +2642,24 @@ describe('Renderer (M1 single quadrant)', () => {
         { name: 'Carol', age: 40 },
       ],
     })
-    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
     const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
     const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
     viewport.setSize(400, 200)
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setScroll(0, 0)
-    const renderer = new Renderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Renderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
     return { ctx, ops, data, viewport, renderer }
   }
 
@@ -2542,7 +2670,9 @@ describe('Renderer (M1 single quadrant)', () => {
     const firstBgFill = ops.find((o) => o.op === 'fillRect')
     expect(firstBgFill).toBeDefined()
     // header texts present
-    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
     expect(texts).toContain('Name')
     expect(texts).toContain('Age')
     expect(texts).toContain('Alice')
@@ -2688,9 +2818,8 @@ export class Renderer {
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
       const yTop = this.rowsAxis.indexToPosition(r)
       const yBottom = this.rowsAxis.indexToPosition(r + 1)
-      const rowHeight = (r + 1 >= this.rowsAxis.getCount())
-        ? this.rowsAxis.getTotalSize() - yTop
-        : yBottom - yTop
+      const rowHeight =
+        r + 1 >= this.rowsAxis.getCount() ? this.rowsAxis.getTotalSize() - yTop : yBottom - yTop
       const cellY = rect.y + yTop // M1: no scroll subtraction (scrollY = 0)
 
       for (let c = colRange[0]; c <= colRange[1]; c++) {
@@ -2698,9 +2827,8 @@ export class Renderer {
         if (!field) continue
         const xLeft = this.colsAxis.indexToPosition(c)
         const xRight = this.colsAxis.indexToPosition(c + 1)
-        const colWidth = (c + 1 >= this.colsAxis.getCount())
-          ? this.colsAxis.getTotalSize() - xLeft
-          : xRight - xLeft
+        const colWidth =
+          c + 1 >= this.colsAxis.getCount() ? this.colsAxis.getTotalSize() - xLeft : xRight - xLeft
         const cellX = rect.x + xLeft
         const value = this.data.getCell(r, field.id)
         this.cellPainter.paint(this.ctx, {
@@ -2739,6 +2867,7 @@ git commit -m "feat(core): add Renderer for single-quadrant frame paint"
 ### Task 16: Grid facade
 
 **Files:**
+
 - Create: `packages/core/src/Grid.ts`
 - Modify: `packages/core/src/index.ts`
 - Test: `packages/core/tests/Grid.test.ts`
@@ -3046,18 +3175,8 @@ Replace `packages/core/src/index.ts` with:
 export { Grid } from './Grid'
 export type { GridOptions } from './Grid'
 export { InMemoryDataSource } from './data/InMemoryDataSource'
-export type {
-  CellValue,
-  Field,
-  FieldType,
-  Row,
-  Schema,
-} from './data/Schema'
-export type {
-  DataSource,
-  DataSourceEvent,
-  DataSourceListener,
-} from './data/DataSource'
+export type { CellValue, Field, FieldType, Row, Schema } from './data/Schema'
+export type { DataSource, DataSourceEvent, DataSourceListener } from './data/DataSource'
 export { denseGridTheme } from './theme/denseGridTheme'
 export type { Theme } from './theme/Theme'
 ```
@@ -3116,6 +3235,7 @@ git commit -m "feat(core): add Grid facade + public exports + canvas test stub"
 ### Task 17: Full-suite integration smoke + typecheck + build
 
 **Files:**
+
 - (No new files; verifying the whole package end-to-end)
 
 - [ ] **Step 1: Run the full test suite**
@@ -3182,6 +3302,7 @@ When all tasks above pass, the following should be true:
 - [ ] git tag `m1-foundation` exists
 
 **What's intentionally NOT working yet:**
+
 - Scroll (no overflow container, no scroll mapper) — M2
 - Frozen rows / cols — M3
 - Resize handles — M4

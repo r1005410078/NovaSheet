@@ -32,7 +32,10 @@ createGridHost({ data })
 
 export const Basic: Story = {
   name: '列头排序与筛选',
-  ...docsStory(source, '右键任意列头打开菜单；选择 Sort ascending / descending 或 Filter... 观察行顺序、行数和列头图标。'),
+  ...docsStory(
+    source,
+    '右键任意列头打开菜单；选择 Sort ascending / descending 或 Filter... 观察行顺序、行数和列头图标。',
+  ),
   render: () => {
     const data = new InMemoryDataSource({ schema: sortFilterSchema(), rows: sortFilterRows(80) })
     return createGridHost({ data })

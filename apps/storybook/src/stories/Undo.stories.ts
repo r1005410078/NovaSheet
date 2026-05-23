@@ -90,7 +90,8 @@ export const Basic: Story = {
     )
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/web').Grid }).__grid
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/web').Grid })
+      .__grid
 
     function syncButtons() {
       undoBtn.disabled = !grid.canUndo()

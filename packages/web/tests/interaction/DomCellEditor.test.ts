@@ -44,7 +44,9 @@ describe('DomCellEditor — Phase 3.5', () => {
     editor.attach()
     editor.open({ x: 0, y: 0, width: 200, height: 60 }, 'line1', { multiline: true })
 
-    const textarea = container.querySelector('textarea[data-novasheet-cell-editor]') as HTMLTextAreaElement
+    const textarea = container.querySelector(
+      'textarea[data-novasheet-cell-editor]',
+    ) as HTMLTextAreaElement
     const input = container.querySelector('input[data-novasheet-cell-editor]') as HTMLInputElement
     expect(textarea.style.display).toBe('block')
     expect(input.style.display).toBe('none')
@@ -52,7 +54,9 @@ describe('DomCellEditor — Phase 3.5', () => {
     expect(document.activeElement).toBe(textarea)
 
     textarea.setSelectionRange(textarea.value.length, textarea.value.length)
-    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true }))
+    textarea.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true }),
+    )
     expect(textarea.value).toBe('line1\n')
     expect(onCommitEnter).not.toHaveBeenCalled()
     expect(onDraftChange).toHaveBeenCalledWith('line1\n')

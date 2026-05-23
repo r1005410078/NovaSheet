@@ -21,7 +21,10 @@ class FakeLayer implements ViewLayer<string | null> {
   private spec: string | null = null
   private notify: ((change: ViewLayerChange) => void) | null = null
 
-  constructor(id: string, private decoration: HeaderDecoration) {
+  constructor(
+    id: string,
+    private decoration: HeaderDecoration,
+  ) {
     this.id = id
   }
 

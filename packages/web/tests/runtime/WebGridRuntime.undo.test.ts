@@ -121,7 +121,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     const { engine, runtime } = setup()
     engine.commitRowResize(0, 24, 50)
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+      key: 'z',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
     })
     expect(handled).toBe(true)
     expect(engine.getRowsAxis().getSize(0)).toBe(24)
@@ -131,7 +135,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     const { engine, runtime } = setup()
     engine.commitRowResize(0, 24, 50)
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: false, ctrlKey: true, metaKey: false, altKey: false,
+      key: 'z',
+      shiftKey: false,
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
     })
     expect(handled).toBe(true)
   })
@@ -139,7 +147,11 @@ describe('WebGridRuntime — keyboard routing', () => {
   it('Cmd+Z 在空栈时返回 false(不 preventDefault)', () => {
     const { runtime } = setup()
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+      key: 'z',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
     })
     expect(handled).toBe(false)
   })
@@ -149,7 +161,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     engine.commitRowResize(0, 24, 50)
     runtime.undo()
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: true, ctrlKey: false, metaKey: true, altKey: false,
+      key: 'z',
+      shiftKey: true,
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
     })
     expect(handled).toBe(true)
     expect(engine.getRowsAxis().getSize(0)).toBe(50)
@@ -160,7 +176,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     engine.commitRowResize(0, 24, 50)
     runtime.undo()
     const handled = runtime.handleHostKeyDown({
-      key: 'y', shiftKey: false, ctrlKey: true, metaKey: false, altKey: false,
+      key: 'y',
+      shiftKey: false,
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
     })
     expect(handled).toBe(true)
     expect(engine.getRowsAxis().getSize(0)).toBe(50)
@@ -172,7 +192,11 @@ describe('WebGridRuntime — keyboard routing', () => {
     engine.selectCell({ rowIndex: 0, colIndex: 0 })
     engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
     const handled = runtime.handleHostKeyDown({
-      key: 'z', shiftKey: false, ctrlKey: false, metaKey: true, altKey: false,
+      key: 'z',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: true,
+      altKey: false,
     })
     expect(handled).toBe(false)
     // engine 未受影响,resize 仍生效
@@ -215,7 +239,10 @@ describe('WebGridRuntime — paste undo integration', () => {
     expect(engine.getData().getCell(0, 'b')).toBe(1)
     const sel = engine.getSelection()
     expect(sel.selectedRange).toEqual({
-      startRow: 0, endRow: 0, startCol: 0, endCol: 1,
+      startRow: 0,
+      endRow: 0,
+      startCol: 0,
+      endCol: 1,
     })
   })
 })

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 import { denseGridTheme } from '@novasheet/core'
-import { applyResizeHandleTheme, ensureResizeHandleStylesheet } from '../../src/host/resize-handle-style'
+import {
+  applyResizeHandleTheme,
+  ensureResizeHandleStylesheet,
+} from '../../src/host/resize-handle-style'
 
 describe('resize-handle-style', () => {
   it('注入样式表并写入 CSS 变量', () => {

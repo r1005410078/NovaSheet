@@ -21,7 +21,10 @@ describe('DomFillHandleLayer', () => {
     const root = document.createElement('div')
     const layer = new DomFillHandleLayer(root, callbacks())
     layer.attach()
-    layer.showPreview([{ x: 0, y: 0, width: 100, height: 30 }, { x: 0, y: 30, width: 100, height: 30 }])
+    layer.showPreview([
+      { x: 0, y: 0, width: 100, height: 30 },
+      { x: 0, y: 30, width: 100, height: 30 },
+    ])
     expect(root.querySelectorAll('[data-novasheet-fill-preview]').length).toBe(2)
     const preview = root.querySelector('[data-novasheet-fill-preview]') as HTMLElement
     expect(preview.style.borderStyle).toBe('dashed')
@@ -39,8 +42,12 @@ describe('DomFillHandleLayer', () => {
     layer.sync({ x: 10, y: 20, width: 8, height: 8 })
     const handle = root.querySelector('[data-novasheet-fill-handle]') as HTMLElement
 
-    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, clientX: 14, clientY: 24, bubbles: true }))
-    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 20, clientY: 40, bubbles: true }))
+    handle.dispatchEvent(
+      new PointerEvent('pointerdown', { pointerId: 7, clientX: 14, clientY: 24, bubbles: true }),
+    )
+    handle.dispatchEvent(
+      new PointerEvent('pointermove', { pointerId: 7, clientX: 20, clientY: 40, bubbles: true }),
+    )
     handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, bubbles: true }))
 
     expect(cb.onFillPointerDown).toHaveBeenCalledWith(7, 14, 24)

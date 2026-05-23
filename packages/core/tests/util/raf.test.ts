@@ -34,9 +34,18 @@ describe('FrameScheduler — RAF 调度', () => {
 
   it('多次 schedule 合并为一次 RAF', () => {
     const scheduler = new FrameScheduler()
-    scheduler.schedule('a', mock(() => {}))
-    scheduler.schedule('b', mock(() => {}))
-    scheduler.schedule('c', mock(() => {}))
+    scheduler.schedule(
+      'a',
+      mock(() => {}),
+    )
+    scheduler.schedule(
+      'b',
+      mock(() => {}),
+    )
+    scheduler.schedule(
+      'c',
+      mock(() => {}),
+    )
     expect(rafs).toHaveLength(1)
   })
 
@@ -72,9 +81,15 @@ describe('FrameScheduler — RAF 调度', () => {
 
   it('flush 后可再调度新帧', () => {
     const scheduler = new FrameScheduler()
-    scheduler.schedule('a', mock(() => {}))
+    scheduler.schedule(
+      'a',
+      mock(() => {}),
+    )
     flushFrame()
-    scheduler.schedule('b', mock(() => {}))
+    scheduler.schedule(
+      'b',
+      mock(() => {}),
+    )
     expect(rafs).toHaveLength(1)
   })
 })

@@ -305,9 +305,12 @@ describe('FilterLayer', () => {
     ;(schemaCapture as { dispose?: () => void }).dispose?.()
     const events: DataSourceEvent[] = []
 
-    expect(layer.setSpec({ fieldId: 'score', op: { kind: 'text-contains', value: '1', caseSensitive: false } })).toBe(
-      false,
-    )
+    expect(
+      layer.setSpec({
+        fieldId: 'score',
+        op: { kind: 'text-contains', value: '1', caseSensitive: false },
+      }),
+    ).toBe(false)
     expect(layer.setSpec({ fieldId: 'score', op: { kind: 'number-equals', value: 1 } })).toBe(true)
     const filtered = layer.wrap(source)
     filtered.subscribe((event) => events.push(event))
@@ -378,7 +381,10 @@ describe('FilterLayer', () => {
     source.setSchema({ fields: [{ id: 'score', name: 'Score', type: 'text', width: 80 }] })
 
     expect(events).toEqual([])
-    expect(layer.getSpec()).toEqual({ fieldId: 'score', op: { kind: 'number-between', min: 10, max: null } })
+    expect(layer.getSpec()).toEqual({
+      fieldId: 'score',
+      op: { kind: 'number-between', min: 10, max: null },
+    })
     expect(filtered.getRowCount()).toBe(2)
   })
 })

@@ -1,10 +1,5 @@
 import { describe, expect, it, mock, spyOn } from 'bun:test'
-import {
-  FilterLayer,
-  InMemoryDataSource,
-  SortLayer,
-  ViewPipeline,
-} from '@novasheet/core'
+import { FilterLayer, InMemoryDataSource, SortLayer, ViewPipeline } from '@novasheet/core'
 import type {
   CellAddress,
   DataSource,
@@ -222,7 +217,10 @@ describe('WebGridRuntime.handleHostPointerDown — 点击选择', () => {
 
     runtime.handleHostPointerDown({ x: 120, y: 72, shiftKey: false })
 
-    expect(engine.selectCell).toHaveBeenCalledWith({ rowIndex: 1, colIndex: 1 } satisfies CellAddress)
+    expect(engine.selectCell).toHaveBeenCalledWith({
+      rowIndex: 1,
+      colIndex: 1,
+    } satisfies CellAddress)
     expect(refreshSpy).toHaveBeenCalled()
   })
 
@@ -311,7 +309,10 @@ describe('WebGridRuntime drag auto-scroll — 拖选带动滚动', () => {
     expect(host.scrollTo).toHaveBeenCalled()
     expect(scrollTop).toBeGreaterThan(0)
     expect(scrollLeft).toBeGreaterThan(0)
-    expect(engine.selectCell).toHaveBeenLastCalledWith({ rowIndex: 9, colIndex: 2 }, { extend: true })
+    expect(engine.selectCell).toHaveBeenLastCalledWith(
+      { rowIndex: 9, colIndex: 2 },
+      { extend: true },
+    )
 
     globalThis.requestAnimationFrame = originalRaf
   })
@@ -622,8 +623,16 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     engine.getFrame = mock(() => ({
       data: {} as never,
       theme: { metrics: { headerHeight: 32 } } as never,
-      rowsAxis: { indexToPosition: () => 0, getSize: () => 28, positionToIndex: (p: number) => Math.floor(p / 28) } as never,
-      colsAxis: { indexToPosition: () => 0, getSize: () => 100, positionToIndex: (p: number) => Math.floor(p / 100) } as never,
+      rowsAxis: {
+        indexToPosition: () => 0,
+        getSize: () => 28,
+        positionToIndex: (p: number) => Math.floor(p / 28),
+      } as never,
+      colsAxis: {
+        indexToPosition: () => 0,
+        getSize: () => 100,
+        positionToIndex: (p: number) => Math.floor(p / 100),
+      } as never,
       viewport: {
         regions: [
           {
@@ -652,8 +661,16 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     engine.getFrame = mock(() => ({
       data: {} as never,
       theme: { metrics: { headerHeight: 32 } } as never,
-      rowsAxis: { indexToPosition: () => 0, getSize: () => 28, positionToIndex: (pos: number) => Math.floor(pos / 28) } as never,
-      colsAxis: { indexToPosition: () => 0, getSize: () => 100, positionToIndex: (pos: number) => Math.floor(pos / 100) } as never,
+      rowsAxis: {
+        indexToPosition: () => 0,
+        getSize: () => 28,
+        positionToIndex: (pos: number) => Math.floor(pos / 28),
+      } as never,
+      colsAxis: {
+        indexToPosition: () => 0,
+        getSize: () => 100,
+        positionToIndex: (pos: number) => Math.floor(pos / 100),
+      } as never,
       viewport: {
         regions: [
           {
@@ -832,8 +849,16 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     engine.getFrame = mock(() => ({
       data: {} as never,
       theme: { metrics: { headerHeight: 32 } } as never,
-      rowsAxis: { indexToPosition: () => 0, getSize: () => 28, positionToIndex: (pos: number) => Math.floor(pos / 28) } as never,
-      colsAxis: { indexToPosition: () => 0, getSize: () => 100, positionToIndex: (pos: number) => Math.floor(pos / 100) } as never,
+      rowsAxis: {
+        indexToPosition: () => 0,
+        getSize: () => 28,
+        positionToIndex: (pos: number) => Math.floor(pos / 28),
+      } as never,
+      colsAxis: {
+        indexToPosition: () => 0,
+        getSize: () => 100,
+        positionToIndex: (pos: number) => Math.floor(pos / 100),
+      } as never,
       viewport: {
         regions: [
           {
@@ -963,7 +988,8 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
       getRowCount: () => rows.length,
       getSchema: () => schema,
       getRows: () => rows,
-      getCell: (r: number, f: string) => (rows[r] as Record<string, unknown> | undefined)?.[f] ?? null,
+      getCell: (r: number, f: string) =>
+        (rows[r] as Record<string, unknown> | undefined)?.[f] ?? null,
       subscribe: () => () => {},
       updateCell,
     }
@@ -976,12 +1002,15 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
     ],
   }
 
-  function setupForCopyCut(activeCell = { rowIndex: 0, colIndex: 0 }, range = {
-    startRow: 0,
-    endRow: 0,
-    startCol: 0,
-    endCol: 1,
-  }) {
+  function setupForCopyCut(
+    activeCell = { rowIndex: 0, colIndex: 0 },
+    range = {
+      startRow: 0,
+      endRow: 0,
+      startCol: 0,
+      endCol: 1,
+    },
+  ) {
     const engine = makeEngine()
     const rows = [{ a: 'hello', b: 42 }] as Row[]
     const data = makeMutableData(rows, schema)
@@ -1019,7 +1048,9 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
 
   it('paste readText 返回 null（adapter 不可用）→ no-op', async () => {
     const { runtime, data } = setupForCopyCut()
-    ;(runtime as unknown as { clipboardAdapter: { readText: () => Promise<null> } }).clipboardAdapter = {
+    ;(
+      runtime as unknown as { clipboardAdapter: { readText: () => Promise<null> } }
+    ).clipboardAdapter = {
       writeText: async () => true,
       readText: async () => null,
     } as never
@@ -1057,15 +1088,24 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
 
   it('paste 类型不匹配触发 onPasteSkipped', async () => {
     const { engine, runtime, adapter } = setupForCopyCut()
-    const skipped = mock((_: readonly { rowIndex: number; fieldId: string; reason: string }[]) => {})
+    const skipped = mock(
+      (_: readonly { rowIndex: number; fieldId: string; reason: string }[]) => {},
+    )
     runtime.setOnPasteSkipped(skipped as never)
     // 让 commitPaste mock 调用传入的 onSkipped 回调（模拟引擎行为）
     ;(engine.commitPaste as ReturnType<typeof mock>).mockImplementation(
-      (_src: unknown, _tgt: unknown, _fids: unknown, onSkippedCb?: (cells: readonly { rowIndex: number; fieldId: string; reason: string }[]) => void) => {
+      (
+        _src: unknown,
+        _tgt: unknown,
+        _fids: unknown,
+        onSkippedCb?: (
+          cells: readonly { rowIndex: number; fieldId: string; reason: string }[],
+        ) => void,
+      ) => {
         onSkippedCb?.([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
       },
     )
-    adapter.readText = mock(async () => 'ok\tabc')  // 'abc' → number 列 → skip
+    adapter.readText = mock(async () => 'ok\tabc') // 'abc' → number 列 → skip
     await runtime.handleClipboardPaste()
     expect(skipped).toHaveBeenCalledWith([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
   })

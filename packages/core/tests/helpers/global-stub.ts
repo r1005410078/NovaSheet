@@ -25,7 +25,7 @@ export function stubGlobal(name: string, value: unknown): void {
   if (!stubs.has(name)) {
     stubs.set(name, (globalThis as unknown as GlobalLike)[name])
   }
-  (globalThis as unknown as GlobalLike)[name] = value
+  ;(globalThis as unknown as GlobalLike)[name] = value
 }
 
 export function unstubAllGlobals(): void {
@@ -33,7 +33,7 @@ export function unstubAllGlobals(): void {
     if (original === undefined) {
       delete (globalThis as unknown as GlobalLike)[name]
     } else {
-      (globalThis as unknown as GlobalLike)[name] = original
+      ;(globalThis as unknown as GlobalLike)[name] = original
     }
   }
   stubs.clear()

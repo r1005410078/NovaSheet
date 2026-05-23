@@ -59,7 +59,10 @@ export class CellPainter {
   private truncationCache = new Map<string, string>()
   private measurer: TextMeasurer | undefined
 
-  constructor(private theme: Theme, options: CellPainterOptions = {}) {
+  constructor(
+    private theme: Theme,
+    options: CellPainterOptions = {},
+  ) {
     this.measurer = options.measurer
   }
 

@@ -146,8 +146,7 @@ export class Canvas2DBackend implements GridController {
     this.host = new DomGridHost({
       container: this.container,
       scheduler: this.scheduler,
-      onScroll: (scrollTop, scrollLeft) =>
-        this.runtime.handleHostScroll(scrollTop, scrollLeft),
+      onScroll: (scrollTop, scrollLeft) => this.runtime.handleHostScroll(scrollTop, scrollLeft),
       onResize: (w, h, dpr) => this.runtime.handleHostResize(w, h, dpr),
       onDprChange: (dpr) => this.runtime.handleHostDprChange(dpr),
       onPointerDown: (event) => this.runtime.handleHostPointerDown(event),
@@ -224,15 +223,14 @@ export class Canvas2DBackend implements GridController {
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
     })
-    this.renderer = this.runtime.setData(
-      this.pipeline.getComposed(),
-      () => this.createRenderer(),
+    this.renderer = this.runtime.setData(this.pipeline.getComposed(), () =>
+      this.createRenderer(),
     ) as Canvas2DRenderer
   }
 
   setTheme(theme: Theme): void {
     this.runtime.setTheme(theme, (renderer) => {
-      (renderer as Canvas2DRenderer).setTheme(theme)
+      ;(renderer as Canvas2DRenderer).setTheme(theme)
     })
     // 字体可能随主题变；清空 measurer 缓存避免过期宽度
     this.measurer.clearCache()

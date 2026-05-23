@@ -3,7 +3,15 @@ import type { Field, FieldType, Schema } from '../../src/data/Schema'
 
 describe('Schema — 类型契约', () => {
   it('FieldType 覆盖 Phase1 七种类型', () => {
-    const types: FieldType[] = ['text', 'number', 'singleSelect', 'multiSelect', 'date', 'checkbox', 'url']
+    const types: FieldType[] = [
+      'text',
+      'number',
+      'singleSelect',
+      'multiSelect',
+      'date',
+      'checkbox',
+      'url',
+    ]
     expect(types).toHaveLength(7)
   })
 

@@ -53,6 +53,7 @@
 ## Task 1: Core 填充目标范围
 
 **Files:**
+
 - Create: `packages/core/src/fill/FillTarget.ts`
 - Create: `packages/core/tests/fill/FillTarget.test.ts`
 - Modify: `packages/core/src/index.ts`
@@ -170,7 +171,12 @@ export function computeFillTarget(
 
   const rowIndex = clamp(hover.rowIndex, 0, dims.rowCount - 1)
   const colIndex = clamp(hover.colIndex, 0, dims.colCount - 1)
-  if (rowIndex >= source.startRow && rowIndex <= source.endRow && colIndex >= source.startCol && colIndex <= source.endCol) {
+  if (
+    rowIndex >= source.startRow &&
+    rowIndex <= source.endRow &&
+    colIndex >= source.startCol &&
+    colIndex <= source.endCol
+  ) {
     return null
   }
 
@@ -198,16 +204,36 @@ function fillRangeForDirection(
   colIndex: number,
 ): CellRange | null {
   if (direction === 'down' && rowIndex > source.endRow) {
-    return { startRow: source.endRow + 1, endRow: rowIndex, startCol: source.startCol, endCol: source.endCol }
+    return {
+      startRow: source.endRow + 1,
+      endRow: rowIndex,
+      startCol: source.startCol,
+      endCol: source.endCol,
+    }
   }
   if (direction === 'up' && rowIndex < source.startRow) {
-    return { startRow: rowIndex, endRow: source.startRow - 1, startCol: source.startCol, endCol: source.endCol }
+    return {
+      startRow: rowIndex,
+      endRow: source.startRow - 1,
+      startCol: source.startCol,
+      endCol: source.endCol,
+    }
   }
   if (direction === 'right' && colIndex > source.endCol) {
-    return { startRow: source.startRow, endRow: source.endRow, startCol: source.endCol + 1, endCol: colIndex }
+    return {
+      startRow: source.startRow,
+      endRow: source.endRow,
+      startCol: source.endCol + 1,
+      endCol: colIndex,
+    }
   }
   if (direction === 'left' && colIndex < source.startCol) {
-    return { startRow: source.startRow, endRow: source.endRow, startCol: colIndex, endCol: source.startCol - 1 }
+    return {
+      startRow: source.startRow,
+      endRow: source.endRow,
+      startCol: colIndex,
+      endCol: source.startCol - 1,
+    }
   }
   return null
 }
@@ -255,6 +281,7 @@ git commit -m "feat(core): compute fill handle target ranges"
 ## Task 2: Core 填充序列写入
 
 **Files:**
+
 - Create: `packages/core/src/fill/FillSeries.ts`
 - Create: `packages/core/tests/fill/FillSeries.test.ts`
 - Modify: `packages/core/src/index.ts`
@@ -321,9 +348,29 @@ describe('computeFillWrites', () => {
         { id: 'd', name: 'D', type: 'number', width: 80 },
       ],
     }
-    const source = new InMemoryDataSource({ schema: localSchema, rows: [{ a: 1, b: 3 }, { c: 10, d: 15 }] })
-    expect(computeFillWrites({ data: source, source: r(0, 0, 0, 1), fill: r(0, 0, 2, 3), direction: 'right' }).map((w) => w.value)).toEqual([5, 7])
-    expect(computeFillWrites({ data: source, source: r(1, 1, 2, 3), fill: r(1, 1, 0, 1), direction: 'left' }).map((w) => w.value)).toEqual([0, 5])
+    const source = new InMemoryDataSource({
+      schema: localSchema,
+      rows: [
+        { a: 1, b: 3 },
+        { c: 10, d: 15 },
+      ],
+    })
+    expect(
+      computeFillWrites({
+        data: source,
+        source: r(0, 0, 0, 1),
+        fill: r(0, 0, 2, 3),
+        direction: 'right',
+      }).map((w) => w.value),
+    ).toEqual([5, 7])
+    expect(
+      computeFillWrites({
+        data: source,
+        source: r(1, 1, 2, 3),
+        fill: r(1, 1, 0, 1),
+        direction: 'left',
+      }).map((w) => w.value),
+    ).toEqual([0, 5])
   })
 
   it('extends text tail series and preserves numeric width', () => {
@@ -338,12 +385,20 @@ describe('computeFillWrites', () => {
 
   it('extends Date series by millisecond delta', () => {
     const writes = computeFillWrites({
-      data: data([{ date: new Date('2026-01-01T00:00:00Z') }, { date: new Date('2026-01-03T00:00:00Z') }, {}, {}]),
+      data: data([
+        { date: new Date('2026-01-01T00:00:00Z') },
+        { date: new Date('2026-01-03T00:00:00Z') },
+        {},
+        {},
+      ]),
       source: r(0, 1, 2, 2),
       fill: r(2, 3, 2, 2),
       direction: 'down',
     })
-    expect(writes.map((w) => (w.value as Date).toISOString().slice(0, 10))).toEqual(['2026-01-05', '2026-01-07'])
+    expect(writes.map((w) => (w.value as Date).toISOString().slice(0, 10))).toEqual([
+      '2026-01-05',
+      '2026-01-07',
+    ])
   })
 
   it('falls back to repeating pattern for mixed or unstable samples', () => {
@@ -413,16 +468,27 @@ export interface ComputeFillWritesInput {
 type Sequence =
   | { readonly kind: 'number'; readonly base: number; readonly step: number }
   | { readonly kind: 'date'; readonly base: Date; readonly step: number }
-  | { readonly kind: 'textTail'; readonly prefix: string; readonly suffix: string; readonly base: number; readonly step: number; readonly width: number }
+  | {
+      readonly kind: 'textTail'
+      readonly prefix: string
+      readonly suffix: string
+      readonly base: number
+      readonly step: number
+      readonly width: number
+    }
   | { readonly kind: 'copy'; readonly samples: readonly CellValue[] }
 
 export function computeFillWrites(input: ComputeFillWritesInput): readonly FillWrite[] {
   const fields = input.data.getSchema().fields
-  if (input.direction === 'down' || input.direction === 'up') return computeVerticalWrites(input, fields)
+  if (input.direction === 'down' || input.direction === 'up')
+    return computeVerticalWrites(input, fields)
   return computeHorizontalWrites(input, fields)
 }
 
-function computeVerticalWrites(input: ComputeFillWritesInput, fields: ReturnType<DataSource['getSchema']>['fields']): FillWrite[] {
+function computeVerticalWrites(
+  input: ComputeFillWritesInput,
+  fields: ReturnType<DataSource['getSchema']>['fields'],
+): FillWrite[] {
   const writes: FillWrite[] = []
   const rows = rangeNumbers(input.fill.startRow, input.fill.endRow)
   const orderedRows = input.direction === 'up' ? [...rows].reverse() : rows
@@ -430,16 +496,23 @@ function computeVerticalWrites(input: ComputeFillWritesInput, fields: ReturnType
     for (let col = input.fill.startCol; col <= input.fill.endCol; col++) {
       const field = fields[col]
       if (!field) continue
-      const samples = rangeNumbers(input.source.startRow, input.source.endRow).map((row) => normalize(input.data.getCell(row, field.id)))
+      const samples = rangeNumbers(input.source.startRow, input.source.endRow).map((row) =>
+        normalize(input.data.getCell(row, field.id)),
+      )
       const seq = inferSequence(samples)
-      const offset = Math.abs(rowIndex - (input.direction === 'up' ? input.source.startRow : input.source.endRow))
+      const offset = Math.abs(
+        rowIndex - (input.direction === 'up' ? input.source.startRow : input.source.endRow),
+      )
       writes.push({ rowIndex, fieldId: field.id, value: valueAt(seq, offset, input.direction) })
     }
   }
   return input.direction === 'up' ? writes.reverse() : writes
 }
 
-function computeHorizontalWrites(input: ComputeFillWritesInput, fields: ReturnType<DataSource['getSchema']>['fields']): FillWrite[] {
+function computeHorizontalWrites(
+  input: ComputeFillWritesInput,
+  fields: ReturnType<DataSource['getSchema']>['fields'],
+): FillWrite[] {
   const writes: FillWrite[] = []
   for (let rowIndex = input.fill.startRow; rowIndex <= input.fill.endRow; rowIndex++) {
     const cols = rangeNumbers(input.fill.startCol, input.fill.endCol)
@@ -453,7 +526,9 @@ function computeHorizontalWrites(input: ComputeFillWritesInput, fields: ReturnTy
     for (const col of orderedCols) {
       const field = fields[col]
       if (!field) continue
-      const offset = Math.abs(col - (input.direction === 'left' ? input.source.startCol : input.source.endCol))
+      const offset = Math.abs(
+        col - (input.direction === 'left' ? input.source.startCol : input.source.endCol),
+      )
       writes.push({ rowIndex, fieldId: field.id, value: valueAt(seq, offset, input.direction) })
     }
   }
@@ -467,9 +542,16 @@ function inferSequence(samples: readonly CellValue[]): Sequence {
       return { kind: 'number', base: samples[samples.length - 1] as number, step }
     }
   }
-  if (samples.length >= 2 && samples.every((v) => v instanceof Date && Number.isFinite(v.getTime()))) {
+  if (
+    samples.length >= 2 &&
+    samples.every((v) => v instanceof Date && Number.isFinite(v.getTime()))
+  ) {
     const step = (samples[1] as Date).getTime() - (samples[0] as Date).getTime()
-    if (samples.every((v, i) => i === 0 || (v as Date).getTime() - (samples[i - 1] as Date).getTime() === step)) {
+    if (
+      samples.every(
+        (v, i) => i === 0 || (v as Date).getTime() - (samples[i - 1] as Date).getTime() === step,
+      )
+    ) {
       return { kind: 'date', base: samples[samples.length - 1] as Date, step }
     }
   }
@@ -487,7 +569,12 @@ function inferTextTail(samples: readonly CellValue[]): Sequence | null {
   const suffix = first[3]!
   const nums = parsed.map((m) => Number(m![2]))
   const width = first[2]!.replace('-', '').length
-  if (!parsed.every((m) => m![1] === prefix && m![3] === suffix && m![2]!.replace('-', '').length === width)) return null
+  if (
+    !parsed.every(
+      (m) => m![1] === prefix && m![3] === suffix && m![2]!.replace('-', '').length === width,
+    )
+  )
+    return null
   const step = nums[1]! - nums[0]!
   if (!nums.every((n, i) => i === 0 || n - nums[i - 1]! === step)) return null
   return { kind: 'textTail', prefix, suffix, base: nums[nums.length - 1]!, step, width }
@@ -546,6 +633,7 @@ git commit -m "feat(core): compute fill handle series writes"
 ## Task 3: Engine 提交填充与 Undo/Redo
 
 **Files:**
+
 - Modify: `packages/core/src/undo/UndoCommand.ts`
 - Modify: `packages/core/src/engine/GridEngine.ts`
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
@@ -596,7 +684,12 @@ describe('DefaultGridEngine.commitFill', () => {
     expect(e.getData().getCell(0, 'a')).toBe('Item 1')
     expect(e.getData().getCell(2, 'a')).toBe('Item 3')
     expect(e.getData().getCell(3, 'b')).toBe(7)
-    expect(e.getSelection().selectedRange).toEqual({ startRow: 0, endRow: 3, startCol: 0, endCol: 1 })
+    expect(e.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 3,
+      startCol: 0,
+      endCol: 1,
+    })
   })
 
   it('pushes one undo command and restores fill range only', () => {
@@ -611,7 +704,12 @@ describe('DefaultGridEngine.commitFill', () => {
     expect(e.getData().getCell(2, 'a')).toBeNull()
     expect(e.getData().getCell(3, 'b')).toBeNull()
     expect(e.getData().getCell(0, 'a')).toBe('Item 1')
-    expect(e.getSelection().selectedRange).toEqual({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
+    expect(e.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 1,
+      startCol: 0,
+      endCol: 1,
+    })
   })
 
   it('redo writes fill values again and restores result selection', () => {
@@ -625,7 +723,12 @@ describe('DefaultGridEngine.commitFill', () => {
     const cmd = e.redo()
     expect(cmd?.kind).toBe('fill')
     expect(e.getData().getCell(2, 'a')).toBe('Item 3')
-    expect(e.getSelection().selectedRange).toEqual({ startRow: 0, endRow: 3, startCol: 0, endCol: 1 })
+    expect(e.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 3,
+      startCol: 0,
+      endCol: 1,
+    })
   })
 
   it('non-mutable data source does not write or push undo', () => {
@@ -637,7 +740,13 @@ describe('DefaultGridEngine.commitFill', () => {
       subscribe: () => () => {},
     }
     const e = new DefaultGridEngine({ data: readonly })
-    expect(e.commitFill({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, { startRow: 1, endRow: 1, startCol: 0, endCol: 0 }, 'down')).toBeNull()
+    expect(
+      e.commitFill(
+        { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+        { startRow: 1, endRow: 1, startCol: 0, endCol: 0 },
+        'down',
+      ),
+    ).toBeNull()
     expect(e.canUndo()).toBe(false)
   })
 })
@@ -786,6 +895,7 @@ git commit -m "feat(core): commit fill handle operations with undo"
 ## Task 4: Web 范围 Overlay 矩形
 
 **Files:**
+
 - Create: `packages/web/src/interaction/RangeOverlayRects.ts`
 - Create: `packages/web/tests/interaction/RangeOverlayRects.test.ts`
 
@@ -795,23 +905,30 @@ Create `packages/web/tests/interaction/RangeOverlayRects.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'bun:test'
-import { computeFillHandleRect, computeRangeOverlayRects } from '../../src/interaction/RangeOverlayRects'
+import {
+  computeFillHandleRect,
+  computeRangeOverlayRects,
+} from '../../src/interaction/RangeOverlayRects'
 import type { RenderFrame } from '@novasheet/core'
 
 describe('RangeOverlayRects', () => {
   it('computes visible rect for range intersection with region', () => {
     const frame = makeFrame()
-    expect(computeRangeOverlayRects(frame, { startRow: 1, endRow: 2, startCol: 1, endCol: 2 })).toEqual([
-      { x: 100, y: 60, width: 200, height: 60 },
-    ])
+    expect(
+      computeRangeOverlayRects(frame, { startRow: 1, endRow: 2, startCol: 1, endCol: 2 }),
+    ).toEqual([{ x: 100, y: 60, width: 200, height: 60 }])
   })
 
   it('returns empty when range is outside visible region', () => {
-    expect(computeRangeOverlayRects(makeFrame(), { startRow: 20, endRow: 21, startCol: 0, endCol: 1 })).toEqual([])
+    expect(
+      computeRangeOverlayRects(makeFrame(), { startRow: 20, endRow: 21, startCol: 0, endCol: 1 }),
+    ).toEqual([])
   })
 
   it('anchors fill handle at bottom-right of the visible source range', () => {
-    expect(computeFillHandleRect(makeFrame(), { startRow: 1, endRow: 2, startCol: 1, endCol: 2 })).toEqual({
+    expect(
+      computeFillHandleRect(makeFrame(), { startRow: 1, endRow: 2, startCol: 1, endCol: 2 }),
+    ).toEqual({
       x: 296,
       y: 116,
       width: 8,
@@ -892,8 +1009,16 @@ export function computeRangeOverlayRects(frame: RenderFrame, range: CellRange): 
 
     const x = region.rect.x + frame.colsAxis.indexToPosition(startCol) - region.scrollOffsetX
     const y = region.rect.y + frame.rowsAxis.indexToPosition(startRow) - region.scrollOffsetY
-    const right = region.rect.x + frame.colsAxis.indexToPosition(endCol) - region.scrollOffsetX + frame.colsAxis.getSize(endCol)
-    const bottom = region.rect.y + frame.rowsAxis.indexToPosition(endRow) - region.scrollOffsetY + frame.rowsAxis.getSize(endRow)
+    const right =
+      region.rect.x +
+      frame.colsAxis.indexToPosition(endCol) -
+      region.scrollOffsetX +
+      frame.colsAxis.getSize(endCol)
+    const bottom =
+      region.rect.y +
+      frame.rowsAxis.indexToPosition(endRow) -
+      region.scrollOffsetY +
+      frame.rowsAxis.getSize(endRow)
     rects.push({ x, y, width: right - x, height: bottom - y })
   }
   return rects
@@ -935,6 +1060,7 @@ git commit -m "feat(web): compute range overlay rects for fill handle"
 ## Task 5: DOM 填充柄 Layer
 
 **Files:**
+
 - Create: `packages/web/src/interaction/DomFillHandleLayer.ts`
 - Create: `packages/web/tests/interaction/DomFillHandleLayer.test.ts`
 
@@ -965,7 +1091,10 @@ describe('DomFillHandleLayer', () => {
     const root = document.createElement('div')
     const layer = new DomFillHandleLayer(root, callbacks())
     layer.attach()
-    layer.showPreview([{ x: 0, y: 0, width: 100, height: 30 }, { x: 0, y: 30, width: 100, height: 30 }])
+    layer.showPreview([
+      { x: 0, y: 0, width: 100, height: 30 },
+      { x: 0, y: 30, width: 100, height: 30 },
+    ])
     expect(root.querySelectorAll('[data-novasheet-fill-preview]').length).toBe(2)
     layer.hidePreview()
     expect(root.querySelectorAll('[data-novasheet-fill-preview]').length).toBe(0)
@@ -979,8 +1108,12 @@ describe('DomFillHandleLayer', () => {
     layer.sync({ x: 10, y: 20, width: 8, height: 8 })
     const handle = root.querySelector('[data-novasheet-fill-handle]') as HTMLElement
 
-    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, clientX: 14, clientY: 24, bubbles: true }))
-    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 20, clientY: 40, bubbles: true }))
+    handle.dispatchEvent(
+      new PointerEvent('pointerdown', { pointerId: 7, clientX: 14, clientY: 24, bubbles: true }),
+    )
+    handle.dispatchEvent(
+      new PointerEvent('pointermove', { pointerId: 7, clientX: 20, clientY: 40, bubbles: true }),
+    )
     handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, bubbles: true }))
 
     expect(cb.onFillPointerDown).toHaveBeenCalledWith(7, 14, 24)
@@ -1130,7 +1263,8 @@ export class DomFillHandleLayer {
   }
 
   private onPointerUp = (event: PointerEvent): void => {
-    if (this.handle.hasPointerCapture?.(event.pointerId)) this.handle.releasePointerCapture(event.pointerId)
+    if (this.handle.hasPointerCapture?.(event.pointerId))
+      this.handle.releasePointerCapture(event.pointerId)
     this.callbacks.onFillPointerUp(event.pointerId)
   }
 }
@@ -1156,6 +1290,7 @@ git commit -m "feat(web): add fill handle DOM layer"
 ## Task 6: Web Runtime 填充拖拽
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/src/backends/Canvas2DBackend.ts`
 - Create: `packages/web/tests/runtime/WebGridRuntime.fill.test.ts`
@@ -1176,7 +1311,12 @@ describe('WebGridRuntime fill handle', () => {
   it('syncs fill handle after render when selection exists', () => {
     const fillLayer = makeFillLayer()
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer })
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer,
+    })
     ;(runtime as unknown as { syncFillHandle(): void }).syncFillHandle()
     expect(fillLayer.sync).toHaveBeenCalled()
   })
@@ -1184,7 +1324,12 @@ describe('WebGridRuntime fill handle', () => {
   it('drag commits fill target and emits onFill', () => {
     const engine = makeEngine()
     const fillLayer = makeFillLayer()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer })
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer,
+    })
     const onFill = mock(() => {})
     runtime.setOnFill(onFill)
 
@@ -1197,8 +1342,18 @@ describe('WebGridRuntime fill handle', () => {
   })
 
   it('does not enter fill drag without a selected range', () => {
-    const engine = makeEngine({ selectedRange: null, activeCell: null, anchorCell: null, extentCell: null })
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer: makeFillLayer() })
+    const engine = makeEngine({
+      selectedRange: null,
+      activeCell: null,
+      anchorCell: null,
+      extentCell: null,
+    })
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer: makeFillLayer(),
+    })
     runtime.handleFillPointerDown(1, 0, 0)
     runtime.handleFillPointerMove(1, 0, 150)
     runtime.handleFillPointerUp(1)
@@ -1214,18 +1369,22 @@ function makeFillLayer() {
   }
 }
 
-function makeEngine(selection: GridSelection = {
-  activeCell: { rowIndex: 0, colIndex: 0 },
-  anchorCell: { rowIndex: 0, colIndex: 0 },
-  extentCell: { rowIndex: 1, colIndex: 1 },
-  selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
-}): GridEngine {
+function makeEngine(
+  selection: GridSelection = {
+    activeCell: { rowIndex: 0, colIndex: 0 },
+    anchorCell: { rowIndex: 0, colIndex: 0 },
+    extentCell: { rowIndex: 1, colIndex: 1 },
+    selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+  },
+): GridEngine {
   const data = {
     getRowCount: () => 10,
-    getSchema: () => ({ fields: [
-      { id: 'a', name: 'A', type: 'text', width: 100 },
-      { id: 'b', name: 'B', type: 'number', width: 100 },
-    ] }),
+    getSchema: () => ({
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: 100 },
+        { id: 'b', name: 'B', type: 'number', width: 100 },
+      ],
+    }),
     getRows: () => [],
     getCell: () => null,
     subscribe: () => () => {},
@@ -1245,17 +1404,19 @@ function makeEngine(selection: GridSelection = {
     } as never,
     viewport: {
       contentRect: { width: 400, height: 300 },
-      regions: [{
-        id: 'main',
-        rowBand: 'middle',
-        colBand: 'center',
-        rowRange: [0, 9],
-        colRange: [0, 1],
-        rect: { x: 0, y: 30, width: 200, height: 270 },
-        scrollOffsetX: 0,
-        scrollOffsetY: 0,
-        zIndex: 0,
-      }],
+      regions: [
+        {
+          id: 'main',
+          rowBand: 'middle',
+          colBand: 'center',
+          rowRange: [0, 9],
+          colRange: [0, 1],
+          rect: { x: 0, y: 30, width: 200, height: 270 },
+          scrollOffsetX: 0,
+          scrollOffsetY: 0,
+          zIndex: 0,
+        },
+      ],
     },
     selection,
   } as never
@@ -1294,7 +1455,13 @@ function makeEngine(selection: GridSelection = {
     commitRowResize: mock(() => {}),
     commitColumnResize: mock(() => {}),
     commitPaste: mock(() => {}),
-    commitFill: mock((source, fill, direction) => ({ source, fill, result: { startRow: 0, endRow: 4, startCol: 0, endCol: 1 }, direction, writes: [] })),
+    commitFill: mock((source, fill, direction) => ({
+      source,
+      fill,
+      result: { startRow: 0, endRow: 4, startCol: 0, endCol: 1 },
+      direction,
+      writes: [],
+    })),
   } as GridEngine
 }
 
@@ -1497,6 +1664,7 @@ git commit -m "feat(web): wire fill handle drag runtime"
 ## Task 7: Public API 与 Storybook
 
 **Files:**
+
 - Modify: `packages/web/src/grid/GridController.ts`
 - Modify: `packages/web/src/Grid.ts`
 - Modify: `packages/web/src/index.ts`
@@ -1602,7 +1770,7 @@ const grid = new Grid(document.getElementById('grid')!, {
 Create `apps/storybook/src/stories/FillHandle.stories.ts` following the existing `Undo.stories.ts` shape. Use rows with:
 
 ```ts
-[
+;[
   { task: 'Item 001', count: 1, due: new Date('2026-01-01T00:00:00Z'), done: false },
   { task: 'Item 002', count: 3, due: new Date('2026-01-03T00:00:00Z'), done: true },
   { task: null, count: null, due: null, done: null },
@@ -1647,6 +1815,7 @@ git commit -m "feat(web): expose fill handle API and story"
 ## Task 8: 最终验证
 
 **文件:**
+
 - 除非验证暴露 bug,否则不新增文件。
 
 - [ ] **Step 1: Run full test suite**

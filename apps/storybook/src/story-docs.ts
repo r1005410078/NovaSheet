@@ -17,10 +17,7 @@ function stripSnippetPragma(code: string): string {
 }
 
 /** Story 级 TypeScript 源码示例（HTML renderer 无法从 render 自动提取 TS）。 */
-export function docsStory(
-  code: string,
-  storyDescription?: string,
-): Pick<StoryObj, 'parameters'> {
+export function docsStory(code: string, storyDescription?: string): Pick<StoryObj, 'parameters'> {
   return {
     parameters: {
       docs: {

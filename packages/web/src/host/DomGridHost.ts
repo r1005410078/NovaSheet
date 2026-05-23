@@ -143,8 +143,7 @@ export class DomGridHost implements WebHost {
   }
 
   getContainerSize(): { width: number; height: number } {
-    const width =
-      this.container.clientWidth || this.container.getBoundingClientRect().width || 400
+    const width = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
     const height =
       this.container.clientHeight || this.container.getBoundingClientRect().height || 300
     return { width, height }
@@ -257,8 +256,7 @@ export class DomGridHost implements WebHost {
     const clientWidth = this.scrollHost.clientWidth
     const clientHeight = this.scrollHost.clientHeight
     return (
-      (clientWidth > 0 && point.x >= clientWidth) ||
-      (clientHeight > 0 && point.y >= clientHeight)
+      (clientWidth > 0 && point.x >= clientWidth) || (clientHeight > 0 && point.y >= clientHeight)
     )
   }
 

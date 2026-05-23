@@ -186,11 +186,11 @@ i.e. each new renderer re-implements roughly the same `paintQuadrant` loop. The 
 
 This is a deliberate YAGNI choice. Two alternatives were considered:
 
-| Alternative | What it would do | Why not now |
-|---|---|---|
-| (A) Full `RenderCommand[]` precomputed in core | core emits `{type:'fillText', x, y, str, color}[]`; renderer only translates primitives | premature; second renderer hasn't surfaced its real needs (alpha? batching? text-shaping?) — designing the language now risks getting it wrong |
-| (B) **Engine snapshot only (this spec)** | each renderer iterates its own paintQuadrant | per-renderer code duplication for the iteration loop, accepted |
-| (C) Shared iteration helpers | core exposes `iterateVisibleCells(frame, callback)`; renderers pass per-cell draw callbacks | could be added later if (B) duplication actually becomes painful |
+| Alternative                                    | What it would do                                                                            | Why not now                                                                                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| (A) Full `RenderCommand[]` precomputed in core | core emits `{type:'fillText', x, y, str, color}[]`; renderer only translates primitives     | premature; second renderer hasn't surfaced its real needs (alpha? batching? text-shaping?) — designing the language now risks getting it wrong |
+| (B) **Engine snapshot only (this spec)**       | each renderer iterates its own paintQuadrant                                                | per-renderer code duplication for the iteration loop, accepted                                                                                 |
+| (C) Shared iteration helpers                   | core exposes `iterateVisibleCells(frame, callback)`; renderers pass per-cell draw callbacks | could be added later if (B) duplication actually becomes painful                                                                               |
 
 Decision: go with (B). Re-evaluate after a second renderer (WebGL or Flutter) actually exists. (A) and (C) can be layered on later without breaking (B)'s contracts.
 
@@ -671,16 +671,16 @@ Important behavior to preserve:
 
 ## 11. Risks
 
-| Risk                                | Mitigation                                                                              |
-| ----------------------------------- | --------------------------------------------------------------------------------------- |
-| Refactor is large                   | Keep behavior-preserving commits and run tests after each package move                  |
-| Public API break                    | Move browser `Grid` to `@novasheet/web-canvas2d` intentionally; update README/Storybook |
-| Too many interfaces                 | Only add interfaces at package boundaries, not for every private helper                 |
-| Comments become stale               | Put architectural comments on interfaces; keep implementation comments short            |
-| Storybook HMR breaks                | Alias Storybook to `packages/web-canvas2d/src/index.ts`                                 |
-| Build config gets complex           | Each package needs its own `build.ts` + `tsconfig.build.json` (mirroring `packages/core/`'s Bun-migration pattern). core may skip `build.ts` if it ships pure types — re-evaluate during Step 1. |
+| Risk                                           | Mitigation                                                                                                                                                                                                                                                                 |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Refactor is large                              | Keep behavior-preserving commits and run tests after each package move                                                                                                                                                                                                     |
+| Public API break                               | Move browser `Grid` to `@novasheet/web-canvas2d` intentionally; update README/Storybook                                                                                                                                                                                    |
+| Too many interfaces                            | Only add interfaces at package boundaries, not for every private helper                                                                                                                                                                                                    |
+| Comments become stale                          | Put architectural comments on interfaces; keep implementation comments short                                                                                                                                                                                               |
+| Storybook HMR breaks                           | Alias Storybook to `packages/web-canvas2d/src/index.ts`                                                                                                                                                                                                                    |
+| Build config gets complex                      | Each package needs its own `build.ts` + `tsconfig.build.json` (mirroring `packages/core/`'s Bun-migration pattern). core may skip `build.ts` if it ships pure types — re-evaluate during Step 1.                                                                           |
 | **Inter-package version drift** when published | Use `workspace:*` in dev. On publish, replace with exact pins (`=x.y.z`); `@novasheet/web-canvas2d@1.2.0` peers `=@novasheet/web@1.2.0` peers `=@novasheet/core@1.2.0`. Mismatch will silently break consumers; CI must verify three-way version alignment before publish. |
-| Three packages bloat consumer install | Acceptable trade-off — npm dedupes the shared tree. If it becomes a real problem, ship a meta-package `@novasheet/web-canvas2d-all` that re-exports the public surface. |
+| Three packages bloat consumer install          | Acceptable trade-off — npm dedupes the shared tree. If it becomes a real problem, ship a meta-package `@novasheet/web-canvas2d-all` that re-exports the public surface.                                                                                                    |
 
 ---
 

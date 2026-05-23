@@ -62,9 +62,7 @@ describe('ChunkedAxis — 变更尺寸', () => {
     const axis = new ChunkedAxis({ count: 3000, defaultSize: 28 })
     axis.setSize(100, 100)
     axis.setSize(2000, 200)
-    expect(axis.indexToPosition(2001)).toBe(
-      101 * 28 + (100 - 28) + (2000 - 101) * 28 + 200,
-    )
+    expect(axis.indexToPosition(2001)).toBe(101 * 28 + (100 - 28) + (2000 - 101) * 28 + 200)
     expect(axis.getTotalSize()).toBe(3000 * 28 + (100 - 28) + (200 - 28))
   })
 

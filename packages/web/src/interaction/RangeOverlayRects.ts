@@ -22,8 +22,16 @@ export function computeRangeOverlayRects(frame: RenderFrame, range: CellRange): 
 
     const x = region.rect.x + frame.colsAxis.indexToPosition(startCol) - region.scrollOffsetX
     const y = region.rect.y + frame.rowsAxis.indexToPosition(startRow) - region.scrollOffsetY
-    const right = region.rect.x + frame.colsAxis.indexToPosition(endCol) - region.scrollOffsetX + frame.colsAxis.getSize(endCol)
-    const bottom = region.rect.y + frame.rowsAxis.indexToPosition(endRow) - region.scrollOffsetY + frame.rowsAxis.getSize(endRow)
+    const right =
+      region.rect.x +
+      frame.colsAxis.indexToPosition(endCol) -
+      region.scrollOffsetX +
+      frame.colsAxis.getSize(endCol)
+    const bottom =
+      region.rect.y +
+      frame.rowsAxis.indexToPosition(endRow) -
+      region.scrollOffsetY +
+      frame.rowsAxis.getSize(endRow)
     rects.push({ x, y, width: right - x, height: bottom - y })
   }
   return rects

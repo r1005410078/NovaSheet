@@ -27,7 +27,10 @@ export type RecordedOp =
 
 const CHAR_WIDTH = 7 // deterministic default for measureText
 
-export function createRecordingContext(width = 800, height = 600): {
+export function createRecordingContext(
+  width = 800,
+  height = 600,
+): {
   canvas: HTMLCanvasElement
   ctx: CanvasRenderingContext2D
   ops: RecordedOp[]
@@ -45,36 +48,95 @@ export function createRecordingContext(width = 800, height = 600): {
 
   const ctx = {
     canvas,
-    get fillStyle() { return _fillStyle },
-    set fillStyle(v) { _fillStyle = v; ops.push({ op: 'set:fillStyle', value: v }) },
-    get strokeStyle() { return _strokeStyle },
-    set strokeStyle(v) { _strokeStyle = v; ops.push({ op: 'set:strokeStyle', value: v }) },
-    get font() { return _font },
-    set font(v) { _font = v; ops.push({ op: 'set:font', value: v }) },
-    get textBaseline() { return _textBaseline },
-    set textBaseline(v) { _textBaseline = v; ops.push({ op: 'set:textBaseline', value: v }) },
-    get textAlign() { return _textAlign },
-    set textAlign(v) { _textAlign = v; ops.push({ op: 'set:textAlign', value: v }) },
-    get lineWidth() { return _lineWidth },
-    set lineWidth(v) { _lineWidth = v; ops.push({ op: 'set:lineWidth', value: v }) },
-    get lineCap() { return _lineCap },
-    set lineCap(v) { _lineCap = v; ops.push({ op: 'set:lineCap', value: v }) },
+    get fillStyle() {
+      return _fillStyle
+    },
+    set fillStyle(v) {
+      _fillStyle = v
+      ops.push({ op: 'set:fillStyle', value: v })
+    },
+    get strokeStyle() {
+      return _strokeStyle
+    },
+    set strokeStyle(v) {
+      _strokeStyle = v
+      ops.push({ op: 'set:strokeStyle', value: v })
+    },
+    get font() {
+      return _font
+    },
+    set font(v) {
+      _font = v
+      ops.push({ op: 'set:font', value: v })
+    },
+    get textBaseline() {
+      return _textBaseline
+    },
+    set textBaseline(v) {
+      _textBaseline = v
+      ops.push({ op: 'set:textBaseline', value: v })
+    },
+    get textAlign() {
+      return _textAlign
+    },
+    set textAlign(v) {
+      _textAlign = v
+      ops.push({ op: 'set:textAlign', value: v })
+    },
+    get lineWidth() {
+      return _lineWidth
+    },
+    set lineWidth(v) {
+      _lineWidth = v
+      ops.push({ op: 'set:lineWidth', value: v })
+    },
+    get lineCap() {
+      return _lineCap
+    },
+    set lineCap(v) {
+      _lineCap = v
+      ops.push({ op: 'set:lineCap', value: v })
+    },
 
-    save() { ops.push({ op: 'save' }) },
-    restore() { ops.push({ op: 'restore' }) },
-    beginPath() { ops.push({ op: 'beginPath' }) },
-    clip() { ops.push({ op: 'clip' }) },
-    rect(x: number, y: number, w: number, h: number) { ops.push({ op: 'rect', args: [x, y, w, h] }) },
-    fillRect(x: number, y: number, w: number, h: number) { ops.push({ op: 'fillRect', args: [x, y, w, h] }) },
-    clearRect(x: number, y: number, w: number, h: number) { ops.push({ op: 'clearRect', args: [x, y, w, h] }) },
+    save() {
+      ops.push({ op: 'save' })
+    },
+    restore() {
+      ops.push({ op: 'restore' })
+    },
+    beginPath() {
+      ops.push({ op: 'beginPath' })
+    },
+    clip() {
+      ops.push({ op: 'clip' })
+    },
+    rect(x: number, y: number, w: number, h: number) {
+      ops.push({ op: 'rect', args: [x, y, w, h] })
+    },
+    fillRect(x: number, y: number, w: number, h: number) {
+      ops.push({ op: 'fillRect', args: [x, y, w, h] })
+    },
+    clearRect(x: number, y: number, w: number, h: number) {
+      ops.push({ op: 'clearRect', args: [x, y, w, h] })
+    },
     fillText(text: string, x: number, y: number, maxWidth?: number) {
-      ops.push({ op: 'fillText', args: maxWidth === undefined ? [text, x, y] : [text, x, y, maxWidth] })
+      ops.push({
+        op: 'fillText',
+        args: maxWidth === undefined ? [text, x, y] : [text, x, y, maxWidth],
+      })
     },
     strokeText(text: string, x: number, y: number, maxWidth?: number) {
-      ops.push({ op: 'strokeText', args: maxWidth === undefined ? [text, x, y] : [text, x, y, maxWidth] })
+      ops.push({
+        op: 'strokeText',
+        args: maxWidth === undefined ? [text, x, y] : [text, x, y, maxWidth],
+      })
     },
-    moveTo(x: number, y: number) { ops.push({ op: 'moveTo', args: [x, y] }) },
-    lineTo(x: number, y: number) { ops.push({ op: 'lineTo', args: [x, y] }) },
+    moveTo(x: number, y: number) {
+      ops.push({ op: 'moveTo', args: [x, y] })
+    },
+    lineTo(x: number, y: number) {
+      ops.push({ op: 'lineTo', args: [x, y] })
+    },
     stroke(path?: Path2D) {
       if (path) ops.push({ op: 'strokePath' })
       else ops.push({ op: 'stroke' })
@@ -83,8 +145,12 @@ export function createRecordingContext(width = 800, height = 600): {
       if (path) ops.push({ op: 'fillPath' })
       else ops.push({ op: 'fill' })
     },
-    translate(x: number, y: number) { ops.push({ op: 'translate', args: [x, y] }) },
-    scale(x: number, y: number) { ops.push({ op: 'scale', args: [x, y] }) },
+    translate(x: number, y: number) {
+      ops.push({ op: 'translate', args: [x, y] })
+    },
+    scale(x: number, y: number) {
+      ops.push({ op: 'scale', args: [x, y] })
+    },
     setTransform(a: number, b: number, c: number, d: number, e: number, f: number) {
       ops.push({ op: 'setTransform', args: [a, b, c, d, e, f] })
     },

@@ -131,7 +131,12 @@ describe('DefaultGridEngine.commitFill', () => {
     expect(e.getData().getCell(0, 'a')).toBe('Item 1')
     expect(e.getData().getCell(2, 'a')).toBe('Item 3')
     expect(e.getData().getCell(3, 'b')).toBe(7)
-    expect(e.getSelection().selectedRange).toEqual({ startRow: 0, endRow: 3, startCol: 0, endCol: 1 })
+    expect(e.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 3,
+      startCol: 0,
+      endCol: 1,
+    })
   })
 
   it('pushes one undo command and restores selection to written rows', () => {
@@ -146,7 +151,12 @@ describe('DefaultGridEngine.commitFill', () => {
     expect(e.getData().getCell(2, 'a')).toBeNull()
     expect(e.getData().getCell(3, 'b')).toBeNull()
     expect(e.getData().getCell(0, 'a')).toBe('Item 1')
-    expect(e.getSelection().selectedRange).toEqual({ startRow: 2, endRow: 3, startCol: 0, endCol: 1 })
+    expect(e.getSelection().selectedRange).toEqual({
+      startRow: 2,
+      endRow: 3,
+      startCol: 0,
+      endCol: 1,
+    })
   })
 
   it('redo writes fill values again and restores selection to written rows', () => {
@@ -160,7 +170,12 @@ describe('DefaultGridEngine.commitFill', () => {
     const cmd = e.redo()
     expect(cmd?.kind).toBe('fill')
     expect(e.getData().getCell(2, 'a')).toBe('Item 3')
-    expect(e.getSelection().selectedRange).toEqual({ startRow: 2, endRow: 3, startCol: 0, endCol: 1 })
+    expect(e.getSelection().selectedRange).toEqual({
+      startRow: 2,
+      endRow: 3,
+      startCol: 0,
+      endCol: 1,
+    })
   })
 
   it('non-mutable data source does not write or push undo', () => {
@@ -172,7 +187,13 @@ describe('DefaultGridEngine.commitFill', () => {
       subscribe: () => () => {},
     }
     const e = new DefaultGridEngine({ data: readonly })
-    expect(e.commitFill({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, { startRow: 1, endRow: 1, startCol: 0, endCol: 0 }, 'down')).toBeNull()
+    expect(
+      e.commitFill(
+        { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+        { startRow: 1, endRow: 1, startCol: 0, endCol: 0 },
+        'down',
+      ),
+    ).toBeNull()
     expect(e.canUndo()).toBe(false)
   })
 

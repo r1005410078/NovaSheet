@@ -1,5 +1,8 @@
 import type { Field, FilterOp, Theme } from '@novasheet/core'
-import { applyFilterPopoverTheme, ensureFilterPopoverStylesheet } from '../host/filter-popover-style'
+import {
+  applyFilterPopoverTheme,
+  ensureFilterPopoverStylesheet,
+} from '../host/filter-popover-style'
 
 export interface FilterPopoverCallbacks {
   onApply: (op: FilterOp | null) => void
@@ -144,12 +147,16 @@ export class FilterPopover {
     }
 
     if (draft.kind === 'number-between') {
-      this.popover.appendChild(this.numberInput('min', draft.min, (value) => {
-        draft.min = value
-      }))
-      this.popover.appendChild(this.numberInput('max', draft.max, (value) => {
-        draft.max = value
-      }))
+      this.popover.appendChild(
+        this.numberInput('min', draft.min, (value) => {
+          draft.min = value
+        }),
+      )
+      this.popover.appendChild(
+        this.numberInput('max', draft.max, (value) => {
+          draft.max = value
+        }),
+      )
       return
     }
 
@@ -174,19 +181,26 @@ export class FilterPopover {
     }
 
     if (draft.kind === 'date-between') {
-      this.popover.appendChild(this.dateInput('start', draft.start, (value) => {
-        draft.start = value
-      }))
-      this.popover.appendChild(this.dateInput('end', draft.end, (value) => {
-        draft.end = value
-      }))
+      this.popover.appendChild(
+        this.dateInput('start', draft.start, (value) => {
+          draft.start = value
+        }),
+      )
+      this.popover.appendChild(
+        this.dateInput('end', draft.end, (value) => {
+          draft.end = value
+        }),
+      )
       return
     }
 
     if (draft.kind === 'checkbox-equals') {
       const select = document.createElement('select')
       select.setAttribute('data-ns-filter-value', '')
-      for (const [label, value] of [['已勾选', 'true'], ['未勾选', 'false']] as const) {
+      for (const [label, value] of [
+        ['已勾选', 'true'],
+        ['未勾选', 'false'],
+      ] as const) {
         const option = document.createElement('option')
         option.value = value
         option.textContent = label
@@ -201,7 +215,11 @@ export class FilterPopover {
     }
   }
 
-  private numberInput(kind: 'min' | 'max', value: string, setValue: (value: string) => void): HTMLInputElement {
+  private numberInput(
+    kind: 'min' | 'max',
+    value: string,
+    setValue: (value: string) => void,
+  ): HTMLInputElement {
     const input = document.createElement('input')
     input.type = 'number'
     input.placeholder = kind === 'min' ? '最小值' : '最大值'
@@ -214,7 +232,11 @@ export class FilterPopover {
     return input
   }
 
-  private dateInput(kind: 'start' | 'end', value: string, setValue: (value: string) => void): HTMLInputElement {
+  private dateInput(
+    kind: 'start' | 'end',
+    value: string,
+    setValue: (value: string) => void,
+  ): HTMLInputElement {
     const input = document.createElement('input')
     input.type = 'date'
     input.placeholder = kind === 'start' ? '开始日期' : '结束日期'
@@ -244,7 +266,9 @@ export class FilterPopover {
     if (!draft) return null
     if (draft.kind === 'text-contains') {
       const value = draft.value.trim()
-      return value === '' ? null : { kind: 'text-contains', value, caseSensitive: draft.caseSensitive }
+      return value === ''
+        ? null
+        : { kind: 'text-contains', value, caseSensitive: draft.caseSensitive }
     }
     if (draft.kind === 'number-between') {
       const min = finiteOrNull(draft.min)
@@ -301,7 +325,11 @@ function draftFromOp(op: FilterOp): Draft {
     return { kind: 'text-contains', value: op.value, caseSensitive: op.caseSensitive }
   }
   if (op.kind === 'number-between') {
-    return { kind: 'number-between', min: op.min == null ? '' : String(op.min), max: op.max == null ? '' : String(op.max) }
+    return {
+      kind: 'number-between',
+      min: op.min == null ? '' : String(op.min),
+      max: op.max == null ? '' : String(op.max),
+    }
   }
   if (op.kind === 'date-between') {
     return { kind: 'date-between', start: dateInputValue(op.start), end: dateInputValue(op.end) }
@@ -313,7 +341,9 @@ function draftFromOp(op: FilterOp): Draft {
 
 function getChoices(field: Field | null): string[] {
   const choices = field?.options?.choices
-  return Array.isArray(choices) ? choices.filter((choice): choice is string => typeof choice === 'string') : []
+  return Array.isArray(choices)
+    ? choices.filter((choice): choice is string => typeof choice === 'string')
+    : []
 }
 
 function finiteOrNull(value: string): number | null {

@@ -1,5 +1,11 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { denseGridTheme, type DataSource, type GridEngine, type GridSelection, type Theme } from '@novasheet/core'
+import {
+  denseGridTheme,
+  type DataSource,
+  type GridEngine,
+  type GridSelection,
+  type Theme,
+} from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 import type { WebHost } from '../../src/host/WebHost'
 import type { WebRenderer } from '../../src/render/WebRenderer'
@@ -10,7 +16,12 @@ describe('WebGridRuntime fill handle', () => {
   it('syncs fill handle after render when selection exists', () => {
     const fillLayer = makeFillLayer()
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer })
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer,
+    })
     ;(runtime as unknown as { syncFillHandle(): void }).syncFillHandle()
     expect(fillLayer.sync).toHaveBeenCalled()
   })
@@ -18,7 +29,12 @@ describe('WebGridRuntime fill handle', () => {
   it('resyncs fill handle when pointer selection ends', () => {
     const fillLayer = makeFillLayer()
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer })
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer,
+    })
 
     runtime.handleHostPointerDown({ x: 50, y: 45, shiftKey: false })
     runtime.handleHostPointerUp()
@@ -34,7 +50,12 @@ describe('WebGridRuntime fill handle', () => {
   it('syncs fill handle in the same render as pointer selection', () => {
     const fillLayer = makeFillLayer()
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer })
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer,
+    })
     const rafs: Array<FrameRequestCallback> = []
     const originalRaf = globalThis.requestAnimationFrame
     globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
@@ -58,7 +79,12 @@ describe('WebGridRuntime fill handle', () => {
   it('drag commits fill target and emits onFill', () => {
     const engine = makeEngine()
     const fillLayer = makeFillLayer()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer })
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer,
+    })
     const onFill = mock(() => {})
     runtime.setOnFill(onFill)
 
@@ -87,8 +113,18 @@ describe('WebGridRuntime fill handle', () => {
   })
 
   it('does not enter fill drag without a selected range', () => {
-    const engine = makeEngine({ selectedRange: null, activeCell: null, anchorCell: null, extentCell: null })
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer(), fillLayer: makeFillLayer() })
+    const engine = makeEngine({
+      selectedRange: null,
+      activeCell: null,
+      anchorCell: null,
+      extentCell: null,
+    })
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer: makeFillLayer(),
+    })
     runtime.handleFillPointerDown(1, 0, 0)
     runtime.handleFillPointerMove(1, 0, 150)
     runtime.handleFillPointerUp(1)
@@ -101,10 +137,12 @@ describe('WebGridRuntime fill handle', () => {
     frame.theme = denseGridTheme
     frame.data = {
       getRowCount: () => 10,
-      getSchema: () => ({ fields: [
-        { id: 'a', name: 'A', type: 'text', width: 44, wrap: true },
-        { id: 'b', name: 'B', type: 'number', width: 100 },
-      ] }),
+      getSchema: () => ({
+        fields: [
+          { id: 'a', name: 'A', type: 'text', width: 44, wrap: true },
+          { id: 'b', name: 'B', type: 'number', width: 100 },
+        ],
+      }),
       getRows: () => [],
       getCell: (rowIndex: number, fieldId: string) =>
         rowIndex === 2 && fieldId === 'a' ? 'filled text needs several wrapped lines' : null,
@@ -143,18 +181,22 @@ function makeFillLayer() {
   } as unknown as DomFillHandleLayer
 }
 
-function makeEngine(selection: GridSelection = {
-  activeCell: { rowIndex: 0, colIndex: 0 },
-  anchorCell: { rowIndex: 0, colIndex: 0 },
-  extentCell: { rowIndex: 1, colIndex: 1 },
-  selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
-}): GridEngine {
+function makeEngine(
+  selection: GridSelection = {
+    activeCell: { rowIndex: 0, colIndex: 0 },
+    anchorCell: { rowIndex: 0, colIndex: 0 },
+    extentCell: { rowIndex: 1, colIndex: 1 },
+    selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+  },
+): GridEngine {
   const data = {
     getRowCount: () => 10,
-    getSchema: () => ({ fields: [
-      { id: 'a', name: 'A', type: 'text', width: 100 },
-      { id: 'b', name: 'B', type: 'number', width: 100 },
-    ] }),
+    getSchema: () => ({
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: 100 },
+        { id: 'b', name: 'B', type: 'number', width: 100 },
+      ],
+    }),
     getRows: () => [],
     getCell: () => null,
     subscribe: () => () => {},
@@ -176,17 +218,19 @@ function makeEngine(selection: GridSelection = {
     } as never,
     viewport: {
       contentRect: { width: 400, height: 300 },
-      regions: [{
-        id: 'main',
-        rowBand: 'middle',
-        colBand: 'center',
-        rowRange: [0, 9],
-        colRange: [0, 1],
-        rect: { x: 0, y: 30, width: 200, height: 270 },
-        scrollOffsetX: 0,
-        scrollOffsetY: 0,
-        zIndex: 0,
-      }],
+      regions: [
+        {
+          id: 'main',
+          rowBand: 'middle',
+          colBand: 'center',
+          rowRange: [0, 9],
+          colRange: [0, 1],
+          rect: { x: 0, y: 30, width: 200, height: 270 },
+          scrollOffsetX: 0,
+          scrollOffsetY: 0,
+          zIndex: 0,
+        },
+      ],
     },
     selection,
   } as {
@@ -229,7 +273,13 @@ function makeEngine(selection: GridSelection = {
     commitRowResize: mock(() => {}),
     commitColumnResize: mock(() => {}),
     commitPaste: mock(() => {}),
-    commitFill: mock((source, fill, direction) => ({ source, fill, result: { startRow: 0, endRow: 4, startCol: 0, endCol: 1 }, direction, writes: [] })),
+    commitFill: mock((source, fill, direction) => ({
+      source,
+      fill,
+      result: { startRow: 0, endRow: 4, startCol: 0, endCol: 1 },
+      direction,
+      writes: [],
+    })),
   } as unknown as GridEngine
 }
 

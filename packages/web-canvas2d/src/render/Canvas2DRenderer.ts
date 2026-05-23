@@ -314,7 +314,17 @@ export class Canvas2DRenderer {
   }
 
   private paintContentLayer(ctx: Canvas2DPaintFrameContext): void {
-    const { contentRect, data, theme, rowsAxis, colsAxis, snapshot, regions, paintOrder, excelChrome } = ctx
+    const {
+      contentRect,
+      data,
+      theme,
+      rowsAxis,
+      colsAxis,
+      snapshot,
+      regions,
+      paintOrder,
+      excelChrome,
+    } = ctx
 
     if (ctx.isEmpty) {
       const bodyTop = snapshot.headerHeight
@@ -333,7 +343,8 @@ export class Canvas2DRenderer {
     // 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
     this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
     this.preloadVisibleRows(ctx)
-    for (const region of paintOrder) this.paintCellContentRegion(region, data, rowsAxis, colsAxis, ctx.frame.cellEdit?.cell)
+    for (const region of paintOrder)
+      this.paintCellContentRegion(region, data, rowsAxis, colsAxis, ctx.frame.cellEdit?.cell)
     this.paintHeaders(paintOrder, data, colsAxis, excelChrome, ctx.frame.viewPipeline)
     this.paintRowHeaders(regions, rowsAxis, snapshot)
   }
@@ -365,12 +376,27 @@ export class Canvas2DRenderer {
     }
 
     for (const region of ctx.paintOrder) {
-      this.paintSelectionRangeInRegion(region, selection.selectedRange, ctx.rowsAxis, ctx.colsAxis, ctx.theme)
+      this.paintSelectionRangeInRegion(
+        region,
+        selection.selectedRange,
+        ctx.rowsAxis,
+        ctx.colsAxis,
+        ctx.theme,
+      )
     }
 
     if (selection.activeCell) {
       for (const region of [...ctx.paintOrder].reverse()) {
-        if (this.paintActiveCellInRegion(region, selection.activeCell, ctx.rowsAxis, ctx.colsAxis, ctx.theme)) break
+        if (
+          this.paintActiveCellInRegion(
+            region,
+            selection.activeCell,
+            ctx.rowsAxis,
+            ctx.colsAxis,
+            ctx.theme,
+          )
+        )
+          break
       }
     }
   }
@@ -648,7 +674,13 @@ export class Canvas2DRenderer {
       }
     }
 
-    this.strokeFrozenSeparatorLines(idleVerticalLines, idleHorizontalLines, contentRect, theme.colors.gridLine, theme)
+    this.strokeFrozenSeparatorLines(
+      idleVerticalLines,
+      idleHorizontalLines,
+      contentRect,
+      theme.colors.gridLine,
+      theme,
+    )
     this.strokeFrozenSeparatorLines(
       activeVerticalLines,
       activeHorizontalLines,
@@ -686,7 +718,10 @@ export class Canvas2DRenderer {
   }
 }
 
-function ctxClipRect(ctx: CanvasRenderingContext2D, rect: { x: number; y: number; width: number; height: number }): void {
+function ctxClipRect(
+  ctx: CanvasRenderingContext2D,
+  rect: { x: number; y: number; width: number; height: number },
+): void {
   ctx.save()
   ctx.beginPath()
   ctx.rect(rect.x, rect.y, rect.width, rect.height)

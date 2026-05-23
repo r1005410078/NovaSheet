@@ -27,8 +27,16 @@ describe('NativeScroller — 原生滚动', () => {
 
   function makeScrollHost(initialTop = 0, initialLeft = 0): HTMLElement {
     const el = document.createElement('div')
-    Object.defineProperty(el, 'scrollTop', { value: initialTop, writable: true, configurable: true })
-    Object.defineProperty(el, 'scrollLeft', { value: initialLeft, writable: true, configurable: true })
+    Object.defineProperty(el, 'scrollTop', {
+      value: initialTop,
+      writable: true,
+      configurable: true,
+    })
+    Object.defineProperty(el, 'scrollLeft', {
+      value: initialLeft,
+      writable: true,
+      configurable: true,
+    })
     el.scrollTo = ((opts: { top?: number; left?: number }) => {
       if (opts.top !== undefined) (el as unknown as { scrollTop: number }).scrollTop = opts.top
       if (opts.left !== undefined) (el as unknown as { scrollLeft: number }).scrollLeft = opts.left
@@ -81,7 +89,11 @@ describe('NativeScroller — 原生滚动', () => {
 
   it('scrollTo 设置 scrollTop/scrollLeft', () => {
     const host = makeScrollHost(0, 0)
-    const scroller = new NativeScroller(host, new FrameScheduler(), mock(() => {}))
+    const scroller = new NativeScroller(
+      host,
+      new FrameScheduler(),
+      mock(() => {}),
+    )
     scroller.scrollTo(150, 75)
     expect(host.scrollTop).toBe(150)
     expect(host.scrollLeft).toBe(75)
@@ -89,7 +101,11 @@ describe('NativeScroller — 原生滚动', () => {
 
   it('未 attach 就 destroy 不抛错', () => {
     const host = makeScrollHost()
-    const scroller = new NativeScroller(host, new FrameScheduler(), mock(() => {}))
+    const scroller = new NativeScroller(
+      host,
+      new FrameScheduler(),
+      mock(() => {}),
+    )
     expect(() => scroller.destroy()).not.toThrow()
   })
 

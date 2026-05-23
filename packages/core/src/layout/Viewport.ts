@@ -186,7 +186,7 @@ export class Viewport {
   }
 
   /**
- * 不可变快照。每帧绘制开始时调用一次；FrozenRegions 内部根据 viewport 状态实时切分绘制区域。
+   * 不可变快照。每帧绘制开始时调用一次；FrozenRegions 内部根据 viewport 状态实时切分绘制区域。
    * version 取 viewport 自身 + 两个 axis 的最大值——
    * 这样 axis 的 setSize / setDefaultSize 也会反映到 Renderer 的 invalidate 缓存键。
    *

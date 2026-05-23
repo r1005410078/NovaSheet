@@ -102,7 +102,11 @@ describe('applySelectionNavigation', () => {
   it('返回下一格地址供滚动跟随', () => {
     const model = new SelectionModel()
     model.selectCell({ rowIndex: 1, colIndex: 1 })
-    const next = applySelectionNavigation(model, { kind: 'delta', dRow: 1, dCol: 0, extend: false }, bounds)
+    const next = applySelectionNavigation(
+      model,
+      { kind: 'delta', dRow: 1, dCol: 0, extend: false },
+      bounds,
+    )
     expect(next).toEqual({ rowIndex: 2, colIndex: 1 })
   })
 })

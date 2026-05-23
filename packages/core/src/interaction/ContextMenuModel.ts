@@ -6,9 +6,7 @@
  */
 
 import type { CellAddress, CellRange } from './SelectionModel'
-import type {
-  ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext,
-} from '../view/ViewLayer'
+import type { ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext } from '../view/ViewLayer'
 import type { ViewPipeline } from '../view/ViewPipeline'
 
 export type ContextMenuTargetKind = 'cell' | 'columnHeader'
@@ -44,9 +42,7 @@ export interface ContextMenuItem {
   readonly separatorAfter?: boolean
 }
 
-export function getCellContextMenuItems(
-  ctx: CellMenuContext,
-): readonly ContextMenuItem[] {
+export function getCellContextMenuItems(ctx: CellMenuContext): readonly ContextMenuItem[] {
   return [
     { id: 'cut', label: '剪切', disabled: !ctx.hasSelection },
     { id: 'copy', label: '复制', disabled: !ctx.hasSelection, separatorAfter: true },

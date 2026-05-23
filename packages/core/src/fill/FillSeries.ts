@@ -37,7 +37,10 @@ export function computeFillWrites(input: ComputeFillWritesInput): readonly FillW
     for (let colIndex = input.fill.startCol; colIndex <= input.fill.endCol; colIndex += 1) {
       const field = fields[colIndex]
       if (!field) continue
-      projectors.set(colIndex, inferProjector(readVerticalSamples(input.data, input.source, field.id)))
+      projectors.set(
+        colIndex,
+        inferProjector(readVerticalSamples(input.data, input.source, field.id)),
+      )
     }
 
     for (let rowIndex = input.fill.startRow; rowIndex <= input.fill.endRow; rowIndex += 1) {
@@ -58,7 +61,10 @@ export function computeFillWrites(input: ComputeFillWritesInput): readonly FillW
 
   const projectors = new Map<number, SeriesProjector>()
   for (let rowIndex = input.fill.startRow; rowIndex <= input.fill.endRow; rowIndex += 1) {
-    projectors.set(rowIndex, inferProjector(readHorizontalSamples(input.data, input.source, rowIndex)))
+    projectors.set(
+      rowIndex,
+      inferProjector(readHorizontalSamples(input.data, input.source, rowIndex)),
+    )
   }
 
   for (let rowIndex = input.fill.startRow; rowIndex <= input.fill.endRow; rowIndex += 1) {
@@ -117,7 +123,12 @@ function inferProjector(samples: readonly CellValue[]): SeriesProjector {
 }
 
 function inferNumberProjector(samples: readonly CellValue[]): SeriesProjector | null {
-  if (!samples.every((sample): sample is number => typeof sample === 'number' && Number.isFinite(sample))) return null
+  if (
+    !samples.every(
+      (sample): sample is number => typeof sample === 'number' && Number.isFinite(sample),
+    )
+  )
+    return null
   const delta = samples[1]! - samples[0]!
   for (let i = 2; i < samples.length; i += 1) {
     if (samples[i]! - samples[i - 1]! !== delta) return null
@@ -127,7 +138,12 @@ function inferNumberProjector(samples: readonly CellValue[]): SeriesProjector | 
 }
 
 function inferDateProjector(samples: readonly CellValue[]): SeriesProjector | null {
-  if (!samples.every((sample): sample is Date => sample instanceof Date && Number.isFinite(sample.getTime()))) return null
+  if (
+    !samples.every(
+      (sample): sample is Date => sample instanceof Date && Number.isFinite(sample.getTime()),
+    )
+  )
+    return null
   const times = samples.map((sample) => sample.getTime())
   const delta = times[1]! - times[0]!
   for (let i = 2; i < times.length; i += 1) {

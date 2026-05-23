@@ -28,14 +28,24 @@ describe('Canvas2DRenderer — regions 绘制', () => {
         { name: 'Carol', age: 40 },
       ],
     })
-    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
     const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
     const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
     viewport.setSize(400, 200)
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setScroll(0, 0)
-    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
     return { ctx, ops, data, viewport, rowsAxis, colsAxis, renderer }
   }
 
@@ -46,7 +56,9 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     const firstBgFill = ops.find((o) => o.op === 'fillRect')
     expect(firstBgFill).toBeDefined()
     // header texts present
-    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
     expect(texts).toContain('Name')
     expect(texts).toContain('Age')
     expect(texts).toContain('Alice')
@@ -146,7 +158,9 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       },
     })
 
-    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
     expect(texts).not.toContain('Alice')
     expect(texts).toContain('Bob')
   })
@@ -188,7 +202,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
         { name: 'Dave', age: 35, role: 'QA' },
       ],
     })
-    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     const frozen = new FrozenRegions(rowsAxis, colsAxis, 1, 1)
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
@@ -196,7 +213,14 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setScroll(100, 56)
 
-    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
     renderer.paint()
 
     const alice = ops.find(
@@ -230,7 +254,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
 
     expect(ops).toContainEqual({ op: 'rect', args: [100, 60, 200, 84] })
     expect(ops).toContainEqual({ op: 'rect', args: [100, 0, 200, 32] })
-    expect(ops).toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.frozenSeparator.color })
+    expect(ops).toContainEqual({
+      op: 'set:strokeStyle',
+      value: denseGridTheme.frozenSeparator.color,
+    })
     expect(ops).toContainEqual({ op: 'set:lineWidth', value: denseGridTheme.frozenSeparator.width })
     expect(ops).toContainEqual({ op: 'moveTo', args: [99.5, 0] })
     expect(ops).toContainEqual({ op: 'lineTo', args: [99.5, 144] })
@@ -253,7 +280,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
         { name: 'Bob', age: 25, role: 'Designer' },
       ],
     })
-    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 1, leftCols: 1, rightCols: 1 })
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
@@ -261,7 +291,14 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setScroll(0, 0)
 
-    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
     renderer.paint()
 
     const idleSeparatorStart = ops.findIndex(
@@ -291,7 +328,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
         { name: 'Bob', age: 25, role: 'Designer' },
       ],
     })
-    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 1, leftCols: 1, rightCols: 1 })
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
@@ -299,7 +339,14 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setScroll(50, 0)
 
-    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
     renderer.paint()
 
     const separatorStart = ops.findIndex(
@@ -337,7 +384,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
         { name: 'Carol', age: 40, role: 'PM' },
       ],
     })
-    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 0, leftCols: 0, rightCols: 1 })
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
@@ -345,7 +395,14 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setScroll(100, 0)
 
-    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
     renderer.paint()
 
     const engineer = ops.find(
@@ -363,7 +420,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(roleHeader!.args[1]).toBe(208)
     expect(ops).toContainEqual({ op: 'rect', args: [200, 32, 100, 112] })
     expect(ops).toContainEqual({ op: 'rect', args: [200, 0, 100, 32] })
-    expect(ops).toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.frozenSeparator.color })
+    expect(ops).toContainEqual({
+      op: 'set:strokeStyle',
+      value: denseGridTheme.frozenSeparator.color,
+    })
     expect(ops).toContainEqual({ op: 'set:lineWidth', value: denseGridTheme.frozenSeparator.width })
     expect(ops).toContainEqual({ op: 'moveTo', args: [199.5, 0] })
     expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 144] })
@@ -378,7 +438,14 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
     viewport.setSize(400, 200)
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
-    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
     renderer.paint()
 
     expect(ops.some((o) => o.op === 'fillPath')).toBe(true)
@@ -415,7 +482,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
 
     expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBg })
     expect(ops).toContainEqual({ op: 'fillRect', args: [100, 60, 100, 28] })
-    expect(ops).toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.colors.selectionBorder })
+    expect(ops).toContainEqual({
+      op: 'set:strokeStyle',
+      value: denseGridTheme.colors.selectionBorder,
+    })
     expect(ops).toContainEqual({ op: 'moveTo', args: [100.5, 60.5] })
     expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 60.5] })
     expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 87.5] })
@@ -471,7 +541,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
         { name: 'Eve', role: 'Analyst', team: 'Brand' },
       ],
     })
-    const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
@@ -479,7 +552,14 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
     viewport.setRowHeaderWidth(44)
 
-    const renderer = new Canvas2DRenderer({ ctx, data, viewport, rowsAxis, colsAxis, theme: denseGridTheme })
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
     renderer.render({
       data,
       theme: denseGridTheme,

@@ -126,7 +126,8 @@ export class DomFillHandleLayer {
   }
 
   private onPointerUp = (event: PointerEvent): void => {
-    if (this.handle.hasPointerCapture?.(event.pointerId)) this.handle.releasePointerCapture(event.pointerId)
+    if (this.handle.hasPointerCapture?.(event.pointerId))
+      this.handle.releasePointerCapture(event.pointerId)
     if (this.activePointerId === event.pointerId) this.activePointerId = null
     this.callbacks.onFillPointerUp(event.pointerId)
   }

@@ -21,7 +21,9 @@ describe('CellPainter — 单元格', () => {
       rect: { x: 0, y: 0, width: 100, height: 28 },
       field: makeField(),
     })
-    const sequence = ops.map((o) => o.op).filter((op) => ['save', 'beginPath', 'rect', 'clip', 'restore'].includes(op))
+    const sequence = ops
+      .map((o) => o.op)
+      .filter((op) => ['save', 'beginPath', 'rect', 'clip', 'restore'].includes(op))
     expect(sequence).toEqual(['save', 'beginPath', 'rect', 'clip', 'restore'])
   })
 
@@ -138,7 +140,10 @@ describe('CellPainter — 单元格', () => {
         field: makeField({ type: 'text', wrap: true }),
       })
       const lines = ops
-        .filter((o): o is { op: 'fillText'; args: [string, number, number, number?] } => o.op === 'fillText')
+        .filter(
+          (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+            o.op === 'fillText',
+        )
         .map((o) => o.args[0])
       expect(lines.length).toBeGreaterThanOrEqual(2)
       expect(lines.join('')).toContain('hello')
@@ -172,7 +177,10 @@ describe('CellPainter — 单元格', () => {
         field: makeField({ type: 'text', wrap: true }),
       })
       const lines = ops
-        .filter((o): o is { op: 'fillText'; args: [string, number, number, number?] } => o.op === 'fillText')
+        .filter(
+          (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+            o.op === 'fillText',
+        )
         .map((o) => o.args[0])
       expect(lines.length).toBeLessThanOrEqual(2)
       expect(lines[lines.length - 1]!.endsWith('…')).toBe(true)
@@ -186,7 +194,10 @@ describe('CellPainter — 单元格', () => {
         field: makeField({ type: 'text', wrap: true }),
       })
       const lines = ops
-        .filter((o): o is { op: 'fillText'; args: [string, number, number, number?] } => o.op === 'fillText')
+        .filter(
+          (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+            o.op === 'fillText',
+        )
         .map((o) => o.args[0])
       expect(lines).toEqual(['first', 'second'])
     })

@@ -27,7 +27,12 @@ export function computeFillTarget(
 
   const rowIndex = clamp(hover.rowIndex, 0, dims.rowCount - 1)
   const colIndex = clamp(hover.colIndex, 0, dims.colCount - 1)
-  if (rowIndex >= source.startRow && rowIndex <= source.endRow && colIndex >= source.startCol && colIndex <= source.endCol) {
+  if (
+    rowIndex >= source.startRow &&
+    rowIndex <= source.endRow &&
+    colIndex >= source.startCol &&
+    colIndex <= source.endCol
+  ) {
     return null
   }
 
@@ -55,16 +60,36 @@ function fillRangeForDirection(
   colIndex: number,
 ): CellRange | null {
   if (direction === 'down' && rowIndex > source.endRow) {
-    return { startRow: source.endRow + 1, endRow: rowIndex, startCol: source.startCol, endCol: source.endCol }
+    return {
+      startRow: source.endRow + 1,
+      endRow: rowIndex,
+      startCol: source.startCol,
+      endCol: source.endCol,
+    }
   }
   if (direction === 'up' && rowIndex < source.startRow) {
-    return { startRow: rowIndex, endRow: source.startRow - 1, startCol: source.startCol, endCol: source.endCol }
+    return {
+      startRow: rowIndex,
+      endRow: source.startRow - 1,
+      startCol: source.startCol,
+      endCol: source.endCol,
+    }
   }
   if (direction === 'right' && colIndex > source.endCol) {
-    return { startRow: source.startRow, endRow: source.endRow, startCol: source.endCol + 1, endCol: colIndex }
+    return {
+      startRow: source.startRow,
+      endRow: source.endRow,
+      startCol: source.endCol + 1,
+      endCol: colIndex,
+    }
   }
   if (direction === 'left' && colIndex < source.startCol) {
-    return { startRow: source.startRow, endRow: source.endRow, startCol: colIndex, endCol: source.startCol - 1 }
+    return {
+      startRow: source.startRow,
+      endRow: source.endRow,
+      startCol: colIndex,
+      endCol: source.startCol - 1,
+    }
   }
   return null
 }

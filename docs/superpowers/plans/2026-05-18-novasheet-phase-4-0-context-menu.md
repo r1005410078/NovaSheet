@@ -15,6 +15,7 @@
 ## File Structure
 
 **Create:**
+
 - `packages/core/src/interaction/ContextMenuModel.ts` — types + `getCellContextMenuItems`
 - `packages/core/tests/interaction/ContextMenuModel.test.ts`
 - `packages/web/src/host/context-menu-style.ts` — themed stylesheet
@@ -24,6 +25,7 @@
 - `apps/storybook/src/stories/snippets/contextMenu.basic.snippet.ts`
 
 **Modify:**
+
 - `packages/core/src/theme/Theme.ts` — 新增 4 个 token
 - `packages/core/src/theme/denseGridTheme.ts` — 默认值
 - `packages/core/src/index.ts` — re-exports
@@ -45,6 +47,7 @@
 ## Task 1: Theme tokens for menu
 
 **Files:**
+
 - Modify: `packages/core/src/theme/Theme.ts`
 - Modify: `packages/core/src/theme/denseGridTheme.ts`
 
@@ -77,6 +80,7 @@ describe('denseGridTheme — Phase 4.0 menu tokens', () => {
 ```bash
 bun test packages/core/tests/theme/Theme.test.ts
 ```
+
 Expected: fail（类型不存在 / 字段 undefined）
 
 - [ ] **Step 3: Add tokens to Theme.ts**
@@ -111,6 +115,7 @@ menuPaddingY: 4,
 bun test packages/core/tests/theme/Theme.test.ts
 bun run --filter @novasheet/core typecheck
 ```
+
 Expected: pass
 
 - [ ] **Step 6: Commit**
@@ -125,6 +130,7 @@ git commit -m "feat(core): theme tokens for Phase 4.0 context menu"
 ## Task 2: ContextMenuModel — types + getCellContextMenuItems
 
 **Files:**
+
 - Create: `packages/core/src/interaction/ContextMenuModel.ts`
 - Create: `packages/core/tests/interaction/ContextMenuModel.test.ts`
 - Modify: `packages/core/src/index.ts`
@@ -195,6 +201,7 @@ describe('getCellContextMenuItems — Phase 4.0', () => {
 ```bash
 bun test packages/core/tests/interaction/ContextMenuModel.test.ts
 ```
+
 Expected: fail（模块不存在）
 
 - [ ] **Step 3: Implement ContextMenuModel.ts**
@@ -219,9 +226,7 @@ export interface ContextMenuItem {
   readonly separatorAfter?: boolean
 }
 
-export function getCellContextMenuItems(
-  ctx: ContextMenuContext,
-): readonly ContextMenuItem[] {
+export function getCellContextMenuItems(ctx: ContextMenuContext): readonly ContextMenuItem[] {
   return [
     { id: 'cut', label: 'Cut', disabled: !ctx.hasSelection },
     { id: 'copy', label: 'Copy', disabled: !ctx.hasSelection, separatorAfter: true },
@@ -248,6 +253,7 @@ export type {
 bun test packages/core/tests/interaction/ContextMenuModel.test.ts
 bun run --filter @novasheet/core typecheck
 ```
+
 Expected: 7 tests pass
 
 - [ ] **Step 6: Commit**
@@ -264,6 +270,7 @@ git commit -m "feat(core): ContextMenuModel + getCellContextMenuItems"
 ## Task 3: context-menu-style.ts + DomContextMenuLayer 基本生命周期
 
 **Files:**
+
 - Create: `packages/web/src/host/context-menu-style.ts`
 - Create: `packages/web/src/interaction/DomContextMenuLayer.ts`
 - Create: `packages/web/tests/interaction/DomContextMenuLayer.test.ts`
@@ -382,6 +389,7 @@ describe('DomContextMenuLayer — Phase 4.0 lifecycle', () => {
 ```bash
 bun test packages/web/tests/interaction/DomContextMenuLayer.test.ts
 ```
+
 Expected: fail（模块不存在）
 
 - [ ] **Step 3: Implement context-menu-style.ts**
@@ -593,6 +601,7 @@ export class DomContextMenuLayer {
 bun test packages/web/tests/interaction/DomContextMenuLayer.test.ts
 bun run --filter @novasheet/web typecheck
 ```
+
 Expected: 6 tests pass
 
 - [ ] **Step 6: Commit**
@@ -609,6 +618,7 @@ git commit -m "feat(web): DomContextMenuLayer lifecycle + themed CSS"
 ## Task 4: 菜单键盘导航（a11y）+ Esc / 外部点击关闭
 
 **Files:**
+
 - Modify: `packages/web/src/interaction/DomContextMenuLayer.ts`
 - Modify: `packages/web/tests/interaction/DomContextMenuLayer.test.ts`
 
@@ -688,6 +698,7 @@ describe('DomContextMenuLayer — keyboard navigation (spec §4.7)', () => {
 ```bash
 bun test packages/web/tests/interaction/DomContextMenuLayer.test.ts
 ```
+
 Expected: 6 new tests fail；已有 6 个仍 pass
 
 - [ ] **Step 3: Implement keyboard nav + outside-pointerdown 监听**
@@ -776,6 +787,7 @@ private activateFocused(): void {
 ```
 
 attach() 内加：
+
 ```ts
 this.menu.addEventListener('keydown', this.onMenuKeyDown)
 document.addEventListener('pointerdown', this.onDocumentPointerDown, true)
@@ -788,6 +800,7 @@ destroy() 内对应清理。
 ```bash
 bun test packages/web/tests/interaction/DomContextMenuLayer.test.ts
 ```
+
 Expected: 12 tests pass
 
 - [ ] **Step 5: Commit**
@@ -803,6 +816,7 @@ git commit -m "feat(web): DomContextMenuLayer keyboard nav + Esc / outside-click
 ## Task 5: 视口 clamp（右溢贴边、下溢 flip）
 
 **Files:**
+
 - Modify: `packages/web/src/interaction/DomContextMenuLayer.ts`
 - Modify: `packages/web/tests/interaction/DomContextMenuLayer.test.ts`
 
@@ -876,6 +890,7 @@ describe('DomContextMenuLayer — viewport clamp (spec §4.4)', () => {
 ```bash
 bun test packages/web/tests/interaction/DomContextMenuLayer.test.ts
 ```
+
 Expected: 4 new tests fail
 
 - [ ] **Step 3: Add clamp logic in open()**
@@ -916,6 +931,7 @@ private clampToViewport(clientX: number, clientY: number): void {
 ```bash
 bun test packages/web/tests/interaction/DomContextMenuLayer.test.ts
 ```
+
 Expected: 16 tests pass
 
 - [ ] **Step 5: Commit**
@@ -931,6 +947,7 @@ git commit -m "feat(web): DomContextMenuLayer viewport clamp + flip"
 ## Task 6: WebHost.onContextMenu + DomGridHost listener
 
 **Files:**
+
 - Modify: `packages/web/src/host/WebHost.ts`
 - Modify: `packages/web/src/host/DomGridHost.ts`
 - Modify: `packages/web/tests/host/DomGridHost.test.ts`
@@ -955,10 +972,25 @@ it('contextmenu on scroll-host invokes onContextMenu with local coords', () => {
   host.attach()
   const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
   // contextmenu 不冒到 document（spec：菜单层来 close）；这里只测 host 回调
-  const evt = new MouseEvent('contextmenu', { clientX: 40, clientY: 30, bubbles: true, cancelable: true })
+  const evt = new MouseEvent('contextmenu', {
+    clientX: 40,
+    clientY: 30,
+    bubbles: true,
+    cancelable: true,
+  })
   // 让 scroll-host getBoundingClientRect 返回 (10, 5) 偏移
   scrollHost.getBoundingClientRect = () =>
-    ({ x: 10, y: 5, left: 10, top: 5, width: 300, height: 200, right: 310, bottom: 205, toJSON: () => ({}) }) as DOMRect
+    ({
+      x: 10,
+      y: 5,
+      left: 10,
+      top: 5,
+      width: 300,
+      height: 200,
+      right: 310,
+      bottom: 205,
+      toJSON: () => ({}),
+    }) as DOMRect
   scrollHost.dispatchEvent(evt)
   expect(onContextMenu).toHaveBeenCalledWith({ x: 30, y: 25, shiftKey: false })
   expect(evt.defaultPrevented).toBe(true) // host 内部 preventDefault
@@ -972,6 +1004,7 @@ it('contextmenu on scroll-host invokes onContextMenu with local coords', () => {
 ```bash
 bun test packages/web/tests/host/DomGridHost.test.ts
 ```
+
 Expected: fail（`onContextMenu` 字段不存在 / handler 未实现）
 
 - [ ] **Step 3: Add to WebHost.ts interface**
@@ -985,16 +1018,19 @@ onContextMenu?: (event: WebPointerEvent) => void
 - [ ] **Step 4: Wire listener in DomGridHost.ts**
 
 attach() 内追加（与 pointerdown 同位置）：
+
 ```ts
 this.scrollHost.addEventListener('contextmenu', this.onContextMenuEvent)
 ```
 
 destroy() 对应：
+
 ```ts
 this.scrollHost.removeEventListener('contextmenu', this.onContextMenuEvent)
 ```
 
 新增字段 + handler：
+
 ```ts
 private onContextMenuEvent = (event: MouseEvent): void => {
   event.preventDefault()
@@ -1014,6 +1050,7 @@ private onContextMenuEvent = (event: MouseEvent): void => {
 bun test packages/web/tests/host/DomGridHost.test.ts
 bun run --filter @novasheet/web typecheck
 ```
+
 Expected: pass
 
 - [ ] **Step 6: Commit**
@@ -1030,6 +1067,7 @@ git commit -m "feat(web): DomGridHost contextmenu listener; preventDefault + dis
 ## Task 7: WebGridRuntime.handleHostContextMenu + 状态机集成
 
 **Files:**
+
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/tests/runtime/WebGridRuntime.test.ts`
 
@@ -1187,11 +1225,13 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
 ```bash
 bun test packages/web/tests/runtime/WebGridRuntime.test.ts
 ```
+
 Expected: 新增 5 个 fail（旧测试不变）
 
 - [ ] **Step 3: Implement in WebGridRuntime.ts**
 
 新增字段 + setter（与 cellEditor 旁）：
+
 ```ts
 private contextMenuLayer?: DomContextMenuLayer
 setContextMenuLayer(layer: DomContextMenuLayer): void {
@@ -1206,6 +1246,7 @@ private syncContextMenuTheme(): void {
 setTheme / setData 内补 `this.syncContextMenuTheme()` / `this.contextMenuLayer?.close()`。
 
 handleHostScroll / setData / 任何 `afterEngineMutation` 触发的 selection mutation 之后调 `this.contextMenuLayer?.close()`——直接在 `afterEngineMutation` 末尾加一行：
+
 ```ts
 this.contextMenuLayer?.close()
 ```
@@ -1213,6 +1254,7 @@ this.contextMenuLayer?.close()
 注意：避免在 contextmenu 打开**当帧**就 close——把 close 调用集中在 host scroll / setData / setTheme 等回调路径；`handleHostContextMenu` 本身在 close 之后 open 不冲突，因为 close 是 idempotent。
 
 新方法：
+
 ```ts
 handleHostContextMenu(event: WebPointerEvent): void {
   if (this.destroyed) return
@@ -1277,6 +1319,7 @@ handleHostContextMenu(event: WebPointerEvent): void {
 - [ ] **Step 4: Wire layer.onSelect 触发外部回调**
 
 新增字段 + 暴露 setter：
+
 ```ts
 private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
 setOnContextMenuAction(cb: typeof this.onContextMenuAction): void {
@@ -1286,6 +1329,7 @@ private lastContextMenuContext: ContextMenuContext | null = null
 ```
 
 构造 `DomContextMenuLayer` 时把 `onSelect` 接到这里（Canvas2DBackend 改造在 Task 8）：
+
 ```ts
 new DomContextMenuLayer(container, {
   onSelect: (id) => {
@@ -1297,6 +1341,7 @@ new DomContextMenuLayer(container, {
 ```
 
 新增 setter：
+
 ```ts
 private clipboardReady = false
 setClipboardReady(ready: boolean): void {
@@ -1317,6 +1362,7 @@ closeContextMenu(): void {
 bun test packages/web/tests/runtime/WebGridRuntime.test.ts
 bun run --filter @novasheet/web typecheck
 ```
+
 Expected: 全 pass（新 5 + 旧）
 
 - [ ] **Step 6: Commit**
@@ -1334,6 +1380,7 @@ git commit -m "feat(web): WebGridRuntime.handleHostContextMenu + state machine i
 ## Task 8: Canvas2DBackend 装配 + Grid facade
 
 **Files:**
+
 - Modify: `packages/web/src/grid/GridController.ts`
 - Modify: `packages/web/src/backends/Canvas2DBackend.ts`
 - Modify: `packages/web/src/Grid.ts`
@@ -1408,6 +1455,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
 ```bash
 bun test packages/web/tests/grid/Grid.test.ts
 ```
+
 Expected: fail（option / methods 不存在）
 
 - [ ] **Step 3: Extend GridController + GridOptions**
@@ -1424,11 +1472,7 @@ interface GridController {
 
 ```ts
 // packages/web/src/Grid.ts — GridOptions 扩展
-import type {
-  ContextMenuAction,
-  ContextMenuContext,
-  GridEngineOptions,
-} from '@novasheet/core'
+import type { ContextMenuAction, ContextMenuContext, GridEngineOptions } from '@novasheet/core'
 
 export interface GridOptions extends GridEngineOptions {
   renderer?: GridRendererBackend
@@ -1437,15 +1481,18 @@ export interface GridOptions extends GridEngineOptions {
 ```
 
 `engineOptionsFrom` 内继续剥离 `renderer` 和新加 `onContextMenuAction`：
+
 ```ts
 function engineOptionsFrom(options: GridOptions): GridEngineOptions {
   const { renderer: _renderer, onContextMenuAction: _cb, ...engineOptions } = options
-  void _renderer; void _cb
+  void _renderer
+  void _cb
   return engineOptions
 }
 ```
 
 `Grid` 内追加 3 个公开方法：
+
 ```ts
 setClipboardReady(ready: boolean): void {
   this.delegate.setClipboardReady(ready)
@@ -1475,6 +1522,7 @@ if (options.onContextMenuAction) {
 DomGridHost 构造里新增 `onContextMenu: (e) => this.runtime.handleHostContextMenu(e)`。
 
 backend 三个方法转发 runtime：
+
 ```ts
 setClipboardReady(ready: boolean): void { this.runtime.setClipboardReady(ready) }
 openContextMenuAt(row: number, fieldId: string): void { this.runtime.openContextMenuAt(row, fieldId) }
@@ -1484,6 +1532,7 @@ closeContextMenu(): void { this.runtime.closeContextMenu() }
 `destroy()` 内先 `this.contextMenuLayer.destroy()` 再走原 destroy 流程（不变量 #3）。
 
 `openContextMenuAt` 实现（在 WebGridRuntime）：
+
 ```ts
 openContextMenuAt(rowIndex: number, fieldId: string): void {
   if (!this.contextMenuLayer) return
@@ -1504,6 +1553,7 @@ openContextMenuAt(rowIndex: number, fieldId: string): void {
 ```
 
 > 若 `DomGridHost` 暂未暴露 `getContainerRect`，本任务追加一个公共方法：
+>
 > ```ts
 > getContainerRect(): { left: number; top: number } {
 >   return this.scrollHost.getBoundingClientRect()
@@ -1525,6 +1575,7 @@ bun run --filter '*' typecheck
 bun run lint
 bun run --filter @novasheet/web build && bun run --filter @novasheet/web-canvas2d build && bun run --filter @novasheet/core build
 ```
+
 Expected: 全 pass / 0 error
 
 - [ ] **Step 7: Commit**
@@ -1545,6 +1596,7 @@ git commit -m "feat(web): Phase 4.0 Grid facade — onContextMenuAction + setCli
 ## Task 9: Storybook 故事 + README 标 4.0 完成
 
 **Files:**
+
 - Create: `apps/storybook/src/stories/ContextMenu.stories.ts`
 - Create: `apps/storybook/src/stories/snippets/contextMenu.basic.snippet.ts`
 - Modify: `README.md`
@@ -1641,6 +1693,7 @@ export const PasteEnabled: Story = {
 ```md
 | Phase 4.0 | 单元格右键菜单（cut/copy/paste shell；剪贴板真正语义留 4.1） |
 ```
+
 移动到"已交付"段；从"未交付"删除对应行。同时在子阶段表里把 4.0 标 ✅ + 短描述。
 
 - [ ] **Step 4: Run full chain + storybook build**
@@ -1651,6 +1704,7 @@ bun run --filter '*' typecheck
 bun run lint
 bun run --filter @novasheet/storybook build-storybook
 ```
+
 Expected: 全 pass / Storybook build 成功
 
 - [ ] **Step 5: Commit**
@@ -1683,6 +1737,7 @@ git commit -m "feat(storybook,docs): Phase 4.0 context menu stories + README sig
 ## Self-Review
 
 **Spec 覆盖**：
+
 - §4.1 触发（body / 头 / handle / drag / edit）→ Task 7
 - §4.2 selection 调整 → Task 7
 - §4.3 items + clipboardReady → Task 2 / Task 8
@@ -1698,16 +1753,19 @@ git commit -m "feat(storybook,docs): Phase 4.0 context menu stories + README sig
 **焦点恢复（spec §4.5）**：4.0 plan **未显式实现**——layer close 时不显式 `scrollHost.focus()`。这是一个 conscious 减裁：键盘用户 Tab 关闭后焦点自然由浏览器走 Tab 顺序；外部 pointerdown 关闭后焦点由用户点击的元素接管；Esc 关闭后焦点目前留在 menu DOM 节点（已 detach data-open，但还在 DOM）——这条路径可能确实卡焦点。**Mitigation**：Task 4 的 Esc 测试加一条 follow-up，在 close() 内追加 `if (closedByKeyboard) container.focus()` 一行 polish。若主审认为过 polish，可挪到 4.0.1。
 
 **Type 一致性**：
+
 - `CellRange`（不是 `SelectedRange`）—— Task 2 已写
 - `engine.selectCell(cell)` —— Task 7 已写（不是 `setActiveCell`）
 - `menuItemHover` 默认 = `hoverRowBg` —— Task 1 已写
 
 **Placeholder scan**：
+
 - 无 TBD / TODO / "later"
 - Task 7 中标注了 `hitTestCell` band 判断在实现前查实际类型——明确指导而非占位
 - Task 8 中 `getContainerRect` 若不存在则追加——明确指导
 
 **Type / 命名一致性**：
+
 - `getCellContextMenuItems(ctx)` 全文一致
 - `ContextMenuAction` `'cut' | 'copy' | 'paste'` 全文一致
 - `ContextMenuItem` 字段 `id / label / disabled / separatorAfter?` 全文一致

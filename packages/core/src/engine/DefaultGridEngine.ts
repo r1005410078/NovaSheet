@@ -6,11 +6,7 @@ import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../cli
 import type { PasteSkippedCell } from '../clipboard/types'
 import { computeFillWrites } from '../fill/FillSeries'
 import { unionRange, type FillDirection } from '../fill/FillTarget'
-import {
-  formatCellForEdit,
-  isEditableFieldType,
-  parseCellEditInput,
-} from '../interaction/CellEdit'
+import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../interaction/CellEdit'
 import { CellEditModel } from '../interaction/CellEditModel'
 import { parseSelectionNavigationKey } from '../interaction/SelectionNavigation'
 import {
@@ -29,7 +25,12 @@ import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { findViewRow, resolveUnderlyingRow } from '../view/coordinates'
-import type { FillCommitResult, GridEngine, GridEngineOptions, SetViewDataOptions } from './GridEngine'
+import type {
+  FillCommitResult,
+  GridEngine,
+  GridEngineOptions,
+  SetViewDataOptions,
+} from './GridEngine'
 
 /**
  * `GridEngine` 默认实现。
@@ -65,11 +66,7 @@ export class DefaultGridEngine implements GridEngine {
       count: this.data.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
     })
-    this.frozen = new FrozenRegions(
-      this.rowsAxis,
-      this.colsAxis,
-      this.resolveFrozenConfig(options),
-    )
+    this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.resolveFrozenConfig(options))
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
     this.applySheetChrome()
@@ -102,11 +99,7 @@ export class DefaultGridEngine implements GridEngine {
       count: this.data.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
     })
-    this.frozen = new FrozenRegions(
-      this.rowsAxis,
-      this.colsAxis,
-      this.frozen.getFrozenConfig(),
-    )
+    this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
     this.applySheetChrome()
@@ -348,7 +341,11 @@ export class DefaultGridEngine implements GridEngine {
     this.undoStack.push({ kind: 'paste', target: range, before, after })
   }
 
-  commitFill(source: CellRange, fill: CellRange, direction: FillDirection): FillCommitResult | null {
+  commitFill(
+    source: CellRange,
+    fill: CellRange,
+    direction: FillDirection,
+  ): FillCommitResult | null {
     if (!isMutableDataSource(this.data)) return null
     const viewWrites = computeFillWrites({ data: this.data, source, fill, direction })
     const resultWrites: CellWrite[] = viewWrites.map((w) => ({
@@ -606,10 +603,7 @@ export class DefaultGridEngine implements GridEngine {
 }
 
 function isSingleCellRange(range: CellRange): boolean {
-  return (
-    range.startRow === range.endRow &&
-    range.startCol === range.endCol
-  )
+  return range.startRow === range.endRow && range.startCol === range.endCol
 }
 
 function areContiguousRows(rows: readonly number[]): boolean {

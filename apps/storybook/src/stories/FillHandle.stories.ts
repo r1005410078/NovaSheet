@@ -66,12 +66,16 @@ export const Basic: Story = {
     wrapper.appendChild(status)
     wrapper.appendChild(gridContainer)
 
-    const gridEl = createGridHost({
-      data,
-      onFill: (event) => {
-        status.textContent = `最近填充: ${event.direction} R${event.fill.startRow + 1}:R${event.fill.endRow + 1}, C${event.fill.startCol + 1}:C${event.fill.endCol + 1}`
+    const gridEl = createGridHost(
+      {
+        data,
+        onFill: (event) => {
+          status.textContent = `最近填充: ${event.direction} R${event.fill.startRow + 1}:R${event.fill.endRow + 1}, C${event.fill.startCol + 1}:C${event.fill.endCol + 1}`
+        },
       },
-    }, '100%', '100%')
+      '100%',
+      '100%',
+    )
     gridContainer.appendChild(gridEl)
 
     return wrapper

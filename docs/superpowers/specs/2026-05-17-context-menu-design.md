@@ -44,24 +44,24 @@ Phase 3 已有选择、键盘导航、resize。下一个用户期待的电子表
 
 ### 4.1 触发
 
-| 事件 | 命中 | 行为 |
-|---|---|---|
-| `contextmenu` | body cell | `preventDefault`；按 §4.2 更新 selection；菜单在 pointer 处打开 |
-| `contextmenu` | 列头 / 行号列 | `preventDefault`（不弹浏览器菜单），**4.0 不打开自己的菜单**（4.5 接管） |
-| `contextmenu` | resize handle | handle 内部 `stopPropagation`——浏览器菜单和我们的菜单都不弹 |
-| `contextmenu` | 已打开的菜单内部 | `preventDefault`——不嵌套二级浏览器菜单 |
-| `contextmenu` | drag-select / resize-drag 进行中 | `preventDefault`，**不开** |
-| `contextmenu` | cell 编辑中 | **先 commit 当前编辑**（同 blur 路径），然后按 body-cell 规则开菜单 |
+| 事件          | 命中                             | 行为                                                                     |
+| ------------- | -------------------------------- | ------------------------------------------------------------------------ |
+| `contextmenu` | body cell                        | `preventDefault`；按 §4.2 更新 selection；菜单在 pointer 处打开          |
+| `contextmenu` | 列头 / 行号列                    | `preventDefault`（不弹浏览器菜单），**4.0 不打开自己的菜单**（4.5 接管） |
+| `contextmenu` | resize handle                    | handle 内部 `stopPropagation`——浏览器菜单和我们的菜单都不弹              |
+| `contextmenu` | 已打开的菜单内部                 | `preventDefault`——不嵌套二级浏览器菜单                                   |
+| `contextmenu` | drag-select / resize-drag 进行中 | `preventDefault`，**不开**                                               |
+| `contextmenu` | cell 编辑中                      | **先 commit 当前编辑**（同 blur 路径），然后按 body-cell 规则开菜单      |
 
 未来 Shift+F10（键盘触发）：**4.0 暂不实现**，但 API 预留——`Grid.openContextMenuAt(rowIndex, fieldId)` 编程触发，位置取 cell 的右下角；上层组装快捷键时复用。
 
 ### 4.2 与 selection 的交互
 
-| 当前 selection | 右键命中 cell | 行为 |
-|---|---|---|
-| 单格 / 多格 range | **range 内** | 保留 selection，菜单上下文 = 整个 range |
-| 单格 / 多格 range | **range 外** | `setActiveCell(cell)`（同左键单击），menu 上下文 = 该格 |
-| 无 active | 任意 cell | `setActiveCell(cell)`，menu 上下文 = 该格 |
+| 当前 selection    | 右键命中 cell | 行为                                                    |
+| ----------------- | ------------- | ------------------------------------------------------- |
+| 单格 / 多格 range | **range 内**  | 保留 selection，菜单上下文 = 整个 range                 |
+| 单格 / 多格 range | **range 外**  | `setActiveCell(cell)`（同左键单击），menu 上下文 = 该格 |
+| 无 active         | 任意 cell     | `setActiveCell(cell)`，menu 上下文 = 该格               |
 
 不引入新的 selection 模式。复用现有 `selection.activeCell / anchorCell / extentCell / selectedRange`。
 
@@ -69,11 +69,11 @@ Phase 3 已有选择、键盘导航、resize。下一个用户期待的电子表
 
 固定三项，由 core `getCellContextMenuItems(context)` 计算 `disabled`：
 
-| Item | id | enabled when（4.0） | 4.1 action |
-|---|---|---|---|
-| Cut | `'cut'` | `context.hasSelection === true` 且后续剪贴板就绪——4.0 始终启用，回调里抛 stub | `grid.cut()` |
-| Copy | `'copy'` | 同上 | `grid.copy()` |
-| Paste | `'paste'` | `context.clipboardReady === true`——4.0 永远 `false` → 渲染为 `disabled` | `grid.paste()` |
+| Item  | id        | enabled when（4.0）                                                           | 4.1 action     |
+| ----- | --------- | ----------------------------------------------------------------------------- | -------------- |
+| Cut   | `'cut'`   | `context.hasSelection === true` 且后续剪贴板就绪——4.0 始终启用，回调里抛 stub | `grid.cut()`   |
+| Copy  | `'copy'`  | 同上                                                                          | `grid.copy()`  |
+| Paste | `'paste'` | `context.clipboardReady === true`——4.0 永远 `false` → 渲染为 `disabled`       | `grid.paste()` |
 
 顺序：Cut · Copy · Paste，**Copy 与 Paste 之间一条 separator**（贴近 Excel/Sheets 习惯）。
 
@@ -95,6 +95,7 @@ DPR / 缩放不需要特殊处理（`clientX/Y` 已是 CSS 逻辑像素）。
 ### 4.5 关闭与焦点
 
 **关闭触发**：
+
 - `Escape` 键（focus 在菜单上时）
 - 菜单外任意 `pointerdown`
 - 菜单自身的 `contextmenu`（同时打开新一次菜单）
@@ -106,25 +107,26 @@ DPR / 缩放不需要特殊处理（`clientX/Y` 已是 CSS 逻辑像素）。
 
 ### 4.6 与其它交互状态的交叉表
 
-| 当前状态 | `contextmenu` 触发 | `pointerdown` 触发（拖选 / resize / edit 进入） |
-|---|---|---|
-| 菜单已打开 | 关闭旧菜单，按 §4.1 决定是否打开新菜单 | 关闭菜单，再进入下一交互 |
-| 拖选中 | preventDefault，不开 | n/a |
-| resize-drag 中 | preventDefault，不开 | n/a |
-| cell 编辑中 | commit 编辑（走 blur 路径），再按 body-cell 规则开 | commit 编辑 |
-| 菜单内点 disabled 项 | n/a | 不关闭菜单，focus 留在该项 |
+| 当前状态             | `contextmenu` 触发                                 | `pointerdown` 触发（拖选 / resize / edit 进入） |
+| -------------------- | -------------------------------------------------- | ----------------------------------------------- |
+| 菜单已打开           | 关闭旧菜单，按 §4.1 决定是否打开新菜单             | 关闭菜单，再进入下一交互                        |
+| 拖选中               | preventDefault，不开                               | n/a                                             |
+| resize-drag 中       | preventDefault，不开                               | n/a                                             |
+| cell 编辑中          | commit 编辑（走 blur 路径），再按 body-cell 规则开 | commit 编辑                                     |
+| 菜单内点 disabled 项 | n/a                                                | 不关闭菜单，focus 留在该项                      |
 
 ### 4.7 a11y（菜单内键盘导航 — 4.0 必做）
 
-| 键 | 行为 |
-|---|---|
-| `↑` / `↓` | 移动 focus 到上/下一个**非 disabled**项；首尾循环 |
-| `Home` / `End` | 跳到第一个 / 最后一个非 disabled 项 |
-| `Enter` / `Space` | 选中当前 focus 项（disabled 则 no-op） |
-| `Escape` | 关闭菜单 |
-| `Tab` / `Shift+Tab` | 关闭菜单（焦点离开 == 取消） |
+| 键                  | 行为                                              |
+| ------------------- | ------------------------------------------------- |
+| `↑` / `↓`           | 移动 focus 到上/下一个**非 disabled**项；首尾循环 |
+| `Home` / `End`      | 跳到第一个 / 最后一个非 disabled 项               |
+| `Enter` / `Space`   | 选中当前 focus 项（disabled 则 no-op）            |
+| `Escape`            | 关闭菜单                                          |
+| `Tab` / `Shift+Tab` | 关闭菜单（焦点离开 == 取消）                      |
 
 ARIA：
+
 - 菜单容器 `role="menu"`，`aria-label="Cell actions"`
 - 项 `role="menuitem"`；disabled 项 `aria-disabled="true"` **仍可 focus**（标准菜单模式）
 - 打开后立即 focus 第一个非 disabled 项
@@ -140,8 +142,8 @@ ARIA：
 export type ContextMenuAction = 'cut' | 'copy' | 'paste'
 
 export interface ContextMenuContext {
-  readonly cell: CellAddress            // 触发右键的那一格（不是 active）
-  readonly selectedRange: CellRange | null  // selection 调整后的范围；为 null 表示无 range
+  readonly cell: CellAddress // 触发右键的那一格（不是 active）
+  readonly selectedRange: CellRange | null // selection 调整后的范围；为 null 表示无 range
   readonly hasSelection: boolean
   readonly clipboardReady: boolean
 }
@@ -153,9 +155,7 @@ export interface ContextMenuItem {
   readonly separatorAfter?: boolean
 }
 
-export function getCellContextMenuItems(
-  context: ContextMenuContext,
-): readonly ContextMenuItem[]
+export function getCellContextMenuItems(context: ContextMenuContext): readonly ContextMenuItem[]
 ```
 
 ```ts
@@ -185,25 +185,24 @@ class Grid {
 
 ### 6.1 包内位置
 
-| 件 | 包 | 备注 |
-|---|---|---|
-| `ContextMenuModel.ts`（types + `getCellContextMenuItems`） | `@novasheet/core/interaction` | 纯函数 + 纯类型 |
-| `DomContextMenuLayer.ts` | `@novasheet/web/interaction` | DOM overlay；attach/open/close/destroy |
-| `context-menu-style.ts` | `@novasheet/web/host` | 注入 stylesheet + Theme CSS 变量，结构对齐 `resize-handle-style.ts` / `cell-editor-style.ts` |
-| `WebHost.onContextMenu` 回调 | `@novasheet/web/host/WebHost` 接口 + `DomGridHost` 实现 | 类似 `onPointerDown` |
-| `WebGridRuntime.handleHostContextMenu` | `@novasheet/web/runtime` | 命中 → 调 selection → 调 layer.open |
-| `Canvas2DBackend` | `@novasheet/web/backends` | 实例化 layer + 接 runtime |
-| Storybook story | `apps/storybook/src/stories/ContextMenu.stories.ts` | 含编程触发按钮便于截图 |
+| 件                                                         | 包                                                      | 备注                                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `ContextMenuModel.ts`（types + `getCellContextMenuItems`） | `@novasheet/core/interaction`                           | 纯函数 + 纯类型                                                                              |
+| `DomContextMenuLayer.ts`                                   | `@novasheet/web/interaction`                            | DOM overlay；attach/open/close/destroy                                                       |
+| `context-menu-style.ts`                                    | `@novasheet/web/host`                                   | 注入 stylesheet + Theme CSS 变量，结构对齐 `resize-handle-style.ts` / `cell-editor-style.ts` |
+| `WebHost.onContextMenu` 回调                               | `@novasheet/web/host/WebHost` 接口 + `DomGridHost` 实现 | 类似 `onPointerDown`                                                                         |
+| `WebGridRuntime.handleHostContextMenu`                     | `@novasheet/web/runtime`                                | 命中 → 调 selection → 调 layer.open                                                          |
+| `Canvas2DBackend`                                          | `@novasheet/web/backends`                               | 实例化 layer + 接 runtime                                                                    |
+| Storybook story                                            | `apps/storybook/src/stories/ContextMenu.stories.ts`     | 含编程触发按钮便于截图                                                                       |
 
 依赖方向不变：`core ← web ← web-canvas2d`。
 
 ### 6.2 DOM 结构
 
 ```html
-<div data-novasheet-context-menu-layer>      <!-- pointer-events: none 关时 -->
-  <div role="menu" aria-label="Cell actions"
-       data-novasheet-context-menu
-       hidden>
+<div data-novasheet-context-menu-layer>
+  <!-- pointer-events: none 关时 -->
+  <div role="menu" aria-label="Cell actions" data-novasheet-context-menu hidden>
     <button role="menuitem" data-ns-action="cut">Cut</button>
     <button role="menuitem" data-ns-action="copy">Copy</button>
     <div role="separator"></div>
@@ -218,16 +217,16 @@ class Grid {
 
 ### 6.3 Theme tokens（CSS 变量挂 grid container）
 
-| 变量 | Theme 路径 | 备注 |
-|---|---|---|
-| `--ns-menu-bg` | `colors.background` | 已存在 |
-| `--ns-menu-border` | `colors.gridLineStrong` | 已存在 |
-| `--ns-menu-text` | `colors.text` | 已存在 |
-| `--ns-menu-text-disabled` | `colors.headerText` | 已存在，承担次级文本色 |
-| `--ns-menu-item-hover` | `colors.menuItemHover` ← **新增** | 默认值取 `colors.hoverRowBg`；为 4.5 column-header 风格扩展留口 |
-| `--ns-menu-separator` | `colors.gridLine` | 已存在 |
-| `--ns-menu-shadow` | `metrics.menuShadow` ← **新增** | string，例如 `'0 4px 12px rgba(15,23,42,.12)'` |
-| `--ns-menu-padding-y` / `-x` | `metrics.menuPaddingY / X` ← **新增** | 数字 px |
+| 变量                         | Theme 路径                            | 备注                                                            |
+| ---------------------------- | ------------------------------------- | --------------------------------------------------------------- |
+| `--ns-menu-bg`               | `colors.background`                   | 已存在                                                          |
+| `--ns-menu-border`           | `colors.gridLineStrong`               | 已存在                                                          |
+| `--ns-menu-text`             | `colors.text`                         | 已存在                                                          |
+| `--ns-menu-text-disabled`    | `colors.headerText`                   | 已存在，承担次级文本色                                          |
+| `--ns-menu-item-hover`       | `colors.menuItemHover` ← **新增**     | 默认值取 `colors.hoverRowBg`；为 4.5 column-header 风格扩展留口 |
+| `--ns-menu-separator`        | `colors.gridLine`                     | 已存在                                                          |
+| `--ns-menu-shadow`           | `metrics.menuShadow` ← **新增**       | string，例如 `'0 4px 12px rgba(15,23,42,.12)'`                  |
+| `--ns-menu-padding-y` / `-x` | `metrics.menuPaddingY / X` ← **新增** | 数字 px                                                         |
 
 **`@novasheet/web/interaction/DomContextMenuLayer.ts` 与 `context-menu-style.ts` 内严禁硬编码 px / 颜色 / 字体值**（同其余 painter / layer 的约束）。
 
@@ -267,15 +266,15 @@ class Grid {
 
 ## 7. 测试计划
 
-| 测试 | 文件 |
-|---|---|
-| `getCellContextMenuItems` 的 disabled 计算（有无 selection、clipboardReady 切换、disabled 集合稳定） | `packages/core/tests/interaction/ContextMenuModel.test.ts` |
-| `DomContextMenuLayer` open/close、disabled 项点击 no-op、Esc / 外部 pointerdown 关闭 | `packages/web/tests/interaction/DomContextMenuLayer.test.ts` |
-| Layer 键盘导航：↑↓ 跳过 disabled、Home/End、Enter 触发 onSelect | 同上 |
-| Layer 位置 clamp：右/下溢 flip、左/上溢贴边 | 同上（用伪 `window.innerWidth/Height`） |
-| `handleHostContextMenu` 的状态机：drag / resize / edit 期间不开；range 内不动 selection、range 外 setActiveCell | `packages/web/tests/runtime/WebGridRuntime.test.ts` |
-| `Grid` facade：`setClipboardReady` → 重开菜单 Paste 项 enabled；`openContextMenuAt` 编程触发 | `packages/web/tests/grid/Grid.test.ts` |
-| Storybook 故事手动验证：默认状态、设 clipboardReady、不传 `onContextMenuAction` 时点击只关闭 | `apps/storybook/src/stories/ContextMenu.stories.ts` |
+| 测试                                                                                                            | 文件                                                         |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `getCellContextMenuItems` 的 disabled 计算（有无 selection、clipboardReady 切换、disabled 集合稳定）            | `packages/core/tests/interaction/ContextMenuModel.test.ts`   |
+| `DomContextMenuLayer` open/close、disabled 项点击 no-op、Esc / 外部 pointerdown 关闭                            | `packages/web/tests/interaction/DomContextMenuLayer.test.ts` |
+| Layer 键盘导航：↑↓ 跳过 disabled、Home/End、Enter 触发 onSelect                                                 | 同上                                                         |
+| Layer 位置 clamp：右/下溢 flip、左/上溢贴边                                                                     | 同上（用伪 `window.innerWidth/Height`）                      |
+| `handleHostContextMenu` 的状态机：drag / resize / edit 期间不开；range 内不动 selection、range 外 setActiveCell | `packages/web/tests/runtime/WebGridRuntime.test.ts`          |
+| `Grid` facade：`setClipboardReady` → 重开菜单 Paste 项 enabled；`openContextMenuAt` 编程触发                    | `packages/web/tests/grid/Grid.test.ts`                       |
+| Storybook 故事手动验证：默认状态、设 clipboardReady、不传 `onContextMenuAction` 时点击只关闭                    | `apps/storybook/src/stories/ContextMenu.stories.ts`          |
 
 `contextmenu` 事件在 happy-dom 下用 `new MouseEvent('contextmenu', { clientX, clientY, button: 2 })` 派发，dispatch 到 scroll-host。
 
@@ -283,16 +282,16 @@ class Grid {
 
 ## 8. Risks / Open Questions
 
-| # | 风险 / 问题 | 4.0 应对 |
-|---|---|---|
-| R1 | iOS Safari long-press 默认行为（image actions）跟我们的菜单冲突 | 4.0 不实现 touch；4.0.1 评估是否拦截 |
-| R2 | z-index 3 在 host 嵌入页面中可能被外层 modal 盖住 | 不在 4.0 做主题化；将来 Theme 加 `menuZIndex` token |
-| R3 | 多 Grid 在同一 stylesheet id 下注入两次 | 用 `ensure*Stylesheet(doc)` 复用已有去重模式（与 cell-editor / resize-handle 一致） |
-| R4 | 第三方页面有自己的 contextmenu listener stopping propagation | container 元素 `addEventListener('contextmenu', ..., { capture: true })` 抢前；文档里提示 host 不要再 stopPropagation |
-| R5 | a11y 焦点恢复目标在不同浏览器表现差异 | 4.0 只承诺"回 scroll-host"，不试图记忆精细 focus 位置 |
-| OQ1 | 菜单项 label 是否要 i18n？（目前硬编码 Cut/Copy/Paste） | 4.0 硬编码英文；Storybook 用中文 alias 展示；i18n 框架后续 |
-| OQ2 | `getCellContextMenuItems` 是否暴露给 consumer 自定义？ | 4.0 不暴露；4.5 配合命令注册一起设计 |
-| OQ3 | clipboardReady 是真正的 `navigator.clipboard.read` 异步探测，还是 consumer 手工标记？ | 4.0 留 `setClipboardReady` 手工口；4.1 引擎接入后内部自动维护 |
+| #   | 风险 / 问题                                                                           | 4.0 应对                                                                                                              |
+| --- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| R1  | iOS Safari long-press 默认行为（image actions）跟我们的菜单冲突                       | 4.0 不实现 touch；4.0.1 评估是否拦截                                                                                  |
+| R2  | z-index 3 在 host 嵌入页面中可能被外层 modal 盖住                                     | 不在 4.0 做主题化；将来 Theme 加 `menuZIndex` token                                                                   |
+| R3  | 多 Grid 在同一 stylesheet id 下注入两次                                               | 用 `ensure*Stylesheet(doc)` 复用已有去重模式（与 cell-editor / resize-handle 一致）                                   |
+| R4  | 第三方页面有自己的 contextmenu listener stopping propagation                          | container 元素 `addEventListener('contextmenu', ..., { capture: true })` 抢前；文档里提示 host 不要再 stopPropagation |
+| R5  | a11y 焦点恢复目标在不同浏览器表现差异                                                 | 4.0 只承诺"回 scroll-host"，不试图记忆精细 focus 位置                                                                 |
+| OQ1 | 菜单项 label 是否要 i18n？（目前硬编码 Cut/Copy/Paste）                               | 4.0 硬编码英文；Storybook 用中文 alias 展示；i18n 框架后续                                                            |
+| OQ2 | `getCellContextMenuItems` 是否暴露给 consumer 自定义？                                | 4.0 不暴露；4.5 配合命令注册一起设计                                                                                  |
+| OQ3 | clipboardReady 是真正的 `navigator.clipboard.read` 异步探测，还是 consumer 手工标记？ | 4.0 留 `setClipboardReady` 手工口；4.1 引擎接入后内部自动维护                                                         |
 
 ---
 

@@ -9,11 +9,14 @@ export function isEditableFieldType(type: FieldType): boolean {
 }
 
 /** 选中格后直接键入（Sheets 式）；不含 Enter / Tab / 方向键等。 */
-export function isTypableEditKey(key: string, modifiers: {
-  readonly ctrlKey?: boolean
-  readonly metaKey?: boolean
-  readonly altKey?: boolean
-}): boolean {
+export function isTypableEditKey(
+  key: string,
+  modifiers: {
+    readonly ctrlKey?: boolean
+    readonly metaKey?: boolean
+    readonly altKey?: boolean
+  },
+): boolean {
   if (modifiers.ctrlKey || modifiers.metaKey || modifiers.altKey) return false
   if (key.length !== 1) return false
   return key !== '\n' && key !== '\t'
@@ -27,10 +30,7 @@ export function formatCellForEdit(value: CellValue | undefined, type: FieldType)
 }
 
 /** 合法输入返回 CellValue；空串为 null；非法 number 返回 undefined。 */
-export function parseCellEditInput(
-  text: string,
-  type: FieldType,
-): CellValue | null | undefined {
+export function parseCellEditInput(text: string, type: FieldType): CellValue | null | undefined {
   const trimmed = text.trim()
   if (trimmed === '') return null
   if (type === 'number') {

@@ -11,6 +11,7 @@
 **Spec reference:** [docs/superpowers/specs/2026-05-13-novasheet-phase1-canvas-grid-design.md §6](../specs/2026-05-13-novasheet-phase1-canvas-grid-design.md)
 
 **Out of scope for M2 (covered in later milestones):**
+
 - Frozen rows/cols (4-quadrant scroll exclusion) — M3
 - Resize handles (`<handle-layer>`) — M4
 - React wrapper — M4
@@ -73,6 +74,7 @@ packages/core/tests/
 ### Task 1: ScrollMapper — non-linear scroll math
 
 **Files:**
+
 - Create: `packages/core/src/scroll/ScrollMapper.ts`
 - Test: `packages/core/tests/scroll/ScrollMapper.test.ts`
 
@@ -272,6 +274,7 @@ git commit -m "feat(core): add ScrollMapper with non-linear scrollTop ↔ logica
 ### Task 2: NativeScroller — DOM scroll event adapter
 
 **Files:**
+
 - Create: `packages/core/src/scroll/NativeScroller.ts`
 - Test: `packages/core/tests/scroll/NativeScroller.test.ts`
 
@@ -309,8 +312,16 @@ describe('NativeScroller', () => {
 
   function makeScrollHost(initialTop = 0, initialLeft = 0): HTMLElement {
     const el = document.createElement('div')
-    Object.defineProperty(el, 'scrollTop', { value: initialTop, writable: true, configurable: true })
-    Object.defineProperty(el, 'scrollLeft', { value: initialLeft, writable: true, configurable: true })
+    Object.defineProperty(el, 'scrollTop', {
+      value: initialTop,
+      writable: true,
+      configurable: true,
+    })
+    Object.defineProperty(el, 'scrollLeft', {
+      value: initialLeft,
+      writable: true,
+      configurable: true,
+    })
     el.scrollTo = ((opts: { top?: number; left?: number }) => {
       if (opts.top !== undefined) (el as unknown as { scrollTop: number }).scrollTop = opts.top
       if (opts.left !== undefined) (el as unknown as { scrollLeft: number }).scrollLeft = opts.left
@@ -477,6 +488,7 @@ git commit -m "feat(core): add NativeScroller adapter wired through shared Frame
 ### Task 3: Renderer — scroll-aware paintQuadrant
 
 **Files:**
+
 - Modify: `packages/core/src/render/Renderer.ts`
 - Modify: `packages/core/src/render/GridLinesPainter.ts`
 - Modify: `packages/core/tests/render/Renderer.test.ts`
@@ -487,36 +499,36 @@ git commit -m "feat(core): add NativeScroller adapter wired through shared Frame
 Append to `packages/core/tests/render/Renderer.test.ts` (inside the existing `describe('Renderer (M1 single quadrant)')` block, just before its closing `})`):
 
 ```ts
-  it('paintQuadrant subtracts viewport.scrollY from cellY for vertical scroll', () => {
-    const { ctx, ops, viewport, renderer } = setup()
-    viewport.setScroll(0, 56) // scroll down by 2 rows (28px each)
-    ops.length = 0
-    renderer.paint()
-    // First cell of the FIRST visible row should be at cellY ≈ rect.y + indexToPosition(visibleFirst) - 56
-    // For our 200px viewport with headerHeight 32, scrollY 56 → visibleFirst = 2 (rows 2,3,4..)
-    // Row 2 starts at y = 56 in content space; rect.y = headerHeight = 32; cellY = 32 + 56 - 56 = 32
-    const firstCellFillText = ops.find(
-      (o) => o.op === 'fillText' && typeof o.args[0] === 'string' && o.args[0] === 'Carol',
-    )
-    // Carol is row 2 (Alice=0, Bob=1, Carol=2). It should still be in fillText
-    expect(firstCellFillText).toBeDefined()
-  })
+it('paintQuadrant subtracts viewport.scrollY from cellY for vertical scroll', () => {
+  const { ctx, ops, viewport, renderer } = setup()
+  viewport.setScroll(0, 56) // scroll down by 2 rows (28px each)
+  ops.length = 0
+  renderer.paint()
+  // First cell of the FIRST visible row should be at cellY ≈ rect.y + indexToPosition(visibleFirst) - 56
+  // For our 200px viewport with headerHeight 32, scrollY 56 → visibleFirst = 2 (rows 2,3,4..)
+  // Row 2 starts at y = 56 in content space; rect.y = headerHeight = 32; cellY = 32 + 56 - 56 = 32
+  const firstCellFillText = ops.find(
+    (o) => o.op === 'fillText' && typeof o.args[0] === 'string' && o.args[0] === 'Carol',
+  )
+  // Carol is row 2 (Alice=0, Bob=1, Carol=2). It should still be in fillText
+  expect(firstCellFillText).toBeDefined()
+})
 
-  it('paintQuadrant subtracts viewport.scrollX from cellX for horizontal scroll', () => {
-    const { ctx, ops, viewport, renderer } = setup()
-    viewport.setScroll(100, 0) // scroll right by 100px (= 1 col)
-    ops.length = 0
-    renderer.paint()
-    // Column 0 (Name) starts at xLeft=0; with scrollX=100 it should be at cellX = 0 + 0 - 100 = -100,
-    // which means it's mostly clipped. But the fillText call is still made if the col is in visible range.
-    // After scrolling left, visible col range starts at col 1 (Age). Verify "Age" header is the leftmost visible.
-    const ageHeader = ops.find((o) => o.op === 'fillText' && o.args[0] === 'Age')
-    expect(ageHeader).toBeDefined()
-    if (ageHeader && ageHeader.op === 'fillText') {
-      // Age column starts at content x=100; with scrollX=100 it lands at cellX = 0 + 100 - 100 = 0 + padX = 8
-      expect(typeof ageHeader.args[1]).toBe('number')
-    }
-  })
+it('paintQuadrant subtracts viewport.scrollX from cellX for horizontal scroll', () => {
+  const { ctx, ops, viewport, renderer } = setup()
+  viewport.setScroll(100, 0) // scroll right by 100px (= 1 col)
+  ops.length = 0
+  renderer.paint()
+  // Column 0 (Name) starts at xLeft=0; with scrollX=100 it should be at cellX = 0 + 0 - 100 = -100,
+  // which means it's mostly clipped. But the fillText call is still made if the col is in visible range.
+  // After scrolling left, visible col range starts at col 1 (Age). Verify "Age" header is the leftmost visible.
+  const ageHeader = ops.find((o) => o.op === 'fillText' && o.args[0] === 'Age')
+  expect(ageHeader).toBeDefined()
+  if (ageHeader && ageHeader.op === 'fillText') {
+    // Age column starts at content x=100; with scrollX=100 it lands at cellX = 0 + 100 - 100 = 0 + padX = 8
+    expect(typeof ageHeader.args[1]).toBe('number')
+  }
+})
 ```
 
 - [ ] **Step 2: Append failing test to GridLinesPainter.test.ts**
@@ -524,47 +536,47 @@ Append to `packages/core/tests/render/Renderer.test.ts` (inside the existing `de
 Append to `packages/core/tests/render/GridLinesPainter.test.ts`:
 
 ```ts
-  it('shifts line positions by scrollOffset when provided', () => {
-    const { ctx, ops } = createRecordingContext()
-    const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
-    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
-    const painter = new GridLinesPainter(denseGridTheme)
-    painter.paint(ctx, {
-      rowsAxis,
-      colsAxis,
-      rowRange: [0, 2],
-      colRange: [0, 1],
-      rect: { x: 0, y: 0, width: 200, height: 100 },
-      scrollOffsetX: 0,
-      scrollOffsetY: 28, // scroll down by 1 row
-    })
-    // Without scroll, the last row bottom is at y = 84 (3 × 28). With scrollY=28, lines should be
-    // shifted up by 28. The bottom line for row 2 should be at y = 84 - 28 = 56 (+0.5 = 56.5).
-    const lineYs = ops
-      .filter((o) => o.op === 'moveTo')
-      .map((o) => (o.op === 'moveTo' ? o.args[1] : 0))
-      .filter((y) => y > 0 && y < 100)
-    expect(lineYs).toContain(56.5)
+it('shifts line positions by scrollOffset when provided', () => {
+  const { ctx, ops } = createRecordingContext()
+  const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
+  const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+  const painter = new GridLinesPainter(denseGridTheme)
+  painter.paint(ctx, {
+    rowsAxis,
+    colsAxis,
+    rowRange: [0, 2],
+    colRange: [0, 1],
+    rect: { x: 0, y: 0, width: 200, height: 100 },
+    scrollOffsetX: 0,
+    scrollOffsetY: 28, // scroll down by 1 row
   })
+  // Without scroll, the last row bottom is at y = 84 (3 × 28). With scrollY=28, lines should be
+  // shifted up by 28. The bottom line for row 2 should be at y = 84 - 28 = 56 (+0.5 = 56.5).
+  const lineYs = ops
+    .filter((o) => o.op === 'moveTo')
+    .map((o) => (o.op === 'moveTo' ? o.args[1] : 0))
+    .filter((y) => y > 0 && y < 100)
+  expect(lineYs).toContain(56.5)
+})
 
-  it('keeps backward-compatible default (no scroll offset = no shift)', () => {
-    const { ctx, ops } = createRecordingContext()
-    const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
-    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
-    new GridLinesPainter(denseGridTheme).paint(ctx, {
-      rowsAxis,
-      colsAxis,
-      rowRange: [0, 2],
-      colRange: [0, 1],
-      rect: { x: 0, y: 0, width: 200, height: 100 },
-      // scrollOffsetX / scrollOffsetY omitted — defaults to 0
-    })
-    const lineYs = ops
-      .filter((o) => o.op === 'moveTo')
-      .map((o) => (o.op === 'moveTo' ? o.args[1] : 0))
-      .filter((y) => y > 0 && y < 100)
-    expect(lineYs).toContain(84.5)
+it('keeps backward-compatible default (no scroll offset = no shift)', () => {
+  const { ctx, ops } = createRecordingContext()
+  const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
+  const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+  new GridLinesPainter(denseGridTheme).paint(ctx, {
+    rowsAxis,
+    colsAxis,
+    rowRange: [0, 2],
+    colRange: [0, 1],
+    rect: { x: 0, y: 0, width: 200, height: 100 },
+    // scrollOffsetX / scrollOffsetY omitted — defaults to 0
   })
+  const lineYs = ops
+    .filter((o) => o.op === 'moveTo')
+    .map((o) => (o.op === 'moveTo' ? o.args[1] : 0))
+    .filter((y) => y > 0 && y < 100)
+  expect(lineYs).toContain(84.5)
+})
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
@@ -632,6 +644,7 @@ export class GridLinesPainter {
 ```
 
 Notes:
+
 - The M1 painter built coordinates from `rect.y + (indexToPosition(r) + getSize(r))` which assumed scrollY=0. The new version reads `rect.y + yBase - scrollOffsetY`. This matches Renderer's per-cell convention.
 - Backward compatibility: when callers omit the new fields, they default to 0 — M1 callers (none after this task lands) keep working.
 
@@ -736,6 +749,7 @@ git commit -m "feat(core): make Renderer + GridLinesPainter scroll-aware (subtra
 ### Task 4: Grid — DOM restructuring with scroll-host + spacer
 
 **Files:**
+
 - Modify: `packages/core/src/Grid.ts`
 - Modify: `packages/core/tests/Grid.test.ts`
 
@@ -744,83 +758,83 @@ git commit -m "feat(core): make Renderer + GridLinesPainter scroll-aware (subtra
 Append to `packages/core/tests/Grid.test.ts` (inside `describe('Grid')`):
 
 ```ts
-  it('mounts scroll-host, scroll-spacer, and canvas with correct DOM hierarchy', () => {
-    const el = document.createElement('div')
-    Object.assign(el.style, { width: '400px', height: '300px' })
-    document.body.appendChild(el)
-    const grid = new Grid(el, { data: makeData() })
+it('mounts scroll-host, scroll-spacer, and canvas with correct DOM hierarchy', () => {
+  const el = document.createElement('div')
+  Object.assign(el.style, { width: '400px', height: '300px' })
+  document.body.appendChild(el)
+  const grid = new Grid(el, { data: makeData() })
 
-    const scrollHost = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement | null
-    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement | null
-    const canvas = el.querySelector('canvas') as HTMLCanvasElement | null
+  const scrollHost = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement | null
+  const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement | null
+  const canvas = el.querySelector('canvas') as HTMLCanvasElement | null
 
-    expect(scrollHost).not.toBeNull()
-    expect(spacer).not.toBeNull()
-    expect(canvas).not.toBeNull()
-    expect(scrollHost!.contains(spacer!)).toBe(true)
-    expect(scrollHost!.parentNode).toBe(el)
-    expect(canvas!.parentNode).toBe(el)
+  expect(scrollHost).not.toBeNull()
+  expect(spacer).not.toBeNull()
+  expect(canvas).not.toBeNull()
+  expect(scrollHost!.contains(spacer!)).toBe(true)
+  expect(scrollHost!.parentNode).toBe(el)
+  expect(canvas!.parentNode).toBe(el)
 
-    grid.destroy()
-    document.body.removeChild(el)
+  grid.destroy()
+  document.body.removeChild(el)
+})
+
+it('canvas has pointer-events: none so scroll events pass through', () => {
+  const el = document.createElement('div')
+  const grid = new Grid(el, { data: makeData() })
+  const canvas = el.querySelector('canvas') as HTMLCanvasElement
+  expect(canvas.style.pointerEvents).toBe('none')
+  grid.destroy()
+})
+
+it('scroll-host has overflow auto so it produces a native scrollbar', () => {
+  const el = document.createElement('div')
+  const grid = new Grid(el, { data: makeData() })
+  const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+  expect(host.style.overflow).toBe('auto')
+  grid.destroy()
+})
+
+it('scroll-spacer is sized via ScrollMapper.computeSpacerSize for both axes', () => {
+  const el = document.createElement('div')
+  const grid = new Grid(el, { data: makeData() })
+  const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
+  // makeData has 50 rows × 2 cols × default theme rowHeight=28; widths come from SCHEMA
+  // contentH = 50 × 28 = 1400; contentW = 200 + 80 = 280 (both well under SAFE_MAX)
+  expect(spacer.style.height).toBe('1400px')
+  expect(spacer.style.width).toBe('280px')
+  grid.destroy()
+})
+
+it('destroy removes scroll-host along with canvas', () => {
+  const el = document.createElement('div')
+  const grid = new Grid(el, { data: makeData() })
+  grid.destroy()
+  expect(el.querySelector('[data-novasheet-scroll-host]')).toBeNull()
+  expect(el.querySelector('canvas')).toBeNull()
+})
+
+it('setData re-sizes the spacer to match the new dataset', () => {
+  const el = document.createElement('div')
+  const grid = new Grid(el, { data: makeData() })
+  const newData = new InMemoryDataSource({
+    schema: SCHEMA,
+    rows: Array.from({ length: 200 }, (_, i) => ({ name: `n${i}`, age: i })),
   })
+  grid.setData(newData)
+  const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
+  expect(spacer.style.height).toBe(`${200 * 28}px`)
+  grid.destroy()
+})
 
-  it('canvas has pointer-events: none so scroll events pass through', () => {
-    const el = document.createElement('div')
-    const grid = new Grid(el, { data: makeData() })
-    const canvas = el.querySelector('canvas') as HTMLCanvasElement
-    expect(canvas.style.pointerEvents).toBe('none')
-    grid.destroy()
-  })
-
-  it('scroll-host has overflow auto so it produces a native scrollbar', () => {
-    const el = document.createElement('div')
-    const grid = new Grid(el, { data: makeData() })
-    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
-    expect(host.style.overflow).toBe('auto')
-    grid.destroy()
-  })
-
-  it('scroll-spacer is sized via ScrollMapper.computeSpacerSize for both axes', () => {
-    const el = document.createElement('div')
-    const grid = new Grid(el, { data: makeData() })
-    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
-    // makeData has 50 rows × 2 cols × default theme rowHeight=28; widths come from SCHEMA
-    // contentH = 50 × 28 = 1400; contentW = 200 + 80 = 280 (both well under SAFE_MAX)
-    expect(spacer.style.height).toBe('1400px')
-    expect(spacer.style.width).toBe('280px')
-    grid.destroy()
-  })
-
-  it('destroy removes scroll-host along with canvas', () => {
-    const el = document.createElement('div')
-    const grid = new Grid(el, { data: makeData() })
-    grid.destroy()
-    expect(el.querySelector('[data-novasheet-scroll-host]')).toBeNull()
-    expect(el.querySelector('canvas')).toBeNull()
-  })
-
-  it('setData re-sizes the spacer to match the new dataset', () => {
-    const el = document.createElement('div')
-    const grid = new Grid(el, { data: makeData() })
-    const newData = new InMemoryDataSource({
-      schema: SCHEMA,
-      rows: Array.from({ length: 200 }, (_, i) => ({ name: `n${i}`, age: i })),
-    })
-    grid.setData(newData)
-    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
-    expect(spacer.style.height).toBe(`${200 * 28}px`)
-    grid.destroy()
-  })
-
-  it('setRowHeight re-sizes the spacer', () => {
-    const el = document.createElement('div')
-    const grid = new Grid(el, { data: makeData() })
-    grid.setRowHeight(0, 100) // delta = 100 - 28 = 72
-    const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
-    expect(spacer.style.height).toBe(`${50 * 28 + 72}px`)
-    grid.destroy()
-  })
+it('setRowHeight re-sizes the spacer', () => {
+  const el = document.createElement('div')
+  const grid = new Grid(el, { data: makeData() })
+  grid.setRowHeight(0, 100) // delta = 100 - 28 = 72
+  const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
+  expect(spacer.style.height).toBe(`${50 * 28 + 72}px`)
+  grid.destroy()
+})
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -836,60 +850,60 @@ Expected: FAIL — no scroll-host / spacer in DOM yet.
 Replace the constructor's DOM setup section in `packages/core/src/Grid.ts`. Find:
 
 ```ts
-    this.canvas = document.createElement('canvas')
-    Object.assign(this.canvas.style, {
-      position: 'absolute',
-      top: '0',
-      left: '0',
-      pointerEvents: 'none',
-    })
-    if (getComputedStyle(this.container).position === 'static') {
-      this.container.style.position = 'relative'
-    }
-    this.container.appendChild(this.canvas)
+this.canvas = document.createElement('canvas')
+Object.assign(this.canvas.style, {
+  position: 'absolute',
+  top: '0',
+  left: '0',
+  pointerEvents: 'none',
+})
+if (getComputedStyle(this.container).position === 'static') {
+  this.container.style.position = 'relative'
+}
+this.container.appendChild(this.canvas)
 ```
 
 Replace with:
 
 ```ts
-    // Position the container so absolute children (canvas, scroll-host) anchor correctly
-    const computedPos = getComputedStyle(this.container).position
-    this.originalPosition = this.container.style.position
-    if (computedPos === 'static') {
-      this.container.style.position = 'relative'
-    }
+// Position the container so absolute children (canvas, scroll-host) anchor correctly
+const computedPos = getComputedStyle(this.container).position
+this.originalPosition = this.container.style.position
+if (computedPos === 'static') {
+  this.container.style.position = 'relative'
+}
 
-    // Scroll-host: native scrollbar provider; absolutely fills container
-    this.scrollHost = document.createElement('div')
-    this.scrollHost.setAttribute('data-novasheet-scroll-host', '')
-    Object.assign(this.scrollHost.style, {
-      position: 'absolute',
-      top: '0',
-      left: '0',
-      right: '0',
-      bottom: '0',
-      overflow: 'auto',
-    })
-    // Spacer: sized to ScrollMapper.computeSpacerSize, gives the scrollbar its range
-    this.scrollSpacer = document.createElement('div')
-    this.scrollSpacer.setAttribute('data-novasheet-scroll-spacer', '')
-    Object.assign(this.scrollSpacer.style, {
-      display: 'block',
-      width: '0px',
-      height: '0px',
-    })
-    this.scrollHost.appendChild(this.scrollSpacer)
-    this.container.appendChild(this.scrollHost)
+// Scroll-host: native scrollbar provider; absolutely fills container
+this.scrollHost = document.createElement('div')
+this.scrollHost.setAttribute('data-novasheet-scroll-host', '')
+Object.assign(this.scrollHost.style, {
+  position: 'absolute',
+  top: '0',
+  left: '0',
+  right: '0',
+  bottom: '0',
+  overflow: 'auto',
+})
+// Spacer: sized to ScrollMapper.computeSpacerSize, gives the scrollbar its range
+this.scrollSpacer = document.createElement('div')
+this.scrollSpacer.setAttribute('data-novasheet-scroll-spacer', '')
+Object.assign(this.scrollSpacer.style, {
+  display: 'block',
+  width: '0px',
+  height: '0px',
+})
+this.scrollHost.appendChild(this.scrollSpacer)
+this.container.appendChild(this.scrollHost)
 
-    // Canvas: sits on top, pointer-events: none so wheel/touch scroll passes through
-    this.canvas = document.createElement('canvas')
-    Object.assign(this.canvas.style, {
-      position: 'absolute',
-      top: '0',
-      left: '0',
-      pointerEvents: 'none',
-    })
-    this.container.appendChild(this.canvas)
+// Canvas: sits on top, pointer-events: none so wheel/touch scroll passes through
+this.canvas = document.createElement('canvas')
+Object.assign(this.canvas.style, {
+  position: 'absolute',
+  top: '0',
+  left: '0',
+  pointerEvents: 'none',
+})
+this.container.appendChild(this.canvas)
 ```
 
 Add private fields to the Grid class (near `private canvas: HTMLCanvasElement`):
@@ -920,7 +934,7 @@ This needs `this.scrollMapper` — add a field near `private renderer: Renderer`
 Initialize in constructor (after `this.frozen = new FrozenRegions(...)`):
 
 ```ts
-    this.scrollMapper = new ScrollMapper()
+this.scrollMapper = new ScrollMapper()
 ```
 
 Add the import at the top:
@@ -936,23 +950,23 @@ Specifically:
 In the constructor, change the end from:
 
 ```ts
-    this.applyFieldWidths()
-    this.renderer.paint()
+this.applyFieldWidths()
+this.renderer.paint()
 ```
 
 to:
 
 ```ts
-    this.applyFieldWidths()
-    this.resizeSpacer()
-    this.renderer.paint()
+this.applyFieldWidths()
+this.resizeSpacer()
+this.renderer.paint()
 ```
 
 In `setData`, after `this.applyFieldWidths()`:
 
 ```ts
-    this.applyFieldWidths()
-    this.resizeSpacer()
+this.applyFieldWidths()
+this.resizeSpacer()
 ```
 
 In `setRowHeight`:
@@ -1039,6 +1053,7 @@ git commit -m "feat(core): Grid DOM restructure — scroll-host + spacer for nat
 ### Task 5: Grid — wire NativeScroller + ResizeObserver + scrollToRow/Cell API
 
 **Files:**
+
 - Modify: `packages/core/src/Grid.ts`
 - Modify: `packages/core/src/index.ts` (re-export ScrollMapper if useful publicly; keep NativeScroller internal)
 - Modify: `packages/core/tests/Grid.test.ts`
@@ -1048,115 +1063,115 @@ git commit -m "feat(core): Grid DOM restructure — scroll-host + spacer for nat
 Append to `packages/core/tests/Grid.test.ts`:
 
 ```ts
-  it('forwards native scroll events to viewport via ScrollMapper', () => {
-    const rafs: Array<() => void> = []
-    const originalRaf = globalThis.requestAnimationFrame
-    globalThis.requestAnimationFrame = ((cb: () => void) => {
-      rafs.push(cb)
-      return rafs.length
-    }) as typeof requestAnimationFrame
+it('forwards native scroll events to viewport via ScrollMapper', () => {
+  const rafs: Array<() => void> = []
+  const originalRaf = globalThis.requestAnimationFrame
+  globalThis.requestAnimationFrame = ((cb: () => void) => {
+    rafs.push(cb)
+    return rafs.length
+  }) as typeof requestAnimationFrame
 
-    const el = document.createElement('div')
-    Object.assign(el.style, { width: '400px', height: '300px' })
-    document.body.appendChild(el)
-    const grid = new Grid(el, { data: makeData() })
-    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
-    // Drain initial paint frames
-    while (rafs.length) rafs.shift()!()
+  const el = document.createElement('div')
+  Object.assign(el.style, { width: '400px', height: '300px' })
+  document.body.appendChild(el)
+  const grid = new Grid(el, { data: makeData() })
+  const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+  // Drain initial paint frames
+  while (rafs.length) rafs.shift()!()
 
-    // Fake a scroll event with new scrollTop
-    Object.defineProperty(host, 'scrollTop', { value: 56, writable: true, configurable: true })
-    Object.defineProperty(host, 'scrollLeft', { value: 0, writable: true, configurable: true })
-    host.dispatchEvent(new Event('scroll'))
-    expect(rafs).toHaveLength(1)
-    while (rafs.length) rafs.shift()!()
+  // Fake a scroll event with new scrollTop
+  Object.defineProperty(host, 'scrollTop', { value: 56, writable: true, configurable: true })
+  Object.defineProperty(host, 'scrollLeft', { value: 0, writable: true, configurable: true })
+  host.dispatchEvent(new Event('scroll'))
+  expect(rafs).toHaveLength(1)
+  while (rafs.length) rafs.shift()!()
 
-    // After the scroll, viewport scrollY should be ~56 (content 1400 ≤ spacer 1400 → identity)
-    // Indirect verification: refresh and check the canvas got paint instructions referencing
-    // the scrolled state. A direct assertion would require exposing viewport state, but the
-    // RAF being scheduled + drained without throwing is sufficient as a smoke test here.
-    expect(() => grid.refresh()).not.toThrow()
+  // After the scroll, viewport scrollY should be ~56 (content 1400 ≤ spacer 1400 → identity)
+  // Indirect verification: refresh and check the canvas got paint instructions referencing
+  // the scrolled state. A direct assertion would require exposing viewport state, but the
+  // RAF being scheduled + drained without throwing is sufficient as a smoke test here.
+  expect(() => grid.refresh()).not.toThrow()
 
-    grid.destroy()
-    document.body.removeChild(el)
-    globalThis.requestAnimationFrame = originalRaf
-  })
+  grid.destroy()
+  document.body.removeChild(el)
+  globalThis.requestAnimationFrame = originalRaf
+})
 
-  it('scrollToRow moves the scroll-host scrollTop to align the row', () => {
-    const el = document.createElement('div')
-    Object.assign(el.style, { width: '400px', height: '300px' })
-    document.body.appendChild(el)
-    const grid = new Grid(el, { data: makeData() })
-    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+it('scrollToRow moves the scroll-host scrollTop to align the row', () => {
+  const el = document.createElement('div')
+  Object.assign(el.style, { width: '400px', height: '300px' })
+  document.body.appendChild(el)
+  const grid = new Grid(el, { data: makeData() })
+  const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
 
-    grid.scrollToRow(10, 'start')
-    // Row 10 starts at y = 10 × 28 = 280; content 1400 ≤ spacer 1400 (identity branch)
-    expect(host.scrollTop).toBe(280)
+  grid.scrollToRow(10, 'start')
+  // Row 10 starts at y = 10 × 28 = 280; content 1400 ≤ spacer 1400 (identity branch)
+  expect(host.scrollTop).toBe(280)
 
-    grid.scrollToRow(0, 'start')
-    expect(host.scrollTop).toBe(0)
+  grid.scrollToRow(0, 'start')
+  expect(host.scrollTop).toBe(0)
 
-    grid.destroy()
-    document.body.removeChild(el)
-  })
+  grid.destroy()
+  document.body.removeChild(el)
+})
 
-  it('scrollToCell moves both scrollTop and scrollLeft', () => {
-    const el = document.createElement('div')
-    Object.assign(el.style, { width: '400px', height: '300px' })
-    document.body.appendChild(el)
-    const grid = new Grid(el, { data: makeData() })
-    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+it('scrollToCell moves both scrollTop and scrollLeft', () => {
+  const el = document.createElement('div')
+  Object.assign(el.style, { width: '400px', height: '300px' })
+  document.body.appendChild(el)
+  const grid = new Grid(el, { data: makeData() })
+  const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
 
-    grid.scrollToCell(5, 'age') // age = field index 1, at x = 200; row 5 at y = 140
-    expect(host.scrollTop).toBe(140)
-    expect(host.scrollLeft).toBe(200)
+  grid.scrollToCell(5, 'age') // age = field index 1, at x = 200; row 5 at y = 140
+  expect(host.scrollTop).toBe(140)
+  expect(host.scrollLeft).toBe(200)
 
-    grid.destroy()
-    document.body.removeChild(el)
-  })
+  grid.destroy()
+  document.body.removeChild(el)
+})
 
-  it('scrollToRow with align=end aligns the row bottom to viewport bottom', () => {
-    const el = document.createElement('div')
-    Object.assign(el.style, { width: '400px', height: '300px' })
-    document.body.appendChild(el)
-    const grid = new Grid(el, { data: makeData() })
-    const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+it('scrollToRow with align=end aligns the row bottom to viewport bottom', () => {
+  const el = document.createElement('div')
+  Object.assign(el.style, { width: '400px', height: '300px' })
+  document.body.appendChild(el)
+  const grid = new Grid(el, { data: makeData() })
+  const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
 
-    // viewport-content height = 300 - 32 (headerHeight from denseGridTheme) = 268
-    // row 20 bottom = 21 × 28 = 588; align=end → scrollTop = 588 - 268 = 320
-    grid.scrollToRow(20, 'end')
-    expect(host.scrollTop).toBe(320)
+  // viewport-content height = 300 - 32 (headerHeight from denseGridTheme) = 268
+  // row 20 bottom = 21 × 28 = 588; align=end → scrollTop = 588 - 268 = 320
+  grid.scrollToRow(20, 'end')
+  expect(host.scrollTop).toBe(320)
 
-    grid.destroy()
-    document.body.removeChild(el)
-  })
+  grid.destroy()
+  document.body.removeChild(el)
+})
 
-  it('scrollToRow with out-of-range index does not throw', () => {
-    const el = document.createElement('div')
-    const grid = new Grid(el, { data: makeData() })
-    expect(() => grid.scrollToRow(99999, 'start')).not.toThrow()
-    expect(() => grid.scrollToRow(-1, 'start')).not.toThrow()
-    grid.destroy()
-  })
+it('scrollToRow with out-of-range index does not throw', () => {
+  const el = document.createElement('div')
+  const grid = new Grid(el, { data: makeData() })
+  expect(() => grid.scrollToRow(99999, 'start')).not.toThrow()
+  expect(() => grid.scrollToRow(-1, 'start')).not.toThrow()
+  grid.destroy()
+})
 
-  it('ResizeObserver-style container resize triggers paint invalidate', () => {
-    // happy-dom may or may not implement ResizeObserver. The test verifies our wiring
-    // by manually calling the internal resize handler (exposed via _onContainerResize for tests).
-    const el = document.createElement('div')
-    Object.assign(el.style, { width: '400px', height: '300px' })
-    document.body.appendChild(el)
-    const grid = new Grid(el, { data: makeData() })
+it('ResizeObserver-style container resize triggers paint invalidate', () => {
+  // happy-dom may or may not implement ResizeObserver. The test verifies our wiring
+  // by manually calling the internal resize handler (exposed via _onContainerResize for tests).
+  const el = document.createElement('div')
+  Object.assign(el.style, { width: '400px', height: '300px' })
+  document.body.appendChild(el)
+  const grid = new Grid(el, { data: makeData() })
 
-    const spy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
-    // Simulate a container resize by setting different bounding rect and dispatching the internal handler
-    Object.defineProperty(el, 'clientWidth', { value: 500, configurable: true })
-    Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true })
-    ;(grid as unknown as { _onContainerResize: () => void })._onContainerResize()
+  const spy = vi.spyOn(grid as unknown as { invalidate: () => void }, 'invalidate')
+  // Simulate a container resize by setting different bounding rect and dispatching the internal handler
+  Object.defineProperty(el, 'clientWidth', { value: 500, configurable: true })
+  Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true })
+  ;(grid as unknown as { _onContainerResize: () => void })._onContainerResize()
 
-    expect(spy).toHaveBeenCalled()
-    grid.destroy()
-    document.body.removeChild(el)
-  })
+  expect(spy).toHaveBeenCalled()
+  grid.destroy()
+  document.body.removeChild(el)
+})
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -1187,28 +1202,28 @@ Add private fields to the Grid class:
 Pass the shared scheduler to Renderer construction — find:
 
 ```ts
-    this.renderer = new Renderer({
-      ctx: this.ctx,
-      data: this.data,
-      viewport: this.viewport,
-      rowsAxis: this.rowsAxis,
-      colsAxis: this.colsAxis,
-      theme: this.theme,
-    })
+this.renderer = new Renderer({
+  ctx: this.ctx,
+  data: this.data,
+  viewport: this.viewport,
+  rowsAxis: this.rowsAxis,
+  colsAxis: this.colsAxis,
+  theme: this.theme,
+})
 ```
 
 Change to:
 
 ```ts
-    this.renderer = new Renderer({
-      ctx: this.ctx,
-      data: this.data,
-      viewport: this.viewport,
-      rowsAxis: this.rowsAxis,
-      colsAxis: this.colsAxis,
-      theme: this.theme,
-      scheduler: this.scheduler,
-    })
+this.renderer = new Renderer({
+  ctx: this.ctx,
+  data: this.data,
+  viewport: this.viewport,
+  rowsAxis: this.rowsAxis,
+  colsAxis: this.colsAxis,
+  theme: this.theme,
+  scheduler: this.scheduler,
+})
 ```
 
 - [ ] **Step 4: Wire up NativeScroller in constructor**
@@ -1216,19 +1231,23 @@ Change to:
 After `this.applyFieldWidths()` and `this.resizeSpacer()`, but BEFORE `this.renderer.paint()`, add:
 
 ```ts
-    // Wire native scroll → ScrollMapper → Viewport.setScroll → Renderer.invalidate
-    this.nativeScroller = new NativeScroller(this.scrollHost, this.scheduler, (scrollTop, scrollLeft) => {
-      const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
-      this.viewport.setScroll(logicalX, logicalY)
-      this.renderer.invalidate()
-    })
-    this.nativeScroller.attach()
+// Wire native scroll → ScrollMapper → Viewport.setScroll → Renderer.invalidate
+this.nativeScroller = new NativeScroller(
+  this.scrollHost,
+  this.scheduler,
+  (scrollTop, scrollLeft) => {
+    const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
+    this.viewport.setScroll(logicalX, logicalY)
+    this.renderer.invalidate()
+  },
+)
+this.nativeScroller.attach()
 
-    // Watch container resize so spacer + canvas stay in sync with element size
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => this._onContainerResize())
-      this.resizeObserver.observe(this.container)
-    }
+// Watch container resize so spacer + canvas stay in sync with element size
+if (typeof ResizeObserver !== 'undefined') {
+  this.resizeObserver = new ResizeObserver(() => this._onContainerResize())
+  this.resizeObserver.observe(this.container)
+}
 ```
 
 - [ ] **Step 5: Implement private helpers**
@@ -1371,6 +1390,7 @@ git commit -m "feat(core): wire NativeScroller + ResizeObserver + scrollToRow/Ce
 ### Task 6: Storybook — Scroll stories
 
 **Files:**
+
 - Create: `apps/storybook/src/stories/Scroll.stories.ts`
 
 - [ ] **Step 1: Inspect existing Storybook conventions**
@@ -1397,11 +1417,7 @@ import { Grid, type GridOptions } from '@novasheet/core'
  * instance attached as `__grid` so stories can call imperative APIs (scrollToRow,
  * setTheme, etc.) and devtools can inspect it.
  */
-export function createGridHost(
-  opts: GridOptions,
-  width = 780,
-  height = 480,
-): HTMLElement {
+export function createGridHost(opts: GridOptions, width = 780, height = 480): HTMLElement {
   const el = document.createElement('div')
   el.style.width = `${width}px`
   el.style.height = `${height}px`
@@ -1530,6 +1546,7 @@ git commit -m "feat(storybook): add Scroll stories — 10k / 1M rows / scrollToR
 ### Task 7: Integration check + tag M2
 
 **Files:**
+
 - (No new files; final verification before tagging the milestone.)
 
 - [ ] **Step 1: Run the full test suite**
@@ -1591,6 +1608,7 @@ mapping (ScrollMapper SAFE_MAX = 6_000_000 px). Grid DOM: scroll-host + spacer +
 wired; scrollToRow / scrollToCell APIs implemented. Visible in Storybook → Grid/Scroll stories.
 
 **Next milestone:** **M3 Frozen + Dynamic sizing** — not yet planned. Scope (per spec §4 + §5.3):
+
 - FrozenRegions returning 4 quadrants (topLeft / topRight / bottomLeft / main) when frozenRows > 0
   or frozenCols > 0
 - Renderer iterating all populated quadrants with per-quadrant scroll subtraction (frozen quadrants
@@ -1637,6 +1655,7 @@ When all tasks above pass, the following should be true:
 - [ ] git tag `m2-virtualization` exists on remote
 
 **What's intentionally NOT working yet:**
+
 - Frozen rows/columns — M3 (FrozenRegions still returns only `main`)
 - Resize drag handles — M4
 - React wrapper — M4

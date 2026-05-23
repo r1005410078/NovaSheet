@@ -9,7 +9,14 @@
  * 主 header 之后再绘一次（M3 才会启用，因为 M1 没有冻结列）。
  */
 
-import { columnIndexToLetter, type Axis, type IconDef, type Schema, type Theme, type ViewPipeline } from '@novasheet/core'
+import {
+  columnIndexToLetter,
+  type Axis,
+  type IconDef,
+  type Schema,
+  type Theme,
+  type ViewPipeline,
+} from '@novasheet/core'
 import { snapLineInside } from '../paint/line-snap'
 import { paintSvgPath } from '../paint/svg-path'
 

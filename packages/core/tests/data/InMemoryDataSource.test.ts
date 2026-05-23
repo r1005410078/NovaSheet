@@ -13,7 +13,10 @@ describe('InMemoryDataSource — 内存数据源', () => {
   it('返回行数与 schema', () => {
     const ds = new InMemoryDataSource({
       schema: SCHEMA,
-      rows: [{ name: 'A', age: 1 }, { name: 'B', age: 2 }],
+      rows: [
+        { name: 'A', age: 1 },
+        { name: 'B', age: 2 },
+      ],
     })
     expect(ds.getRowCount()).toBe(2)
     expect(ds.getSchema()).toBe(SCHEMA)
@@ -78,7 +81,10 @@ describe('InMemoryDataSource — 内存数据源', () => {
     const ds = new InMemoryDataSource({ schema: SCHEMA, rows: [{ name: 'A', age: 1 }] })
     const listener = mock(() => {})
     ds.subscribe(listener)
-    ds.setRows([{ name: 'X', age: 9 }, { name: 'Y', age: 8 }])
+    ds.setRows([
+      { name: 'X', age: 9 },
+      { name: 'Y', age: 8 },
+    ])
     expect(ds.getRowCount()).toBe(2)
     expect(listener).toHaveBeenCalledWith({ type: 'rowCountChanged', newCount: 2 })
     expect(listener).toHaveBeenCalledWith({ type: 'reset' })

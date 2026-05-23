@@ -12,25 +12,25 @@
 
 ### 1.1 交付清单
 
-| 能力 | 是否交付 | 说明 |
-| --- | --- | --- |
-| `ViewLayer` 协议（视图管线） | 是 | 4.4 的核心架构产物——`DataSource → DataSource` 装饰链 |
-| `SortLayer`（单列 asc/desc/none 三态） | 是 | 内置参考实现；stable sort；null 一律末尾 |
-| `FilterLayer`（单列条件筛选） | 是 | 内置参考实现；按字段 `FieldType` 提供类型化 predicate |
-| 列头右键菜单（`targetKind: 'columnHeader'`） | 是 | 复用 4.0 `ContextMenuModel`，泛化菜单目标 |
-| 列头排序箭头 + 筛选漏斗指示 | 是 | `HeaderPainter` 通过 `ViewLayer.headerDecoration` 拉取装饰，绘制态 icon |
-| Filter popover 面板（按 FieldType 切换控件） | 是 | 与 4.0 的菜单 popover 同样作为 DOM overlay |
-| `DataSource.resolveUnderlyingRow / findViewRow`（可选） | 是 | 视图坐标 ↔ 底层稳定行键的双向映射 |
-| `MutableDataSource.updateCellByUnderlyingRow`（可选） | 是 | raw source 可选；mutable decorated source 必须实现，用于 undo/redo 写回被过滤行 |
-| Undo / Redo 与视图变化的解耦 | 是 | 命令存底层 rowIndex；undo/redo 时映回视图 |
-| 选区在视图切换后的重定位 / 自动清空 | 是 | 由 Grid 协调 ViewLayer 事件触发 |
-| 编辑会话在视图切换时强制 commit-or-cancel | 是 | 不试图保留编辑态 |
-| `viewChange / sortChange / filterChange` 事件 | 是 | 三种粒度同时暴露 |
-| 多列复合排序 / 多列复合筛选 | 否 | Phase 5+ 在同协议上叠加 |
-| 服务端排序 / 服务端筛选 | 否 | 协议预留，Phase 5+ 引入 server source 时再做参考实现 |
-| 自定义 predicate / 外部插件注册 | 否 | 协议先内部稳定一版，4.5 后再开放 |
-| Excel 风格按值勾选 distinct 列表（text 类） | 否 | 可作为 `FilterLayer` 的第二种 op (`in-set`) 增量加入 |
-| 列头 DOM overlay 层（点击/hover） | 否 | Phase 4.5 列拖拽重排时引入 |
+| 能力                                                    | 是否交付 | 说明                                                                            |
+| ------------------------------------------------------- | -------- | ------------------------------------------------------------------------------- |
+| `ViewLayer` 协议（视图管线）                            | 是       | 4.4 的核心架构产物——`DataSource → DataSource` 装饰链                            |
+| `SortLayer`（单列 asc/desc/none 三态）                  | 是       | 内置参考实现；stable sort；null 一律末尾                                        |
+| `FilterLayer`（单列条件筛选）                           | 是       | 内置参考实现；按字段 `FieldType` 提供类型化 predicate                           |
+| 列头右键菜单（`targetKind: 'columnHeader'`）            | 是       | 复用 4.0 `ContextMenuModel`，泛化菜单目标                                       |
+| 列头排序箭头 + 筛选漏斗指示                             | 是       | `HeaderPainter` 通过 `ViewLayer.headerDecoration` 拉取装饰，绘制态 icon         |
+| Filter popover 面板（按 FieldType 切换控件）            | 是       | 与 4.0 的菜单 popover 同样作为 DOM overlay                                      |
+| `DataSource.resolveUnderlyingRow / findViewRow`（可选） | 是       | 视图坐标 ↔ 底层稳定行键的双向映射                                               |
+| `MutableDataSource.updateCellByUnderlyingRow`（可选）   | 是       | raw source 可选；mutable decorated source 必须实现，用于 undo/redo 写回被过滤行 |
+| Undo / Redo 与视图变化的解耦                            | 是       | 命令存底层 rowIndex；undo/redo 时映回视图                                       |
+| 选区在视图切换后的重定位 / 自动清空                     | 是       | 由 Grid 协调 ViewLayer 事件触发                                                 |
+| 编辑会话在视图切换时强制 commit-or-cancel               | 是       | 不试图保留编辑态                                                                |
+| `viewChange / sortChange / filterChange` 事件           | 是       | 三种粒度同时暴露                                                                |
+| 多列复合排序 / 多列复合筛选                             | 否       | Phase 5+ 在同协议上叠加                                                         |
+| 服务端排序 / 服务端筛选                                 | 否       | 协议预留，Phase 5+ 引入 server source 时再做参考实现                            |
+| 自定义 predicate / 外部插件注册                         | 否       | 协议先内部稳定一版，4.5 后再开放                                                |
+| Excel 风格按值勾选 distinct 列表（text 类）             | 否       | 可作为 `FilterLayer` 的第二种 op (`in-set`) 增量加入                            |
+| 列头 DOM overlay 层（点击/hover）                       | 否       | Phase 4.5 列拖拽重排时引入                                                      |
 
 ### 1.2 术语
 
@@ -57,23 +57,23 @@ Filter 在 Sort 前的理由：过滤后的集合上排序，O((N - filtered) lo
 
 ### 2.2 主要模块新增 / 修改
 
-| 路径 | 类型 | 用途 |
-| --- | --- | --- |
-| `packages/core/src/view/ViewLayer.ts` | 新增 | `ViewLayer` 协议、`HeaderDecoration`、`ColumnHeaderMenuContext` |
-| `packages/core/src/view/ViewPipeline.ts` | 新增 | 装配 / 重建 / 装饰汇总 / 菜单贡献汇总 |
-| `packages/core/src/view/SortLayer.ts` | 新增 | 内置参考实现 |
-| `packages/core/src/view/FilterLayer.ts` | 新增 | 内置参考实现 |
-| `packages/core/src/view/coordinates.ts` | 新增 | `resolveUnderlyingRow` / `findViewRow` helper |
-| `packages/core/src/data/DataSource.ts` | 修改 | 新增两个 optional 方法 |
-| `packages/core/src/data/MutableDataSource.ts` | 修改 | 新增 optional `updateCellByUnderlyingRow` |
-| `packages/core/src/interaction/ContextMenuModel.ts` | 修改 | 泛化 `targetKind`；新增 `getColumnHeaderContextMenuItems` |
-| `packages/core/src/theme/Theme.ts` | 修改 | `icons.sortAsc / sortDesc / filter` |
-| `packages/core/src/theme/denseGridTheme.ts` | 修改 | 提供三个 icon 的内联 SVG path |
-| `packages/web-canvas2d/src/painters/HeaderPainter.ts` | 修改 | 排序箭头 + 漏斗 icon 绘制 |
-| `packages/web/src/interaction/FilterPopover.ts` | 新增 | DOM overlay 面板 |
-| `packages/web/src/runtime/WebGridRuntime.ts` | 修改 | 列头右键分派；popover 生命周期；与 fill handle / cell 菜单互斥 |
-| `packages/web/src/Grid.ts` | 修改 | 装配 pipeline、暴露事件、`getSortLayer / getFilterLayer / getViewPipeline` |
-| `packages/core/src/engine/DefaultGridEngine.ts` | 修改 | 写入路径中把 viewRow 翻译为 underlyingRow 存 undo；undo/redo 反向翻译 |
+| 路径                                                  | 类型 | 用途                                                                       |
+| ----------------------------------------------------- | ---- | -------------------------------------------------------------------------- |
+| `packages/core/src/view/ViewLayer.ts`                 | 新增 | `ViewLayer` 协议、`HeaderDecoration`、`ColumnHeaderMenuContext`            |
+| `packages/core/src/view/ViewPipeline.ts`              | 新增 | 装配 / 重建 / 装饰汇总 / 菜单贡献汇总                                      |
+| `packages/core/src/view/SortLayer.ts`                 | 新增 | 内置参考实现                                                               |
+| `packages/core/src/view/FilterLayer.ts`               | 新增 | 内置参考实现                                                               |
+| `packages/core/src/view/coordinates.ts`               | 新增 | `resolveUnderlyingRow` / `findViewRow` helper                              |
+| `packages/core/src/data/DataSource.ts`                | 修改 | 新增两个 optional 方法                                                     |
+| `packages/core/src/data/MutableDataSource.ts`         | 修改 | 新增 optional `updateCellByUnderlyingRow`                                  |
+| `packages/core/src/interaction/ContextMenuModel.ts`   | 修改 | 泛化 `targetKind`；新增 `getColumnHeaderContextMenuItems`                  |
+| `packages/core/src/theme/Theme.ts`                    | 修改 | `icons.sortAsc / sortDesc / filter`                                        |
+| `packages/core/src/theme/denseGridTheme.ts`           | 修改 | 提供三个 icon 的内联 SVG path                                              |
+| `packages/web-canvas2d/src/painters/HeaderPainter.ts` | 修改 | 排序箭头 + 漏斗 icon 绘制                                                  |
+| `packages/web/src/interaction/FilterPopover.ts`       | 新增 | DOM overlay 面板                                                           |
+| `packages/web/src/runtime/WebGridRuntime.ts`          | 修改 | 列头右键分派；popover 生命周期；与 fill handle / cell 菜单互斥             |
+| `packages/web/src/Grid.ts`                            | 修改 | 装配 pipeline、暴露事件、`getSortLayer / getFilterLayer / getViewPipeline` |
+| `packages/core/src/engine/DefaultGridEngine.ts`       | 修改 | 写入路径中把 viewRow 翻译为 underlyingRow 存 undo；undo/redo 反向翻译      |
 
 ---
 
@@ -259,14 +259,14 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
 
 ### 4.2 类型化比较器
 
-| FieldType | 比较器 | null / "空" 处理 |
-| --- | --- | --- |
-| `text` / `url` | `Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })` | null 与 `''` 一律末尾 |
-| `number` | 数值比较；`NaN` 视同 null | null / NaN 末尾 |
-| `date` | `Date.getTime()`；非 Date 强转失败 → null | null 末尾 |
-| `checkbox` | `false < true`；非布尔视 null | null 末尾 |
-| `singleSelect` | 按 `schema.field.options.choices` 数组中的序号；choices 缺失则降级为 text | null 末尾 |
-| `multiSelect` | **不可排序**——`SortLayer` 拒绝此类型的 spec；菜单项禁用 | — |
+| FieldType      | 比较器                                                                    | null / "空" 处理      |
+| -------------- | ------------------------------------------------------------------------- | --------------------- |
+| `text` / `url` | `Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })`        | null 与 `''` 一律末尾 |
+| `number`       | 数值比较；`NaN` 视同 null                                                 | null / NaN 末尾       |
+| `date`         | `Date.getTime()`；非 Date 强转失败 → null                                 | null 末尾             |
+| `checkbox`     | `false < true`；非布尔视 null                                             | null 末尾             |
+| `singleSelect` | 按 `schema.field.options.choices` 数组中的序号；choices 缺失则降级为 text | null 末尾             |
+| `multiSelect`  | **不可排序**——`SortLayer` 拒绝此类型的 spec；菜单项禁用                   | —                     |
 
 "null 末尾" 不暴露成 spec 选项；asc / desc 都把 null 放末尾，与 Sheets 行为一致。
 
@@ -329,9 +329,9 @@ headerDecoration(field):
 export type FilterOp =
   | { kind: 'text-contains'; value: string; caseSensitive: boolean }
   | { kind: 'text-equals'; value: string; caseSensitive: boolean }
-  | { kind: 'number-between'; min: number | null; max: number | null }     // 任一端 null = 该端不限
+  | { kind: 'number-between'; min: number | null; max: number | null } // 任一端 null = 该端不限
   | { kind: 'number-equals'; value: number }
-  | { kind: 'date-between'; start: Date | null; end: Date | null }         // 闭区间
+  | { kind: 'date-between'; start: Date | null; end: Date | null } // 闭区间
   | { kind: 'select-in'; values: readonly string[] }
   | { kind: 'checkbox-equals'; value: boolean }
   | { kind: 'is-empty' }
@@ -348,7 +348,7 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
   isActive(fieldId: string): boolean
   getSpec(): FilterSpec | null
   setSpec(spec: FilterSpec | null): boolean
-  clear(fieldId?: string): void   // 不传 fieldId → 等价 setSpec(null)；传入非当前 active 字段 → no-op
+  clear(fieldId?: string): void // 不传 fieldId → 等价 setSpec(null)；传入非当前 active 字段 → no-op
 
   wrap(upstream: DataSource): DataSource
   headerDecoration(field: Field): HeaderDecoration | null
@@ -358,14 +358,14 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
 
 ### 5.2 FieldType ↔ 可用 op
 
-| FieldType | 默认 op（弹窗首项） | 全部可用 op |
-| --- | --- | --- |
-| `text` / `url` | `text-contains` | `text-contains`, `text-equals`, `is-empty`, `is-not-empty` |
-| `number` | `number-between` | `number-between`, `number-equals`, `is-empty`, `is-not-empty` |
-| `date` | `date-between` | `date-between`, `is-empty`, `is-not-empty` |
-| `singleSelect` | `select-in` | `select-in`, `is-empty`, `is-not-empty` |
-| `multiSelect` | `select-in` | `select-in`（行的数组与所选集合有交集 = 命中）, `is-empty`, `is-not-empty` |
-| `checkbox` | `checkbox-equals` | `checkbox-equals`, `is-empty`, `is-not-empty` |
+| FieldType      | 默认 op（弹窗首项） | 全部可用 op                                                                |
+| -------------- | ------------------- | -------------------------------------------------------------------------- |
+| `text` / `url` | `text-contains`     | `text-contains`, `text-equals`, `is-empty`, `is-not-empty`                 |
+| `number`       | `number-between`    | `number-between`, `number-equals`, `is-empty`, `is-not-empty`              |
+| `date`         | `date-between`      | `date-between`, `is-empty`, `is-not-empty`                                 |
+| `singleSelect` | `select-in`         | `select-in`, `is-empty`, `is-not-empty`                                    |
+| `multiSelect`  | `select-in`         | `select-in`（行的数组与所选集合有交集 = 命中）, `is-empty`, `is-not-empty` |
+| `checkbox`     | `checkbox-equals`   | `checkbox-equals`, `is-empty`, `is-not-empty`                              |
 
 「空」的统一定义：`null` 或 `undefined` 或 `''`（文本）或 `[]`（multiSelect）。
 
@@ -478,9 +478,14 @@ export function findViewRow(source: DataSource, underlyingRow: number): number {
 export type ContextMenuTargetKind = 'cell' | 'columnHeader'
 
 export type ContextMenuAction =
-  | 'cut' | 'copy' | 'paste'
-  | 'sort-asc' | 'sort-desc' | 'sort-none'
-  | 'filter-open' | 'filter-clear'
+  | 'cut'
+  | 'copy'
+  | 'paste'
+  | 'sort-asc'
+  | 'sort-desc'
+  | 'sort-none'
+  | 'filter-open'
+  | 'filter-clear'
 
 export interface CellMenuContext {
   readonly targetKind: 'cell'
@@ -584,15 +589,15 @@ interface ThemeIcons {
 
 **校验**（决定「应用」按钮是否启用）：
 
-| op | 合法条件 |
-| --- | --- |
-| `text-contains` / `text-equals` | value 非空字符串 |
-| `number-between` | min 或 max 至少一项是有限数 |
-| `number-equals` | value 是有限数 |
-| `date-between` | start 或 end 至少一项是有效 Date |
-| `select-in` | values 非空 |
-| `checkbox-equals` | value 已选（true / false） |
-| `is-empty` / `is-not-empty` | 始终合法 |
+| op                              | 合法条件                         |
+| ------------------------------- | -------------------------------- |
+| `text-contains` / `text-equals` | value 非空字符串                 |
+| `number-between`                | min 或 max 至少一项是有限数      |
+| `number-equals`                 | value 是有限数                   |
+| `date-between`                  | start 或 end 至少一项是有效 Date |
+| `select-in`                     | values 非空                      |
+| `checkbox-equals`               | value 已选（true / false）       |
+| `is-empty` / `is-not-empty`     | 始终合法                         |
 
 「应用」在不合法时**禁用**（disabled）。
 
@@ -693,13 +698,13 @@ undo 后选区重定位：对每个被写的底层 rowIndex 算 `findViewRow`；
 
 ### 8.3 失败模式
 
-| 情况 | 处理 |
-| --- | --- |
-| `SortLayer.spec.fieldId` 在 schemaChanged 后不存在 | `setSpec(null)` + emit reset |
-| `FilterLayer.spec.fieldId` 不存在 / op 与新 type 不兼容 | `setSpec(null)` + emit reset |
-| undo 命令的 fieldId 在 schemaChanged 后不存在 | 该写入静默跳过（4.2 既有 fallback） |
-| undo 命令的底层 rowIndex 越界（外部 `setRows` 后行数变少） | 该写入跳过 |
-| Filter 把整表过滤为 0 行 | composed.getRowCount() === 0；renderer 进入 empty state；selection 清空 |
+| 情况                                                       | 处理                                                                    |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `SortLayer.spec.fieldId` 在 schemaChanged 后不存在         | `setSpec(null)` + emit reset                                            |
+| `FilterLayer.spec.fieldId` 不存在 / op 与新 type 不兼容    | `setSpec(null)` + emit reset                                            |
+| undo 命令的 fieldId 在 schemaChanged 后不存在              | 该写入静默跳过（4.2 既有 fallback）                                     |
+| undo 命令的底层 rowIndex 越界（外部 `setRows` 后行数变少） | 该写入跳过                                                              |
+| Filter 把整表过滤为 0 行                                   | composed.getRowCount() === 0；renderer 进入 empty state；selection 清空 |
 
 ### 8.4 公开事件
 
@@ -741,15 +746,15 @@ grid.on('filterChange', (e: { spec: FilterSpec | null })    => void)
 
 ### 9.1 单元测试矩阵
 
-| 模块 | 关键测试用例 |
-| --- | --- |
-| `SortLayer.wrap` | text/number/date/checkbox/singleSelect 各 asc/desc/null 末尾断言；stable sort；多次 setSpec 顺序正确；multiSelect 被拒 |
-| `FilterLayer.wrap` | 每个 FilterOp 至少 3 行覆盖（命中/未命中/空值）；schemaChanged 失效 spec 降级；rowsChanged 不重过滤 |
-| `ViewPipeline` 套娃 | filter→sort 后 getCell 数据正确；`resolveUnderlyingRow / findViewRow` 双射 invariant；spec 变化触发 subscribe；oldResolveUnderlyingRow 在 subscribe 回调中可用 |
-| `MutableDataSource.updateCellByUnderlyingRow` | 装饰源必须实现并透传到上游；被过滤行可写底层；raw identity 源无 updateCellByUnderlyingRow 时走 fallback |
-| `ContextMenuModel.getColumnHeaderContextMenuItems` | sort 三态 checked；filter 激活时「清除」启用；multiSelect 列上 sort 全禁用 |
-| `DefaultGridEngine` 视图协调 | view 切换后 selection 重定位 / 清空各分支；undo 命令 rowIndex 翻译；undo 命中已过滤行时调用 updateCellByUnderlyingRow |
-| `FilterPopover` 表单 | 各 op 的「应用」按钮启用 / 禁用条件；Esc / 外部点击 / Apply / Clear / Cancel 五条路径 |
+| 模块                                               | 关键测试用例                                                                                                                                                   |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SortLayer.wrap`                                   | text/number/date/checkbox/singleSelect 各 asc/desc/null 末尾断言；stable sort；多次 setSpec 顺序正确；multiSelect 被拒                                         |
+| `FilterLayer.wrap`                                 | 每个 FilterOp 至少 3 行覆盖（命中/未命中/空值）；schemaChanged 失效 spec 降级；rowsChanged 不重过滤                                                            |
+| `ViewPipeline` 套娃                                | filter→sort 后 getCell 数据正确；`resolveUnderlyingRow / findViewRow` 双射 invariant；spec 变化触发 subscribe；oldResolveUnderlyingRow 在 subscribe 回调中可用 |
+| `MutableDataSource.updateCellByUnderlyingRow`      | 装饰源必须实现并透传到上游；被过滤行可写底层；raw identity 源无 updateCellByUnderlyingRow 时走 fallback                                                        |
+| `ContextMenuModel.getColumnHeaderContextMenuItems` | sort 三态 checked；filter 激活时「清除」启用；multiSelect 列上 sort 全禁用                                                                                     |
+| `DefaultGridEngine` 视图协调                       | view 切换后 selection 重定位 / 清空各分支；undo 命令 rowIndex 翻译；undo 命中已过滤行时调用 updateCellByUnderlyingRow                                          |
+| `FilterPopover` 表单                               | 各 op 的「应用」按钮启用 / 禁用条件；Esc / 外部点击 / Apply / Clear / Cancel 五条路径                                                                          |
 
 ### 9.2 集成测试（`packages/web/tests`）
 
@@ -783,17 +788,17 @@ grid.on('filterChange', (e: { spec: FilterSpec | null })    => void)
 
 ## 10. Out of Scope 与未来 hook
 
-| 项 | 状态 | 后续位置 |
-| --- | --- | --- |
-| 多列复合排序（Shift+Click） | 不交付 | Phase 5+：`SortLayer.setSpec` 改为 `readonly SortSpec[]`；菜单加「添加第二排序键」 |
-| 多列同时筛选（AND/OR） | 不交付 | Phase 5+：`FilterLayer.setSpec` 改为 `readonly FilterSpec[]` |
-| Excel 风格 distinct 按值勾选（text 列） | 不交付 | FilterLayer 加 `op: { kind: 'in-set'; values }` + UI 增加 distinct 模式 |
-| 自定义 predicate / 外部插件注册 | 不交付 | `ViewPipeline.add()` 开放为 public API；定义插件注册流程 |
-| 服务端排序 / 筛选 | 不交付 | Phase 5+：`@novasheet/server-source` 实现 `ViewLayer`，spec 下推 |
-| 分组 / 透视（grouping / pivot） | 不交付 | Phase 6+：新增 `GroupLayer`；`resolveUnderlyingRow` 返回 -1 表示聚合行 |
-| 列头 DOM overlay 层（点击命中 / hover effect） | 不交付 | Phase 4.5 列拖拽重排时引入 |
-| 行号列上的筛选 / 排序入口 | 不交付 | 仅顶部列头支持右键菜单 |
-| 持久化 view 状态到 storage | 不交付 | Grid 消费者自行用事件保存 / 恢复 |
+| 项                                             | 状态   | 后续位置                                                                           |
+| ---------------------------------------------- | ------ | ---------------------------------------------------------------------------------- |
+| 多列复合排序（Shift+Click）                    | 不交付 | Phase 5+：`SortLayer.setSpec` 改为 `readonly SortSpec[]`；菜单加「添加第二排序键」 |
+| 多列同时筛选（AND/OR）                         | 不交付 | Phase 5+：`FilterLayer.setSpec` 改为 `readonly FilterSpec[]`                       |
+| Excel 风格 distinct 按值勾选（text 列）        | 不交付 | FilterLayer 加 `op: { kind: 'in-set'; values }` + UI 增加 distinct 模式            |
+| 自定义 predicate / 外部插件注册                | 不交付 | `ViewPipeline.add()` 开放为 public API；定义插件注册流程                           |
+| 服务端排序 / 筛选                              | 不交付 | Phase 5+：`@novasheet/server-source` 实现 `ViewLayer`，spec 下推                   |
+| 分组 / 透视（grouping / pivot）                | 不交付 | Phase 6+：新增 `GroupLayer`；`resolveUnderlyingRow` 返回 -1 表示聚合行             |
+| 列头 DOM overlay 层（点击命中 / hover effect） | 不交付 | Phase 4.5 列拖拽重排时引入                                                         |
+| 行号列上的筛选 / 排序入口                      | 不交付 | 仅顶部列头支持右键菜单                                                             |
+| 持久化 view 状态到 storage                     | 不交付 | Grid 消费者自行用事件保存 / 恢复                                                   |
 
 ### 10.1 协议演进保证
 
@@ -807,12 +812,12 @@ grid.on('filterChange', (e: { spec: FilterSpec | null })    => void)
 
 本 spec 与 CLAUDE.md「Locked architectural decisions」的关系：
 
-| ADR | 是否影响 | 说明 |
-| --- | --- | --- |
-| §A.1 单 Canvas 全可见区重绘 | 不影响 | Renderer 只多绘两种 icon |
-| §A.2 原生滚动 + 非线性 scrollTop | 不影响 | view 切换会引起总行数变化 → ScrollMapper 重算 spacer，复用 4.2 既有路径 |
-| §A.3 ChunkedAxis | 不影响 | 行数变化时 Grid 已有 `setRowCount` 重建路径 |
-| §A.4 DataSource 接口契约 | **小幅修订** | 新增两个 optional 方法，向后兼容；`endIndex INCLUSIVE` 不变 |
-| §A.5 Theme 是唯一视觉源 | 不影响 | 新 icon 走 `theme.icons` |
-| §A.6 DOM `<handle-layer>` siblings | 不影响 | Filter popover 复用 4.0 popover 层 |
-| §A.7 Per-Grid FrameScheduler | 不影响 | 不引入新 RAF 源 |
+| ADR                                | 是否影响     | 说明                                                                    |
+| ---------------------------------- | ------------ | ----------------------------------------------------------------------- |
+| §A.1 单 Canvas 全可见区重绘        | 不影响       | Renderer 只多绘两种 icon                                                |
+| §A.2 原生滚动 + 非线性 scrollTop   | 不影响       | view 切换会引起总行数变化 → ScrollMapper 重算 spacer，复用 4.2 既有路径 |
+| §A.3 ChunkedAxis                   | 不影响       | 行数变化时 Grid 已有 `setRowCount` 重建路径                             |
+| §A.4 DataSource 接口契约           | **小幅修订** | 新增两个 optional 方法，向后兼容；`endIndex INCLUSIVE` 不变             |
+| §A.5 Theme 是唯一视觉源            | 不影响       | 新 icon 走 `theme.icons`                                                |
+| §A.6 DOM `<handle-layer>` siblings | 不影响       | Filter popover 复用 4.0 popover 层                                      |
+| §A.7 Per-Grid FrameScheduler       | 不影响       | 不引入新 RAF 源                                                         |

@@ -47,7 +47,9 @@ export const FrozenTopLeftAndRight: Story = {
       if (fieldId === 'summary') return `第 ${(row % 4) + 1} 季度汇总 · 第 ${row} 行`
       if (fieldId.startsWith('metric_')) {
         const n = Number.parseInt(fieldId.slice('metric_'.length), 10)
-        return n % 3 === 0 ? row * n + 42 : `${regions[row % regions.length]!}·${teams[row % teams.length]!}`
+        return n % 3 === 0
+          ? row * n + 42
+          : `${regions[row % regions.length]!}·${teams[row % teams.length]!}`
       }
       return ''
     })

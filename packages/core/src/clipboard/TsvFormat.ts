@@ -59,9 +59,9 @@ export function serializeRowsToTsv(rows: readonly Row[], fieldIds: readonly stri
   }
 
   return rows
-    .map(row =>
+    .map((row) =>
       fieldIds
-        .map(fieldId => {
+        .map((fieldId) => {
           const val = row[fieldId]
           return serializeValue(val)
         })

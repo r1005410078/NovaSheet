@@ -27,7 +27,11 @@ export const Basic: Story = {
       data,
       onContextMenuAction: (action, ctx) => {
         // eslint-disable-next-line no-console
-        console.log('[ContextMenu]', action, ctx.targetKind === 'columnHeader' ? ctx.field : ctx.cell)
+        console.log(
+          '[ContextMenu]',
+          action,
+          ctx.targetKind === 'columnHeader' ? ctx.field : ctx.cell,
+        )
       },
     })
   },

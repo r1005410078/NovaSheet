@@ -18,7 +18,9 @@ describe('GridLinesPainter — 网格线', () => {
     })
     const strokeCount = ops.filter((o) => o.op === 'stroke').length
     expect(strokeCount).toBe(1)
-    expect(ops.some((o) => o.op === 'set:strokeStyle' && o.value === denseGridTheme.colors.gridLine)).toBe(true)
+    expect(
+      ops.some((o) => o.op === 'set:strokeStyle' && o.value === denseGridTheme.colors.gridLine),
+    ).toBe(true)
     expect(ops.some((o) => o.op === 'moveTo')).toBe(true)
     expect(ops.some((o) => o.op === 'lineTo')).toBe(true)
   })
@@ -52,7 +54,7 @@ describe('GridLinesPainter — 网格线', () => {
     // The last row's bottom line should be at y = 3*28 = 84 (with +0.5 alignment)
     const lineYs = ops
       .filter((o) => o.op === 'moveTo')
-      .map((o) => o.op === 'moveTo' ? o.args[1] : 0)
+      .map((o) => (o.op === 'moveTo' ? o.args[1] : 0))
       .filter((y) => y > 0 && y < 100)
     expect(lineYs).toContain(84.5) // last row bottom (after floor + 0.5 alignment)
   })
@@ -104,7 +106,12 @@ describe('GridLinesPainter — 网格线', () => {
 
   it('paintOuterFrame 绘制视口外框', () => {
     const { ctx, ops } = createRecordingContext(400, 300)
-    new GridLinesPainter(denseGridTheme).paintOuterFrame(ctx, { x: 0, y: 0, width: 400, height: 300 })
+    new GridLinesPainter(denseGridTheme).paintOuterFrame(ctx, {
+      x: 0,
+      y: 0,
+      width: 400,
+      height: 300,
+    })
     expect(ops.some((o) => o.op === 'stroke')).toBe(true)
     expect(ops).toContainEqual({
       op: 'set:strokeStyle',

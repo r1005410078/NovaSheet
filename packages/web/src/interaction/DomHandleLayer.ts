@@ -19,7 +19,12 @@ export type ResizeIndicatorLine =
   | { readonly kind: 'row'; readonly y: number }
 
 export interface DomHandleLayerCallbacks {
-  onResizePointerDown: (handle: ResizeHandleRect, pointerId: number, clientX: number, clientY: number) => void
+  onResizePointerDown: (
+    handle: ResizeHandleRect,
+    pointerId: number,
+    clientX: number,
+    clientY: number,
+  ) => void
   onResizePointerMove: (pointerId: number, clientX: number, clientY: number) => void
   onResizePointerUp: (pointerId: number) => void
   onResizeKeyboard: (handle: ResizeHandleRect, delta: number) => void
@@ -208,7 +213,10 @@ export class DomHandleLayer {
   }
 
   private onPointerMove = (event: PointerEvent): void => {
-    if (!event.currentTarget || !(event.currentTarget as HTMLElement).hasPointerCapture?.(event.pointerId)) {
+    if (
+      !event.currentTarget ||
+      !(event.currentTarget as HTMLElement).hasPointerCapture?.(event.pointerId)
+    ) {
       return
     }
     this.callbacks.onResizePointerMove(event.pointerId, event.clientX, event.clientY)

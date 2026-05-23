@@ -50,7 +50,17 @@ if (!cjsResult.success) {
 // Use tsconfig.build.json (rootDir: src, excludes tests) so output is flat
 // `dist/index.d.ts` rather than `dist/src/index.d.ts`.
 const dts = Bun.spawn(
-  ['bunx', 'tsc', '-p', 'tsconfig.build.json', '--emitDeclarationOnly', '--outDir', `${ROOT}dist`, '--declaration', '--declarationMap'],
+  [
+    'bunx',
+    'tsc',
+    '-p',
+    'tsconfig.build.json',
+    '--emitDeclarationOnly',
+    '--outDir',
+    `${ROOT}dist`,
+    '--declaration',
+    '--declarationMap',
+  ],
   { cwd: ROOT, stdout: 'inherit', stderr: 'inherit' },
 )
 const dtsExitCode = await dts.exited

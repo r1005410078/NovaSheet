@@ -48,6 +48,7 @@
 ## Task 1: Core 坐标协议
 
 **Files:**
+
 - Modify: `packages/core/src/data/DataSource.ts`
 - Modify: `packages/core/src/data/MutableDataSource.ts`
 - Modify: `packages/core/src/data/InMemoryDataSource.ts`
@@ -156,6 +157,7 @@ git commit -m "feat(core): add view coordinate protocol"
 ## Task 2: ViewLayer / ViewPipeline
 
 **Files:**
+
 - Create: `packages/core/src/view/ViewLayer.ts`
 - Create: `packages/core/src/view/ViewPipeline.ts`
 - Create: `packages/core/tests/view/ViewPipeline.test.ts`
@@ -168,7 +170,12 @@ Create tests that use two small fake layers:
 ```ts
 import { describe, expect, it } from 'bun:test'
 import type { DataSource } from '../../src/data/DataSource'
-import type { ColumnHeaderMenuContext, HeaderDecoration, ViewLayer, ViewLayerChange } from '../../src/view/ViewLayer'
+import type {
+  ColumnHeaderMenuContext,
+  HeaderDecoration,
+  ViewLayer,
+  ViewLayerChange,
+} from '../../src/view/ViewLayer'
 import { ViewPipeline } from '../../src/view/ViewPipeline'
 
 const source: DataSource = {
@@ -183,7 +190,10 @@ class FakeLayer implements ViewLayer<string | null> {
   readonly id: string
   private spec: string | null = null
   private notify: ((change: ViewLayerChange) => void) | null = null
-  constructor(id: string, private decoration: HeaderDecoration) {
+  constructor(
+    id: string,
+    private decoration: HeaderDecoration,
+  ) {
     this.id = id
   }
   bindPipeline(notify: (change: ViewLayerChange) => void): void {
@@ -238,8 +248,15 @@ describe('ViewPipeline', () => {
     pipeline.add(new FakeLayer('a', { filterActive: true }))
     pipeline.add(new FakeLayer('b', { sortIndicator: 'desc' }))
     const field = source.getSchema().fields[0]!
-    expect(pipeline.collectHeaderDecorations(field)).toEqual({ filterActive: true, sortIndicator: 'desc' })
-    expect(pipeline.collectColumnHeaderMenuItems({ targetKind: 'columnHeader', field, colIndex: 0 }).map((i) => i.label)).toEqual(['a:name', 'b:name'])
+    expect(pipeline.collectHeaderDecorations(field)).toEqual({
+      filterActive: true,
+      sortIndicator: 'desc',
+    })
+    expect(
+      pipeline
+        .collectColumnHeaderMenuItems({ targetKind: 'columnHeader', field, colIndex: 0 })
+        .map((i) => i.label),
+    ).toEqual(['a:name', 'b:name'])
   })
 })
 ```
@@ -288,6 +305,7 @@ git commit -m "feat(core): add view pipeline"
 ## Task 3: SortLayer
 
 **Files:**
+
 - Create: `packages/core/src/view/SortLayer.ts`
 - Create: `packages/core/tests/view/SortLayer.test.ts`
 - Modify: `packages/core/src/index.ts`
@@ -301,7 +319,13 @@ const schema = {
   fields: [
     { id: 'name', name: 'Name', type: 'text', width: 120 },
     { id: 'score', name: 'Score', type: 'number', width: 80 },
-    { id: 'status', name: 'Status', type: 'singleSelect', width: 100, options: { choices: ['Todo', 'Doing', 'Done'] } },
+    {
+      id: 'status',
+      name: 'Status',
+      type: 'singleSelect',
+      width: 100,
+      options: { choices: ['Todo', 'Doing', 'Done'] },
+    },
     { id: 'tags', name: 'Tags', type: 'multiSelect', width: 120, options: { choices: ['A', 'B'] } },
   ],
 } as const
@@ -361,6 +385,7 @@ git commit -m "feat(core): add sort view layer"
 ## Task 4: FilterLayer
 
 **Files:**
+
 - Create: `packages/core/src/view/FilterLayer.ts`
 - Create: `packages/core/tests/view/FilterLayer.test.ts`
 - Modify: `packages/core/src/index.ts`
@@ -423,6 +448,7 @@ git commit -m "feat(core): add filter view layer"
 ## Task 5: Engine 底层行 undo/redo
 
 **Files:**
+
 - Modify: `packages/core/src/engine/GridEngine.ts`
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 - Modify: `packages/core/src/render/RenderFrame.ts`
@@ -508,6 +534,7 @@ git commit -m "feat(core): store undo writes by underlying row"
 ## Task 6: Grid pipeline assembly and public events
 
 **Files:**
+
 - Modify: `packages/web/src/Grid.ts`
 - Modify: `packages/web/src/grid/GridController.ts`
 - Modify: `packages/web/src/backends/Canvas2DBackend.ts`
@@ -572,6 +599,7 @@ git commit -m "feat(web): assemble sort filter view pipeline"
 **Why this task exists:** Task 6 intentionally used the existing `engine.setData()` path for pipeline changes to stay within its allowed files. That satisfies the public API assembly tests, but it clears the undo stack and selection on sort/filter changes. Phase 4.4 requires view changes to preserve undo/redo and remap selection by underlying row, so this follow-up must land before Task 7+ integration work relies on the pipeline.
 
 **Files:**
+
 - Modify: `packages/core/src/engine/GridEngine.ts`
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
@@ -697,6 +725,7 @@ git commit -m "feat(web): preserve state across view changes"
 ## Task 7: Column header context menu
 
 **Files:**
+
 - Modify: `packages/core/src/interaction/ContextMenuModel.ts`
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
 - Modify: `packages/web/src/backends/Canvas2DBackend.ts`
@@ -736,9 +765,14 @@ Extend `ContextMenuContext` into discriminated union:
 export type ContextMenuTargetKind = 'cell' | 'columnHeader'
 export type ContextMenuContext = CellMenuContext | ColumnHeaderMenuContext
 export type ContextMenuAction =
-  | 'cut' | 'copy' | 'paste'
-  | 'sort-asc' | 'sort-desc' | 'sort-none'
-  | 'filter-open' | 'filter-clear'
+  | 'cut'
+  | 'copy'
+  | 'paste'
+  | 'sort-asc'
+  | 'sort-desc'
+  | 'sort-none'
+  | 'filter-open'
+  | 'filter-clear'
 ```
 
 In runtime `handleHostContextMenu`, branch on `event.y < frame.theme.metrics.headerHeight`; use `colsAxis.positionToIndex(event.x + viewport.scrollX)` and guard out-of-range clicks.
@@ -767,6 +801,7 @@ git commit -m "feat(web): add column header sort filter menu"
 ## Task 8: Header icons and theme tokens
 
 **Files:**
+
 - Modify: `packages/core/src/theme/Theme.ts`
 - Modify: `packages/core/src/theme/denseGridTheme.ts`
 - Modify: `packages/core/src/render/RenderFrame.ts`
@@ -826,6 +861,7 @@ git commit -m "feat(canvas2d): render sort filter header icons"
 ## Task 9: FilterPopover DOM overlay
 
 **Files:**
+
 - Create: `packages/web/src/interaction/FilterPopover.ts`
 - Create: `packages/web/tests/interaction/FilterPopover.test.ts`
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
@@ -883,6 +919,7 @@ git commit -m "feat(web): add filter popover"
 ## Task 10: Integration tests, Storybook, docs
 
 **Files:**
+
 - Create: `apps/storybook/src/stories/SortFilter.stories.ts`
 - Modify: `README.md`
 - Test: `packages/web/tests/Grid.test.ts`

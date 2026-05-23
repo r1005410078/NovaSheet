@@ -10,7 +10,12 @@ export interface GridIndexBounds {
 }
 
 export type SelectionNavigationIntent =
-  | { readonly kind: 'delta'; readonly dRow: number; readonly dCol: number; readonly extend: boolean }
+  | {
+      readonly kind: 'delta'
+      readonly dRow: number
+      readonly dCol: number
+      readonly extend: boolean
+    }
   | { readonly kind: 'tab'; readonly backward: boolean; readonly extend: boolean }
 
 export function parseSelectionNavigationKey(

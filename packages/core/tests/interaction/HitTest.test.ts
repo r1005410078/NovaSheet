@@ -28,7 +28,10 @@ function makeFrame(): RenderFrame {
       { name: 'Dave', age: 35, role: 'QA' },
     ],
   })
-  const rowsAxis = new ChunkedAxis({ count: data.getRowCount(), defaultSize: denseGridTheme.metrics.rowHeight })
+  const rowsAxis = new ChunkedAxis({
+    count: data.getRowCount(),
+    defaultSize: denseGridTheme.metrics.rowHeight,
+  })
   const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
   const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 1, leftCols: 1, rightCols: 1 })
   const viewport = new Viewport(rowsAxis, colsAxis, frozen)

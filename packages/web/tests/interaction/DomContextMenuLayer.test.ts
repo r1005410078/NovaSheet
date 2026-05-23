@@ -181,7 +181,11 @@ describe('DomContextMenuLayer — focus restoration on close (spec §4.5)', () =
     layer.applyTheme(denseGridTheme)
     layer.open({ clientX: 0, clientY: 0, items: sampleItems })
     // focus is now on the first enabled button (inside the menu)
-    expect(document.body.querySelector('[data-novasheet-context-menu]')!.contains(document.activeElement)).toBe(true)
+    expect(
+      document.body
+        .querySelector('[data-novasheet-context-menu]')!
+        .contains(document.activeElement),
+    ).toBe(true)
     layer.close()
     expect(onClose).toHaveBeenCalledTimes(1)
     layer.destroy()
@@ -198,7 +202,11 @@ describe('DomContextMenuLayer — focus restoration on close (spec §4.5)', () =
     // move focus away from menu
     ;(document.activeElement as HTMLElement | null)?.blur()
     container.focus()
-    expect(document.body.querySelector('[data-novasheet-context-menu]')!.contains(document.activeElement)).toBe(false)
+    expect(
+      document.body
+        .querySelector('[data-novasheet-context-menu]')!
+        .contains(document.activeElement),
+    ).toBe(false)
     layer.close()
     expect(onClose).not.toHaveBeenCalled()
     layer.destroy()
@@ -214,10 +222,10 @@ describe('DomContextMenuLayer — disabled 项 ARIA focusable (spec §4.7)', () 
     layer.applyTheme(denseGridTheme)
     layer.open({ clientX: 0, clientY: 0, items: sampleItems })
     const pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
-    expect(pasteBtn.disabled).toBe(false)           // HTML disabled NOT set
+    expect(pasteBtn.disabled).toBe(false) // HTML disabled NOT set
     expect(pasteBtn.getAttribute('aria-disabled')).toBe('true') // aria-only
     pasteBtn.focus()
-    expect(document.activeElement).toBe(pasteBtn)   // can be programmatically focused
+    expect(document.activeElement).toBe(pasteBtn) // can be programmatically focused
     layer.destroy()
     document.body.removeChild(container)
   })

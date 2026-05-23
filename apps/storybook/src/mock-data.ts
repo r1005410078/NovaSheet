@@ -33,8 +33,22 @@ export function mixedTypesSchema(): Schema {
 }
 
 const FIRST_NAMES = [
-  'Alice', 'Bob', 'Carol', 'David', 'Eve', 'Frank', 'Grace', 'Heidi',
-  'Ivan', 'Judy', 'Kevin', 'Linda', 'Mallory', 'Niaj', 'Olivia', 'Peggy',
+  'Alice',
+  'Bob',
+  'Carol',
+  'David',
+  'Eve',
+  'Frank',
+  'Grace',
+  'Heidi',
+  'Ivan',
+  'Judy',
+  'Kevin',
+  'Linda',
+  'Mallory',
+  'Niaj',
+  'Olivia',
+  'Peggy',
 ]
 const ROLES = ['Engineer', 'Designer', 'PM', 'Researcher', 'Analyst', 'Manager']
 const TEAMS = ['Platform', 'Growth', 'Data', 'Infra', 'Brand', 'Mobile']
@@ -52,7 +66,8 @@ export function generateRows(schema: Schema, n: number): Row[] {
       switch (field.type) {
         case 'text': {
           if (field.id === 'name') {
-            row[field.id] = `${FIRST_NAMES[i % FIRST_NAMES.length]} ${String(i + 1).padStart(3, '0')}`
+            row[field.id] =
+              `${FIRST_NAMES[i % FIRST_NAMES.length]} ${String(i + 1).padStart(3, '0')}`
           } else if (field.id === 'role') {
             row[field.id] = ROLES[i % ROLES.length] as string
           } else if (field.id === 'team') {
@@ -236,8 +251,9 @@ export function createWrapAutofitBigDataSource(rowCount = 10_000): GeneratedData
             1 + (row % 3),
           )
         }
-        if (kind === 3) return `EN-only row ${row}: rollout behind flag sheet.wrap_v2; monitor P99 latency.`
-        return `【阻塞】row ${row} 依赖上游 API；重试 3 次后失败；日志 id=0x${(row * 2654435761 >>> 0).toString(16).slice(0, 8)}`
+        if (kind === 3)
+          return `EN-only row ${row}: rollout behind flag sheet.wrap_v2; monitor P99 latency.`
+        return `【阻塞】row ${row} 依赖上游 API；重试 3 次后失败；日志 id=0x${((row * 2654435761) >>> 0).toString(16).slice(0, 8)}`
       }
       case 'note': {
         if (row % 7 === 0) return ''

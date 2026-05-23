@@ -63,11 +63,11 @@ flowchart TB
 
 **依赖方向（无环）**：`core` ← `web-canvas2d` ← `web` ← Storybook / 应用。
 
-| 包 | 职责 | 不含 |
-|----|------|------|
-| `@novasheet/core` | 数据、Schema、Theme、ChunkedAxis、Viewport、FrozenRegions、`DefaultGridEngine`、`RenderFrame`、`FrameScheduler` | DOM、Canvas、滚动容器 |
-| `@novasheet/web-canvas2d` | `Canvas2DRenderer`、三个 painter、`HighDPI` | Grid 门面、scrollHost、编排 |
-| `@novasheet/web` | 对外 `Grid`、`Canvas2DBackend`、`WebGridRuntime`、`DomGridHost`、`ScrollMapper`、`NativeScroller`、`WebRenderer` 契约 | 引擎算法、未来 WebGL 实现 |
+| 包                        | 职责                                                                                                                  | 不含                        |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `@novasheet/core`         | 数据、Schema、Theme、ChunkedAxis、Viewport、FrozenRegions、`DefaultGridEngine`、`RenderFrame`、`FrameScheduler`       | DOM、Canvas、滚动容器       |
+| `@novasheet/web-canvas2d` | `Canvas2DRenderer`、三个 painter、`HighDPI`                                                                           | Grid 门面、scrollHost、编排 |
+| `@novasheet/web`          | 对外 `Grid`、`Canvas2DBackend`、`WebGridRuntime`、`DomGridHost`、`ScrollMapper`、`NativeScroller`、`WebRenderer` 契约 | 引擎算法、未来 WebGL 实现   |
 
 核心关系：
 
@@ -138,44 +138,44 @@ sequenceDiagram
 
 ### 4.1 `@novasheet/core`
 
-| 模块 | 路径 | 职责 |
-|------|------|------|
-| DataSource | `src/data/DataSource.ts`, `InMemoryDataSource.ts` | 数据读取；`getCell` 同步热路径；`getRows` 闭区间预热 |
-| Schema | `src/data/Schema.ts` | 字段类型、列宽、行结构 |
-| ChunkedAxis | `src/layout/ChunkedAxis.ts` | 行/列尺寸 → 像素位置；`CHUNK_SIZE = 1024` |
-| Viewport | `src/layout/Viewport.ts` | 尺寸、滚动、可见区；`snapshot()` 供渲染 |
-| FrozenRegions | `src/layout/FrozenRegions.ts` | 象限切分；**当前仅返回 `main`** |
-| DefaultGridEngine | `src/engine/DefaultGridEngine.ts` | 引擎状态；`getFrame()` 快照 |
-| RenderFrame | `src/render/RenderFrame.ts` | 跨平台每帧输入（data / theme / axes / viewport） |
-| Theme | `src/theme/` | 全部视觉 token |
-| FrameScheduler | `src/util/raf.ts` | per-Grid RAF 合并（导出供 web 使用） |
+| 模块              | 路径                                              | 职责                                                 |
+| ----------------- | ------------------------------------------------- | ---------------------------------------------------- |
+| DataSource        | `src/data/DataSource.ts`, `InMemoryDataSource.ts` | 数据读取；`getCell` 同步热路径；`getRows` 闭区间预热 |
+| Schema            | `src/data/Schema.ts`                              | 字段类型、列宽、行结构                               |
+| ChunkedAxis       | `src/layout/ChunkedAxis.ts`                       | 行/列尺寸 → 像素位置；`CHUNK_SIZE = 1024`            |
+| Viewport          | `src/layout/Viewport.ts`                          | 尺寸、滚动、可见区；`snapshot()` 供渲染              |
+| FrozenRegions     | `src/layout/FrozenRegions.ts`                     | 象限切分；**当前仅返回 `main`**                      |
+| DefaultGridEngine | `src/engine/DefaultGridEngine.ts`                 | 引擎状态；`getFrame()` 快照                          |
+| RenderFrame       | `src/render/RenderFrame.ts`                       | 跨平台每帧输入（data / theme / axes / viewport）     |
+| Theme             | `src/theme/`                                      | 全部视觉 token                                       |
+| FrameScheduler    | `src/util/raf.ts`                                 | per-Grid RAF 合并（导出供 web 使用）                 |
 
 ### 4.2 `@novasheet/web`
 
-| 模块 | 路径 | 职责 |
-|------|------|------|
-| Grid | `src/Grid.ts` | 对外门面；转发至 `GridController` |
+| 模块            | 路径                              | 职责                                                               |
+| --------------- | --------------------------------- | ------------------------------------------------------------------ |
+| Grid            | `src/Grid.ts`                     | 对外门面；转发至 `GridController`                                  |
 | Canvas2DBackend | `src/backends/Canvas2DBackend.ts` | 装配 engine + host + runtime + canvas + HighDPI + Canvas2DRenderer |
-| WebGridRuntime | `src/runtime/WebGridRuntime.ts` | 编排、滚动映射、spacer、RAF、`setData` 换 renderer |
-| DomGridHost | `src/host/DomGridHost.ts` | scroll-host / spacer、ResizeObserver、DPR 监听 |
-| ScrollMapper | `src/scroll/ScrollMapper.ts` | DOM scroll ↔ 逻辑坐标；`SAFE_MAX = 6_000_000` |
-| NativeScroller | `src/scroll/NativeScroller.ts` | 原生 scroll 事件 → RAF 节流 |
-| WebRenderer | `src/render/WebRenderer.ts` | 渲染后端接口（Canvas2D / 未来 WebGL） |
+| WebGridRuntime  | `src/runtime/WebGridRuntime.ts`   | 编排、滚动映射、spacer、RAF、`setData` 换 renderer                 |
+| DomGridHost     | `src/host/DomGridHost.ts`         | scroll-host / spacer、ResizeObserver、DPR 监听                     |
+| ScrollMapper    | `src/scroll/ScrollMapper.ts`      | DOM scroll ↔ 逻辑坐标；`SAFE_MAX = 6_000_000`                      |
+| NativeScroller  | `src/scroll/NativeScroller.ts`    | 原生 scroll 事件 → RAF 节流                                        |
+| WebRenderer     | `src/render/WebRenderer.ts`       | 渲染后端接口（Canvas2D / 未来 WebGL）                              |
 
 ### 4.3 `@novasheet/web-canvas2d`
 
-| 模块 | 路径 | 职责 |
-|------|------|------|
-| Canvas2DRenderer | `src/render/Canvas2DRenderer.ts` | `render(frame)` 绘制管线；`paint()` 测试/兜底 |
-| CellPainter | `src/painters/CellPainter.ts` | 单元格内容与截断 |
-| GridLinesPainter | `src/painters/GridLinesPainter.ts` | 批量网格线 |
-| HeaderPainter | `src/painters/HeaderPainter.ts` | 列头 |
-| HighDPI | `src/surface/HighDPI.ts` | CSS 尺寸 × DPR 位图 + transform |
+| 模块             | 路径                               | 职责                                          |
+| ---------------- | ---------------------------------- | --------------------------------------------- |
+| Canvas2DRenderer | `src/render/Canvas2DRenderer.ts`   | `render(frame)` 绘制管线；`paint()` 测试/兜底 |
+| CellPainter      | `src/painters/CellPainter.ts`      | 单元格内容与截断                              |
+| GridLinesPainter | `src/painters/GridLinesPainter.ts` | 批量网格线                                    |
+| HeaderPainter    | `src/painters/HeaderPainter.ts`    | 列头                                          |
+| HighDPI          | `src/surface/HighDPI.ts`           | CSS 尺寸 × DPR 位图 + transform               |
 
 ### 4.4 应用层
 
-| 模块 | 路径 | 职责 |
-|------|------|------|
+| 模块      | 路径              | 职责                                              |
+| --------- | ----------------- | ------------------------------------------------- |
 | Storybook | `apps/storybook/` | 变体演示；`import { Grid } from '@novasheet/web'` |
 
 ---
@@ -227,34 +227,34 @@ flowchart TB
 
 ## 7. 关键不变量
 
-| 不变量 | 说明 |
-|--------|------|
-| 对外 mutation 走 `Grid` | painter / runtime 不自行改数据源或布局 |
-| 渲染只读 `RenderFrame` / `viewport` 快照 | 每帧单一读取源，避免绘制中状态撕裂 |
-| Theme 为视觉唯一来源 | `web-canvas2d` 的 painter 不硬编码颜色/尺寸 |
-| 每 Grid 一个 `FrameScheduler` | `scroll:read`、`host:resize`、`renderer:flush` 同帧合并；禁止跨 Grid 共用单例 |
-| `Grid.destroy()` 幂等 | 取消 pending RAF、移除 canvas 与 scroll-host、恢复 container `position` |
-| `ScrollMapper.SAFE_MAX = 6_000_000` | 避开 Firefox / iOS Safari scrollHeight 上限 |
-| 包依赖无环 | `core` ← `web-canvas2d` ← `web`；core 不得 import DOM/Canvas 类型 |
+| 不变量                                   | 说明                                                                          |
+| ---------------------------------------- | ----------------------------------------------------------------------------- |
+| 对外 mutation 走 `Grid`                  | painter / runtime 不自行改数据源或布局                                        |
+| 渲染只读 `RenderFrame` / `viewport` 快照 | 每帧单一读取源，避免绘制中状态撕裂                                            |
+| Theme 为视觉唯一来源                     | `web-canvas2d` 的 painter 不硬编码颜色/尺寸                                   |
+| 每 Grid 一个 `FrameScheduler`            | `scroll:read`、`host:resize`、`renderer:flush` 同帧合并；禁止跨 Grid 共用单例 |
+| `Grid.destroy()` 幂等                    | 取消 pending RAF、移除 canvas 与 scroll-host、恢复 container `position`       |
+| `ScrollMapper.SAFE_MAX = 6_000_000`      | 避开 Firefox / iOS Safari scrollHeight 上限                                   |
+| 包依赖无环                               | `core` ← `web-canvas2d` ← `web`；core 不得 import DOM/Canvas 类型             |
 
 ---
 
 ## 8. 能力边界
 
-| 能力 | 状态 |
-|------|------|
-| 三包拆分 + `Grid` 门面在 `@novasheet/web` | ✅ |
-| Canvas2D 渲染 + Theme + HighDPI | ✅ |
-| ChunkedAxis 双轴虚拟化 | ✅ |
-| 原生滚动 + 非线性 `ScrollMapper` | ✅ |
-| `scrollToRow` / `scrollToCell` | ✅ |
-| Resize 合并绘制（无空白帧闪烁） | ✅ |
-| 冻结 4 象限真实绘制 | planned（`FrozenRegions` 已预留） |
-| 动态行高 autofit | planned |
-| resize handle / selection / editing | planned（M4，`handle-layer` DOM） |
-| WebGL 后端 | planned（`WebRenderer` 第二实现） |
-| React wrapper | planned |
-| Playground 1M 性能验证 | planned |
+| 能力                                      | 状态                              |
+| ----------------------------------------- | --------------------------------- |
+| 三包拆分 + `Grid` 门面在 `@novasheet/web` | ✅                                |
+| Canvas2D 渲染 + Theme + HighDPI           | ✅                                |
+| ChunkedAxis 双轴虚拟化                    | ✅                                |
+| 原生滚动 + 非线性 `ScrollMapper`          | ✅                                |
+| `scrollToRow` / `scrollToCell`            | ✅                                |
+| Resize 合并绘制（无空白帧闪烁）           | ✅                                |
+| 冻结 4 象限真实绘制                       | planned（`FrozenRegions` 已预留） |
+| 动态行高 autofit                          | planned                           |
+| resize handle / selection / editing       | planned（M4，`handle-layer` DOM） |
+| WebGL 后端                                | planned（`WebRenderer` 第二实现） |
+| React wrapper                             | planned                           |
+| Playground 1M 性能验证                    | planned                           |
 
 ---
 
