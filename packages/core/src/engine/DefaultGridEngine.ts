@@ -397,6 +397,13 @@ export class DefaultGridEngine implements GridEngine {
       case 'resizeColumn':
         this.colsAxis.setSize(cmd.colIndex, cmd.before)
         return
+      case 'insertRows':
+      case 'deleteRows':
+      case 'hideRows':
+      case 'unhideRows':
+      case 'resizeRowsMulti':
+        // TODO(phase-4.5): Task 10 fills these in
+        return
     }
   }
 
@@ -423,6 +430,13 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'resizeColumn':
         this.colsAxis.setSize(cmd.colIndex, cmd.after)
+        return
+      case 'insertRows':
+      case 'deleteRows':
+      case 'hideRows':
+      case 'unhideRows':
+      case 'resizeRowsMulti':
+        // TODO(phase-4.5): Task 10 fills these in
         return
     }
   }
