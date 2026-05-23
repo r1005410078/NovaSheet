@@ -1308,7 +1308,7 @@ insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
   if (!ds?.insertRows) throw new Error('DataSource does not support insertRows')
   const before = this.selection.getSelection()
   const newIds = ds.insertRows(beforeUnderlyingRow, count)
-  this.axisRow.insertRange(beforeUnderlyingRow, count, this.theme.dimensions.rowHeight)
+  this.axisRow.insertRange(beforeUnderlyingRow, count, this.theme.metrics.rowHeight)
   this.selection.remapAfterRowsInserted(beforeUnderlyingRow, count)
   const after = this.selection.getSelection()
   this.undoStack.push({ kind: 'insertRows', at: beforeUnderlyingRow, count, newIds, selectionBefore: before, selectionAfter: after })
@@ -1373,7 +1373,7 @@ getHiddenRows(): readonly number[] {
 case 'insertRows':
   // redo
   this.dataSource.insertRows!(cmd.at, cmd.count)
-  this.axisRow.insertRange(cmd.at, cmd.count, this.theme.dimensions.rowHeight)
+  this.axisRow.insertRange(cmd.at, cmd.count, this.theme.metrics.rowHeight)
   this.selection.setSelection(cmd.selectionAfter)
   break
 // unapply 把 cmd 反向：删 [cmd.at .. cmd.at+cmd.count-1]
