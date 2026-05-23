@@ -120,6 +120,7 @@ NovaSheet uses a **少而硬** comment strategy: public API is readable, core ru
 ## Commit conventions
 
 - **Conventional Commits**: `feat(core): ...`, `chore(core): ...`, `docs(plan): ...`, `docs(spec): ...`
+- **Commit 说明使用中文。** Conventional Commits 的 `type(scope)` 前缀保持英文，冒号后面的 subject 与正文（body）用中文叙述；代码标识符、文件路径、命令、API 名、错误信息等仍保持英文原样。示例：`feat(web): 新增筛选弹层` / `fix(core): 修正 ChunkedAxis.getSize 边界返回 0 的问题`。
 - One task = one commit, per the milestone plan. Don't batch commits across plan tasks.
 - When the plan itself has a bug (caught during execution), correct the plan FIRST in a `docs(plan): fix ...` commit, then re-dispatch the implementer. Audit trail matters.
 - **Never use `--no-verify`** unless the user explicitly asks. Hook failures need fixing, not bypassing.
@@ -137,6 +138,7 @@ The user opts into the formal pipeline for any non-trivial feature:
 4. **finishing-a-development-branch** — verify tests, present completion options, push + tag
 
 Subagent prompts must:
+
 - Reference the plan file path; do NOT paste hundreds of lines of task body inline (saves controller context)
 - State known plan-risk areas explicitly (off-by-ones, semantic conflicts) and instruct STOP+ASK before silent fixes
 - Demand a self-review section in the report (DONE / DONE_WITH_CONCERNS / BLOCKED / NEEDS_CONTEXT)
@@ -145,21 +147,21 @@ Subagent prompts must:
 
 ## What goes where
 
-| Topic | Location |
-|---|---|
-| Public Grid API | `packages/web/src/Grid.ts` / `packages/web/src/index.ts` |
-| DataSource / Schema / Theme types | `packages/core/src/index.ts` |
-| Engine state coordinator | `packages/core/src/engine/DefaultGridEngine.ts` |
-| Algorithm core | `packages/core/src/layout/ChunkedAxis.ts` (also `Axis` / `MutableAxis`) |
-| Per-frame Canvas2D logic | `packages/web-canvas2d/src/render/Canvas2DRenderer.ts` |
-| Theme tokens | `packages/core/src/theme/denseGridTheme.ts` |
-| DOM host | `packages/web/src/host/DomGridHost.ts` |
-| Scroll math + SAFE_MAX | `packages/web/src/scroll/ScrollMapper.ts` |
-| Web orchestrator | `packages/web/src/runtime/WebGridRuntime.ts` |
-| Tests | each `packages/<pkg>/tests/` mirrors its `src/` |
-| RecordingContext helper | `packages/web-canvas2d/tests/helpers/recording-context.ts` |
-| global-stub helper | `packages/web/tests/helpers/global-stub.ts` (+ duplicate in web-canvas2d) |
-| Probe tests | `packages/core/tests/_probe.test.ts` |
+| Topic                             | Location                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| Public Grid API                   | `packages/web/src/Grid.ts` / `packages/web/src/index.ts`                  |
+| DataSource / Schema / Theme types | `packages/core/src/index.ts`                                              |
+| Engine state coordinator          | `packages/core/src/engine/DefaultGridEngine.ts`                           |
+| Algorithm core                    | `packages/core/src/layout/ChunkedAxis.ts` (also `Axis` / `MutableAxis`)   |
+| Per-frame Canvas2D logic          | `packages/web-canvas2d/src/render/Canvas2DRenderer.ts`                    |
+| Theme tokens                      | `packages/core/src/theme/denseGridTheme.ts`                               |
+| DOM host                          | `packages/web/src/host/DomGridHost.ts`                                    |
+| Scroll math + SAFE_MAX            | `packages/web/src/scroll/ScrollMapper.ts`                                 |
+| Web orchestrator                  | `packages/web/src/runtime/WebGridRuntime.ts`                              |
+| Tests                             | each `packages/<pkg>/tests/` mirrors its `src/`                           |
+| RecordingContext helper           | `packages/web-canvas2d/tests/helpers/recording-context.ts`                |
+| global-stub helper                | `packages/web/tests/helpers/global-stub.ts` (+ duplicate in web-canvas2d) |
+| Probe tests                       | `packages/core/tests/_probe.test.ts`                                      |
 
 ---
 
