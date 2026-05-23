@@ -12,7 +12,7 @@
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "oxlint packages",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "format": "prettier --write --cache \"**/*.{ts,tsx,js,json,md}\"",
     "storybook": "bun run --filter @novasheet/storybook storybook",
     "build-storybook": "bun run --filter @novasheet/storybook build-storybook"
   },
