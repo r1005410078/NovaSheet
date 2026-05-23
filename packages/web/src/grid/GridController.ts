@@ -1,6 +1,34 @@
-import type { DataSource, FrozenConfig, GridEngineOptions, Theme } from '@novasheet/core'
+import type {
+  DataSource,
+  FilterLayer,
+  FilterSpec,
+  FrozenConfig,
+  GridEngineOptions,
+  SortLayer,
+  SortSpec,
+  Theme,
+  ViewPipeline,
+} from '@novasheet/core'
 import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
 export type { FillEvent, RedoEvent, UndoEvent }
+
+export interface ViewChangeEvent {
+  readonly layerId: 'sort' | 'filter'
+}
+
+export interface SortChangeEvent {
+  readonly spec: SortSpec | null
+}
+
+export interface FilterChangeEvent {
+  readonly spec: FilterSpec | null
+}
+
+export interface GridPublicEventMap {
+  readonly viewChange: ViewChangeEvent
+  readonly sortChange: SortChangeEvent
+  readonly filterChange: FilterChangeEvent
+}
 
 /** Grid.autofitRows 入参。`rows` 缺省 = 全表。 */
 export interface AutofitRowsOptions {
@@ -56,6 +84,13 @@ export interface GridController {
   setOnUndo(cb: (event: UndoEvent) => void): void
   setOnRedo(cb: (event: RedoEvent) => void): void
   onFill(handler: (event: FillEvent) => void): () => void
+  getSortLayer(): SortLayer
+  getFilterLayer(): FilterLayer
+  getViewPipeline(): ViewPipeline
+  on<K extends keyof GridPublicEventMap>(
+    eventName: K,
+    handler: (event: GridPublicEventMap[K]) => void,
+  ): () => void
 }
 
 export type { GridEngineOptions }

@@ -499,6 +499,14 @@ export class WebGridRuntime {
     return this.renderer
   }
 
+  updateData(data: DataSource, patchRenderer?: (renderer: WebRenderer) => void): void {
+    this.engine.setData(data)
+    patchRenderer?.(this.renderer)
+    this.engine.clearSelection()
+    this.clipboardCache = null
+    this.afterEngineMutation()
+  }
+
   setTheme(theme: Theme, patchRenderer?: (renderer: WebRenderer) => void): void {
     this.engine.setTheme(theme)
     patchRenderer?.(this.renderer)

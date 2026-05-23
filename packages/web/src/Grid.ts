@@ -7,12 +7,16 @@ import type {
   GridEngineOptions,
   PasteSkippedCell,
   Theme,
+  FilterLayer,
+  SortLayer,
+  ViewPipeline,
 } from '@novasheet/core'
 import { Canvas2DBackend } from './backends/Canvas2DBackend'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
   FillEvent,
+  GridPublicEventMap,
   GridController,
   RedoEvent,
   UndoEvent,
@@ -210,6 +214,25 @@ export class Grid {
 
   onFill(handler: (event: FillEvent) => void): () => void {
     return this.delegate.onFill(handler)
+  }
+
+  getSortLayer(): SortLayer {
+    return this.delegate.getSortLayer()
+  }
+
+  getFilterLayer(): FilterLayer {
+    return this.delegate.getFilterLayer()
+  }
+
+  getViewPipeline(): ViewPipeline {
+    return this.delegate.getViewPipeline()
+  }
+
+  on<K extends keyof GridPublicEventMap>(
+    eventName: K,
+    handler: (event: GridPublicEventMap[K]) => void,
+  ): () => void {
+    return this.delegate.on(eventName, handler)
   }
 
   destroy(): void {

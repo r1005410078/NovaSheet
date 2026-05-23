@@ -13,22 +13,32 @@
 
 import {
   DefaultGridEngine,
+  FilterLayer,
   FrameScheduler,
+  SortLayer,
+  ViewPipeline,
   type CellRange,
   type ContextMenuAction,
   type ContextMenuContext,
   type DataSource,
+  type FilterSpec,
   type FrozenConfig,
   type GridEngineOptions,
   type PasteSkippedCell,
+  type SortSpec,
   type Theme,
+  type ViewLayerChange,
 } from '@novasheet/core'
 import { Canvas2DRenderer, Canvas2DTextMeasurer, HighDPI } from '@novasheet/web-canvas2d'
 import { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
+  FilterChangeEvent,
   GridController,
+  GridPublicEventMap,
+  SortChangeEvent,
+  ViewChangeEvent,
 } from '../grid/GridController'
 import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
 import { DomGridHost } from '../host/DomGridHost'
@@ -64,6 +74,15 @@ export class Canvas2DBackend implements GridController {
   private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
+  private rawSource: DataSource
+  private filterLayer = new FilterLayer()
+  private sortLayer = new SortLayer()
+  private pipeline: ViewPipeline
+  private unsubscribePipeline: () => void = () => {}
+  private suppressPipelineEvents = false
+  private viewChangeListeners = new Set<(event: ViewChangeEvent) => void>()
+  private sortChangeListeners = new Set<(event: SortChangeEvent) => void>()
+  private filterChangeListeners = new Set<(event: FilterChangeEvent) => void>()
   /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
    *  让 LRU 缓存跨绘制 / 度量复用。 */
   private measurer = new Canvas2DTextMeasurer()
@@ -83,7 +102,10 @@ export class Canvas2DBackend implements GridController {
     },
   ) {
     this.container = container
-    this.engine = new DefaultGridEngine(options)
+    this.rawSource = options.data
+    this.pipeline = this.createPipeline(this.rawSource)
+    this.subscribePipeline()
+    this.engine = new DefaultGridEngine({ ...options, data: this.pipeline.getComposed() })
 
     this.canvas = document.createElement('canvas')
     Object.assign(this.canvas.style, {
@@ -176,7 +198,19 @@ export class Canvas2DBackend implements GridController {
   }
 
   setData(data: DataSource): void {
-    this.renderer = this.runtime.setData(data, () => this.createRenderer()) as Canvas2DRenderer
+    this.suppressPipelineEvents = true
+    this.sortLayer.setSpec(null)
+    this.filterLayer.setSpec(null)
+    this.suppressPipelineEvents = false
+
+    this.rawSource = data
+    this.unsubscribePipeline()
+    this.pipeline = this.createPipeline(this.rawSource)
+    this.subscribePipeline()
+    this.renderer = this.runtime.setData(
+      this.pipeline.getComposed(),
+      () => this.createRenderer(),
+    ) as Canvas2DRenderer
   }
 
   setTheme(theme: Theme): void {
@@ -243,6 +277,7 @@ export class Canvas2DBackend implements GridController {
   }
 
   destroy(): void {
+    this.unsubscribePipeline()
     this.contextMenuLayer.destroy()
     this.runtime.destroy()
     this.fillHandleLayer.destroy()
@@ -286,6 +321,29 @@ export class Canvas2DBackend implements GridController {
     return () => this.runtime.setOnFill(() => {})
   }
 
+  getSortLayer(): SortLayer {
+    return this.sortLayer
+  }
+
+  getFilterLayer(): FilterLayer {
+    return this.filterLayer
+  }
+
+  getViewPipeline(): ViewPipeline {
+    return this.pipeline
+  }
+
+  on<K extends keyof GridPublicEventMap>(
+    eventName: K,
+    handler: (event: GridPublicEventMap[K]) => void,
+  ): () => void {
+    const listeners = this.listenersFor(eventName)
+    listeners.add(handler as never)
+    return () => {
+      listeners.delete(handler as never)
+    }
+  }
+
   /** 用当前 engine 状态构造新的 `Canvas2DRenderer`（`setData` 后轴/viewport 会重建）。 */
   private createRenderer(): Canvas2DRenderer {
     return new Canvas2DRenderer({
@@ -298,5 +356,60 @@ export class Canvas2DBackend implements GridController {
       scheduler: this.scheduler,
       measurer: this.measurer,
     })
+  }
+
+  private createPipeline(source: DataSource): ViewPipeline {
+    const pipeline = new ViewPipeline(source)
+    pipeline.add(this.filterLayer)
+    pipeline.add(this.sortLayer)
+    return pipeline
+  }
+
+  private subscribePipeline(): void {
+    this.unsubscribePipeline = this.pipeline.subscribe((change) =>
+      this.handlePipelineChange(change),
+    )
+  }
+
+  private handlePipelineChange(change: ViewLayerChange): void {
+    if (this.suppressPipelineEvents) return
+    if (change.layerId !== 'sort' && change.layerId !== 'filter') return
+
+    const data = this.pipeline.getComposed()
+    this.runtime.updateData(data, (renderer) => {
+      const canvasRenderer = renderer as Canvas2DRenderer
+      canvasRenderer.setData(data)
+    })
+
+    this.emitViewChange({ layerId: change.layerId })
+    if (change.layerId === 'sort') {
+      this.emitSortChange({ spec: this.sortLayer.getSpec() })
+    } else {
+      this.emitFilterChange({ spec: this.filterLayer.getSpec() })
+    }
+  }
+
+  private listenersFor<K extends keyof GridPublicEventMap>(
+    eventName: K,
+  ): Set<(event: GridPublicEventMap[K]) => void> {
+    if (eventName === 'viewChange') {
+      return this.viewChangeListeners as Set<(event: GridPublicEventMap[K]) => void>
+    }
+    if (eventName === 'sortChange') {
+      return this.sortChangeListeners as Set<(event: GridPublicEventMap[K]) => void>
+    }
+    return this.filterChangeListeners as Set<(event: GridPublicEventMap[K]) => void>
+  }
+
+  private emitViewChange(event: ViewChangeEvent): void {
+    for (const listener of this.viewChangeListeners) listener(event)
+  }
+
+  private emitSortChange(event: { spec: SortSpec | null }): void {
+    for (const listener of this.sortChangeListeners) listener(event)
+  }
+
+  private emitFilterChange(event: { spec: FilterSpec | null }): void {
+    for (const listener of this.filterChangeListeners) listener(event)
   }
 }

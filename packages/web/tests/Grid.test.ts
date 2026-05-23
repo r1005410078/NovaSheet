@@ -525,3 +525,85 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     document.body.removeChild(container)
   })
 })
+
+describe('Grid — Phase 4.4 view pipeline facade', () => {
+  it('returns stable sort, filter, and pipeline instances', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+
+    expect(grid.getSortLayer()).toBe(grid.getSortLayer())
+    expect(grid.getFilterLayer()).toBe(grid.getFilterLayer())
+    expect(grid.getViewPipeline()).toBe(grid.getViewPipeline())
+
+    grid.destroy()
+  })
+
+  it('emits sortChange with the active spec', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const handler = mock((_event: { spec: unknown }) => {})
+    const spec = { fieldId: 'age', direction: 'desc' as const }
+
+    const unsubscribe = grid.on('sortChange', handler)
+    grid.getSortLayer().setSpec(spec)
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(handler.mock.calls[0]![0]).toEqual({ spec })
+
+    unsubscribe()
+    grid.destroy()
+  })
+
+  it('emits filterChange with the active spec', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const handler = mock((_event: { spec: unknown }) => {})
+    const spec = {
+      fieldId: 'name',
+      op: { kind: 'text-contains' as const, value: 'n1', caseSensitive: false },
+    }
+
+    const unsubscribe = grid.on('filterChange', handler)
+    grid.getFilterLayer().setSpec(spec)
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(handler.mock.calls[0]![0]).toEqual({ spec })
+
+    unsubscribe()
+    grid.destroy()
+  })
+
+  it('emits viewChange with the changed layer id', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const handler = mock((_event: { layerId: 'sort' | 'filter' }) => {})
+
+    const unsubscribe = grid.on('viewChange', handler)
+    grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'asc' })
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(handler.mock.calls[0]![0]).toEqual({ layerId: 'sort' })
+
+    unsubscribe()
+    grid.destroy()
+  })
+
+  it('setData clears sort and filter specs', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+
+    grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'asc' })
+    grid.getFilterLayer().setSpec({
+      fieldId: 'name',
+      op: { kind: 'text-contains', value: 'n1', caseSensitive: false },
+    })
+
+    const newData = new InMemoryDataSource({ schema: SCHEMA, rows: [{ name: 'X', age: 1 }] })
+    grid.setData(newData)
+
+    expect(grid.getSortLayer().getSpec()).toBeNull()
+    expect(grid.getFilterLayer().getSpec()).toBeNull()
+
+    grid.destroy()
+  })
+})
