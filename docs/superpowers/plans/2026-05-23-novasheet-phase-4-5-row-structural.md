@@ -613,42 +613,54 @@ Expected：FAIL，`insertRange is not a function`。
 
 在 `packages/core/src/layout/ChunkedAxis.ts` 内 class 体加：
 
+> **Plan-bug fix (2026-05-24):** ChunkedAxis 内部没有扁平的 `sizes: Float64Array`，而是
+> `chunks: Chunk[]` 分块结构（每块最多 CHUNK_SIZE=1024 项）。原始伪代码基于不存在的扁平数组，
+> 已替换为正确实现：先把所有 chunk 展平成逐项尺寸数组，做插入/删除操作后再重设 count，
+> 然后调用 `rebuild()` 重建 chunks / chunkPrefixSum。
+
 ```ts
+/** 把当前 chunks 展平成每项尺寸的 number[] —— insertRange/deleteRange 共用辅助。 */
+private flattenSizes(): number[] {
+  const result: number[] = new Array(this.count)
+  for (let i = 0; i < this.count; i++) {
+    const chunkIdx = i >>> 10
+    const offset = i & 1023
+    const chunk = this.chunks[chunkIdx]!
+    result[i] = chunk.sizes === null ? this.defaultSize : chunk.sizes[offset]!
+  }
+  return result
+}
+
 insertRange(beforeIndex: number, count: number, defaultSize: number): void {
   if (count <= 0) return
   const at = Math.max(0, Math.min(beforeIndex, this.count))
+  const flat = this.flattenSizes()
   const inserted = Array.from({ length: count }, () => defaultSize)
-  this.sizes = Float64Array.from([
-    ...this.sizes.subarray(0, at),
-    ...inserted,
-    ...this.sizes.subarray(at),
-  ])
+  flat.splice(at, 0, ...inserted)
   this.count += count
+  // 用展平后的尺寸数组重建 chunk 结构：先 rebuild 建好空 chunk 骨架，再按项 setSize。
+  // 简化：直接重设 defaultSize 相同的项不需要 setSize；只对偏离 defaultSize 的项调用。
   this.rebuild()
+  for (let i = 0; i < flat.length; i++) {
+    if (flat[i] !== this.defaultSize) this.setSize(i, flat[i]!)
+  }
 }
 
 deleteRange(removedSortedIndices: readonly number[]): void {
   if (removedSortedIndices.length === 0) return
-  const next = new Float64Array(this.count - removedSortedIndices.length)
-  let write = 0
-  let read = 0
-  let removedCursor = 0
-  while (read < this.count) {
-    if (removedCursor < removedSortedIndices.length && read === removedSortedIndices[removedCursor]) {
-      read += 1
-      removedCursor += 1
-      continue
-    }
-    next[write++] = this.sizes[read]!
-    read += 1
-  }
-  this.sizes = next
+  const flat = this.flattenSizes()
+  const removeSet = new Set(removedSortedIndices)
+  const next = flat.filter((_, i) => !removeSet.has(i))
   this.count = next.length
   this.rebuild()
+  for (let i = 0; i < next.length; i++) {
+    if (next[i] !== this.defaultSize) this.setSize(i, next[i]!)
+  }
 }
 ```
 
-如果 `count` / `sizes` 是 private 改成 protected 或加 internal 调用。`rebuild` 必须是既有的内部方法；不存在则先在本任务里抽出。
+> **注意**：`rebuild()` 是 `private` 方法，在同一 class 内直接调用没有障碍。
+> `count` 字段在同一 class 内直接赋值，不需要改可见性。
 
 - [ ] **Step 5: 验证 GREEN**
 
