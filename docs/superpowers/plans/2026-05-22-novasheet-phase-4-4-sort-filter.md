@@ -699,6 +699,7 @@ git commit -m "feat(web): preserve state across view changes"
 **Files:**
 - Modify: `packages/core/src/interaction/ContextMenuModel.ts`
 - Modify: `packages/web/src/runtime/WebGridRuntime.ts`
+- Modify: `packages/web/src/backends/Canvas2DBackend.ts`
 - Test: `packages/core/tests/interaction/ContextMenuModel.test.ts`
 - Test: `packages/web/tests/runtime/WebGridRuntime.test.ts`
 
@@ -742,6 +743,8 @@ export type ContextMenuAction =
 
 In runtime `handleHostContextMenu`, branch on `event.y < frame.theme.metrics.headerHeight`; use `colsAxis.positionToIndex(event.x + viewport.scrollX)` and guard out-of-range clicks.
 
+`WebGridRuntime` needs narrow access to the already-owned `ViewPipeline`, `SortLayer`, and `FilterLayer`. Inject them from `Canvas2DBackend` during construction or immediately after runtime creation; do not move pipeline ownership out of the backend.
+
 - [ ] **Step 4: Run tests**
 
 Run:
@@ -755,7 +758,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/core/src/interaction/ContextMenuModel.ts packages/web/src/runtime/WebGridRuntime.ts packages/core/tests/interaction/ContextMenuModel.test.ts packages/web/tests/runtime/WebGridRuntime.test.ts
+git add packages/core/src/interaction/ContextMenuModel.ts packages/web/src/runtime/WebGridRuntime.ts packages/web/src/backends/Canvas2DBackend.ts packages/core/tests/interaction/ContextMenuModel.test.ts packages/web/tests/runtime/WebGridRuntime.test.ts
 git commit -m "feat(web): add column header sort filter menu"
 ```
 
