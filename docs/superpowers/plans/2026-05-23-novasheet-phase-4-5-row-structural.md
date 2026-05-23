@@ -1582,39 +1582,50 @@ Create `packages/web-canvas2d/tests/painters/HeaderRowPainter.hide.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'bun:test'
-import { RecordingContext2D } from '../helpers/recording-context'
+import { createRecordingContext } from '../helpers/recording-context'
 import { HeaderRowPainter } from '../../src/painters/HeaderRowPainter'
 import { denseGridTheme } from '@novasheet/core'
 
-function frameWithGaps(gaps: { atViewRow: number; hiddenCount: number; hiddenIds: number[]; yPx: number }[], rowHeaderWidth: number) {
+// rowHeaderWidth 放在 viewport 字段下，与 RenderFrame 实际形状一致。
+// fill(Path2D) 在 RecordingContext 中记录为 op:'fillPath'（非 'fill'）。
+function frameWithGaps(
+  gaps: { atViewRow: number; hiddenCount: number; hiddenIds: number[]; yPx: number }[],
+  rowHeaderWidth: number,
+) {
   return {
-    // 最小 frame 形状，按既有 HeaderRowPainter 期望补
-    rowHeaderWidth,
+    viewport: { rowHeaderWidth },
     collapsedRowGaps: gaps,
     theme: denseGridTheme,
-    // ... 其它必需字段；参照既有 painter 测试 helper
   } as any
 }
 
 describe('HeaderRowPainter — 三角 hide indicator', () => {
-  it('rowHeaderWidth ≥ 24 时为每个 gap 画两个三角 fill', () => {
-    const ctx = new RecordingContext2D()
-    const painter = new HeaderRowPainter()
-    painter.paint(ctx as any, frameWithGaps([{ atViewRow: 2, hiddenCount: 3, hiddenIds: [3, 4, 5], yPx: 60 }], 30))
-    const fillCount = ctx.calls.filter((c) => c.op === 'fill').length
-    // 至少 2 个 fill（两个三角）；具体>= 因 painter 可能调用其它 fill
-    expect(fillCount).toBeGreaterThanOrEqual(2)
+  it('rowHeaderWidth ≥ 24 时为每个 gap 画两个三角 fillPath', () => {
+    const { ctx, ops } = createRecordingContext()
+    const painter = new HeaderRowPainter(denseGridTheme)
+    painter.paint(
+      ctx as any,
+      frameWithGaps([{ atViewRow: 2, hiddenCount: 3, hiddenIds: [3, 4, 5], yPx: 60 }], 30),
+    )
+    // fill(Path2D) → RecordingContext 记为 'fillPath'
+    const fillPathCount = ops.filter((c) => c.op === 'fillPath').length
+    expect(fillPathCount).toBeGreaterThanOrEqual(2)
   })
 
   it('rowHeaderWidth < 24 时跳过三角', () => {
-    const ctx = new RecordingContext2D()
-    const painter = new HeaderRowPainter()
-    painter.paint(ctx as any, frameWithGaps([{ atViewRow: 2, hiddenCount: 3, hiddenIds: [3, 4, 5], yPx: 60 }], 20))
-    // 与不画三角时的 fill count 相同：通过比较有 gap vs 无 gap 时的 fill 数
-    const ctxNoGap = new RecordingContext2D()
-    painter.paint(ctxNoGap as any, frameWithGaps([], 20))
-    expect(ctx.calls.filter((c) => c.op === 'fill').length).toBe(
-      ctxNoGap.calls.filter((c) => c.op === 'fill').length,
+    const { ctx, ops } = createRecordingContext()
+    const painter = new HeaderRowPainter(denseGridTheme)
+    painter.paint(
+      ctx as any,
+      frameWithGaps([{ atViewRow: 2, hiddenCount: 3, hiddenIds: [3, 4, 5], yPx: 60 }], 20),
+    )
+    const { ops: opsNoGap } = createRecordingContext()
+    painter.paint(
+      createRecordingContext().ctx as any,
+      frameWithGaps([], 20),
+    )
+    expect(ops.filter((c) => c.op === 'fillPath').length).toBe(
+      opsNoGap.filter((c) => c.op === 'fillPath').length,
     )
   })
 })
@@ -1625,7 +1636,8 @@ describe('HeaderRowPainter — 三角 hide indicator', () => {
 在 HeaderRowPainter 的 paint 末尾加：
 
 ```ts
-if (frame.rowHeaderWidth >= 24) {
+// rowHeaderWidth 在 frame.viewport.rowHeaderWidth，非 frame 顶层字段
+if (frame.viewport.rowHeaderWidth >= 24) {
   for (const gap of frame.collapsedRowGaps) {
     drawHideTriangle(ctx, frame, gap.yPx, 'up')
     drawHideTriangle(ctx, frame, gap.yPx, 'down')
