@@ -859,12 +859,10 @@ describe('HideRowsLayer 与 Sort/Filter 组合', () => {
     const sort = new SortLayer()
     sort.setSpec({ fieldId: 'n', direction: 'desc' })
     const hide = new HideRowsLayer()
-    // HideRowsLayer 在 pipeline 中位于 SortLayer 之后，
-    // setHidden 的索引是 sort 视图行（非 underlying）。
-    // Sort desc 后视图：row0=n=4, row1=n=3, row2=n=2, row3=n=1。
-    // 隐藏 sort 视图的 row2、row3（对应 underlying n=2, n=1）
-    // → 留下 row0=n=4, row1=n=3。
-    hide.setHidden([2, 3])
+    // HideRowsLayer.setHidden 接收 raw underlying row ids（spec §5.1 / §8.4）。
+    // rows: [{ n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }] → underlying 0=n=1, 1=n=2
+    // 隐藏 underlying 0（n=1）和 1（n=2），Sort desc 后留下 n=4, n=3。
+    hide.setHidden([0, 1]) // underlying n=1, n=2
     pipeline.add(sort)
     pipeline.add(hide)
 
