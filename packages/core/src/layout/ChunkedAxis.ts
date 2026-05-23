@@ -457,7 +457,7 @@ export class ChunkedAxis {
    */
   private rebuild(): void {
     const nChunks = Math.ceil(this.count / CHUNK_SIZE)
-    this.chunks = new Array(nChunks)
+    this.chunks = Array.from({ length: nChunks })
     this.chunkPrefixSum = new Float64Array(nChunks + 1)
     this.totalSize = 0
     for (let i = 0; i < nChunks; i++) {

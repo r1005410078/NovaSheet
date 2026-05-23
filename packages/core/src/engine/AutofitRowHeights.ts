@@ -140,10 +140,8 @@ function toDisplayString(value: CellValue): string {
   return String(value)
 }
 
-/** 生成 [0, n) 的索引数组——不引入 Array.from 的开销，autofit 全表时可能调到。 */
+/** 生成 [0, n) 的索引数组，autofit 全表时使用。 */
 function rangeOf(n: number): readonly number[] {
   if (n <= 0) return []
-  const out: number[] = new Array(n)
-  for (let i = 0; i < n; i++) out[i] = i
-  return out
+  return Array.from({ length: n }, (_, i) => i)
 }
