@@ -81,15 +81,23 @@ function fnv1aHash(s: string): number {
 
 /** WebGridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
 export interface AutofitRowsRuntimeOptions {
+  /** 需要重算高度的行；未传则扫描全部行。 */
   rows?: readonly number[]
+  /** 自动行高允许写回的最小高度。 */
   minHeight?: number
+  /** 自动行高允许写回的最大高度。 */
   maxHeight?: number
 }
 
+/** WebGridRuntime 的依赖注入参数，由 backend 装配阶段提供。 */
 export interface WebGridRuntimeOptions {
+  /** 核心表格状态与 mutation 引擎。 */
   engine: GridEngine
+  /** Web 平台 host adapter，封装 DOM 生命周期、尺寸与滚动。 */
   host: WebHost
+  /** 当前渲染器实现，负责消费 render frame。 */
   renderer: WebRenderer
+  /** 每个 grid 独立的 RAF scheduler；未传时 runtime 自建。 */
   scheduler?: FrameScheduler
   /** 调整绘制表面位图（如 HighDPI）；Canvas2D 目前走此回调，`WebRenderer.resize` 仍为过渡 stub。 */
   onSurfaceResize?: (width: number, height: number, dpr: number) => void
@@ -105,20 +113,33 @@ export interface WebGridRuntimeOptions {
   fillLayer?: DomFillHandleLayer
   /** Phase 4.4 — optional view pipeline/layers for column header context menu dispatch. */
   viewPipeline?: ViewPipeline
+  /** Phase 4.4 — sort 状态层。 */
   sortLayer?: SortLayer
+  /** Phase 4.4 — filter 状态层。 */
   filterLayer?: FilterLayer
 }
 
+/** Undo 成功后的 runtime 事件。 */
 export interface UndoEvent {
+  /** 被撤销的命令。 */
   readonly command: UndoCommand
 }
+
+/** Redo 成功后的 runtime 事件。 */
 export interface RedoEvent {
+  /** 被重做的命令。 */
   readonly command: UndoCommand
 }
+
+/** Fill handle 提交后的 runtime 事件。 */
 export interface FillEvent {
+  /** 填充源区域。 */
   readonly source: CellRange
+  /** 实际写入的填充区域。 */
   readonly fill: CellRange
+  /** 用户可见的最终选区。 */
   readonly result: CellRange
+  /** 填充方向。 */
   readonly direction: FillDirection
 }
 
@@ -128,6 +149,7 @@ const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
 const DRAG_AUTO_SCROLL_EDGE_PX = 32
 const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
 
+/** 去重行号并保持首次出现顺序。 */
 function uniqueRows(rows: readonly number[]): readonly number[] {
   return [...new Set(rows)]
 }
@@ -142,63 +164,105 @@ function uniqueRows(rows: readonly number[]): readonly number[] {
  * 同步 viewport 尺寸、重算 spacer、remap 滚动、触发重绘。
  */
 export class WebGridRuntime {
+  /** 核心表格状态与 mutation 引擎。 */
   private engine: GridEngine
+  /** Web 平台 host adapter，负责 DOM 生命周期、尺寸、滚动与事件入口。 */
   private host: WebHost
+  /** 当前渲染器实现。 */
   private renderer: WebRenderer
+  /** 每个 grid 独立的帧调度器，用于合并 resize/scroll/render。 */
   private scheduler: FrameScheduler
+  /** DOM scroll 与逻辑 scroll 坐标之间的映射器。 */
   private scrollMapper: ScrollMapper
+  /** 绘制表面 resize 回调，通常用于同步 canvas bitmap 与 DPR。 */
   private onSurfaceResize?: WebGridRuntimeOptions['onSurfaceResize']
+  /** 文本量度器，用于 wrap 字段自动行高。 */
   private measurer?: TextMeasurer
+  /** runtime 是否已经销毁；销毁后所有入口都应短路。 */
   private destroyed = false
+  /** 当前是否正在拖拽选择区域。 */
   private draggingSelection = false
+  /** 最近一次 selection drag 的 pointer，用于边缘自动滚动续帧。 */
   private lastDragPointer: WebPointerEvent | null = null
+  /** DOM resize handle layer。 */
   private handleLayer?: DomHandleLayer
+  /** DOM fill handle 与填充预览 layer。 */
   private fillLayer?: DomFillHandleLayer
+  /** 当前 view pipeline，注入到 render frame 并供列头菜单读取。 */
   private viewPipeline?: ViewPipeline
+  /** 当前 sort 状态层。 */
   private sortLayer?: SortLayer
+  /** 当前 filter 状态层。 */
   private filterLayer?: FilterLayer
+  /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
+  /** DOM 右键菜单 layer。 */
   private contextMenuLayer?: DomContextMenuLayer
+  /** DOM filter popover。 */
   private filterPopover?: FilterPopover
+  /** 外部接管 context menu action 的回调。 */
   private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+  /** 外部声明剪贴板可用状态，用于 legacy paste 菜单 enabled 判断。 */
   private clipboardReady = false
+  /** 最近一次打开菜单时的上下文，用于菜单项点击分发。 */
   private lastContextMenuContext: ContextMenuContext | null = null
+  /** 最近一次打开菜单时的屏幕坐标，用于 filter popover 锚点。 */
   private lastContextMenuPoint: { clientX: number; clientY: number } | null = null
+  /** 当前打开 filter popover 绑定的 field id。 */
   private filterPopoverFieldId: string | null = null
-  // Phase 4.1 — 剪贴板
+  /** Phase 4.1 — 剪贴板读写 adapter。 */
   private clipboardAdapter?: WebClipboardAdapter
+  /** 最近一次从 grid 写出的剪贴板缓存，用于 typed paste 保留值类型。 */
   private clipboardCache: { range: CellRange; rows: readonly Row[]; tsvHash: number } | null = null
+  /** copy 成功后的通知回调。 */
   private onCopy?: (range: CellRange) => void
+  /** cut 成功后的通知回调。 */
   private onCut?: (range: CellRange) => void
+  /** paste 成功后的通知回调。 */
   private onPaste?: (target: CellRange) => void
+  /** paste 跳过只读/非法单元格后的通知回调。 */
   private onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
-  // Phase 4.2 — undo/redo
+  /** Phase 4.2 — undo 成功后的通知回调。 */
   private onUndo?: (event: UndoEvent) => void
+  /** Phase 4.2 — redo 成功后的通知回调。 */
   private onRedo?: (event: RedoEvent) => void
+  /** fill handle 提交成功后的通知回调。 */
   private onFill?: (event: FillEvent) => void
   /**
    * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
    * 非 multiline 编辑置 null。
    */
   private editingMultilineOriginalRowHeight: number | null = null
+  /** 当前 resize 拖拽状态；null 表示未拖拽。 */
   private resizeDrag: {
+    /** 被拖拽的 resize handle。 */
     handle: ResizeHandleRect
+    /** 捕获中的 pointer id。 */
     pointerId: number
+    /** 拖拽起点 clientX。 */
     startClientX: number
+    /** 拖拽起点 clientY。 */
     startClientY: number
+    /** 拖拽开始时的行高/列宽。 */
     startSize: number
     /** 列：左缘 x；行：顶缘 y — 拖拽中固定，尺寸从该边向外扩 */
     anchorStart: number
     /** 拖拽预览尺寸；pointerup 时一次性 commit（spec §6.5.2） */
     previewSize: number
   } | null = null
+  /** 当前 fill handle 拖拽状态；null 表示未拖拽。 */
   private fillDrag: {
+    /** 捕获中的 pointer id。 */
     pointerId: number
+    /** 填充源区域。 */
     source: CellRange
+    /** 根据当前 hover 单元格计算出的目标；可能为空。 */
     target: FillTarget | null
+    /** 最近一次 fill drag pointer。 */
     lastPointer: WebPointerEvent | null
   } | null = null
 
+  /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: WebGridRuntimeOptions) {
     this.engine = opts.engine
     this.host = opts.host
@@ -226,11 +290,13 @@ export class WebGridRuntime {
     this.syncContextMenuTheme()
   }
 
+  /** 注入 filter popover 并同步当前主题。 */
   setFilterPopover(popover: FilterPopover): void {
     this.filterPopover = popover
     this.syncFilterPopoverTheme()
   }
 
+  /** 替换当前 view pipeline 与 sort/filter 状态层。 */
   setViewContext(opts: {
     viewPipeline: ViewPipeline
     sortLayer: SortLayer
@@ -241,14 +307,17 @@ export class WebGridRuntime {
     this.filterLayer = opts.filterLayer
   }
 
+  /** 注册右键菜单 action 回调；设置后 consumer 可接管默认菜单行为。 */
   setOnContextMenuAction(cb: (action: ContextMenuAction, ctx: ContextMenuContext) => void): void {
     this.onContextMenuAction = cb
   }
 
+  /** 设置外部剪贴板可用提示，用于右键菜单 paste 项状态。 */
   setClipboardReady(ready: boolean): void {
     this.clipboardReady = ready
   }
 
+  /** 关闭右键菜单并清理最近菜单上下文。 */
   closeContextMenu(): void {
     this.contextMenuLayer?.close()
     this.lastContextMenuContext = null
@@ -259,43 +328,52 @@ export class WebGridRuntime {
     this.clipboardAdapter = adapter
   }
 
+  /** 注册 copy 成功通知回调。 */
   setOnCopy(cb: (range: CellRange) => void): void {
     this.onCopy = cb
   }
 
+  /** 注册 cut 成功通知回调。 */
   setOnCut(cb: (range: CellRange) => void): void {
     this.onCut = cb
   }
 
+  /** 注册 paste 成功通知回调。 */
   setOnPaste(cb: (target: CellRange) => void): void {
     this.onPaste = cb
   }
 
+  /** 注册 paste 跳过单元格通知回调。 */
   setOnPasteSkipped(cb: (cells: readonly PasteSkippedCell[]) => void): void {
     this.onPasteSkipped = cb
   }
 
-  // Phase 4.2 — undo/redo
+  /** 注册 undo 成功通知回调。 */
   setOnUndo(cb: (event: UndoEvent) => void): void {
     this.onUndo = cb
   }
 
+  /** 注册 redo 成功通知回调。 */
   setOnRedo(cb: (event: RedoEvent) => void): void {
     this.onRedo = cb
   }
 
+  /** 注册 fill handle 提交通知回调。 */
   setOnFill(cb: (event: FillEvent) => void): void {
     this.onFill = cb
   }
 
+  /** 返回当前 undo 栈是否可撤销。 */
   canUndo(): boolean {
     return this.engine.canUndo()
   }
 
+  /** 返回当前 redo 栈是否可重做。 */
   canRedo(): boolean {
     return this.engine.canRedo()
   }
 
+  /** 执行一次 undo，并在成功后刷新视图与通知 consumer。 */
   undo(): void {
     if (this.destroyed) return
     const cmd = this.engine.undo()
@@ -304,6 +382,7 @@ export class WebGridRuntime {
     this.onUndo?.({ command: cmd })
   }
 
+  /** 执行一次 redo，并在成功后刷新视图与通知 consumer。 */
   redo(): void {
     if (this.destroyed) return
     const cmd = this.engine.redo()
@@ -329,6 +408,7 @@ export class WebGridRuntime {
     return { range, rows, tsv: serializeRowsToTsv(rows, fieldIds) }
   }
 
+  /** 处理 copy：序列化当前选区、写入剪贴板并更新 typed paste 缓存。 */
   async handleClipboardCopy(): Promise<boolean> {
     if (this.destroyed) return false
     const snap = this.snapshotSelection()
@@ -339,6 +419,7 @@ export class WebGridRuntime {
     return true
   }
 
+  /** 处理 cut：复制当前选区后清空源区域。 */
   async handleClipboardCut(): Promise<boolean> {
     if (this.destroyed) return false
     if (!isMutableDataSource(this.engine.getData())) return false
@@ -352,6 +433,7 @@ export class WebGridRuntime {
     return true
   }
 
+  /** 处理 paste：读取剪贴板、推导目标区域并提交到 engine。 */
   async handleClipboardPaste(): Promise<boolean> {
     if (this.destroyed) return false
     const data = this.engine.getData()
@@ -411,6 +493,7 @@ export class WebGridRuntime {
     return true
   }
 
+  /** 处理 host contextmenu 事件，并根据列头/单元格命中打开对应菜单。 */
   handleHostContextMenu(event: WebPointerEvent): void {
     if (this.destroyed) return
     if (!this.contextMenuLayer) return
@@ -490,6 +573,7 @@ export class WebGridRuntime {
     })
   }
 
+  /** 处理右键菜单项选择，优先执行内置 sort/filter/clipboard 行为。 */
   handleContextMenuSelected(id: ContextMenuAction): void {
     const ctx = this.lastContextMenuContext
     if (ctx?.targetKind === 'columnHeader') {
@@ -533,6 +617,7 @@ export class WebGridRuntime {
     }
   }
 
+  /** 应用 filter popover 返回的条件；null 表示清除当前列筛选。 */
   handleFilterPopoverApply(op: FilterOp | null): void {
     const fieldId = this.filterPopoverFieldId
     if (!fieldId) return
@@ -541,6 +626,7 @@ export class WebGridRuntime {
     this.filterPopoverFieldId = null
   }
 
+  /** 打开列头 filter popover；未注入 popover 时回退到外部 action 回调。 */
   private openFilterPopover(ctx: Extract<ContextMenuContext, { targetKind: 'columnHeader' }>): void {
     if (!this.filterPopover) {
       this.onContextMenuAction?.('filter-open', ctx)
@@ -557,6 +643,7 @@ export class WebGridRuntime {
     })
   }
 
+  /** 按单元格坐标程序化打开右键菜单，锚点位于单元格右下角。 */
   openContextMenuAt(rowIndex: number, fieldId: string): void {
     if (this.destroyed || !this.contextMenuLayer) return
     const colIndex = this.engine.getColumnIndex(fieldId)
@@ -580,6 +667,7 @@ export class WebGridRuntime {
     this.measurer = measurer
   }
 
+  /** 连接 host，初始化 viewport/spacer/theme，并执行首帧同步绘制。 */
   attach(): void {
     this.host.attach()
     const { width, height } = this.host.getContainerSize()
@@ -603,6 +691,7 @@ export class WebGridRuntime {
     return this.renderer
   }
 
+  /** 替换底层 data source 与 renderer，并清空剪贴板 typed 缓存。 */
   setData(data: DataSource, factory: () => WebRenderer): WebRenderer {
     this.engine.setData(data)
     this.replaceRenderer(factory)
@@ -611,6 +700,7 @@ export class WebGridRuntime {
     return this.renderer
   }
 
+  /** 替换 view data，并允许 caller 对现有 renderer 打补丁。 */
   updateViewData(
     data: DataSource,
     options?: SetViewDataOptions,
@@ -622,6 +712,7 @@ export class WebGridRuntime {
     this.afterEngineMutation()
   }
 
+  /** 应用主题到 engine、renderer 与所有 DOM overlay layer。 */
   setTheme(theme: Theme, patchRenderer?: (renderer: WebRenderer) => void): void {
     this.engine.setTheme(theme)
     patchRenderer?.(this.renderer)
@@ -633,24 +724,30 @@ export class WebGridRuntime {
     this.afterEngineMutation()
   }
 
+  /** 设置单行高度并同步滚动空间与渲染。 */
   setRowHeight(rowIndex: number, height: number): void {
     this.engine.setRowHeight(rowIndex, height)
     this.afterEngineMutation()
   }
 
+  /** 设置单列宽度并同步滚动空间与渲染。 */
   setColumnWidth(fieldId: string, width: number): void {
     this.engine.setColumnWidth(fieldId, width)
     this.afterEngineMutation()
   }
 
+  /** 设置冻结行列配置并刷新视图。 */
   setFrozen(config: Partial<FrozenConfig>): void
+  /** 以行列数量设置冻结区域并刷新视图。 */
   setFrozen(rows: number, cols: number): void
+  /** 应用冻结区域重载参数并执行 mutation 收尾。 */
   setFrozen(configOrRows: Partial<FrozenConfig> | number, cols = 0): void {
     if (typeof configOrRows === 'number') this.engine.setFrozen(configOrRows, cols)
     else this.engine.setFrozen(configOrRows)
     this.afterEngineMutation()
   }
 
+  /** 请求一帧异步重绘。 */
   refresh(): void {
     this.invalidate()
   }
@@ -679,6 +776,7 @@ export class WebGridRuntime {
     return result
   }
 
+  /** engine mutation 后的统一收尾：同步 viewport、spacer、scroll 与 overlay 状态。 */
   afterEngineMutation(): void {
     const { width, height } = this.host.getContainerSize()
     this.engine.setViewportSize(width, height)
@@ -689,6 +787,7 @@ export class WebGridRuntime {
     this.fillLayer?.hidePreview()
   }
 
+  /** 滚动到指定行，并按给定对齐方式放入 viewport。 */
   scrollToRow(rowIndex: number, align: 'start' | 'center' | 'end' = 'start'): void {
     const rowsAxis = this.engine.getRowsAxis()
     if (rowIndex < 0 || rowIndex >= rowsAxis.getCount()) return
@@ -706,6 +805,7 @@ export class WebGridRuntime {
     this.host.scrollTo(scrollTop, scrollLeft)
   }
 
+  /** 滚动到指定单元格的左上角。 */
   scrollToCell(rowIndex: number, fieldId: string): void {
     const rowsAxis = this.engine.getRowsAxis()
     const colsAxis = this.engine.getColsAxis()
@@ -720,6 +820,7 @@ export class WebGridRuntime {
     this.host.scrollTo(scrollTop, scrollLeft)
   }
 
+  /** 开始鼠标/触控 resize 拖拽并显示尺寸指示线。 */
   handleResizePointerDown(
     handle: ResizeHandleRect,
     pointerId: number,
@@ -747,6 +848,7 @@ export class WebGridRuntime {
     this.showResizeIndicator(startSize)
   }
 
+  /** 更新 resize 拖拽预览尺寸。 */
   handleResizePointerMove(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed || !this.resizeDrag || this.resizeDrag.pointerId !== pointerId) return
     const nextSize = this.computeResizeSize(this.resizeDrag, clientX, clientY)
@@ -754,6 +856,7 @@ export class WebGridRuntime {
     this.showResizeIndicator(nextSize)
   }
 
+  /** 结束 resize 拖拽并一次性提交行高/列宽变更。 */
   handleResizePointerUp(pointerId: number): void {
     if (!this.resizeDrag || this.resizeDrag.pointerId !== pointerId) return
     const { handle, startSize, previewSize } = this.resizeDrag
@@ -770,6 +873,7 @@ export class WebGridRuntime {
     this.afterEngineMutation()
   }
 
+  /** 开始 fill handle 拖拽。 */
   handleFillPointerDown(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed || this.resizeDrag || this.draggingSelection) return
     if (this.engine.isCellEditing()) this.commitCellEdit(false)
@@ -786,6 +890,7 @@ export class WebGridRuntime {
     }
   }
 
+  /** 更新 fill handle 拖拽目标与预览 overlay。 */
   handleFillPointerMove(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed || !this.fillDrag || this.fillDrag.pointerId !== pointerId) return
     const pointer = this.fillPointerFromClient(clientX, clientY)
@@ -804,6 +909,7 @@ export class WebGridRuntime {
     }
   }
 
+  /** 结束 fill handle 拖拽并提交填充结果。 */
   handleFillPointerUp(pointerId: number): void {
     if (!this.fillDrag || this.fillDrag.pointerId !== pointerId) return
     const target = this.fillDrag.target
@@ -818,6 +924,7 @@ export class WebGridRuntime {
     this.onFill?.({ source: target.source, fill: target.fill, result: target.result, direction: target.direction })
   }
 
+  /** 将 client 坐标转换成 host 内部 pointer 坐标。 */
   private fillPointerFromClient(clientX: number, clientY: number): WebPointerEvent {
     const rect = this.host.getContainerBoundingRect()
     return {
@@ -829,25 +936,30 @@ export class WebGridRuntime {
     }
   }
 
+  /** 同步编辑器 draft 到 engine 的 cell edit session。 */
   handleCellEditDraft(draft: string): void {
     if (this.destroyed) return
     this.engine.updateCellEditDraft(draft)
   }
 
+  /** 处理 Enter 提交编辑，并在成功后移动到下一行。 */
   handleCellEditCommitEnter(): void {
     this.commitCellEdit(true)
   }
 
+  /** 处理 blur 提交编辑，保持当前选区不移动。 */
   handleCellEditCommitBlur(): void {
     this.commitCellEdit(false)
   }
 
+  /** 取消当前编辑并刷新编辑器/选区显示。 */
   handleCellEditCancel(): void {
     if (this.destroyed) return
     this.cancelCellEdit()
     this.refresh()
   }
 
+  /** 处理键盘 resize，按 delta 调整行高或列宽。 */
   handleResizeKeyboard(handle: ResizeHandleRect, delta: number): void {
     if (this.destroyed) return
     const current = this.readResizeSize(handle)
@@ -865,6 +977,7 @@ export class WebGridRuntime {
     this.refresh()
   }
 
+  /** 销毁 runtime、renderer、host，并取消所有 pending scheduler task。 */
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
@@ -879,6 +992,7 @@ export class WebGridRuntime {
     this.host.destroy()
   }
 
+  /** 处理 host 滚动事件，映射为逻辑滚动并触发重绘。 */
   handleHostScroll(scrollTop: number, scrollLeft: number): void {
     const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
     this.engine.setScroll(logicalX, logicalY)
@@ -887,6 +1001,7 @@ export class WebGridRuntime {
     this.invalidate()
   }
 
+  /** 处理 host 尺寸变化；实际 resize 工作合并到 RAF 中执行。 */
   handleHostResize(_cssWidth: number, _cssHeight: number, _dpr: number): void {
     void _cssWidth
     void _cssHeight
@@ -894,11 +1009,13 @@ export class WebGridRuntime {
     this.scheduleHostResize()
   }
 
+  /** 处理 DPR 变化；实际 resize 工作合并到 RAF 中执行。 */
   handleHostDprChange(_dpr: number): void {
     void _dpr
     this.scheduleHostResize()
   }
 
+  /** 处理 host pointerdown，开始单元格选择或扩展选择。 */
   handleHostPointerDown(event: WebPointerEvent): void {
     if (this.destroyed) return
     // 仅左键进入 drag-select；右键 / 中键留给 contextmenu / 其它路径
@@ -914,6 +1031,7 @@ export class WebGridRuntime {
     this.refresh()
   }
 
+  /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
   handleHostPointerMove(event: WebPointerEvent): void {
     if (this.destroyed || !this.lastDragPointer) return
     this.draggingSelection = true
@@ -926,6 +1044,7 @@ export class WebGridRuntime {
     this.updateDragAutoScroll(event)
   }
 
+  /** 处理 host pointerup，结束选区拖拽并恢复 fill handle。 */
   handleHostPointerUp(): void {
     this.draggingSelection = false
     this.lastDragPointer = null
@@ -933,6 +1052,7 @@ export class WebGridRuntime {
     this.syncFillHandle()
   }
 
+  /** 处理双击单元格，进入编辑模式。 */
   handleHostDoubleClick(event: WebPointerEvent): void {
     if (this.destroyed || this.resizeDrag || this.draggingSelection) return
     const hit = hitTestCell(this.engine.getFrame(), event)
@@ -1031,6 +1151,7 @@ export class WebGridRuntime {
     this.handleHostResize(width, height, this.host.getDpr())
   }
 
+  /** 调度下一帧 render flush，并同步 overlay 与编辑器位置。 */
   private invalidate(): void {
     if (this.destroyed) return
     this.scheduler.schedule('renderer:flush', () => {
@@ -1043,6 +1164,7 @@ export class WebGridRuntime {
     })
   }
 
+  /** 立即同步绘制一帧；用于 attach/resize 等不能等待异步 flush 的路径。 */
   private paintSync(): void {
     const frame = this.getRenderFrame()
     this.renderer.render(frame)
@@ -1051,18 +1173,21 @@ export class WebGridRuntime {
     this.syncCellEditorPosition()
   }
 
+  /** 获取当前 render frame，并在 view pipeline 存在时注入视图映射。 */
   private getRenderFrame(): ReturnType<GridEngine['getFrame']> {
     const frame = this.engine.getFrame()
     if (!this.viewPipeline) return frame
     return { ...frame, viewPipeline: this.viewPipeline }
   }
 
+  /** 根据当前 frame 同步 resize handle layer。 */
   private syncResizeHandles(): void {
     if (!this.handleLayer || this.resizeDrag) return
     const frame = this.engine.getFrame()
     this.handleLayer.sync(computeResizeHandles(frame))
   }
 
+  /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。 */
   private syncFillHandle(): void {
     if (!this.fillLayer) return
     if (this.resizeDrag || this.draggingSelection || this.fillDrag || this.engine.isCellEditing()) {
@@ -1077,6 +1202,7 @@ export class WebGridRuntime {
     this.fillLayer.sync(computeFillHandleRect(this.engine.getFrame(), range))
   }
 
+  /** 根据 pointer 位置启动或取消选区拖拽的边缘自动滚动。 */
   private updateDragAutoScroll(pointer: WebPointerEvent): void {
     const step = this.computeDragAutoScrollStep(pointer)
     if (step.x === 0 && step.y === 0) {
@@ -1086,6 +1212,7 @@ export class WebGridRuntime {
     this.scheduler.schedule(DRAG_AUTO_SCROLL_KEY, () => this.tickDragAutoScroll())
   }
 
+  /** 执行一帧选区拖拽自动滚动，并继续调度下一帧。 */
   private tickDragAutoScroll(): void {
     if (this.destroyed || !this.draggingSelection || !this.lastDragPointer) return
     const step = this.computeDragAutoScrollStep(this.lastDragPointer)
@@ -1105,6 +1232,7 @@ export class WebGridRuntime {
     this.updateDragAutoScroll(this.lastDragPointer)
   }
 
+  /** 计算 pointer 靠近 viewport 边缘时每帧应滚动的距离。 */
   private computeDragAutoScrollStep(pointer: WebPointerEvent): { x: number; y: number } {
     const { width, height } = this.host.getContainerSize()
     return {
@@ -1113,6 +1241,7 @@ export class WebGridRuntime {
     }
   }
 
+  /** 计算当前 DOM scrollTop/scrollLeft 的最大边界。 */
   private getScrollLimits(): { maxTop: number; maxLeft: number } {
     const headerH = this.engine.getTheme().metrics.headerHeight
     const { width, height } = this.host.getContainerSize()
@@ -1128,6 +1257,7 @@ export class WebGridRuntime {
     }
   }
 
+  /** 将 DOM scrollTop/scrollLeft 映射为 engine 使用的逻辑 scroll 坐标。 */
   private mapScrollToLogical(
     scrollTop: number,
     scrollLeft: number,
@@ -1144,6 +1274,7 @@ export class WebGridRuntime {
     }
   }
 
+  /** 将逻辑 Y 滚动坐标映射回 DOM scrollTop。 */
   private logicalToScrollY(logicalY: number): number {
     const headerH = this.engine.getTheme().metrics.headerHeight
     const contentH = this.engine.getRowsTotalSize()
@@ -1152,6 +1283,7 @@ export class WebGridRuntime {
     return this.scrollMapper.logicalToScroll(logicalY, spacerH, contentH + headerH, clientH)
   }
 
+  /** 将逻辑 X 滚动坐标映射回 DOM scrollLeft。 */
   private logicalToScrollX(logicalX: number): number {
     const contentW = this.engine.getColsTotalSize()
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
@@ -1159,12 +1291,14 @@ export class WebGridRuntime {
     return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, clientW)
   }
 
+  /** 读取当前 DOM 滚动位置并同步到 engine 的逻辑 viewport。 */
   private remapScroll(): void {
     const { scrollTop, scrollLeft } = this.host.getScrollPosition()
     const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
     this.engine.setScroll(logicalX, logicalY)
   }
 
+  /** 按内容尺寸与 header 尺寸更新 host scroll spacer。 */
   private resizeSpacer(): void {
     const headerH = this.engine.getTheme().metrics.headerHeight
     const w = this.scrollMapper.computeSpacerSize(this.engine.getColsTotalSize())
@@ -1172,27 +1306,33 @@ export class WebGridRuntime {
     this.host.setScrollSize(w, h)
   }
 
+  /** 同步 scrollbar 主题到 host。 */
   private syncScrollbarTheme(): void {
     this.host.applyScrollbarTheme(this.engine.getTheme().scrollbar)
   }
 
+  /** 同步 resize handle layer 主题。 */
   private syncResizeHandleTheme(): void {
     const theme = this.engine.getTheme()
     this.handleLayer?.applyTheme(theme.colors, theme.metrics)
   }
 
+  /** 同步 cell editor 主题。 */
   private syncCellEditorTheme(): void {
     this.cellEditor?.applyTheme(this.engine.getTheme())
   }
 
+  /** 同步 context menu layer 主题。 */
   private syncContextMenuTheme(): void {
     this.contextMenuLayer?.applyTheme(this.engine.getTheme())
   }
 
+  /** 同步 filter popover 主题。 */
   private syncFilterPopoverTheme(): void {
     this.filterPopover?.applyTheme(this.engine.getTheme())
   }
 
+  /** 打开指定单元格编辑器，并按需全选原内容。 */
   private openCellEditor(
     cell: CellAddress,
     options: { selectAll?: boolean } = {},
@@ -1202,6 +1342,7 @@ export class WebGridRuntime {
     return this.showCellEditor(options)
   }
 
+  /** 用首个键入字符作为 draft 打开编辑器。 */
   private beginCellEditWithDraft(cell: CellAddress, draft: string): boolean {
     if (!this.cellEditor || this.resizeDrag) return false
     if (!this.engine.beginCellEdit(cell)) return false
@@ -1209,6 +1350,7 @@ export class WebGridRuntime {
     return this.showCellEditor({ selectAll: false })
   }
 
+  /** 根据当前 engine edit session 定位并展示 DOM cell editor。 */
   private showCellEditor(options: { selectAll?: boolean }): boolean {
     const session = this.engine.getFrame().cellEdit
     const rect = session ? computeCellRect(this.engine.getFrame(), session.cell) : null
@@ -1229,6 +1371,7 @@ export class WebGridRuntime {
     return true
   }
 
+  /** 提交当前编辑；可选在提交后移动到下一行。 */
   private commitCellEdit(moveAfter: boolean): void {
     if (!this.engine.isCellEditing()) return
     const session = this.engine.getFrame().cellEdit
@@ -1250,6 +1393,7 @@ export class WebGridRuntime {
     this.refresh()
   }
 
+  /** 取消当前编辑，并在 multiline 编辑时恢复原始行高。 */
   private cancelCellEdit(): void {
     if (!this.engine.isCellEditing()) {
       this.cellEditor?.close()
@@ -1271,6 +1415,7 @@ export class WebGridRuntime {
     this.editingMultilineOriginalRowHeight = null
   }
 
+  /** 根据当前单元格 rect 同步编辑器位置；不可见时取消编辑。 */
   private syncCellEditorPosition(): void {
     if (!this.cellEditor?.isOpen()) return
     const session = this.engine.getFrame().cellEdit
@@ -1286,11 +1431,13 @@ export class WebGridRuntime {
     this.cellEditor.syncRect(rect)
   }
 
+  /** 返回导航后需要滚动到可见区域的选区目标。 */
   private getSelectionScrollTarget(): CellAddress | null {
     const selection = this.engine.getSelection()
     return selection.extentCell ?? selection.activeCell
   }
 
+  /** 读取 resize handle 对应的当前行高或列宽。 */
   private readResizeSize(handle: ResizeHandleRect): number | null {
     if (handle.kind === 'column' && handle.fieldId) {
       const colIndex = this.engine.getColumnIndex(handle.fieldId)
@@ -1305,6 +1452,7 @@ export class WebGridRuntime {
     return null
   }
 
+  /** 根据拖拽状态和当前 client 坐标计算预览尺寸。 */
   private computeResizeSize(
     drag: NonNullable<WebGridRuntime['resizeDrag']>,
     clientX: number,
@@ -1315,6 +1463,7 @@ export class WebGridRuntime {
     return Math.max(MIN_RESIZE_SIZE, drag.startSize + delta)
   }
 
+  /** 在 resize handle layer 上显示当前预览尺寸对应的指示线。 */
   private showResizeIndicator(size: number): void {
     if (!this.handleLayer || !this.resizeDrag) return
     const { handle, anchorStart } = this.resizeDrag
@@ -1325,6 +1474,7 @@ export class WebGridRuntime {
     this.handleLayer.showIndicator({ kind: 'row', y: anchorStart + size })
   }
 
+  /** 确保指定单元格完整可见，必要时滚动 host。 */
   private ensureCellVisible(cell: CellAddress): void {
     const frame = this.engine.getFrame()
     const { width, height } = this.host.getContainerSize()
@@ -1352,6 +1502,7 @@ export class WebGridRuntime {
   }
 }
 
+/** 计算 pointer 在 viewport 边缘区域内对应的自动滚动速度。 */
 function edgeVelocity(position: number, size: number): number {
   if (size <= 0) return 0
   if (position < DRAG_AUTO_SCROLL_EDGE_PX) {
@@ -1362,11 +1513,13 @@ function edgeVelocity(position: number, size: number): number {
   return 0
 }
 
+/** 将距离边缘的像素距离缩放为每帧滚动步长。 */
 function scaleEdgeDistance(distance: number): number {
   const ratio = Math.min(1, Math.max(0, distance / DRAG_AUTO_SCROLL_EDGE_PX))
   return Math.max(1, Math.ceil(ratio * DRAG_AUTO_SCROLL_MAX_STEP_PX))
 }
 
+/** 将数值限制在闭区间 `[min, max]` 内。 */
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
