@@ -10,12 +10,12 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ## 当前状态
 
-三包拆分已完成；**M1 Foundation**、**M2 虚拟滚动**、**M3 冻结 / 尺寸自适应**、**Phase 2 Canvas 交互绘制分层**、**Phase 3.1–3.5 选择 / 键盘 / 编辑交互**、**Phase 4.0 右键菜单**、**Phase 4.1 剪贴板** 与 **Phase 4.2 Undo / Redo** 已落地。公共 API 从 `@novasheet/web` 导出。
+三包拆分已完成；**M1 Foundation**、**M2 虚拟滚动**、**M3 冻结 / 尺寸自适应**、**Phase 2 Canvas 交互绘制分层**、**Phase 3.1–3.5 选择 / 键盘 / 编辑交互**、**Phase 4.0 右键菜单**、**Phase 4.1 剪贴板**、**Phase 4.2 Undo / Redo**、**Phase 4.3 填充柄** 与 **Phase 4.4 排序 / 筛选** 已落地。公共 API 从 `@novasheet/web` 导出。
 
 | 维度                     | 数值                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d`                                                     |
-| 测试                     | 385 passing（bun:test，跨三包）                                                                                      |
+| 测试                     | 520 passing（bun:test，跨三包）                                                                                      |
 | Lint / Typecheck / Build | 全部 clean                                                                                                           |
 | 公共 API                 | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
 
@@ -34,12 +34,15 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 | Phase 3.5  | 基础编辑：选中即打字（Sheets 式）· F2/双击原位编辑 · Esc 取消 · Enter 提交下移 · text/number 列      |
 | Phase 4.0  | 单元格右键菜单 ✅ · body 右键打开 Cut / Copy / Paste（portal 到 body 避祖先 transform）· `onContextMenuAction(action, ctx)` 外抛 · ARIA + 键盘导航 |
 | Phase 4.1  | 剪贴板 ✅ · Ctrl/Cmd+X/C/V 快捷键 + 菜单同一引擎 · 系统剪贴板 TSV + 内部类型缓存（hash 验证）· Excel/Sheets 双向互通 · 类型不匹配跳过 + `onPasteSkipped` 事件 · `grid.copy()/cut()/paste()` 编程 API |
+| Phase 4.2  | Undo / Redo ✅ · UndoStack(深 100) · cell edit / Cut / Paste / resize 进栈 · `Grid.undo() / redo() / canUndo() / canRedo()` |
+| Phase 4.3  | 填充柄 ✅ · 选区右下角 DOM fill handle · 四方向拖拽 · 单值复制 / 数字等差 / 文本尾号 / Date 序列 · fill 进 undo/redo |
+| Phase 4.4  | 排序 / 筛选 ✅ · ViewLayer / ViewPipeline · 列头右键排序筛选菜单 · Header sort/filter 图标 · DOM FilterPopover · selection / undo 按底层行语义保持 |
 
 ### 暂未交付
 
 | 阶段                 | 内容                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------- |
-| Phase 4.2+           | Undo / Redo · 填充柄（序列填充）· 排序筛选 · 行列结构操作 |
+| Phase 4.5+           | 行列结构操作 · 单元格合并 / 格式化 · 公式 / 导入导出 · 多视图 |
 | 低优先级验证项       | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机验证             |
 
 架构细节见 [docs/architecture.md](docs/architecture.md)。
@@ -262,7 +265,7 @@ Phase 3 聚焦“用户能像表格一样操作当前画布”，不承载复杂
 | Phase 4.1 ✅ | 剪贴板                  | TSV 序列化 + 内部类型缓存（FNV-1a hash 验证）；Ctrl/Cmd+X/C/V 与菜单同一引擎；Cut 立即清（Sheets 风格）；Excel/Sheets 双向互通；类型不匹配跳过 + `onPasteSkipped` 事件。 |
 | Phase 4.2 ✅ | Undo / Redo                  | UndoStack(深 100)+ discriminated-union UndoCommand；cell edit / Cut / Paste / Row+Col resize 进栈；`Cmd/Ctrl+Z`、`Cmd+Shift+Z`、`Ctrl+Y` 键盘；编辑中 Cmd/Ctrl+Z 交给浏览器 input 原生；Undo/Redo 后选区恢复到受影响范围；`Grid.undo() / redo() / canUndo() / canRedo()` + `onUndo / onRedo` 事件。 |
 | Phase 4.3 ✅ | 填充柄 | 选区右下角 DOM fill handle；支持向下/上/右/左拖拽；单值复制、数字等差、文本尾号、Date 序列；拖拽 preview；一次 fill 进 undo/redo；`Grid.onFill()` 事件。 |
-| Phase 4.4 | 排序 / 筛选                  | 列头排序指示；筛选 UI（视 DataSource 能力）。                                               |
+| Phase 4.4 ✅ | 排序 / 筛选                  | `ViewLayer` / `ViewPipeline` 组合视图；列头右键排序 / 筛选菜单；Canvas header sort/filter 图标；DOM `FilterPopover`；排序筛选下 selection / undo / redo 以底层行语义保持。 |
 | Phase 4.5 | 行列结构 + 头区右键菜单      | 插入 / 删除 / 隐藏行列；**列头 / 行头** context menu（依赖本阶段 API）。                  |
 
 Phase 3.1 会先把“后续 Shift 扩展选择、拖拽选择的基础状态”建好，但不会一次性交付全部选择手势。这个基础状态主要包括：

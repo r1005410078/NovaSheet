@@ -28,7 +28,19 @@ function canvas2dDelegate(grid: Grid) {
   return (
     grid as unknown as {
       delegate: {
-        runtime: { refresh: () => void; viewPipeline?: unknown }
+        runtime: {
+          refresh: () => void
+          viewPipeline?: unknown
+          handleHostContextMenu: (event: {
+            x: number
+            y: number
+            shiftKey: boolean
+            clientX?: number
+            clientY?: number
+          }) => void
+          handleContextMenuSelected: (id: string) => void
+          handleFilterPopoverApply: (op: unknown) => void
+        }
         engine: {
           beginCellEdit: (cell: CellAddress) => boolean
           updateCellEditDraft: (draft: string) => void
@@ -568,6 +580,26 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
     grid.destroy()
   })
 
+  it('column header menu sort asc changes row order and emits sortChange', () => {
+    const el = document.createElement('div')
+    const data = makeData()
+    const grid = new Grid(el, { data })
+    const delegate = canvas2dDelegate(grid)
+    const handler = mock((_event: { spec: unknown }) => {})
+
+    grid.on('sortChange', handler)
+    delegate.runtime.handleHostContextMenu({ x: 210, y: 10, shiftKey: false, clientX: 210, clientY: 10 })
+    delegate.runtime.handleContextMenuSelected('sort-asc')
+
+    expect(handler).toHaveBeenCalledWith({ spec: { fieldId: 'age', direction: 'asc' } })
+    expect(delegate.engine.getData().getCell(0, 'age')).toBe(0)
+    expect(delegate.engine.getData().getCell(49, 'age')).toBe(49)
+
+    delegate.runtime.handleContextMenuSelected('sort-desc')
+    expect(delegate.engine.getData().getCell(0, 'age')).toBe(49)
+    grid.destroy()
+  })
+
   it('emits filterChange with the active spec', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
@@ -584,6 +616,24 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
     expect(handler.mock.calls[0]![0]).toEqual({ spec })
 
     unsubscribe()
+    grid.destroy()
+  })
+
+  it('filter text contains changes row count and emits filterChange', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { data: makeData() })
+    const handler = mock((_event: { spec: unknown }) => {})
+    const spec = {
+      fieldId: 'name',
+      op: { kind: 'text-contains' as const, value: 'n1', caseSensitive: false },
+    }
+
+    grid.on('filterChange', handler)
+    grid.getFilterLayer().setSpec(spec)
+
+    expect(handler).toHaveBeenCalledWith({ spec })
+    expect(canvas2dDelegate(grid).engine.getData().getRowCount()).toBe(11)
+
     grid.destroy()
   })
 
@@ -704,6 +754,43 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
     grid.destroy()
   })
 
+  it('editing while sorted does not automatically resort', () => {
+    const el = document.createElement('div')
+    const data = makeData()
+    const grid = new Grid(el, { data })
+    const { engine } = canvas2dDelegate(grid)
+
+    grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'asc' })
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 1 })
+    engine.updateCellEditDraft('999')
+    expect(engine.commitCellEdit()).toBe(true)
+
+    expect(engine.getData().getCell(0, 'name')).toBe('n0')
+    expect(engine.getData().getCell(0, 'age')).toBe(999)
+    grid.destroy()
+  })
+
+  it('editing while filtered does not automatically refilter', () => {
+    const el = document.createElement('div')
+    const data = makeData()
+    const grid = new Grid(el, { data })
+    const { engine } = canvas2dDelegate(grid)
+
+    grid.getFilterLayer().setSpec({
+      fieldId: 'name',
+      op: { kind: 'text-contains', value: 'n0', caseSensitive: false },
+    })
+    expect(engine.getData().getRowCount()).toBe(1)
+
+    engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
+    engine.updateCellEditDraft('zzz')
+    expect(engine.commitCellEdit()).toBe(true)
+
+    expect(engine.getData().getRowCount()).toBe(1)
+    expect(engine.getData().getCell(0, 'name')).toBe('zzz')
+    grid.destroy()
+  })
+
   it('remaps selection to the same underlying row across sort view changes', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { data: makeData() })
@@ -714,6 +801,28 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
     expect(engine.getSelection().activeCell).toEqual({ rowIndex: 49, colIndex: 1 })
     expect(engine.getData().resolveUnderlyingRow?.(49)).toBe(0)
+    grid.destroy()
+  })
+
+  it('undo writes a filtered-out row through underlying row coordinates', () => {
+    const el = document.createElement('div')
+    const data = makeData()
+    const grid = new Grid(el, { data })
+    const { engine } = canvas2dDelegate(grid)
+
+    engine.beginCellEdit({ rowIndex: 1, colIndex: 0 })
+    engine.updateCellEditDraft('edited')
+    expect(engine.commitCellEdit()).toBe(true)
+    expect(data.getCell(1, 'name')).toBe('edited')
+
+    grid.getFilterLayer().setSpec({
+      fieldId: 'name',
+      op: { kind: 'text-contains', value: 'n0', caseSensitive: false },
+    })
+    expect(engine.getData().getRowCount()).toBe(1)
+
+    grid.undo()
+    expect(data.getCell(1, 'name')).toBe('n1')
     grid.destroy()
   })
 })
