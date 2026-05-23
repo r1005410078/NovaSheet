@@ -118,6 +118,8 @@ export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'
 // 视图坐标协议（Phase 4.4）
 export { findViewRow, resolveUnderlyingRow } from './view/coordinates'
 export { FilterLayer } from './view/FilterLayer'
+export { HideRowsLayer } from './view/HideRowsLayer'
+export type { CollapsedGap } from './view/HideRowsLayer'
 export type { FilterOp, FilterSpec } from './view/FilterLayer'
 export { SortLayer } from './view/SortLayer'
 export type { SortDirection, SortSpec } from './view/SortLayer'
