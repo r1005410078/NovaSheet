@@ -58,6 +58,8 @@ export type UndoCommand =
   | {
       readonly kind: 'deleteRows'
       readonly snapshots: readonly DeletedRowSnapshot[]
+      /** 删除前各行（按 snapshots 顺序）在 rowsAxis 中的高度；供 undo 还原行高。 */
+      readonly deletedHeights: readonly number[]
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
     }

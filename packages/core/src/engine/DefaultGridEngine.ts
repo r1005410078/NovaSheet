@@ -1,6 +1,7 @@
 import type { CellValue } from '../data/Schema'
 import type { DataSource } from '../data/DataSource'
 import { isMutableDataSource } from '../data/MutableDataSource'
+import { HideRowsLayer } from '../view/HideRowsLayer'
 import { applyPaste } from '../clipboard/ApplyPaste'
 import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
@@ -41,7 +42,11 @@ import type {
 const DEFAULT_EXCEL_ROW_HEADER_WIDTH = 44
 
 export class DefaultGridEngine implements GridEngine {
+  /** raw 可变数据源（InMemoryDataSource 等）；mutation 方法直接操作此字段。 */
+  private rawData: DataSource
+  /** HideRowsLayer 包裹后的视图数据源；getFrame() / getDataSource() 等读取此字段。 */
   private data: DataSource
+  private readonly hideRowsLayer = new HideRowsLayer()
   private theme: Theme
   private readonly excelHeaders: boolean
   private explicitDefaultRowHeight: number | undefined
@@ -54,16 +59,17 @@ export class DefaultGridEngine implements GridEngine {
   private undoStack = new UndoStack()
 
   constructor(options: GridEngineOptions) {
-    this.data = options.data
+    this.rawData = options.data
     this.theme = options.theme ?? denseGridTheme
     this.excelHeaders = options.excelHeaders === true
     this.explicitDefaultRowHeight = options.defaultRowHeight
+    this.data = this.hideRowsLayer.wrap(this.rawData)
     this.rowsAxis = new ChunkedAxis({
-      count: this.data.getRowCount(),
+      count: this.rawData.getRowCount(),
       defaultSize: this.resolveDefaultRowHeight(),
     })
     this.colsAxis = new ChunkedAxis({
-      count: this.data.getSchema().fields.length,
+      count: this.rawData.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
     })
     this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.resolveFrozenConfig(options))
@@ -90,13 +96,14 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private rebuildData(data: DataSource): void {
-    this.data = data
+    this.rawData = data
+    this.data = this.hideRowsLayer.wrap(this.rawData)
     this.rowsAxis = new ChunkedAxis({
-      count: this.data.getRowCount(),
+      count: this.rawData.getRowCount(),
       defaultSize: this.resolveDefaultRowHeight(),
     })
     this.colsAxis = new ChunkedAxis({
-      count: this.data.getSchema().fields.length,
+      count: this.rawData.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
     })
     this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
@@ -275,6 +282,94 @@ export class DefaultGridEngine implements GridEngine {
     return this.data
   }
 
+  /** 返回视图数据源（HideRowsLayer 包裹后）。测试 / 外部代码通过此方法读取行数与单元格值。 */
+  getDataSource(): DataSource {
+    return this.data
+  }
+
+  /** 当前行高（单行）。委托给 rowsAxis.getSize。 */
+  getRowHeight(rowIndex: number): number {
+    return this.rowsAxis.getSize(rowIndex)
+  }
+
+  /** 主题默认行高（或 options.defaultRowHeight 覆盖值）。 */
+  getDefaultRowHeight(): number {
+    return this.resolveDefaultRowHeight()
+  }
+
+  /** 返回当前隐藏行的 underlying row id 升序数组。 */
+  getHiddenRows(): readonly number[] {
+    return Array.from(this.hideRowsLayer.getHiddenUnderlyingRows()).sort((a, b) => a - b)
+  }
+
+  /**
+   * 在 beforeUnderlyingRow 位置前插入 count 空白行。
+   * 触发 UndoStack 并将新行 id 返回。
+   */
+  insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return []
+    const selectionBefore = this.selection.getSelection()
+    const newIds = this.rawData.insertRows(beforeUnderlyingRow, count)
+    this.rowsAxis.insertRange(beforeUnderlyingRow, count, this.resolveDefaultRowHeight())
+    this.selection.remapAfterRowsInserted(beforeUnderlyingRow, count)
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'insertRows', at: beforeUnderlyingRow, count, newIds, selectionBefore, selectionAfter })
+    return newIds
+  }
+
+  /**
+   * 删除给定 underlying row id 集合（调用方保证升序、去重）。
+   * 返回被删行快照，供上层 UI 反馈。
+   */
+  deleteRows(underlyingRowIds: readonly number[]): void {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.deleteRows) return
+    const selectionBefore = this.selection.getSelection()
+    // 捕获删前高度，需在 axis 更新之前读取
+    const deletedHeights = underlyingRowIds.map((id) => this.rowsAxis.getSize(id))
+    const snapshots = this.rawData.deleteRows(underlyingRowIds)
+    this.rowsAxis.deleteRange(underlyingRowIds)
+    this.selection.remapAfterRowsDeleted(underlyingRowIds)
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'deleteRows', snapshots, deletedHeights, selectionBefore, selectionAfter })
+  }
+
+  /**
+   * 隐藏给定 underlying row id 集合（幂等：已隐藏的行不重复计入命令）。
+   */
+  hideRows(underlyingRowIds: readonly number[]): void {
+    const already = this.hideRowsLayer.getHiddenUnderlyingRows()
+    const newlyHidden = underlyingRowIds.filter((id) => !already.has(id))
+    if (newlyHidden.length === 0) return
+    const selectionBefore = this.selection.getSelection()
+    this.hideRowsLayer.addHidden(newlyHidden)
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'hideRows', underlyingRowIds: newlyHidden, selectionBefore, selectionAfter })
+  }
+
+  /**
+   * 取消隐藏给定 underlying row id 集合（幂等：未隐藏的行不重复计入命令）。
+   */
+  unhideRows(underlyingRowIds: readonly number[]): void {
+    const already = this.hideRowsLayer.getHiddenUnderlyingRows()
+    const newlyVisible = underlyingRowIds.filter((id) => already.has(id))
+    if (newlyVisible.length === 0) return
+    const selectionBefore = this.selection.getSelection()
+    this.hideRowsLayer.removeHidden(newlyVisible)
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'unhideRows', underlyingRowIds: newlyVisible, selectionBefore, selectionAfter })
+  }
+
+  /**
+   * 批量设置多行高度为同一个值 h。
+   */
+  setRowHeights(rowIds: readonly number[], h: number): void {
+    const selectionBefore = this.selection.getSelection()
+    const oldHeights = rowIds.map((id) => this.rowsAxis.getSize(id))
+    for (const id of rowIds) this.rowsAxis.setSize(id, h)
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'resizeRowsMulti', rowIds, oldHeights, newHeight: h, selectionBefore, selectionAfter })
+  }
+
   undo(): UndoCommand | undefined {
     const cmd = this.undoStack.popUndo()
     if (!cmd) return undefined
@@ -397,12 +492,56 @@ export class DefaultGridEngine implements GridEngine {
       case 'resizeColumn':
         this.colsAxis.setSize(cmd.colIndex, cmd.before)
         return
-      case 'insertRows':
-      case 'deleteRows':
+      case 'insertRows': {
+        // unapply insertRows = delete the count rows that were inserted at cmd.at
+        if (!isMutableDataSource(this.rawData) || !this.rawData.deleteRows) return
+        const idsToRemove = Array.from({ length: cmd.count }, (_, i) => cmd.at + i)
+        this.rawData.deleteRows(idsToRemove)
+        this.rowsAxis.deleteRange(idsToRemove)
+        this.selection.setSelection(cmd.selectionBefore)
+        return
+      }
+      case 'deleteRows': {
+        // unapply deleteRows = re-insert rows at their original positions and restore cells
+        if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return
+        // Re-insert in reverse snapshot order so earlier indices stay valid
+        const sorted = [...cmd.snapshots].sort((a, b) => a.originalUnderlyingRow - b.originalUnderlyingRow)
+        for (let i = sorted.length - 1; i >= 0; i -= 1) {
+          const snap = sorted[i]!
+          this.rawData.insertRows(snap.originalUnderlyingRow, 1)
+          this.rowsAxis.insertRange(snap.originalUnderlyingRow, 1, cmd.deletedHeights[i] ?? this.resolveDefaultRowHeight())
+          // restore cells
+          const fields = this.rawData.getSchema().fields
+          for (const field of fields) {
+            const val = snap.cells[field.id]
+            if (val !== undefined) {
+              if (this.rawData.updateCellByUnderlyingRow) {
+                this.rawData.updateCellByUnderlyingRow(snap.originalUnderlyingRow, field.id, val)
+              } else {
+                this.rawData.updateCell(snap.originalUnderlyingRow, field.id, val)
+              }
+            }
+          }
+        }
+        this.selection.setSelection(cmd.selectionBefore)
+        return
+      }
       case 'hideRows':
+        // unapply hideRows = remove from hidden set
+        this.hideRowsLayer.removeHidden(cmd.underlyingRowIds)
+        this.selection.setSelection(cmd.selectionBefore)
+        return
       case 'unhideRows':
+        // unapply unhideRows = add back to hidden set
+        this.hideRowsLayer.addHidden(cmd.underlyingRowIds)
+        this.selection.setSelection(cmd.selectionBefore)
+        return
       case 'resizeRowsMulti':
-        // TODO(phase-4.5): Task 10 fills these in
+        // unapply = restore each row's old height
+        for (let i = 0; i < cmd.rowIds.length; i += 1) {
+          this.rowsAxis.setSize(cmd.rowIds[i]!, cmd.oldHeights[i] ?? this.resolveDefaultRowHeight())
+        }
+        this.selection.setSelection(cmd.selectionBefore)
         return
     }
   }
@@ -431,12 +570,36 @@ export class DefaultGridEngine implements GridEngine {
       case 'resizeColumn':
         this.colsAxis.setSize(cmd.colIndex, cmd.after)
         return
-      case 'insertRows':
-      case 'deleteRows':
+      case 'insertRows': {
+        // redo insertRows = insert count blank rows at cmd.at
+        if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return
+        this.rawData.insertRows(cmd.at, cmd.count)
+        this.rowsAxis.insertRange(cmd.at, cmd.count, this.resolveDefaultRowHeight())
+        this.selection.setSelection(cmd.selectionAfter)
+        return
+      }
+      case 'deleteRows': {
+        // redo deleteRows = delete by original positions (ascending)
+        if (!isMutableDataSource(this.rawData) || !this.rawData.deleteRows) return
+        const ids = [...cmd.snapshots]
+          .sort((a, b) => a.originalUnderlyingRow - b.originalUnderlyingRow)
+          .map((s) => s.originalUnderlyingRow)
+        this.rawData.deleteRows(ids)
+        this.rowsAxis.deleteRange(ids)
+        this.selection.setSelection(cmd.selectionAfter)
+        return
+      }
       case 'hideRows':
+        this.hideRowsLayer.addHidden(cmd.underlyingRowIds)
+        this.selection.setSelection(cmd.selectionAfter)
+        return
       case 'unhideRows':
+        this.hideRowsLayer.removeHidden(cmd.underlyingRowIds)
+        this.selection.setSelection(cmd.selectionAfter)
+        return
       case 'resizeRowsMulti':
-        // TODO(phase-4.5): Task 10 fills these in
+        for (const id of cmd.rowIds) this.rowsAxis.setSize(id, cmd.newHeight)
+        this.selection.setSelection(cmd.selectionAfter)
         return
     }
   }
