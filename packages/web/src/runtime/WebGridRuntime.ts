@@ -424,14 +424,11 @@ export class WebGridRuntime {
       if (colIndex < 0 || colIndex >= fields.length) return
       const field = fields[colIndex]
       if (!field) return
-      const selection = this.engine.getSelection()
-      const range = selection.selectedRange
-      const multiSelect = range !== null && range.startCol !== range.endCol
       const ctx: ContextMenuContext = {
         targetKind: 'columnHeader',
         field,
         colIndex,
-        multiSelect,
+        multiSelect: field.type === 'multiSelect',
       }
       this.lastContextMenuContext = ctx
       const items = getColumnHeaderContextMenuItems(ctx, this.viewPipeline)

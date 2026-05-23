@@ -690,6 +690,24 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     ])
   })
 
+  it('keeps sort actions enabled for sortable columns when selection spans columns', () => {
+    const { engine, runtime, menu } = makeHeaderRuntime()
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 1 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 1 },
+    }))
+
+    runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 150, clientY: 10 })
+
+    const options = menu.open.mock.calls[0]![0] as {
+      items: readonly { id: string; disabled: boolean }[]
+    }
+    expect(options.items.find((item) => item.id === 'sort-asc')!.disabled).toBe(false)
+    expect(options.items.find((item) => item.id === 'sort-desc')!.disabled).toBe(false)
+  })
+
   it('right-click in row-header gutter does not open column header menu', () => {
     const { runtime, menu } = makeHeaderRuntime({ rowHeaderWidth: 48 })
 
