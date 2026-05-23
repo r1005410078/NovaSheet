@@ -485,35 +485,44 @@ export class DefaultGridEngine implements GridEngine {
     }
 
     const activeCell = this.remapCell(selection.activeCell, oldResolveUnderlyingRow)
-    const anchorCell = this.remapCell(selection.anchorCell, oldResolveUnderlyingRow)
-    const extentCell = this.remapCell(selection.extentCell, oldResolveUnderlyingRow)
-    const rangeStart = this.remapRangeEndpoint(
-      selection.selectedRange.startRow,
-      selection.selectedRange.startCol,
-      oldResolveUnderlyingRow,
-    )
-    const rangeEnd = this.remapRangeEndpoint(
-      selection.selectedRange.endRow,
-      selection.selectedRange.endCol,
-      oldResolveUnderlyingRow,
-    )
-
-    if (!activeCell || !anchorCell || !extentCell || !rangeStart || !rangeEnd) {
+    if (!activeCell) {
       this.selection.clear()
       return
     }
 
-    this.selection.setSelection({
-      activeCell,
-      anchorCell,
-      extentCell,
-      selectedRange: {
-        startRow: Math.min(rangeStart.rowIndex, rangeEnd.rowIndex),
-        endRow: Math.max(rangeStart.rowIndex, rangeEnd.rowIndex),
-        startCol: Math.min(rangeStart.colIndex, rangeEnd.colIndex),
-        endCol: Math.max(rangeStart.colIndex, rangeEnd.colIndex),
-      },
-    })
+    if (isSingleCellRange(selection.selectedRange)) {
+      this.selection.selectCell(activeCell)
+      return
+    }
+
+    const anchorCell = this.remapCell(selection.anchorCell, oldResolveUnderlyingRow)
+    const extentCell = this.remapCell(selection.extentCell, oldResolveUnderlyingRow)
+    const remappedRows = this.remapSelectedRows(selection.selectedRange, oldResolveUnderlyingRow)
+
+    if (
+      anchorCell &&
+      extentCell &&
+      remappedRows &&
+      areContiguousRows(remappedRows) &&
+      selection.selectedRange.endRow - selection.selectedRange.startRow ===
+        Math.max(...remappedRows) - Math.min(...remappedRows)
+    ) {
+      const range = {
+        startRow: Math.min(...remappedRows),
+        endRow: Math.max(...remappedRows),
+        startCol: selection.selectedRange.startCol,
+        endCol: selection.selectedRange.endCol,
+      }
+      this.selection.setSelection({
+        activeCell,
+        anchorCell: { rowIndex: range.startRow, colIndex: range.startCol },
+        extentCell: { rowIndex: range.endRow, colIndex: range.endCol },
+        selectedRange: range,
+      })
+      return
+    }
+
+    this.selection.selectCell(activeCell)
   }
 
   private remapCell(
@@ -532,6 +541,20 @@ export class DefaultGridEngine implements GridEngine {
     const viewRow = findViewRow(this.data, underlyingRow)
     if (viewRow === -1) return null
     return { rowIndex: viewRow, colIndex }
+  }
+
+  private remapSelectedRows(
+    range: CellRange,
+    oldResolveUnderlyingRow: (viewRow: number) => number,
+  ): number[] | null {
+    const rows: number[] = []
+    for (let rowIndex = range.startRow; rowIndex <= range.endRow; rowIndex += 1) {
+      const underlyingRow = oldResolveUnderlyingRow(rowIndex)
+      const viewRow = findViewRow(this.data, underlyingRow)
+      if (viewRow === -1) return null
+      rows.push(viewRow)
+    }
+    return rows
   }
 
   private resolveDefaultRowHeight(): number {
@@ -580,4 +603,19 @@ export class DefaultGridEngine implements GridEngine {
       }
     }
   }
+}
+
+function isSingleCellRange(range: CellRange): boolean {
+  return (
+    range.startRow === range.endRow &&
+    range.startCol === range.endCol
+  )
+}
+
+function areContiguousRows(rows: readonly number[]): boolean {
+  const uniqueRows = new Set(rows)
+  if (uniqueRows.size !== rows.length) return false
+  const minRow = Math.min(...rows)
+  const maxRow = Math.max(...rows)
+  return maxRow - minRow + 1 === rows.length
 }

@@ -153,6 +153,50 @@ describe('DefaultGridEngine — 默认引擎', () => {
     })
   })
 
+  it('setViewData preserves a range when remapped rows stay contiguous', () => {
+    const source = makeData(4)
+    const oldView = new OrderedViewDataSource(source, [0, 1, 2, 3])
+    const newView = new OrderedViewDataSource(source, [3, 2, 1, 0])
+    const engine = new DefaultGridEngine({ data: oldView })
+
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.selectCell({ rowIndex: 1, colIndex: 1 }, { extend: true })
+    engine.setViewData(newView, {
+      oldResolveUnderlyingRow: (viewRow) => oldView.resolveUnderlyingRow(viewRow),
+    })
+
+    expect(engine.getSelection().activeCell).toEqual({ rowIndex: 3, colIndex: 0 })
+    expect(engine.getSelection().anchorCell).toEqual({ rowIndex: 2, colIndex: 0 })
+    expect(engine.getSelection().extentCell).toEqual({ rowIndex: 3, colIndex: 1 })
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 2,
+      endRow: 3,
+      startCol: 0,
+      endCol: 1,
+    })
+  })
+
+  it('setViewData degrades a non-contiguous remapped range to the active cell', () => {
+    const source = makeData(3)
+    const oldView = new OrderedViewDataSource(source, [0, 1, 2])
+    const newView = new OrderedViewDataSource(source, [0, 2, 1])
+    const engine = new DefaultGridEngine({ data: oldView })
+
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    engine.selectCell({ rowIndex: 1, colIndex: 1 }, { extend: true })
+    engine.setViewData(newView, {
+      oldResolveUnderlyingRow: (viewRow) => oldView.resolveUnderlyingRow(viewRow),
+    })
+
+    expect(engine.getSelection().activeCell).toEqual({ rowIndex: 0, colIndex: 0 })
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 0,
+      startCol: 0,
+      endCol: 0,
+    })
+  })
+
   it('setViewData clears selection when the selected underlying row is filtered out', () => {
     const source = makeData(3)
     const oldView = new OrderedViewDataSource(source, [0, 1, 2])

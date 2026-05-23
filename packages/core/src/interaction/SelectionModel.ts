@@ -50,6 +50,32 @@ export class SelectionModel {
   }
 
   setSelection(selection: GridSelection): void {
+    const cells = [selection.activeCell, selection.anchorCell, selection.extentCell]
+    const hasAnyCell = cells.some((cell) => cell !== null)
+    const hasEveryCell = cells.every((cell) => cell !== null)
+    if (!hasAnyCell) {
+      if (selection.selectedRange !== null) {
+        throw new Error('SelectionModel.setSelection: empty selection cannot include a range')
+      }
+      this.selection = EMPTY_SELECTION
+      return
+    }
+    if (!hasEveryCell || selection.selectedRange === null) {
+      throw new Error('SelectionModel.setSelection: non-empty selection requires all endpoints')
+    }
+
+    const anchor = selection.anchorCell!
+    const extent = selection.extentCell!
+    const normalizedRange = normalizeRange(anchor, extent)
+    if (
+      selection.selectedRange.startRow !== normalizedRange.startRow ||
+      selection.selectedRange.endRow !== normalizedRange.endRow ||
+      selection.selectedRange.startCol !== normalizedRange.startCol ||
+      selection.selectedRange.endCol !== normalizedRange.endCol
+    ) {
+      throw new Error('SelectionModel.setSelection: selectedRange must match anchor and extent')
+    }
+
     this.selection = selection
   }
 

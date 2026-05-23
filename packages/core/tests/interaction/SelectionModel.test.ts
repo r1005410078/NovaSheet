@@ -38,4 +38,17 @@ describe('SelectionModel — Phase 3.1 选择基础状态', () => {
       },
     })
   })
+
+  it('setSelection rejects inconsistent empty and non-empty state', () => {
+    const model = new SelectionModel()
+
+    expect(() =>
+      model.setSelection({
+        activeCell: null,
+        anchorCell: null,
+        extentCell: null,
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      }),
+    ).toThrow('SelectionModel.setSelection')
+  })
 })
