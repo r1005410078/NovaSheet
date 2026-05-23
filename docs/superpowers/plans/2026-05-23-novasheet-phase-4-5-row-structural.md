@@ -1048,7 +1048,9 @@ case 'insertRows':
 
 - [ ] **Step 6: 验证 GREEN（部分）**
 
-`bun run --filter @novasheet/core typecheck` PASS（联合体完整）。runtime test 需 Task 11 engine API 完成后再 GREEN。
+`bun run --filter @novasheet/core typecheck` PASS（联合体完整）。runtime test 需 Task 10 engine API 完成后再 GREEN。
+
+**注（实现时发现）：** 测试文件引用的 engine 方法（`insertRows` / `deleteRows` / `hideRows` / `setRowHeights` / `getRowHeight` / `getDefaultRowHeight` / `getDataSource` / `getHiddenRows`）在 Task 10 前不存在，直接写方法调用会导致 `typecheck` 报错，与 "typecheck PASS" 的要求矛盾。正确做法：对每一处未实现调用加 `// @ts-expect-error Task 10 adds <method>` 注释；Task 10 落地后统一移除。
 
 - [ ] **Step 7: Commit**
 
