@@ -50,6 +50,12 @@ export class DefaultGridEngine implements GridEngine {
   private theme: Theme
   private readonly excelHeaders: boolean
   private explicitDefaultRowHeight: number | undefined
+  /**
+   * rawRowsAxis：按 underlying row index 存储行高，供 setRowHeight / insertRows / deleteRows 操作。
+   * rowsAxis：视图行轴（隐藏行已剔除），供 Viewport / RenderFrame / Renderer 使用。
+   * 每次 hide/unhide/rebuildData 后调用 rebuildViewRowsAxis() 同步。
+   */
+  private rawRowsAxis: ChunkedAxis
   private rowsAxis: ChunkedAxis
   private colsAxis: ChunkedAxis
   private frozen: FrozenRegions
@@ -64,10 +70,11 @@ export class DefaultGridEngine implements GridEngine {
     this.excelHeaders = options.excelHeaders === true
     this.explicitDefaultRowHeight = options.defaultRowHeight
     this.data = this.hideRowsLayer.wrap(this.rawData)
-    this.rowsAxis = new ChunkedAxis({
+    this.rawRowsAxis = new ChunkedAxis({
       count: this.rawData.getRowCount(),
       defaultSize: this.resolveDefaultRowHeight(),
     })
+    this.rowsAxis = this.buildViewRowsAxis()
     this.colsAxis = new ChunkedAxis({
       count: this.rawData.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
@@ -80,6 +87,7 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   setData(data: DataSource): void {
+    this.hideRowsLayer.setHidden([])
     this.rebuildData(data)
     this.undoStack.clear()
   }
@@ -98,10 +106,11 @@ export class DefaultGridEngine implements GridEngine {
   private rebuildData(data: DataSource): void {
     this.rawData = data
     this.data = this.hideRowsLayer.wrap(this.rawData)
-    this.rowsAxis = new ChunkedAxis({
+    this.rawRowsAxis = new ChunkedAxis({
       count: this.rawData.getRowCount(),
       defaultSize: this.resolveDefaultRowHeight(),
     })
+    this.rowsAxis = this.buildViewRowsAxis()
     this.colsAxis = new ChunkedAxis({
       count: this.rawData.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
@@ -118,7 +127,8 @@ export class DefaultGridEngine implements GridEngine {
     this.viewport.setHeaderHeight(theme.metrics.headerHeight)
     this.applySheetChrome()
     if (this.explicitDefaultRowHeight === undefined) {
-      this.rowsAxis.setDefaultSize(theme.metrics.rowHeight)
+      this.rawRowsAxis.setDefaultSize(theme.metrics.rowHeight)
+      this.rebuildViewAxis()
     }
   }
 
@@ -141,7 +151,8 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   setRowHeight(rowIndex: number, height: number): void {
-    this.rowsAxis.setSize(rowIndex, height)
+    this.rawRowsAxis.setSize(rowIndex, height)
+    this.rebuildViewAxis()
   }
 
   setColumnWidth(fieldId: string, width: number): void {
@@ -300,9 +311,9 @@ export class DefaultGridEngine implements GridEngine {
     return this.data
   }
 
-  /** 当前行高（单行）。委托给 rowsAxis.getSize。 */
+  /** 当前行高（单行）。rowIndex 为 underlying raw 索引，委托给 rawRowsAxis.getSize。 */
   getRowHeight(rowIndex: number): number {
-    return this.rowsAxis.getSize(rowIndex)
+    return this.rawRowsAxis.getSize(rowIndex)
   }
 
   /** 主题默认行高（或 options.defaultRowHeight 覆盖值）。 */
@@ -323,7 +334,8 @@ export class DefaultGridEngine implements GridEngine {
     if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return []
     const selectionBefore = this.selection.getSelection()
     const newIds = this.rawData.insertRows(beforeUnderlyingRow, count)
-    this.rowsAxis.insertRange(beforeUnderlyingRow, count, this.resolveDefaultRowHeight())
+    this.rawRowsAxis.insertRange(beforeUnderlyingRow, count, this.resolveDefaultRowHeight())
+    this.rebuildViewAxis()
     this.selection.remapAfterRowsInserted(beforeUnderlyingRow, count)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({ kind: 'insertRows', at: beforeUnderlyingRow, count, newIds, selectionBefore, selectionAfter })
@@ -338,9 +350,10 @@ export class DefaultGridEngine implements GridEngine {
     if (!isMutableDataSource(this.rawData) || !this.rawData.deleteRows) return
     const selectionBefore = this.selection.getSelection()
     // 捕获删前高度，需在 axis 更新之前读取
-    const deletedHeights = underlyingRowIds.map((id) => this.rowsAxis.getSize(id))
+    const deletedHeights = underlyingRowIds.map((id) => this.rawRowsAxis.getSize(id))
     const snapshots = this.rawData.deleteRows(underlyingRowIds)
-    this.rowsAxis.deleteRange(underlyingRowIds)
+    this.rawRowsAxis.deleteRange(underlyingRowIds)
+    this.rebuildViewAxis()
     this.selection.remapAfterRowsDeleted(underlyingRowIds)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({ kind: 'deleteRows', snapshots, deletedHeights, selectionBefore, selectionAfter })
@@ -355,6 +368,7 @@ export class DefaultGridEngine implements GridEngine {
     if (newlyHidden.length === 0) return
     const selectionBefore = this.selection.getSelection()
     this.hideRowsLayer.addHidden(newlyHidden)
+    this.rebuildViewAxis()
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({ kind: 'hideRows', underlyingRowIds: newlyHidden, selectionBefore, selectionAfter })
   }
@@ -368,6 +382,7 @@ export class DefaultGridEngine implements GridEngine {
     if (newlyVisible.length === 0) return
     const selectionBefore = this.selection.getSelection()
     this.hideRowsLayer.removeHidden(newlyVisible)
+    this.rebuildViewAxis()
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({ kind: 'unhideRows', underlyingRowIds: newlyVisible, selectionBefore, selectionAfter })
   }
@@ -377,8 +392,9 @@ export class DefaultGridEngine implements GridEngine {
    */
   setRowHeights(rowIds: readonly number[], h: number): void {
     const selectionBefore = this.selection.getSelection()
-    const oldHeights = rowIds.map((id) => this.rowsAxis.getSize(id))
-    for (const id of rowIds) this.rowsAxis.setSize(id, h)
+    const oldHeights = rowIds.map((id) => this.rawRowsAxis.getSize(id))
+    for (const id of rowIds) this.rawRowsAxis.setSize(id, h)
+    this.rebuildViewAxis()
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({ kind: 'resizeRowsMulti', rowIds, oldHeights, newHeight: h, selectionBefore, selectionAfter })
   }
@@ -412,7 +428,8 @@ export class DefaultGridEngine implements GridEngine {
 
   commitRowResize(rowIndex: number, oldHeight: number, newHeight: number): void {
     if (oldHeight === newHeight) return
-    this.rowsAxis.setSize(rowIndex, newHeight)
+    this.rawRowsAxis.setSize(rowIndex, newHeight)
+    this.rebuildViewAxis()
     this.undoStack.push({ kind: 'resizeRow', rowIndex, before: oldHeight, after: newHeight })
   }
 
@@ -505,7 +522,8 @@ export class DefaultGridEngine implements GridEngine {
         this.restoreSelectionForWrites(cmd.before, cmd.source)
         return
       case 'resizeRow':
-        this.rowsAxis.setSize(cmd.rowIndex, cmd.before)
+        this.rawRowsAxis.setSize(cmd.rowIndex, cmd.before)
+        this.rebuildViewAxis()
         return
       case 'resizeColumn':
         this.colsAxis.setSize(cmd.colIndex, cmd.before)
@@ -515,7 +533,8 @@ export class DefaultGridEngine implements GridEngine {
         if (!isMutableDataSource(this.rawData) || !this.rawData.deleteRows) return
         const idsToRemove = Array.from({ length: cmd.count }, (_, i) => cmd.at + i)
         this.rawData.deleteRows(idsToRemove)
-        this.rowsAxis.deleteRange(idsToRemove)
+        this.rawRowsAxis.deleteRange(idsToRemove)
+        this.rebuildViewAxis()
         this.selection.setSelection(cmd.selectionBefore)
         return
       }
@@ -527,7 +546,7 @@ export class DefaultGridEngine implements GridEngine {
         for (let i = sorted.length - 1; i >= 0; i -= 1) {
           const snap = sorted[i]!
           this.rawData.insertRows(snap.originalUnderlyingRow, 1)
-          this.rowsAxis.insertRange(snap.originalUnderlyingRow, 1, cmd.deletedHeights[i] ?? this.resolveDefaultRowHeight())
+          this.rawRowsAxis.insertRange(snap.originalUnderlyingRow, 1, cmd.deletedHeights[i] ?? this.resolveDefaultRowHeight())
           // restore cells
           const fields = this.rawData.getSchema().fields
           for (const field of fields) {
@@ -541,24 +560,28 @@ export class DefaultGridEngine implements GridEngine {
             }
           }
         }
+        this.rebuildViewAxis()
         this.selection.setSelection(cmd.selectionBefore)
         return
       }
       case 'hideRows':
         // unapply hideRows = remove from hidden set
         this.hideRowsLayer.removeHidden(cmd.underlyingRowIds)
+        this.rebuildViewAxis()
         this.selection.setSelection(cmd.selectionBefore)
         return
       case 'unhideRows':
         // unapply unhideRows = add back to hidden set
         this.hideRowsLayer.addHidden(cmd.underlyingRowIds)
+        this.rebuildViewAxis()
         this.selection.setSelection(cmd.selectionBefore)
         return
       case 'resizeRowsMulti':
         // unapply = restore each row's old height
         for (let i = 0; i < cmd.rowIds.length; i += 1) {
-          this.rowsAxis.setSize(cmd.rowIds[i]!, cmd.oldHeights[i] ?? this.resolveDefaultRowHeight())
+          this.rawRowsAxis.setSize(cmd.rowIds[i]!, cmd.oldHeights[i] ?? this.resolveDefaultRowHeight())
         }
+        this.rebuildViewAxis()
         this.selection.setSelection(cmd.selectionBefore)
         return
     }
@@ -583,7 +606,8 @@ export class DefaultGridEngine implements GridEngine {
         this.restoreSelectionForWrites(cmd.after, cmd.result)
         return
       case 'resizeRow':
-        this.rowsAxis.setSize(cmd.rowIndex, cmd.after)
+        this.rawRowsAxis.setSize(cmd.rowIndex, cmd.after)
+        this.rowsAxis = this.buildViewRowsAxis()
         return
       case 'resizeColumn':
         this.colsAxis.setSize(cmd.colIndex, cmd.after)
@@ -592,7 +616,8 @@ export class DefaultGridEngine implements GridEngine {
         // redo insertRows = insert count blank rows at cmd.at
         if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return
         this.rawData.insertRows(cmd.at, cmd.count)
-        this.rowsAxis.insertRange(cmd.at, cmd.count, this.resolveDefaultRowHeight())
+        this.rawRowsAxis.insertRange(cmd.at, cmd.count, this.resolveDefaultRowHeight())
+        this.rowsAxis = this.buildViewRowsAxis()
         this.selection.setSelection(cmd.selectionAfter)
         return
       }
@@ -603,20 +628,24 @@ export class DefaultGridEngine implements GridEngine {
           .sort((a, b) => a.originalUnderlyingRow - b.originalUnderlyingRow)
           .map((s) => s.originalUnderlyingRow)
         this.rawData.deleteRows(ids)
-        this.rowsAxis.deleteRange(ids)
+        this.rawRowsAxis.deleteRange(ids)
+        this.rowsAxis = this.buildViewRowsAxis()
         this.selection.setSelection(cmd.selectionAfter)
         return
       }
       case 'hideRows':
         this.hideRowsLayer.addHidden(cmd.underlyingRowIds)
+        this.rowsAxis = this.buildViewRowsAxis()
         this.selection.setSelection(cmd.selectionAfter)
         return
       case 'unhideRows':
         this.hideRowsLayer.removeHidden(cmd.underlyingRowIds)
+        this.rowsAxis = this.buildViewRowsAxis()
         this.selection.setSelection(cmd.selectionAfter)
         return
       case 'resizeRowsMulti':
-        for (const id of cmd.rowIds) this.rowsAxis.setSize(id, cmd.newHeight)
+        for (const id of cmd.rowIds) this.rawRowsAxis.setSize(id, cmd.newHeight)
+        this.rowsAxis = this.buildViewRowsAxis()
         this.selection.setSelection(cmd.selectionAfter)
         return
     }
@@ -751,6 +780,39 @@ export class DefaultGridEngine implements GridEngine {
 
   private resolveDefaultRowHeight(): number {
     return this.explicitDefaultRowHeight ?? this.theme.metrics.rowHeight
+  }
+
+  /**
+   * 从 rawRowsAxis 按视图行顺序（hideRowsLayer.getVisibleRows）构建视图行轴，
+   * 并同步更新 frozen / viewport 以持有新 rowsAxis 的引用。
+   * 在 hide/unhide/rebuildData/setRowHeight 等操作后调用以保持与 data 一致。
+   */
+  private buildViewRowsAxis(): ChunkedAxis {
+    const visibleRows = this.hideRowsLayer.getVisibleRows()
+    const defaultSize = this.resolveDefaultRowHeight()
+    const viewAxis = new ChunkedAxis({ count: visibleRows.length, defaultSize })
+    for (let viewRow = 0; viewRow < visibleRows.length; viewRow += 1) {
+      const underlyingRow = visibleRows[viewRow]!
+      const size = this.rawRowsAxis.getSize(underlyingRow)
+      if (size !== defaultSize) viewAxis.setSize(viewRow, size)
+    }
+    return viewAxis
+  }
+
+  /**
+   * 重建 viewRowsAxis 并同步 frozen / viewport 持有的引用。
+   * 在 constructor / rebuildData 中不调用（彼时 frozen/viewport 尚未构建，由调用方自行处理）；
+   * 在 hide/unhide/setRowHeight/insertRows/deleteRows 等 mutation 路径中使用。
+   */
+  private rebuildViewAxis(): void {
+    this.rowsAxis = this.buildViewRowsAxis()
+    const snap = this.viewport.snapshot()
+    this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
+    this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
+    this.viewport.setHeaderHeight(snap.headerHeight)
+    this.viewport.setRowHeaderWidth(snap.rowHeaderWidth)
+    this.viewport.setSize(snap.contentRect.width, snap.contentRect.height)
+    this.viewport.setScroll(snap.scrollX, snap.scrollY)
   }
 
   private resolveFrozenConfig(options: GridEngineOptions): FrozenConfig {
