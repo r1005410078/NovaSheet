@@ -1,5 +1,6 @@
 import type { CellValue } from '../data/Schema'
-import type { CellRange } from '../interaction/SelectionModel'
+import type { DeletedRowSnapshot } from '../data/MutableDataSource'
+import type { CellRange, GridSelection } from '../interaction/SelectionModel'
 
 export interface CellWrite {
   readonly rowIndex: number
@@ -45,4 +46,40 @@ export type UndoCommand =
       readonly colIndex: number
       readonly before: number
       readonly after: number
+    }
+  | {
+      readonly kind: 'insertRows'
+      readonly at: number
+      readonly count: number
+      readonly newIds: readonly number[]
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }
+  | {
+      readonly kind: 'deleteRows'
+      readonly snapshots: readonly DeletedRowSnapshot[]
+      /** 删除前各行（按 snapshots 顺序）在 rowsAxis 中的高度；供 undo 还原行高。 */
+      readonly deletedHeights: readonly number[]
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }
+  | {
+      readonly kind: 'hideRows'
+      readonly underlyingRowIds: readonly number[]
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }
+  | {
+      readonly kind: 'unhideRows'
+      readonly underlyingRowIds: readonly number[]
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }
+  | {
+      readonly kind: 'resizeRowsMulti'
+      readonly rowIds: readonly number[]
+      readonly oldHeights: readonly number[]
+      readonly newHeight: number
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
     }

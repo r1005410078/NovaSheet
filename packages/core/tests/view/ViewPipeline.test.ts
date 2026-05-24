@@ -7,6 +7,9 @@ import type {
   ViewLayerChange,
 } from '../../src/view/ViewLayer'
 import { ViewPipeline } from '../../src/view/ViewPipeline'
+import { SortLayer } from '../../src/view/SortLayer'
+import { FilterLayer } from '../../src/view/FilterLayer'
+import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
 
 const source: DataSource = {
   getRowCount: () => 3,
@@ -428,5 +431,35 @@ describe('ViewPipeline', () => {
         .collectColumnHeaderMenuItems({ targetKind: 'columnHeader', field, colIndex: 0 })
         .map((i) => i.label),
     ).toEqual(['a:name', 'b:name'])
+  })
+
+  // Phase 4.5 回归：rawData.insertRows 触发 rowsInserted 事件时，SortLayer/FilterLayer
+  // 不能再走 onUpstreamReset → pipeline.rebuild 路径，否则 emit 的 for-of 会持续访问
+  // 新加入的 wrapper listener，造成死循环。改回归测试用 rebuild 计数器 + 行为断言两条线。
+  it('rawData.insertRows 在 Sort+Filter 激活下不会无限触发 pipeline rebuild', () => {
+    const ds = new InMemoryDataSource({
+      schema: {
+        fields: [{ id: 'n', name: 'N', type: 'number' as const, width: 100 }],
+      },
+      rows: [{ n: 3 }, { n: 1 }, { n: 2 }],
+    })
+    const pipeline = new ViewPipeline(ds)
+    const filter = new FilterLayer()
+    const sort = new SortLayer()
+    pipeline.add(filter)
+    pipeline.add(sort)
+    sort.setSpec({ fieldId: 'n', direction: 'asc' })
+
+    let rebuildCount = 0
+    pipeline.subscribe(() => {
+      rebuildCount += 1
+      if (rebuildCount > 50) throw new Error('pipeline.rebuild 进入死循环（回归保护触发）')
+    })
+
+    ds.insertRows!(0, 1)
+
+    expect(ds.getRowCount()).toBe(4)
+    expect(rebuildCount).toBeLessThanOrEqual(2)
+    expect(pipeline.getComposed().getRowCount()).toBe(4)
   })
 })

@@ -41,6 +41,7 @@ import {
   FrameScheduler,
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
+  getRowHeaderContextMenuItems,
   hitTestCell,
   isMutableDataSource,
   MIN_RESIZE_SIZE,
@@ -53,6 +54,7 @@ import {
   type ContextMenuAction,
   type ContextMenuContext,
   type FillDirection,
+  type GridSelection,
   type FillTarget,
   type PasteSkippedCell,
   type ResizeHandleRect,
@@ -62,7 +64,9 @@ import type { DomCellEditor } from '../interaction/DomCellEditor'
 import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
+import type { HideToggleHandle } from '../handle/HideToggleHandle'
 import type { FilterPopover } from '../interaction/FilterPopover'
+import type { RowHeightPopover } from '../overlay/RowHeightPopover'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -117,6 +121,8 @@ export interface WebGridRuntimeOptions {
   sortLayer?: SortLayer
   /** Phase 4.4 — filter 状态层。 */
   filterLayer?: FilterLayer
+  /** Phase 4.5 — DOM hide-toggle 点击区 layer。 */
+  hideToggleHandle?: HideToggleHandle
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -194,12 +200,18 @@ export class WebGridRuntime {
   private sortLayer?: SortLayer
   /** 当前 filter 状态层。 */
   private filterLayer?: FilterLayer
+  /** Phase 4.5 — DOM hide-toggle 点击区 layer。 */
+  private hideToggleHandle?: HideToggleHandle
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
   /** DOM 右键菜单 layer。 */
   private contextMenuLayer?: DomContextMenuLayer
   /** DOM filter popover。 */
   private filterPopover?: FilterPopover
+  /** Phase 4.5 行高调整弹层。 */
+  private rowHeightPopover?: RowHeightPopover
+  /** resize-row-height 操作暂存的行 id 列表，供 onSubmit 回调读取。 */
+  private pendingRowHeightIds: number[] = []
   /** 外部接管 context menu action 的回调。 */
   private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
   /** 外部声明剪贴板可用状态，用于 legacy paste 菜单 enabled 判断。 */
@@ -275,6 +287,7 @@ export class WebGridRuntime {
     this.viewPipeline = opts.viewPipeline
     this.sortLayer = opts.sortLayer
     this.filterLayer = opts.filterLayer
+    this.hideToggleHandle = opts.hideToggleHandle
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -294,6 +307,16 @@ export class WebGridRuntime {
   setFilterPopover(popover: FilterPopover): void {
     this.filterPopover = popover
     this.syncFilterPopoverTheme()
+  }
+
+  /** 注入 row-height popover（Phase 4.5）。 */
+  setRowHeightPopover(popover: RowHeightPopover): void {
+    this.rowHeightPopover = popover
+  }
+
+  /** 返回当前 resize-row-height 操作暂存的行 id 列表，供 onSubmit 回调读取。 */
+  getPendingRowHeightIds(): number[] {
+    return this.pendingRowHeightIds
   }
 
   /** 替换当前 view pipeline 与 sort/filter 状态层。 */
@@ -371,6 +394,115 @@ export class WebGridRuntime {
   /** 返回当前 redo 栈是否可重做。 */
   canRedo(): boolean {
     return this.engine.canRedo()
+  }
+
+  /** Phase 4.5 — 取消隐藏指定底层行，刷新视图。 */
+  unhideRows(underlyingRowIds: readonly number[]): void {
+    if (this.destroyed) return
+    this.engine.unhideRows(underlyingRowIds)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.5 — 返回当前隐藏行 id 升序数组。 */
+  getHiddenRows(): readonly number[] {
+    return this.engine.getHiddenRows()
+  }
+
+  /** Phase 4.5 — 在 beforeUnderlyingRow 位置前插入 count 行，刷新视图并返回新行 id。 */
+  insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
+    if (this.destroyed) return []
+    const ids = this.engine.insertRows(beforeUnderlyingRow, count)
+    this.afterEngineMutation()
+    return ids
+  }
+
+  /** Phase 4.5 — 删除给定 underlying row id 集合（升序、去重），刷新视图。 */
+  deleteRows(underlyingRowIds: readonly number[]): void {
+    if (this.destroyed) return
+    this.engine.deleteRows(underlyingRowIds)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.5 — 隐藏给定 underlying row id 集合，刷新视图。 */
+  hideRows(underlyingRowIds: readonly number[]): void {
+    if (this.destroyed) return
+    this.engine.hideRows(underlyingRowIds)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.5 — 批量将多行高度设置为同一值 h，刷新视图。 */
+  setRowHeights(rowIds: readonly number[], h: number): void {
+    if (this.destroyed) return
+    this.engine.setRowHeights(rowIds, h)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.5 — 程序化设置选区（不入 undo 栈），刷新视图。 */
+  setSelection(selection: GridSelection): void {
+    if (this.destroyed) return
+    this.engine.setSelection(selection)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.5 — 生成行头右键菜单项列表（含条件 unhide 项）。 */
+  getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly import('@novasheet/core').ContextMenuItem[] {
+    const sel = this.engine.getSelection().selectedRange
+    const startRow = sel?.startRow ?? ctx.targetRowIndex
+    const endRow = sel?.endRow ?? ctx.targetRowIndex
+    const n = endRow - startRow + 1
+    const hidden = this.engine.getHiddenRows()
+    // 检查选区 span 的底层行区间内是否存在隐藏行（包括被 hide 而不在视图中的行）
+    let hasHidden = false
+    if (hidden.length > 0) {
+      const data = this.engine.getData()
+      const underlyingStart = data.resolveUnderlyingRow?.(startRow) ?? startRow
+      const underlyingEnd = data.resolveUnderlyingRow?.(endRow) ?? endRow
+      const minU = Math.min(underlyingStart, underlyingEnd)
+      const maxU = Math.max(underlyingStart, underlyingEnd)
+      for (const hiddenId of hidden) {
+        if (hiddenId >= minU && hiddenId <= maxU) {
+          hasHidden = true
+          break
+        }
+      }
+    }
+    return getRowHeaderContextMenuItems(n, hasHidden)
+  }
+
+  /** Phase 4.5 — 执行行头右键菜单动作。 */
+  invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void {
+    const sel = this.engine.getSelection().selectedRange
+    const startRow = sel?.startRow ?? ctx.targetRowIndex
+    const endRow = sel?.endRow ?? ctx.targetRowIndex
+    const underlying: number[] = []
+    for (let r = startRow; r <= endRow; r++) {
+      underlying.push(this.engine.getData().resolveUnderlyingRow?.(r) ?? r)
+    }
+    const sortedIds = [...new Set(underlying)].sort((a, b) => a - b)
+    if (id === 'insert-above') {
+      const at = this.engine.getData().resolveUnderlyingRow?.(startRow) ?? startRow
+      this.insertRows(at, endRow - startRow + 1)
+    } else if (id === 'insert-below') {
+      const at = (this.engine.getData().resolveUnderlyingRow?.(endRow) ?? endRow) + 1
+      this.insertRows(at, endRow - startRow + 1)
+    } else if (id === 'delete-rows') {
+      this.deleteRows(sortedIds)
+    } else if (id === 'hide-rows') {
+      this.hideRows(sortedIds)
+    } else if (id === 'unhide-rows') {
+      const hiddenSet = new Set(this.engine.getHiddenRows())
+      const toUnhide = sortedIds.filter((id) => hiddenSet.has(id))
+      this.unhideRows(toUnhide)
+    } else if (id === 'resize-row-height') {
+      if (!this.rowHeightPopover || sortedIds.length === 0) return
+      this.pendingRowHeightIds = sortedIds
+      const currentHeight = this.engine.getRowHeight(sortedIds[0]!)
+      const pt = this.lastContextMenuPoint
+      const triggerRect = pt
+        ? { x: pt.clientX, y: pt.clientY, width: 0, height: 0 }
+        : { x: 100, y: 100, width: 0, height: 0 }
+      this.rowHeightPopover.open(triggerRect, currentHeight)
+    }
   }
 
   /** 执行一次 undo，并在成功后刷新视图与通知 consumer。 */
@@ -534,6 +666,48 @@ export class WebGridRuntime {
       return
     }
 
+    // Phase 4.5 — 行头区域（x < rowHeaderWidth，y >= headerHeight）右键：选中整行并打开行头菜单
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    if (rowHeaderWidth > 0 && event.x < rowHeaderWidth) {
+      const scrollY = frame.viewport.scrollY ?? 0
+      const logicalY = event.y - headerHeight + scrollY
+      if (logicalY >= 0) {
+        const rowIndex = frame.rowsAxis.positionToIndex(logicalY)
+        const colCount = frame.data.getSchema().fields.length
+        if (rowIndex >= 0 && rowIndex < frame.rowsAxis.getCount() && colCount > 0) {
+          // 选中整行
+          this.engine.setSelection({
+            activeCell: { rowIndex, colIndex: 0 },
+            anchorCell: { rowIndex, colIndex: 0 },
+            extentCell: { rowIndex, colIndex: colCount - 1 },
+            selectedRange: { startRow: rowIndex, endRow: rowIndex, startCol: 0, endCol: colCount - 1 },
+          })
+          this.afterEngineMutation()
+          const ctx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: rowIndex }
+          this.lastContextMenuContext = ctx
+          this.lastContextMenuPoint = {
+            clientX: event.clientX ?? event.x,
+            clientY: event.clientY ?? event.y,
+          }
+          const hiddenSet = new Set(this.engine.getHiddenRows())
+          const sel = this.engine.getSelection().selectedRange!
+          let hasHidden = false
+          for (let r = sel.startRow; r <= sel.endRow && !hasHidden; r++) {
+            const underlying = this.engine.getData().resolveUnderlyingRow?.(r) ?? r
+            if (hiddenSet.has(underlying)) hasHidden = true
+          }
+          const n = sel.endRow - sel.startRow + 1
+          const items = getRowHeaderContextMenuItems(n, hasHidden)
+          this.contextMenuLayer.open({
+            clientX: event.clientX ?? event.x,
+            clientY: event.clientY ?? event.y,
+            items,
+          })
+        }
+      }
+      return
+    }
+
     const hit = hitTestCell(frame, event)
     if (!hit) return
     if (hit.colIndex < 0 || hit.rowIndex < 0) return
@@ -579,6 +753,10 @@ export class WebGridRuntime {
   /** 处理右键菜单项选择，优先执行内置 sort/filter/clipboard 行为。 */
   handleContextMenuSelected(id: ContextMenuAction): void {
     const ctx = this.lastContextMenuContext
+    if (ctx?.targetKind === 'rowHeader') {
+      this.invokeRowHeaderContextMenuAction(id, { targetRowIndex: ctx.targetRowIndex })
+      return
+    }
     if (ctx?.targetKind === 'columnHeader') {
       if (id === 'sort-asc') {
         this.sortLayer?.setSpec({ fieldId: ctx.field.id, direction: 'asc' })
@@ -1170,6 +1348,7 @@ export class WebGridRuntime {
       this.renderer.render(frame)
       this.syncResizeHandles()
       this.syncFillHandle()
+      this.syncHideToggleHandles()
       this.syncCellEditorPosition()
     })
   }
@@ -1180,6 +1359,7 @@ export class WebGridRuntime {
     this.renderer.render(frame)
     this.syncResizeHandles()
     this.syncFillHandle()
+    this.syncHideToggleHandles()
     this.syncCellEditorPosition()
   }
 
@@ -1195,6 +1375,15 @@ export class WebGridRuntime {
     if (!this.handleLayer || this.resizeDrag) return
     const frame = this.engine.getFrame()
     this.handleLayer.sync(computeResizeHandles(frame))
+  }
+
+  /** 根据当前 frame 同步 hide-toggle handle layer。 */
+  private syncHideToggleHandles(): void {
+    if (!this.hideToggleHandle) return
+    const frame = this.engine.getFrame()
+    this.hideToggleHandle.update(frame.collapsedRowGaps, {
+      rowHeaderWidth: frame.viewport.rowHeaderWidth,
+    })
   }
 
   /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。 */

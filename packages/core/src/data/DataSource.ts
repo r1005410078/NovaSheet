@@ -6,10 +6,13 @@ import type { CellValue, Row, Schema } from './Schema'
  * - rowsChanged：部分行内容变更（updateCell、异步分页加载完毕等）
  * - schemaChanged：字段定义变化（M3 加列重排、字段增删时使用）
  * - rowCountChanged：行数变化
+ * - rowsInserted / rowsDeleted：行结构变更（Phase 4.5+）；订阅方按需重建本地缓存
  */
 export type DataSourceEvent =
   | { type: 'reset' }
   | { type: 'rowsChanged'; startIndex: number; endIndex: number }
+  | { type: 'rowsInserted'; at: number; count: number }
+  | { type: 'rowsDeleted'; removed: readonly number[] }
   | { type: 'schemaChanged' }
   | { type: 'rowCountChanged'; newCount: number }
 

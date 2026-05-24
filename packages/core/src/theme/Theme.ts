@@ -68,6 +68,8 @@ export interface ThemeColors {
   readonly selectionBorder: string
   /** 菜单项悬停背景色（Phase 4.0 Context menu） */
   readonly menuItemHover: string
+  /** 隐藏行 indicator 三角颜色（Phase 4.5） */
+  readonly hideIndicator: string
 }
 
 /** 单元格相关 token。 */
@@ -90,6 +92,10 @@ export interface ThemeIcons {
   readonly sortDesc: IconDef
   /** 筛选激活状态图标 */
   readonly filter: IconDef
+  /** 隐藏行上边界三角 SVG path（Phase 4.5，供 Path2D 直接消费） */
+  readonly hideBoundaryUp: string
+  /** 隐藏行下边界三角 SVG path（Phase 4.5，供 Path2D 直接消费） */
+  readonly hideBoundaryDown: string
 }
 
 /** 滚动条样式（`DomGridHost` 通过 CSS 变量应用到原生 scroll-host）。 */
@@ -137,6 +143,14 @@ export interface ThemeFrozenSeparator {
   readonly width: number
 }
 
+/** Phase 4.5 新增：隐藏行 indicator 几何参数。 */
+export interface ThemeDimensions {
+  /** 三角 indicator 距行边界的垂直偏移（px） */
+  readonly hideTriangleOffset: number
+  /** 三角 indicator 水平内边距（px） */
+  readonly hideTrianglePadX: number
+}
+
 /** 完整主题定义接口，所有视觉值必须从此处读取，禁止在 src/render/ 内硬编码 */
 export interface Theme {
   readonly metrics: ThemeMetrics
@@ -146,4 +160,5 @@ export interface Theme {
   readonly scrollbar: ThemeScrollbar
   readonly frozenSeparator: ThemeFrozenSeparator
   readonly emptyState: ThemeEmptyState
+  readonly dimensions: ThemeDimensions
 }

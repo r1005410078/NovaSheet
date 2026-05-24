@@ -16,7 +16,7 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 ## Current state (read first on a fresh session)
 
-**Last shipped:** **Phase 4.4 sorting / filtering** — merged to `main`. Current shipped interaction stack includes context menu, clipboard, undo/redo, resize handles, autofit/multi-line wrap, Sheets-style fill handle, and ViewLayer / ViewPipeline-based sort + filter with column-header menu, header icons, and DOM FilterPopover.
+**Last shipped:** **Phase 4.5 row structural ops + row header menu** — merged to `main`. Current shipped interaction stack now also includes `HideRowsLayer`, row header right-click menu (Insert above/below · Delete · Hide · Unhide · Resize row height…), Sheets-style hide-boundary triangle indicators with DOM hit-zone for unhide, and the row-height popover.
 
 - `@novasheet/core` — platform-independent (data, schema, theme, layout, `DefaultGridEngine`, `RenderFrame`). No DOM.
 - `@novasheet/web` — browser host/runtime (`DomGridHost`, `NativeScroller`, `ScrollMapper`, `WebGridRuntime`) plus public `Grid` facade and Canvas2D backend assembly.
@@ -24,13 +24,13 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses the public `Grid` facade from `@novasheet/web`.
 
-**Next milestone:** **Phase 4.5 row structural ops + row header context menu** unless the user redirects. Phase 4.4 sort/filter is complete and documented in `docs/superpowers/specs/2026-05-22-sort-filter-design.md`. Phase 4.5 design in `docs/superpowers/specs/2026-05-23-novasheet-phase-4-5-row-structural.md`. Column structural ops are split out to **Phase 4.6**; column drag reorder to **Phase 4.7**.
+**Next milestone:** **Phase 4.6 column structural ops + column header menu extension** unless the user redirects. Phase 4.5 row structural is complete and documented in `docs/superpowers/specs/2026-05-23-novasheet-phase-4-5-row-structural.md` + the implementation plan at `docs/superpowers/plans/2026-05-23-novasheet-phase-4-5-row-structural.md`. Column drag reorder remains scheduled for **Phase 4.7**.
 
 **Per-Grid scheduler convention** (invariant #5): each `Grid` owns `new FrameScheduler()` shared by `Canvas2DRenderer` and `NativeScroller` via `WebGridRuntime`; the `frameScheduler` singleton from `util/raf` is NOT used cross-Grid.
 
 **Dependency direction:** `@novasheet/core` is platform-independent. `@novasheet/web-canvas2d` depends on core for render contracts; `@novasheet/web` depends on core + web-canvas2d to expose the browser `Grid` facade and Canvas2D backend. `apps/storybook` depends on `@novasheet/web` + `@novasheet/core`.
 
-**Phase 4 status:** 4.0 context menu, 4.1 clipboard, 4.2 undo/redo, 4.3 fill handle, and 4.4 sort/filter are shipped. 4.5 (row structural + row header menu) is in design. 4.6 (column structural + column header menu extension) and 4.7 (column drag reorder) remain future work.
+**Phase 4 status:** 4.0 context menu, 4.1 clipboard, 4.2 undo/redo, 4.3 fill handle, 4.4 sort/filter, and 4.5 row structural + row header menu are shipped. 4.6 (column structural + column header menu extension) and 4.7 (column drag reorder) remain future work.
 
 **Locked architectural decisions** (do NOT revisit casually, see spec ADR §A):
 

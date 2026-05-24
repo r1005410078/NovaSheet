@@ -561,7 +561,7 @@ describe('ChunkedAxis.insertRange', () => {
     axis.insertRange(5, 3, DEFAULT_SIZE)
     expect(axis.getCount()).toBe(13)
     expect(axis.getSize(5)).toBe(DEFAULT_SIZE)
-    expect(axis.indexToPosition(13)).toBe(13 * DEFAULT_SIZE)
+    expect(axis.getTotalSize()).toBe(13 * DEFAULT_SIZE)
   })
 
   it('在已 setSize 的行之后插入，前段尺寸保留', () => {
@@ -577,7 +577,8 @@ describe('ChunkedAxis.insertRange', () => {
     axis.insertRange(1023, 4, DEFAULT_SIZE)
     expect(axis.getCount()).toBe(2054)
     expect(axis.getSize(1023)).toBe(DEFAULT_SIZE)
-    expect(axis.indexToPosition(2054)).toBe(2054 * DEFAULT_SIZE)
+    // indexToPosition clamps to [0, count-1]，用 getTotalSize() 校验总尺寸
+    expect(axis.getTotalSize()).toBe(2054 * DEFAULT_SIZE)
   })
 })
 
@@ -613,42 +614,54 @@ Expected：FAIL，`insertRange is not a function`。
 
 在 `packages/core/src/layout/ChunkedAxis.ts` 内 class 体加：
 
+> **Plan-bug fix (2026-05-24):** ChunkedAxis 内部没有扁平的 `sizes: Float64Array`，而是
+> `chunks: Chunk[]` 分块结构（每块最多 CHUNK_SIZE=1024 项）。原始伪代码基于不存在的扁平数组，
+> 已替换为正确实现：先把所有 chunk 展平成逐项尺寸数组，做插入/删除操作后再重设 count，
+> 然后调用 `rebuild()` 重建 chunks / chunkPrefixSum。
+
 ```ts
+/** 把当前 chunks 展平成每项尺寸的 number[] —— insertRange/deleteRange 共用辅助。 */
+private flattenSizes(): number[] {
+  const result: number[] = new Array(this.count)
+  for (let i = 0; i < this.count; i++) {
+    const chunkIdx = i >>> 10
+    const offset = i & 1023
+    const chunk = this.chunks[chunkIdx]!
+    result[i] = chunk.sizes === null ? this.defaultSize : chunk.sizes[offset]!
+  }
+  return result
+}
+
 insertRange(beforeIndex: number, count: number, defaultSize: number): void {
   if (count <= 0) return
   const at = Math.max(0, Math.min(beforeIndex, this.count))
+  const flat = this.flattenSizes()
   const inserted = Array.from({ length: count }, () => defaultSize)
-  this.sizes = Float64Array.from([
-    ...this.sizes.subarray(0, at),
-    ...inserted,
-    ...this.sizes.subarray(at),
-  ])
+  flat.splice(at, 0, ...inserted)
   this.count += count
+  // 用展平后的尺寸数组重建 chunk 结构：先 rebuild 建好空 chunk 骨架，再按项 setSize。
+  // 简化：直接重设 defaultSize 相同的项不需要 setSize；只对偏离 defaultSize 的项调用。
   this.rebuild()
+  for (let i = 0; i < flat.length; i++) {
+    if (flat[i] !== this.defaultSize) this.setSize(i, flat[i]!)
+  }
 }
 
 deleteRange(removedSortedIndices: readonly number[]): void {
   if (removedSortedIndices.length === 0) return
-  const next = new Float64Array(this.count - removedSortedIndices.length)
-  let write = 0
-  let read = 0
-  let removedCursor = 0
-  while (read < this.count) {
-    if (removedCursor < removedSortedIndices.length && read === removedSortedIndices[removedCursor]) {
-      read += 1
-      removedCursor += 1
-      continue
-    }
-    next[write++] = this.sizes[read]!
-    read += 1
-  }
-  this.sizes = next
+  const flat = this.flattenSizes()
+  const removeSet = new Set(removedSortedIndices)
+  const next = flat.filter((_, i) => !removeSet.has(i))
   this.count = next.length
   this.rebuild()
+  for (let i = 0; i < next.length; i++) {
+    if (next[i] !== this.defaultSize) this.setSize(i, next[i]!)
+  }
 }
 ```
 
-如果 `count` / `sizes` 是 private 改成 protected 或加 internal 调用。`rebuild` 必须是既有的内部方法；不存在则先在本任务里抽出。
+> **注意**：`rebuild()` 是 `private` 方法，在同一 class 内直接调用没有障碍。
+> `count` 字段在同一 class 内直接赋值，不需要改可见性。
 
 - [ ] **Step 5: 验证 GREEN**
 
@@ -780,185 +793,18 @@ Expected：FAIL，`Cannot find module`。
 
 - [ ] **Step 3: 实现 HideRowsLayer**
 
-Create `packages/core/src/view/HideRowsLayer.ts`:
-
-```ts
-import type { DataSource, DataSourceEvent } from '../data/DataSource'
-import type { Row } from '../data/Schema'
-import type { ViewLayer, ViewLayerChange } from './ViewLayer'
-
-export interface CollapsedGap {
-  readonly atViewRow: number
-  readonly hiddenCount: number
-  readonly hiddenIds: readonly number[]
-}
-
-interface HideRowsSpec {
-  readonly hidden: readonly number[]
-}
-
-/**
- * Phase 4.5：把指定 underlying 行从视图中隐藏。
- * 与 SortLayer / FilterLayer 同款 ViewLayer 协议；在 ViewPipeline 中
- * 推荐放在 Sort → Filter → **Hide** 顺序末端（spec §5.3）。
- */
-export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
-  readonly id = 'hide-rows'
-
-  private hiddenUnderlyingRows = new Set<number>()
-  private visibleRows: number[] = []
-  private upstream: DataSource | null = null
-  private unsubscribe: (() => void) | null = null
-  private notify: ((change: ViewLayerChange) => void) | null = null
-
-  bindPipeline(notify: (change: ViewLayerChange) => void): void {
-    this.notify = notify
-  }
-
-  getSpec(): HideRowsSpec {
-    return { hidden: Array.from(this.hiddenUnderlyingRows).sort((a, b) => a - b) }
-  }
-
-  setSpec(spec: HideRowsSpec): boolean {
-    const next = new Set(spec.hidden)
-    if (sameSet(this.hiddenUnderlyingRows, next)) return false
-    this.hiddenUnderlyingRows = next
-    this.rebuildVisible()
-    this.notify?.({ layerId: this.id, reason: 'spec-changed' })
-    return true
-  }
-
-  setHidden(underlyingRowIds: readonly number[]): boolean {
-    return this.setSpec({ hidden: underlyingRowIds })
-  }
-
-  addHidden(underlyingRowIds: readonly number[]): boolean {
-    const next = new Set(this.hiddenUnderlyingRows)
-    for (const id of underlyingRowIds) next.add(id)
-    return this.setSpec({ hidden: Array.from(next) })
-  }
-
-  removeHidden(underlyingRowIds: readonly number[]): boolean {
-    const next = new Set(this.hiddenUnderlyingRows)
-    for (const id of underlyingRowIds) next.delete(id)
-    return this.setSpec({ hidden: Array.from(next) })
-  }
-
-  getHiddenUnderlyingRows(): ReadonlySet<number> {
-    return this.hiddenUnderlyingRows
-  }
-
-  getCollapsedGaps(): readonly CollapsedGap[] {
-    if (this.hiddenUnderlyingRows.size === 0) return []
-    const hiddenSorted = Array.from(this.hiddenUnderlyingRows).sort((a, b) => a - b)
-    const gaps: CollapsedGap[] = []
-    let run: number[] = []
-    for (const id of hiddenSorted) {
-      if (run.length === 0 || id === run[run.length - 1]! + 1) {
-        run.push(id)
-      } else {
-        gaps.push(this.makeGap(run))
-        run = [id]
-      }
-    }
-    if (run.length > 0) gaps.push(this.makeGap(run))
-    return gaps
-  }
-
-  wrap(upstream: DataSource): DataSource {
-    this.unsubscribe?.()
-    this.upstream = upstream
-    this.unsubscribe = upstream.subscribe((event) => this.onUpstreamEvent(event))
-    this.rebuildVisible()
-    const layer = this
-    return {
-      getRowCount: () => layer.visibleRows.length,
-      getSchema: () => upstream.getSchema(),
-      getRows: (start, end) =>
-        upstream.getRows(layer.visibleRows[start]!, layer.visibleRows[end]!) as Row[],
-      getCell: (rowIndex, fieldId) => upstream.getCell(layer.visibleRows[rowIndex]!, fieldId),
-      subscribe: (listener) => upstream.subscribe(listener),
-      resolveUnderlyingRow: (viewRow) => {
-        const upstreamRow = layer.visibleRows[viewRow]
-        if (upstreamRow == null) return viewRow
-        return upstream.resolveUnderlyingRow?.(upstreamRow) ?? upstreamRow
-      },
-      findViewRow: (underlyingRow) => {
-        const upstreamView = upstream.findViewRow?.(underlyingRow) ?? underlyingRow
-        const idx = layer.visibleRows.indexOf(upstreamView)
-        return idx >= 0 ? idx : -1
-      },
-    }
-  }
-
-  private onUpstreamEvent(event: DataSourceEvent): void {
-    let changed = false
-    switch (event.type) {
-      case 'rowsInserted': {
-        const shifted = new Set<number>()
-        for (const id of this.hiddenUnderlyingRows) {
-          shifted.add(id >= event.at ? id + event.count : id)
-        }
-        this.hiddenUnderlyingRows = shifted
-        changed = true
-        break
-      }
-      case 'rowsDeleted': {
-        const removed = new Set(event.removed)
-        const sortedRemoved = [...event.removed]
-        const shifted = new Set<number>()
-        for (const id of this.hiddenUnderlyingRows) {
-          if (removed.has(id)) continue
-          let shift = 0
-          for (const r of sortedRemoved) if (r < id) shift += 1
-          shifted.add(id - shift)
-        }
-        this.hiddenUnderlyingRows = shifted
-        changed = true
-        break
-      }
-      case 'reset':
-        this.hiddenUnderlyingRows.clear()
-        changed = true
-        break
-      default:
-        break
-    }
-    if (changed) {
-      this.rebuildVisible()
-      this.notify?.({ layerId: this.id, reason: event.type === 'reset' ? 'upstream-reset' : 'spec-changed' })
-    }
-  }
-
-  private rebuildVisible(): void {
-    const upstream = this.upstream
-    if (upstream == null) {
-      this.visibleRows = []
-      return
-    }
-    const total = upstream.getRowCount()
-    const next: number[] = []
-    for (let i = 0; i < total; i += 1) {
-      if (!this.hiddenUnderlyingRows.has(i)) next.push(i)
-    }
-    this.visibleRows = next
-  }
-
-  private makeGap(run: number[]): CollapsedGap {
-    const first = run[0]!
-    // 找上邻 visible underlying，即 first - 1 走 visibleRows 的 indexOf
-    const upperUnderlying = first - 1
-    const atViewRow = upperUnderlying < 0 ? -1 : this.visibleRows.indexOf(upperUnderlying)
-    return { atViewRow, hiddenCount: run.length, hiddenIds: run.slice() }
-  }
-}
-
-function sameSet(a: ReadonlySet<number>, b: ReadonlySet<number>): boolean {
-  if (a.size !== b.size) return false
-  for (const v of a) if (!b.has(v)) return false
-  return true
-}
-```
+> **[Bug Fix 2026-05-24]** `wrap()` 必须返回一个完整的 `DataSource` 实现类（`HiddenDataSource`），
+> 而非 inline object literal。参照 `packages/core/src/view/SortLayer.ts` 中的 `SortedDataSource`
+> 作为规范模式：
+>
+> - 维护独立的 `listeners: Set<DataSourceListener>`，`subscribe` 返回移除闭包；
+> - `getRows(start, end)` 逐 view 行迭代，通过 `upstream.getRows(underlyingId, underlyingId)`
+>   逐行取值，而非 `upstream.getRows(visibleRows[start], visibleRows[end])`（后者在 hidden gap
+>   存在时会返回包含 hidden 行的连续 underlying 区间）；
+> - `handleUpstreamEvent` 先调用 layer 的 shift 逻辑，再向自己的 listeners 转发事件；
+> - 可选地实现 `MutableDataSource` 的 `updateCell` 等方法（参照 SortedDataSource lines 122-145）。
+>
+> 具体实现见 `packages/core/src/view/HideRowsLayer.ts`（以实际文件为准，此处不再粘贴代码块）。
 
 - [ ] **Step 4: 验证 GREEN**
 
@@ -1013,6 +859,9 @@ describe('HideRowsLayer 与 Sort/Filter 组合', () => {
     const sort = new SortLayer()
     sort.setSpec({ fieldId: 'n', direction: 'desc' })
     const hide = new HideRowsLayer()
+    // HideRowsLayer.setHidden 接收 raw underlying row ids（spec §5.1 / §8.4）。
+    // rows: [{ n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }] → underlying 0=n=1, 1=n=2
+    // 隐藏 underlying 0（n=1）和 1（n=2），Sort desc 后留下 n=4, n=3。
     hide.setHidden([0, 1]) // underlying n=1, n=2
     pipeline.add(sort)
     pipeline.add(hide)
@@ -1199,7 +1048,9 @@ case 'insertRows':
 
 - [ ] **Step 6: 验证 GREEN（部分）**
 
-`bun run --filter @novasheet/core typecheck` PASS（联合体完整）。runtime test 需 Task 11 engine API 完成后再 GREEN。
+`bun run --filter @novasheet/core typecheck` PASS（联合体完整）。runtime test 需 Task 10 engine API 完成后再 GREEN。
+
+**注（实现时发现）：** 测试文件引用的 engine 方法（`insertRows` / `deleteRows` / `hideRows` / `setRowHeights` / `getRowHeight` / `getDefaultRowHeight` / `getDataSource` / `getHiddenRows`）在 Task 10 前不存在，直接写方法调用会导致 `typecheck` 报错，与 "typecheck PASS" 的要求矛盾。正确做法：对每一处未实现调用加 `// @ts-expect-error Task 10 adds <method>` 注释；Task 10 落地后统一移除。
 
 - [ ] **Step 7: Commit**
 
@@ -1457,7 +1308,7 @@ insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
   if (!ds?.insertRows) throw new Error('DataSource does not support insertRows')
   const before = this.selection.getSelection()
   const newIds = ds.insertRows(beforeUnderlyingRow, count)
-  this.axisRow.insertRange(beforeUnderlyingRow, count, this.theme.dimensions.rowHeight)
+  this.axisRow.insertRange(beforeUnderlyingRow, count, this.theme.metrics.rowHeight)
   this.selection.remapAfterRowsInserted(beforeUnderlyingRow, count)
   const after = this.selection.getSelection()
   this.undoStack.push({ kind: 'insertRows', at: beforeUnderlyingRow, count, newIds, selectionBefore: before, selectionAfter: after })
@@ -1522,7 +1373,7 @@ getHiddenRows(): readonly number[] {
 case 'insertRows':
   // redo
   this.dataSource.insertRows!(cmd.at, cmd.count)
-  this.axisRow.insertRange(cmd.at, cmd.count, this.theme.dimensions.rowHeight)
+  this.axisRow.insertRange(cmd.at, cmd.count, this.theme.metrics.rowHeight)
   this.selection.setSelection(cmd.selectionAfter)
   break
 // unapply 把 cmd 反向：删 [cmd.at .. cmd.at+cmd.count-1]
@@ -1731,39 +1582,50 @@ Create `packages/web-canvas2d/tests/painters/HeaderRowPainter.hide.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'bun:test'
-import { RecordingContext2D } from '../helpers/recording-context'
+import { createRecordingContext } from '../helpers/recording-context'
 import { HeaderRowPainter } from '../../src/painters/HeaderRowPainter'
 import { denseGridTheme } from '@novasheet/core'
 
-function frameWithGaps(gaps: { atViewRow: number; hiddenCount: number; hiddenIds: number[]; yPx: number }[], rowHeaderWidth: number) {
+// rowHeaderWidth 放在 viewport 字段下，与 RenderFrame 实际形状一致。
+// fill(Path2D) 在 RecordingContext 中记录为 op:'fillPath'（非 'fill'）。
+function frameWithGaps(
+  gaps: { atViewRow: number; hiddenCount: number; hiddenIds: number[]; yPx: number }[],
+  rowHeaderWidth: number,
+) {
   return {
-    // 最小 frame 形状，按既有 HeaderRowPainter 期望补
-    rowHeaderWidth,
+    viewport: { rowHeaderWidth },
     collapsedRowGaps: gaps,
     theme: denseGridTheme,
-    // ... 其它必需字段；参照既有 painter 测试 helper
   } as any
 }
 
 describe('HeaderRowPainter — 三角 hide indicator', () => {
-  it('rowHeaderWidth ≥ 24 时为每个 gap 画两个三角 fill', () => {
-    const ctx = new RecordingContext2D()
-    const painter = new HeaderRowPainter()
-    painter.paint(ctx as any, frameWithGaps([{ atViewRow: 2, hiddenCount: 3, hiddenIds: [3, 4, 5], yPx: 60 }], 30))
-    const fillCount = ctx.calls.filter((c) => c.op === 'fill').length
-    // 至少 2 个 fill（两个三角）；具体>= 因 painter 可能调用其它 fill
-    expect(fillCount).toBeGreaterThanOrEqual(2)
+  it('rowHeaderWidth ≥ 24 时为每个 gap 画两个三角 fillPath', () => {
+    const { ctx, ops } = createRecordingContext()
+    const painter = new HeaderRowPainter(denseGridTheme)
+    painter.paint(
+      ctx as any,
+      frameWithGaps([{ atViewRow: 2, hiddenCount: 3, hiddenIds: [3, 4, 5], yPx: 60 }], 30),
+    )
+    // fill(Path2D) → RecordingContext 记为 'fillPath'
+    const fillPathCount = ops.filter((c) => c.op === 'fillPath').length
+    expect(fillPathCount).toBeGreaterThanOrEqual(2)
   })
 
   it('rowHeaderWidth < 24 时跳过三角', () => {
-    const ctx = new RecordingContext2D()
-    const painter = new HeaderRowPainter()
-    painter.paint(ctx as any, frameWithGaps([{ atViewRow: 2, hiddenCount: 3, hiddenIds: [3, 4, 5], yPx: 60 }], 20))
-    // 与不画三角时的 fill count 相同：通过比较有 gap vs 无 gap 时的 fill 数
-    const ctxNoGap = new RecordingContext2D()
-    painter.paint(ctxNoGap as any, frameWithGaps([], 20))
-    expect(ctx.calls.filter((c) => c.op === 'fill').length).toBe(
-      ctxNoGap.calls.filter((c) => c.op === 'fill').length,
+    const { ctx, ops } = createRecordingContext()
+    const painter = new HeaderRowPainter(denseGridTheme)
+    painter.paint(
+      ctx as any,
+      frameWithGaps([{ atViewRow: 2, hiddenCount: 3, hiddenIds: [3, 4, 5], yPx: 60 }], 20),
+    )
+    const { ops: opsNoGap } = createRecordingContext()
+    painter.paint(
+      createRecordingContext().ctx as any,
+      frameWithGaps([], 20),
+    )
+    expect(ops.filter((c) => c.op === 'fillPath').length).toBe(
+      opsNoGap.filter((c) => c.op === 'fillPath').length,
     )
   })
 })
@@ -1774,7 +1636,8 @@ describe('HeaderRowPainter — 三角 hide indicator', () => {
 在 HeaderRowPainter 的 paint 末尾加：
 
 ```ts
-if (frame.rowHeaderWidth >= 24) {
+// rowHeaderWidth 在 frame.viewport.rowHeaderWidth，非 frame 顶层字段
+if (frame.viewport.rowHeaderWidth >= 24) {
   for (const gap of frame.collapsedRowGaps) {
     drawHideTriangle(ctx, frame, gap.yPx, 'up')
     drawHideTriangle(ctx, frame, gap.yPx, 'down')

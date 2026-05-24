@@ -49,7 +49,7 @@ export type {
   GridEngineOptions,
   SetViewDataOptions,
 } from './engine/GridEngine'
-export type { RenderFrame } from './render/RenderFrame'
+export type { RenderFrame, RenderFrameCollapsedGap } from './render/RenderFrame'
 export type { ViewportSnapshot } from './layout/Viewport'
 
 // 交互层（Phase 3）
@@ -92,6 +92,7 @@ export type { CellEditSession } from './interaction/CellEditModel'
 export {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
+  getRowHeaderContextMenuItems,
 } from './interaction/ContextMenuModel'
 export type {
   CellMenuContext,
@@ -99,6 +100,7 @@ export type {
   ContextMenuContext,
   ContextMenuItem,
   ContextMenuTargetKind,
+  RowHeaderMenuContext,
 } from './interaction/ContextMenuModel'
 export { computeCellRect } from './interaction/CellLayout'
 export type { CellRect } from './interaction/CellLayout'
@@ -118,6 +120,8 @@ export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'
 // 视图坐标协议（Phase 4.4）
 export { findViewRow, resolveUnderlyingRow } from './view/coordinates'
 export { FilterLayer } from './view/FilterLayer'
+export { HideRowsLayer } from './view/HideRowsLayer'
+export type { CollapsedGap } from './view/HideRowsLayer'
 export type { FilterOp, FilterSpec } from './view/FilterLayer'
 export { SortLayer } from './view/SortLayer'
 export type { SortDirection, SortSpec } from './view/SortLayer'

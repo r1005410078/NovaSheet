@@ -57,6 +57,7 @@ export interface GridEngine {
   setViewportSize(width: number, height: number): void
   setHeaderHeight(headerHeight: number): void
   setScroll(logicalX: number, logicalY: number): void
+  getRowHeight(rowIndex: number): number
   setRowHeight(rowIndex: number, height: number): void
   setColumnWidth(fieldId: string, width: number): void
   selectCell(cell: CellAddress, options?: SelectCellOptions): void
@@ -105,4 +106,25 @@ export interface GridEngine {
 
   /** Phase 4.3 — 提交一次填充柄写入为 1 步 undo;无写入时返回 null。 */
   commitFill(source: CellRange, fill: CellRange, direction: FillDirection): FillCommitResult | null
+
+  /** Phase 4.5 — 将指定底层行 ID 列表从隐藏集移除并触发 invalidate。 */
+  unhideRows(underlyingRowIds: readonly number[]): void
+
+  /** Phase 4.5 — 返回当前隐藏行的 underlying row id 升序数组。 */
+  getHiddenRows(): readonly number[]
+
+  /** Phase 4.5 — 在 beforeUnderlyingRow 位置前插入 count 空白行；DataSource 不可写时返回空数组。 */
+  insertRows(beforeUnderlyingRow: number, count: number): readonly number[]
+
+  /** Phase 4.5 — 删除给定 underlying row id 集合（调用方保证升序、去重）。 */
+  deleteRows(underlyingRowIds: readonly number[]): void
+
+  /** Phase 4.5 — 隐藏给定 underlying row id 集合。 */
+  hideRows(underlyingRowIds: readonly number[]): void
+
+  /** Phase 4.5 — 批量将多行高度设置为同一值 h，并入 undo 栈。 */
+  setRowHeights(rowIds: readonly number[], h: number): void
+
+  /** Phase 4.5 — 程序化设置选区。 */
+  setSelection(selection: GridSelection): void
 }

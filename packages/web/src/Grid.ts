@@ -1,10 +1,12 @@
 import type {
   CellRange,
+  ContextMenuItem,
   ContextMenuAction,
   ContextMenuContext,
   DataSource,
   FrozenConfig,
   GridEngineOptions,
+  GridSelection,
   PasteSkippedCell,
   Theme,
   FilterLayer,
@@ -44,6 +46,12 @@ export interface GridOptions extends GridEngineOptions {
   onRedo?: (event: RedoEvent) => void
   /** Phase 4.3 — fill handle 提交完成时触发。 */
   onFill?: (event: FillEvent) => void
+  /** Phase 4.5 — 插入行完成时触发。 */
+  onRowsInserted?: (event: { at: number; count: number; newIds: readonly number[] }) => void
+  /** Phase 4.5 — 删除行完成时触发。 */
+  onRowsDeleted?: (event: { removed: readonly number[] }) => void
+  /** Phase 4.5 — 行隐藏状态变化时触发（hide / unhide 均触发）。 */
+  onHideChange?: (event: { hidden: readonly number[] }) => void
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -63,6 +71,9 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
     onUndo: _u,
     onRedo: _y,
     onFill: _f,
+    onRowsInserted: _ri,
+    onRowsDeleted: _rd,
+    onHideChange: _hc,
     ...engineOptions
   } = options
   void _r
@@ -74,6 +85,9 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
   void _u
   void _y
   void _f
+  void _ri
+  void _rd
+  void _hc
   return engineOptions
 }
 
@@ -86,8 +100,10 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
  */
 export class Grid {
   private readonly delegate: GridController
+  private readonly options: GridOptions
 
   constructor(container: HTMLElement, options: GridOptions) {
+    this.options = options
     const backend = options.renderer ?? 'canvas2d'
     const engineOptions = engineOptionsFrom(options)
 
@@ -214,6 +230,56 @@ export class Grid {
 
   onFill(handler: (event: FillEvent) => void): () => void {
     return this.delegate.onFill(handler)
+  }
+
+  /** Phase 4.5 — 在 beforeUnderlyingRow 位置前插入 count 空白行，返回新行 id。 */
+  insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
+    const newIds = this.delegate.insertRows(beforeUnderlyingRow, count)
+    this.options.onRowsInserted?.({ at: beforeUnderlyingRow, count, newIds })
+    return newIds
+  }
+
+  /** Phase 4.5 — 删除给定 underlying row id 集合（升序、去重）。 */
+  deleteRows(underlyingRowIds: readonly number[]): void {
+    this.delegate.deleteRows(underlyingRowIds)
+    this.options.onRowsDeleted?.({ removed: underlyingRowIds })
+  }
+
+  /** Phase 4.5 — 隐藏给定 underlying row id 集合，触发视图刷新。 */
+  hideRows(underlyingRowIds: readonly number[]): void {
+    this.delegate.hideRows(underlyingRowIds)
+    this.options.onHideChange?.({ hidden: this.delegate.getHiddenRows() })
+  }
+
+  /** Phase 4.5 — 取消隐藏指定底层行 ID，触发视图刷新。 */
+  unhideRows(underlyingRowIds: readonly number[]): void {
+    this.delegate.unhideRows(underlyingRowIds)
+    this.options.onHideChange?.({ hidden: this.delegate.getHiddenRows() })
+  }
+
+  /** Phase 4.5 — 返回当前隐藏行的 underlying row id 升序数组。 */
+  getHiddenRows(): readonly number[] {
+    return this.delegate.getHiddenRows()
+  }
+
+  /** Phase 4.5 — 批量将多行高度设置为同一值 h。 */
+  setRowHeights(rowIds: readonly number[], h: number): void {
+    this.delegate.setRowHeights(rowIds, h)
+  }
+
+  /** Phase 4.5 — 程序化设置选区（不入 undo 栈）。 */
+  setSelection(selection: GridSelection): void {
+    this.delegate.setSelection(selection)
+  }
+
+  /** Phase 4.5 — 返回行头右键菜单项列表（含条件 unhide 项）。 */
+  getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
+    return this.delegate.getRowHeaderContextMenuItems(ctx)
+  }
+
+  /** Phase 4.5 — 执行行头右键菜单动作。 */
+  invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void {
+    this.delegate.invokeRowHeaderContextMenuAction(id, ctx)
   }
 
   getSortLayer(): SortLayer {

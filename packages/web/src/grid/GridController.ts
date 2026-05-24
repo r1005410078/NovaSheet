@@ -1,9 +1,11 @@
 import type {
+  ContextMenuItem,
   DataSource,
   FilterLayer,
   FilterSpec,
   FrozenConfig,
   GridEngineOptions,
+  GridSelection,
   SortLayer,
   SortSpec,
   Theme,
@@ -84,6 +86,24 @@ export interface GridController {
   setOnUndo(cb: (event: UndoEvent) => void): void
   setOnRedo(cb: (event: RedoEvent) => void): void
   onFill(handler: (event: FillEvent) => void): () => void
+  /** Phase 4.5 — 取消隐藏指定底层行 ID。 */
+  unhideRows(underlyingRowIds: readonly number[]): void
+  /** Phase 4.5 — 返回当前隐藏行的 underlying row id 升序数组。 */
+  getHiddenRows(): readonly number[]
+  /** Phase 4.5 — 在 beforeUnderlyingRow 位置前插入 count 空白行。 */
+  insertRows(beforeUnderlyingRow: number, count: number): readonly number[]
+  /** Phase 4.5 — 删除给定 underlying row id 集合（调用方保证升序、去重）。 */
+  deleteRows(underlyingRowIds: readonly number[]): void
+  /** Phase 4.5 — 隐藏给定 underlying row id 集合。 */
+  hideRows(underlyingRowIds: readonly number[]): void
+  /** Phase 4.5 — 批量将多行高度设置为同一值 h。 */
+  setRowHeights(rowIds: readonly number[], h: number): void
+  /** Phase 4.5 — 程序化设置选区。 */
+  setSelection(selection: GridSelection): void
+  /** Phase 4.5 — 返回行头右键菜单项列表（含条件项）。 */
+  getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[]
+  /** Phase 4.5 — 执行行头右键菜单动作。 */
+  invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void
   getSortLayer(): SortLayer
   getFilterLayer(): FilterLayer
   getViewPipeline(): ViewPipeline

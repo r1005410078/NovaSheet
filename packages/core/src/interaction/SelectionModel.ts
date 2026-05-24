@@ -7,6 +7,7 @@
 
 import type { GridIndexBounds, SelectionNavigationIntent } from './SelectionNavigation'
 import { applySelectionNavigation } from './SelectionNavigation'
+import { remapRowIndexAfterDelete, remapRowIndexAfterInsert } from '../coords/remap'
 
 export interface CellAddress {
   readonly rowIndex: number
@@ -111,6 +112,56 @@ export class SelectionModel {
   /** Phase 3.3 — 键盘导航；返回移动后的焦点格（用于滚动跟随）。 */
   navigate(intent: SelectionNavigationIntent, bounds: GridIndexBounds): CellAddress | null {
     return applySelectionNavigation(this, intent, bounds)
+  }
+
+  /** Phase 4.5 — 插入行后平移选区；委托给 `coords/remap.ts`。 */
+  remapAfterRowsInserted(at: number, count: number): void {
+    if (this.selection.selectedRange == null) return
+    const shift = (r: number) => remapRowIndexAfterInsert(r, at, count)
+    const range = this.selection.selectedRange
+    this.selection = {
+      activeCell: this.selection.activeCell
+        ? { ...this.selection.activeCell, rowIndex: shift(this.selection.activeCell.rowIndex) }
+        : null,
+      anchorCell: this.selection.anchorCell
+        ? { ...this.selection.anchorCell, rowIndex: shift(this.selection.anchorCell.rowIndex) }
+        : null,
+      extentCell: this.selection.extentCell
+        ? { ...this.selection.extentCell, rowIndex: shift(this.selection.extentCell.rowIndex) }
+        : null,
+      selectedRange: { ...range, startRow: shift(range.startRow), endRow: shift(range.endRow) },
+    }
+  }
+
+  /**
+   * Phase 4.5 — 删除行后收缩选区。委托给 `coords/remap.ts`；该函数对被删行返回 null。
+   * removedSorted 必须升序。整 range 全部被删 → clear；否则折叠到首/末存活行。
+   */
+  remapAfterRowsDeleted(removedSorted: readonly number[]): void {
+    if (this.selection.selectedRange == null) return
+    const range = this.selection.selectedRange
+    const survivors: number[] = []
+    for (let r = range.startRow; r <= range.endRow; r += 1) {
+      const mapped = remapRowIndexAfterDelete(r, removedSorted)
+      if (mapped !== null) survivors.push(mapped)
+    }
+    if (survivors.length === 0) {
+      this.selection = { activeCell: null, anchorCell: null, extentCell: null, selectedRange: null }
+      return
+    }
+    const startRow = survivors[0]!
+    const endRow = survivors[survivors.length - 1]!
+    const remap = (cell: { rowIndex: number; colIndex: number } | null) => {
+      if (cell == null) return null
+      const mapped = remapRowIndexAfterDelete(cell.rowIndex, removedSorted)
+      return { ...cell, rowIndex: mapped ?? startRow }
+    }
+    this.selection = {
+      activeCell: remap(this.selection.activeCell),
+      anchorCell: remap(this.selection.anchorCell),
+      extentCell: remap(this.selection.extentCell),
+      selectedRange: { ...range, startRow, endRow },
+    }
   }
 }
 

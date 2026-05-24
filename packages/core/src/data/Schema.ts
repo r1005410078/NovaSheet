@@ -35,6 +35,8 @@ export interface Field {
   wrap?: boolean
   /** type-specific 配置，如 singleSelect 的 choices——M2+ 启用 */
   options?: Record<string, unknown>
+  /** 新行插入时该字段的默认值；undefined 表示空 */
+  defaultValue?: CellValue
 }
 
 /** 表格 Schema：有序字段列表 */

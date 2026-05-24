@@ -1,5 +1,6 @@
 import type { DataSource, DataSourceEvent, DataSourceListener } from './DataSource'
 import type { CellValue, Row, Schema } from './Schema'
+import type { DeletedRowSnapshot } from './MutableDataSource'
 
 /**
  * 全内存 DataSource——M1 的默认实现，所有方法同步。
@@ -74,6 +75,51 @@ export class InMemoryDataSource implements DataSource {
     this.rows = rows.slice()
     this.emit({ type: 'rowCountChanged', newCount: this.rows.length })
     this.emit({ type: 'reset' })
+  }
+
+  /** 在 beforeUnderlyingRow 位置插入 count 行空白行，返回新行 rowId 列表 */
+  insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
+    if (count <= 0) return []
+    const at = Math.max(0, Math.min(beforeUnderlyingRow, this.rows.length))
+    const blank: Row[] = Array.from({ length: count }, () => this.makeDefaultRow())
+    this.rows.splice(at, 0, ...blank)
+    const newIds = Array.from({ length: count }, (_, i) => at + i)
+    this.emit({ type: 'rowsInserted', at, count })
+    this.emit({ type: 'rowCountChanged', newCount: this.rows.length })
+    return newIds
+  }
+
+  /**
+   * 删除给定 underlying rowId 集合（须升序、去重）。
+   * 返回被删行快照，供 undo 还原。
+   */
+  deleteRows(underlyingRowIds: readonly number[]): readonly DeletedRowSnapshot[] {
+    for (let i = 1; i < underlyingRowIds.length; i += 1) {
+      if (underlyingRowIds[i]! <= underlyingRowIds[i - 1]!) {
+        throw new Error('InMemoryDataSource.deleteRows: rowIds must be ascending and unique')
+      }
+    }
+    const snapshots: DeletedRowSnapshot[] = []
+    for (const id of underlyingRowIds) {
+      const row = this.rows[id]
+      if (row == null) continue
+      snapshots.push({ originalUnderlyingRow: id, cells: { ...row } })
+    }
+    // 从大到小删，保持前面索引稳定
+    for (let i = underlyingRowIds.length - 1; i >= 0; i -= 1) {
+      this.rows.splice(underlyingRowIds[i]!, 1)
+    }
+    this.emit({ type: 'rowsDeleted', removed: underlyingRowIds })
+    this.emit({ type: 'rowCountChanged', newCount: this.rows.length })
+    return snapshots
+  }
+
+  private makeDefaultRow(): Row {
+    const out: Record<string, CellValue> = {}
+    for (const field of this.schema.fields) {
+      if (field.defaultValue !== undefined) out[field.id] = field.defaultValue
+    }
+    return out as Row
   }
 
   /** 向所有监听器广播事件 */

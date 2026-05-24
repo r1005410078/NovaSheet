@@ -18,12 +18,14 @@ import {
   SortLayer,
   ViewPipeline,
   type CellRange,
+  type ContextMenuItem,
   type ContextMenuAction,
   type ContextMenuContext,
   type DataSource,
   type FilterSpec,
   type FrozenConfig,
   type GridEngineOptions,
+  type GridSelection,
   type PasteSkippedCell,
   type SortSpec,
   type Theme,
@@ -46,7 +48,9 @@ import { DomCellEditor } from '../interaction/DomCellEditor'
 import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import { DomHandleLayer } from '../interaction/DomHandleLayer'
+import { HideToggleHandle } from '../handle/HideToggleHandle'
 import { FilterPopover } from '../interaction/FilterPopover'
+import { RowHeightPopover } from '../overlay/RowHeightPopover'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
 /**
@@ -70,9 +74,11 @@ export class Canvas2DBackend implements GridController {
   private host: DomGridHost
   private handleLayer: DomHandleLayer
   private fillHandleLayer: DomFillHandleLayer
+  private hideToggleHandle: HideToggleHandle
   private cellEditor: DomCellEditor
   private contextMenuLayer!: DomContextMenuLayer
   private filterPopover!: FilterPopover
+  private rowHeightPopover!: RowHeightPopover
   private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
@@ -143,6 +149,10 @@ export class Canvas2DBackend implements GridController {
     })
     this.fillHandleLayer.attach()
 
+    this.hideToggleHandle = new HideToggleHandle(this.container, {
+      onUnhide: (ids) => this.runtime.unhideRows(ids),
+    })
+
     this.host = new DomGridHost({
       container: this.container,
       scheduler: this.scheduler,
@@ -165,6 +175,7 @@ export class Canvas2DBackend implements GridController {
       measurer: this.measurer,
       handleLayer: this.handleLayer,
       fillLayer: this.fillHandleLayer,
+      hideToggleHandle: this.hideToggleHandle,
       viewPipeline: this.pipeline,
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
@@ -192,6 +203,13 @@ export class Canvas2DBackend implements GridController {
     })
     this.filterPopover.attach()
     this.runtime.setFilterPopover(this.filterPopover)
+    this.rowHeightPopover = new RowHeightPopover({
+      onSubmit: (px) => {
+        const ids = this.runtime.getPendingRowHeightIds()
+        if (ids.length > 0) this.runtime.setRowHeights(ids, px)
+      },
+    })
+    this.runtime.setRowHeightPopover(this.rowHeightPopover)
     this.runtime.setClipboardAdapter(this.clipboardAdapter)
     if (gridOptions?.onContextMenuAction) {
       this.runtime.setOnContextMenuAction(gridOptions.onContextMenuAction)
@@ -296,7 +314,9 @@ export class Canvas2DBackend implements GridController {
     this.pipeline.dispose()
     this.contextMenuLayer.destroy()
     this.filterPopover.destroy()
+    this.rowHeightPopover.destroy()
     this.runtime.destroy()
+    this.hideToggleHandle.destroy()
     this.fillHandleLayer.destroy()
     this.handleLayer.destroy()
     this.cellEditor.destroy()
@@ -338,6 +358,42 @@ export class Canvas2DBackend implements GridController {
     return () => this.runtime.setOnFill(() => {})
   }
 
+  unhideRows(underlyingRowIds: readonly number[]): void {
+    this.runtime.unhideRows(underlyingRowIds)
+  }
+
+  getHiddenRows(): readonly number[] {
+    return this.runtime.getHiddenRows()
+  }
+
+  insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
+    return this.runtime.insertRows(beforeUnderlyingRow, count)
+  }
+
+  deleteRows(underlyingRowIds: readonly number[]): void {
+    this.runtime.deleteRows(underlyingRowIds)
+  }
+
+  hideRows(underlyingRowIds: readonly number[]): void {
+    this.runtime.hideRows(underlyingRowIds)
+  }
+
+  setRowHeights(rowIds: readonly number[], h: number): void {
+    this.runtime.setRowHeights(rowIds, h)
+  }
+
+  setSelection(selection: GridSelection): void {
+    this.runtime.setSelection(selection)
+  }
+
+  getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
+    return this.runtime.getRowHeaderContextMenuItems(ctx)
+  }
+
+  invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void {
+    this.runtime.invokeRowHeaderContextMenuAction(id, ctx)
+  }
+
   getSortLayer(): SortLayer {
     return this.sortLayer
   }
@@ -377,8 +433,10 @@ export class Canvas2DBackend implements GridController {
 
   private createPipeline(source: DataSource): ViewPipeline {
     const pipeline = new ViewPipeline(source)
-    pipeline.add(this.filterLayer)
+    // Pipeline 组合顺序对齐 spec §5.3：Sort → Filter → Hide（Hide 由 engine 接管）。
+    // pipeline.add 按顺序 wrap，先 add 的 layer 位于 composition 最内层（先生效）。
     pipeline.add(this.sortLayer)
+    pipeline.add(this.filterLayer)
     return pipeline
   }
 

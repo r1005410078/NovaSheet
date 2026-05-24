@@ -11,7 +11,16 @@ import type { GridSelection } from '../interaction/SelectionModel'
 import type { Axis } from '../layout/ChunkedAxis'
 import type { ViewportSnapshot } from '../layout/Viewport'
 import type { Theme } from '../theme/Theme'
+import type { CollapsedGap } from '../view/HideRowsLayer'
 import type { ViewPipeline } from '../view/ViewPipeline'
+
+/**
+ * Phase 4.5 — `RenderFrame` 中的折叠行间隙，扩展 `CollapsedGap` 加入像素坐标。
+ * `yPx` 为间隙下边界相对于 canvas 顶部的像素偏移（= view-row `atViewRow` 的底边 − scrollY）。
+ */
+export interface RenderFrameCollapsedGap extends CollapsedGap {
+  readonly yPx: number
+}
 
 export interface RenderFrame {
   data: DataSource
@@ -24,4 +33,6 @@ export interface RenderFrame {
   viewPipeline?: Pick<ViewPipeline, 'collectHeaderDecorations'>
   /** Phase 3.5 — 正在编辑的单元格（若有）。 */
   cellEdit?: CellEditSession
+  /** Phase 4.5 — 当前可见区域内的折叠行间隙列表（含像素坐标）。 */
+  collapsedRowGaps: readonly RenderFrameCollapsedGap[]
 }

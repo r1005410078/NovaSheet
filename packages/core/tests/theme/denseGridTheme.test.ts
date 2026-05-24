@@ -60,3 +60,17 @@ describe('denseGridTheme — 默认主题', () => {
     expect(denseGridTheme.scrollbar.borderRadius).toBeGreaterThan(0)
   })
 })
+
+describe('denseGridTheme — Phase 4.5 tokens', () => {
+  it('提供 hideBoundary icons', () => {
+    expect(typeof denseGridTheme.icons.hideBoundaryUp).toBe('string')
+    expect(typeof denseGridTheme.icons.hideBoundaryDown).toBe('string')
+  })
+  it('提供 hideIndicator 颜色', () => {
+    expect(typeof denseGridTheme.colors.hideIndicator).toBe('string')
+  })
+  it('提供 hideTriangleOffset / hideTrianglePadX', () => {
+    expect(denseGridTheme.dimensions.hideTriangleOffset).toBe(4)
+    expect(denseGridTheme.dimensions.hideTrianglePadX).toBe(6)
+  })
+})
