@@ -493,7 +493,7 @@ export class ChunkedAxis {
 
   /** 把当前所有 chunk 展平成逐项尺寸 number[]，insertRange/deleteRange 共用。 */
   private flattenSizes(): number[] {
-    const result: number[] = new Array(this.count)
+    const result: number[] = Array.from({ length: this.count })
     for (let i = 0; i < this.count; i++) {
       const chunkIdx = i >>> 10
       const offset = i & 1023
