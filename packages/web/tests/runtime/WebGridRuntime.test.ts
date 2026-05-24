@@ -24,6 +24,7 @@ function makeEngine(): GridEngine {
     setHeaderHeight: mock(() => {}),
     setScroll: mock(() => {}),
     setRowHeight: mock(() => {}),
+    getRowHeight: mock(() => 28),
     setColumnWidth: mock(() => {}),
     selectCell: mock(() => {}),
     navigateSelection: mock(() => false),

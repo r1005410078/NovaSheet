@@ -57,6 +57,7 @@ export interface GridEngine {
   setViewportSize(width: number, height: number): void
   setHeaderHeight(headerHeight: number): void
   setScroll(logicalX: number, logicalY: number): void
+  getRowHeight(rowIndex: number): number
   setRowHeight(rowIndex: number, height: number): void
   setColumnWidth(fieldId: string, width: number): void
   selectCell(cell: CellAddress, options?: SelectCellOptions): void

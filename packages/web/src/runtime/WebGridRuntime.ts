@@ -66,6 +66,7 @@ import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
 import type { HideToggleHandle } from '../handle/HideToggleHandle'
 import type { FilterPopover } from '../interaction/FilterPopover'
+import type { RowHeightPopover } from '../overlay/RowHeightPopover'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -207,6 +208,10 @@ export class WebGridRuntime {
   private contextMenuLayer?: DomContextMenuLayer
   /** DOM filter popover。 */
   private filterPopover?: FilterPopover
+  /** Phase 4.5 行高调整弹层。 */
+  private rowHeightPopover?: RowHeightPopover
+  /** resize-row-height 操作暂存的行 id 列表，供 onSubmit 回调读取。 */
+  private pendingRowHeightIds: number[] = []
   /** 外部接管 context menu action 的回调。 */
   private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
   /** 外部声明剪贴板可用状态，用于 legacy paste 菜单 enabled 判断。 */
@@ -302,6 +307,16 @@ export class WebGridRuntime {
   setFilterPopover(popover: FilterPopover): void {
     this.filterPopover = popover
     this.syncFilterPopoverTheme()
+  }
+
+  /** 注入 row-height popover（Phase 4.5）。 */
+  setRowHeightPopover(popover: RowHeightPopover): void {
+    this.rowHeightPopover = popover
+  }
+
+  /** 返回当前 resize-row-height 操作暂存的行 id 列表，供 onSubmit 回调读取。 */
+  getPendingRowHeightIds(): number[] {
+    return this.pendingRowHeightIds
   }
 
   /** 替换当前 view pipeline 与 sort/filter 状态层。 */
@@ -478,8 +493,16 @@ export class WebGridRuntime {
       const hiddenSet = new Set(this.engine.getHiddenRows())
       const toUnhide = sortedIds.filter((id) => hiddenSet.has(id))
       this.unhideRows(toUnhide)
+    } else if (id === 'resize-row-height') {
+      if (!this.rowHeightPopover || sortedIds.length === 0) return
+      this.pendingRowHeightIds = sortedIds
+      const currentHeight = this.engine.getRowHeight(sortedIds[0]!)
+      const pt = this.lastContextMenuPoint
+      const triggerRect = pt
+        ? { x: pt.clientX, y: pt.clientY, width: 0, height: 0 }
+        : { x: 100, y: 100, width: 0, height: 0 }
+      this.rowHeightPopover.open(triggerRect, currentHeight)
     }
-    // 'resize-row-height' — Task 16 will hook real popover; no-op here
   }
 
   /** 执行一次 undo，并在成功后刷新视图与通知 consumer。 */

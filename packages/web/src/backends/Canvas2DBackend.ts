@@ -50,6 +50,7 @@ import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import { DomHandleLayer } from '../interaction/DomHandleLayer'
 import { HideToggleHandle } from '../handle/HideToggleHandle'
 import { FilterPopover } from '../interaction/FilterPopover'
+import { RowHeightPopover } from '../overlay/RowHeightPopover'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
 /**
@@ -77,6 +78,7 @@ export class Canvas2DBackend implements GridController {
   private cellEditor: DomCellEditor
   private contextMenuLayer!: DomContextMenuLayer
   private filterPopover!: FilterPopover
+  private rowHeightPopover!: RowHeightPopover
   private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
@@ -201,6 +203,13 @@ export class Canvas2DBackend implements GridController {
     })
     this.filterPopover.attach()
     this.runtime.setFilterPopover(this.filterPopover)
+    this.rowHeightPopover = new RowHeightPopover({
+      onSubmit: (px) => {
+        const ids = this.runtime.getPendingRowHeightIds()
+        if (ids.length > 0) this.runtime.setRowHeights(ids, px)
+      },
+    })
+    this.runtime.setRowHeightPopover(this.rowHeightPopover)
     this.runtime.setClipboardAdapter(this.clipboardAdapter)
     if (gridOptions?.onContextMenuAction) {
       this.runtime.setOnContextMenuAction(gridOptions.onContextMenuAction)
