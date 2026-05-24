@@ -49,4 +49,12 @@ export class RowHeightPopover {
     this.container = null
     this.opts.onClose?.()
   }
+
+  /**
+   * 幂等清理：关闭已打开的弹层并丢弃所有引用。Grid.destroy 路径调用以避免 portaled dialog
+   * 在 grid 卸载后仍残留于 document.body。
+   */
+  destroy(): void {
+    this.close()
+  }
 }

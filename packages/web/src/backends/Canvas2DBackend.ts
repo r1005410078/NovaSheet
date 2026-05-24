@@ -314,6 +314,7 @@ export class Canvas2DBackend implements GridController {
     this.pipeline.dispose()
     this.contextMenuLayer.destroy()
     this.filterPopover.destroy()
+    this.rowHeightPopover.destroy()
     this.runtime.destroy()
     this.hideToggleHandle.destroy()
     this.fillHandleLayer.destroy()
@@ -432,8 +433,10 @@ export class Canvas2DBackend implements GridController {
 
   private createPipeline(source: DataSource): ViewPipeline {
     const pipeline = new ViewPipeline(source)
-    pipeline.add(this.filterLayer)
+    // Pipeline 组合顺序对齐 spec §5.3：Sort → Filter → Hide（Hide 由 engine 接管）。
+    // pipeline.add 按顺序 wrap，先 add 的 layer 位于 composition 最内层（先生效）。
     pipeline.add(this.sortLayer)
+    pipeline.add(this.filterLayer)
     return pipeline
   }
 

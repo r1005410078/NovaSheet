@@ -24,4 +24,13 @@ describe('RowHeightPopover', () => {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(onSubmit).not.toHaveBeenCalled()
   })
+
+  it('destroy() 关闭弹层；重复 destroy 幂等', () => {
+    const popover = new RowHeightPopover({ onSubmit: () => {} })
+    popover.open({ x: 0, y: 0, width: 0, height: 0 }, 30)
+    expect(document.body.querySelector('[role=dialog]')).toBeTruthy()
+    popover.destroy()
+    expect(document.body.querySelector('[role=dialog]')).toBeNull()
+    popover.destroy() // idempotent
+  })
 })
