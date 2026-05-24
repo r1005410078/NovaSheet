@@ -22,6 +22,7 @@ import type {
   DataSource,
   FilterLayer,
   FilterOp,
+  Field,
   FrozenConfig,
   GridEngine,
   SetViewDataOptions,
@@ -53,6 +54,7 @@ import {
   type CellRange,
   type ContextMenuAction,
   type ContextMenuContext,
+  type ContextMenuItem,
   type FillDirection,
   type GridSelection,
   type FillTarget,
@@ -65,8 +67,10 @@ import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
 import type { HideToggleHandle } from '../handle/HideToggleHandle'
+import type { HideColToggleHandle } from '../handle/HideColToggleHandle'
 import type { FilterPopover } from '../interaction/FilterPopover'
 import type { RowHeightPopover } from '../overlay/RowHeightPopover'
+import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -123,6 +127,8 @@ export interface WebGridRuntimeOptions {
   filterLayer?: FilterLayer
   /** Phase 4.5 — DOM hide-toggle 点击区 layer。 */
   hideToggleHandle?: HideToggleHandle
+  /** Phase 4.6 — DOM hide-col-toggle 点击区 layer。 */
+  hideColToggleHandle?: HideColToggleHandle
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -202,6 +208,8 @@ export class WebGridRuntime {
   private filterLayer?: FilterLayer
   /** Phase 4.5 — DOM hide-toggle 点击区 layer。 */
   private hideToggleHandle?: HideToggleHandle
+  /** Phase 4.6 — DOM hide-col-toggle 点击区 layer。 */
+  private hideColToggleHandle?: HideColToggleHandle
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
   /** DOM 右键菜单 layer。 */
@@ -210,8 +218,12 @@ export class WebGridRuntime {
   private filterPopover?: FilterPopover
   /** Phase 4.5 行高调整弹层。 */
   private rowHeightPopover?: RowHeightPopover
+  /** Phase 4.6 列宽调整弹层。 */
+  private columnWidthPopover?: ColumnWidthPopover
   /** resize-row-height 操作暂存的行 id 列表，供 onSubmit 回调读取。 */
   private pendingRowHeightIds: number[] = []
+  /** resize-column-width 操作暂存的 fieldId 列表，供 onSubmit 回调读取。 */
+  private pendingColumnWidthFieldIds: string[] = []
   /** 外部接管 context menu action 的回调。 */
   private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
   /** 外部声明剪贴板可用状态，用于 legacy paste 菜单 enabled 判断。 */
@@ -288,6 +300,7 @@ export class WebGridRuntime {
     this.sortLayer = opts.sortLayer
     this.filterLayer = opts.filterLayer
     this.hideToggleHandle = opts.hideToggleHandle
+    this.hideColToggleHandle = opts.hideColToggleHandle
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -314,9 +327,24 @@ export class WebGridRuntime {
     this.rowHeightPopover = popover
   }
 
+  /** 注入 column-width popover（Phase 4.6）。 */
+  setColumnWidthPopover(popover: ColumnWidthPopover): void {
+    this.columnWidthPopover = popover
+  }
+
+  /** 注入 hide-col toggle handle（Phase 4.6）。 */
+  setHideColToggleHandle(handle: HideColToggleHandle): void {
+    this.hideColToggleHandle = handle
+  }
+
   /** 返回当前 resize-row-height 操作暂存的行 id 列表，供 onSubmit 回调读取。 */
   getPendingRowHeightIds(): number[] {
     return this.pendingRowHeightIds
+  }
+
+  /** 返回当前 resize-column-width 操作暂存的 fieldId 列表，供 onSubmit 回调读取。 */
+  getPendingColumnWidthFieldIds(): readonly string[] {
+    return this.pendingColumnWidthFieldIds
   }
 
   /** 替换当前 view pipeline 与 sort/filter 状态层。 */
@@ -444,8 +472,49 @@ export class WebGridRuntime {
     this.afterEngineMutation()
   }
 
+  /** Phase 4.6 — 在 schema field index 前插入 count 个列字段，刷新视图并返回新字段。 */
+  insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
+    if (this.destroyed) return []
+    const fields = this.engine.insertCols(beforeFieldIndex, count)
+    this.afterEngineMutation()
+    return fields
+  }
+
+  /** Phase 4.6 — 按 fieldId 删除列字段，刷新视图。 */
+  deleteCols(fieldIds: readonly string[]): void {
+    if (this.destroyed) return
+    this.engine.deleteCols(fieldIds)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.6 — 隐藏给定 fieldId 集合，刷新视图。 */
+  hideCols(fieldIds: readonly string[]): void {
+    if (this.destroyed) return
+    this.engine.hideCols(fieldIds)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.6 — 取消隐藏给定 fieldId 集合，刷新视图。 */
+  unhideCols(fieldIds: readonly string[]): void {
+    if (this.destroyed) return
+    this.engine.unhideCols(fieldIds)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.6 — 批量将多列宽度设置为同一值，刷新视图。 */
+  setColumnWidths(fieldIds: readonly string[], widthPx: number): void {
+    if (this.destroyed) return
+    this.engine.setColumnWidths(fieldIds, widthPx)
+    this.afterEngineMutation()
+  }
+
+  /** Phase 4.6 — 返回当前隐藏列 fieldId。 */
+  getHiddenCols(): readonly string[] {
+    return this.engine.getHiddenCols()
+  }
+
   /** Phase 4.5 — 生成行头右键菜单项列表（含条件 unhide 项）。 */
-  getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly import('@novasheet/core').ContextMenuItem[] {
+  getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
     const sel = this.engine.getSelection().selectedRange
     const startRow = sel?.startRow ?? ctx.targetRowIndex
     const endRow = sel?.endRow ?? ctx.targetRowIndex
@@ -503,6 +572,92 @@ export class WebGridRuntime {
         : { x: 100, y: 100, width: 0, height: 0 }
       this.rowHeightPopover.open(triggerRect, currentHeight)
     }
+  }
+
+  /** Phase 4.6 — 生成列头右键菜单项列表（含结构项与条件 unhide 项）。 */
+  getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[] {
+    const frame = this.engine.getFrame()
+    const fields = frame.data.getSchema().fields
+    const field = fields[ctx.targetColIndex]
+    if (!field || !this.viewPipeline) return []
+    const sel = this.engine.getSelection().selectedRange
+    const startCol = sel?.startCol ?? ctx.targetColIndex
+    const endCol = sel?.endCol ?? ctx.targetColIndex
+    return getColumnHeaderContextMenuItems(
+      {
+        targetKind: 'columnHeader',
+        field,
+        colIndex: ctx.targetColIndex,
+        multiSelect: field.type === 'multiSelect',
+        selectedColCount: endCol - startCol + 1,
+        hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
+      },
+      this.viewPipeline,
+    )
+  }
+
+  /** Phase 4.6 — 执行列头右键菜单动作。 */
+  invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void {
+    const sel = this.engine.getSelection().selectedRange
+    const startCol = sel?.startCol ?? ctx.targetColIndex
+    const endCol = sel?.endCol ?? ctx.targetColIndex
+    const fieldIds: string[] = []
+    for (let viewCol = startCol; viewCol <= endCol; viewCol += 1) {
+      const fieldId = this.viewColToFieldId(viewCol)
+      if (fieldId) fieldIds.push(fieldId)
+    }
+    const count = endCol - startCol + 1
+    if (id === 'insert-col-left') {
+      this.insertCols(this.rawSchemaIndexBeforeViewCol(startCol), count)
+    } else if (id === 'insert-col-right') {
+      this.insertCols(this.rawSchemaIndexAfterViewCol(endCol), count)
+    } else if (id === 'delete-cols') {
+      this.deleteCols(fieldIds)
+    } else if (id === 'hide-cols') {
+      this.hideCols(fieldIds)
+    } else if (id === 'unhide-cols') {
+      this.unhideCols(this.collectHiddenInViewColRange(startCol, endCol))
+    } else if (id === 'resize-column-width') {
+      if (!this.columnWidthPopover || fieldIds.length === 0) return
+      this.pendingColumnWidthFieldIds = fieldIds
+      const fields = this.engine.getData().getSchema().fields
+      const currentWidth = fields.find((field) => field.id === fieldIds[0])?.width ?? 100
+      const point = this.lastContextMenuPoint
+      const triggerRect = point
+        ? { x: point.clientX, y: point.clientY, width: 0, height: 0 }
+        : { x: 100, y: 100, width: 0, height: 0 }
+      this.columnWidthPopover.open(triggerRect, currentWidth)
+    }
+  }
+
+  private viewColToFieldId(viewCol: number): string | null {
+    return this.engine.getData().getSchema().fields[viewCol]?.id ?? null
+  }
+
+  private rawSchemaIndexBeforeViewCol(viewCol: number): number {
+    const hiddenBefore = this.engine
+      .getFrame()
+      .collapsedColGaps.filter((gap) => gap.atViewCol < viewCol)
+      .reduce((sum, gap) => sum + gap.hiddenCount, 0)
+    return viewCol + hiddenBefore
+  }
+
+  private rawSchemaIndexAfterViewCol(viewCol: number): number {
+    const hiddenThrough = this.engine
+      .getFrame()
+      .collapsedColGaps.filter((gap) => gap.atViewCol <= viewCol)
+      .reduce((sum, gap) => sum + gap.hiddenCount, 0)
+    return viewCol + 1 + hiddenThrough
+  }
+
+  private collectHiddenInViewColRange(startCol: number, endCol: number): readonly string[] {
+    const out: string[] = []
+    for (const gap of this.engine.getFrame().collapsedColGaps) {
+      if (gap.atViewCol >= startCol - 1 && gap.atViewCol < endCol) {
+        out.push(...gap.hiddenFieldIds)
+      }
+    }
+    return out
   }
 
   /** 执行一次 undo，并在成功后刷新视图与通知 consumer。 */
@@ -646,11 +801,16 @@ export class WebGridRuntime {
       if (colIndex < 0 || colIndex >= fields.length) return
       const field = fields[colIndex]
       if (!field) return
+      const sel = this.engine.getSelection().selectedRange
+      const startCol = sel?.startCol ?? colIndex
+      const endCol = sel?.endCol ?? colIndex
       const ctx: ContextMenuContext = {
         targetKind: 'columnHeader',
         field,
         colIndex,
         multiSelect: field.type === 'multiSelect',
+        selectedColCount: endCol - startCol + 1,
+        hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
       }
       this.lastContextMenuContext = ctx
       this.lastContextMenuPoint = {
@@ -776,6 +936,17 @@ export class WebGridRuntime {
       }
       if (id === 'filter-open') {
         this.openFilterPopover(ctx)
+        return
+      }
+      if (
+        id === 'insert-col-left' ||
+        id === 'insert-col-right' ||
+        id === 'delete-cols' ||
+        id === 'hide-cols' ||
+        id === 'unhide-cols' ||
+        id === 'resize-column-width'
+      ) {
+        this.invokeColumnHeaderContextMenuAction(id, { targetColIndex: ctx.colIndex })
         return
       }
     }
@@ -1349,6 +1520,7 @@ export class WebGridRuntime {
       this.syncResizeHandles()
       this.syncFillHandle()
       this.syncHideToggleHandles()
+      this.syncHideColToggleHandles()
       this.syncCellEditorPosition()
     })
   }
@@ -1360,6 +1532,7 @@ export class WebGridRuntime {
     this.syncResizeHandles()
     this.syncFillHandle()
     this.syncHideToggleHandles()
+    this.syncHideColToggleHandles()
     this.syncCellEditorPosition()
   }
 
@@ -1383,6 +1556,15 @@ export class WebGridRuntime {
     const frame = this.engine.getFrame()
     this.hideToggleHandle.update(frame.collapsedRowGaps, {
       rowHeaderWidth: frame.viewport.rowHeaderWidth,
+    })
+  }
+
+  /** 根据当前 frame 同步 hide-col-toggle handle layer。 */
+  private syncHideColToggleHandles(): void {
+    if (!this.hideColToggleHandle) return
+    const frame = this.engine.getFrame()
+    this.hideColToggleHandle.update(frame.collapsedColGaps, {
+      headerHeight: frame.viewport.headerHeight,
     })
   }
 

@@ -18,7 +18,7 @@ const SCHEMA: Schema = {
 
 function makeData() {
   return new InMemoryDataSource({
-    schema: SCHEMA,
+    schema: { fields: SCHEMA.fields.map((field) => ({ ...field })) },
     rows: Array.from({ length: 50 }, (_, i) => ({ name: `n${i}`, age: i })),
   })
 }

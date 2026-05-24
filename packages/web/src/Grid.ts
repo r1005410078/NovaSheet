@@ -4,6 +4,7 @@ import type {
   ContextMenuAction,
   ContextMenuContext,
   DataSource,
+  Field,
   FrozenConfig,
   GridEngineOptions,
   GridSelection,
@@ -52,6 +53,12 @@ export interface GridOptions extends GridEngineOptions {
   onRowsDeleted?: (event: { removed: readonly number[] }) => void
   /** Phase 4.5 — 行隐藏状态变化时触发（hide / unhide 均触发）。 */
   onHideChange?: (event: { hidden: readonly number[] }) => void
+  /** Phase 4.6 — 插入列完成时触发。 */
+  onColumnsInserted?: (event: { at: number; count: number; newFields: readonly Field[] }) => void
+  /** Phase 4.6 — 删除列完成时触发。 */
+  onColumnsDeleted?: (event: { removed: readonly { index: number; fieldId: string }[] }) => void
+  /** Phase 4.6 — 列隐藏状态变化时触发（hide / unhide 均触发）。 */
+  onHideColsChange?: (event: { hidden: readonly string[] }) => void
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -74,6 +81,9 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
     onRowsInserted: _ri,
     onRowsDeleted: _rd,
     onHideChange: _hc,
+    onColumnsInserted: _ci,
+    onColumnsDeleted: _cd,
+    onHideColsChange: _hcc,
     ...engineOptions
   } = options
   void _r
@@ -88,6 +98,9 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
   void _ri
   void _rd
   void _hc
+  void _ci
+  void _cd
+  void _hcc
   return engineOptions
 }
 
@@ -280,6 +293,53 @@ export class Grid {
   /** Phase 4.5 — 执行行头右键菜单动作。 */
   invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void {
     this.delegate.invokeRowHeaderContextMenuAction(id, ctx)
+  }
+
+  /** Phase 4.6 — 在 schema field index 前插入 count 个列字段。 */
+  insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
+    const newFields = this.delegate.insertCols(beforeFieldIndex, count)
+    this.options.onColumnsInserted?.({ at: beforeFieldIndex, count, newFields })
+    return newFields
+  }
+
+  /** Phase 4.6 — 按 fieldId 删除列字段。 */
+  deleteCols(fieldIds: readonly string[]): void {
+    this.delegate.deleteCols(fieldIds)
+    this.options.onColumnsDeleted?.({
+      removed: fieldIds.map((fieldId, index) => ({ index, fieldId })),
+    })
+  }
+
+  /** Phase 4.6 — 隐藏给定 fieldId 集合。 */
+  hideCols(fieldIds: readonly string[]): void {
+    this.delegate.hideCols(fieldIds)
+    this.options.onHideColsChange?.({ hidden: this.delegate.getHiddenCols() })
+  }
+
+  /** Phase 4.6 — 取消隐藏给定 fieldId 集合。 */
+  unhideCols(fieldIds: readonly string[]): void {
+    this.delegate.unhideCols(fieldIds)
+    this.options.onHideColsChange?.({ hidden: this.delegate.getHiddenCols() })
+  }
+
+  /** Phase 4.6 — 返回当前隐藏列 fieldId。 */
+  getHiddenCols(): readonly string[] {
+    return this.delegate.getHiddenCols()
+  }
+
+  /** Phase 4.6 — 批量将多列宽度设置为同一值。 */
+  setColumnWidths(fieldIds: readonly string[], widthPx: number): void {
+    this.delegate.setColumnWidths(fieldIds, widthPx)
+  }
+
+  /** Phase 4.6 — 返回列头右键菜单项列表（含结构项）。 */
+  getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[] {
+    return this.delegate.getColumnHeaderContextMenuItems(ctx)
+  }
+
+  /** Phase 4.6 — 执行列头右键菜单动作。 */
+  invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void {
+    this.delegate.invokeColumnHeaderContextMenuAction(id, ctx)
   }
 
   getSortLayer(): SortLayer {

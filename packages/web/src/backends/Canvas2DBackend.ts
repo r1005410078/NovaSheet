@@ -22,6 +22,7 @@ import {
   type ContextMenuAction,
   type ContextMenuContext,
   type DataSource,
+  type Field,
   type FilterSpec,
   type FrozenConfig,
   type GridEngineOptions,
@@ -49,8 +50,10 @@ import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import { DomHandleLayer } from '../interaction/DomHandleLayer'
 import { HideToggleHandle } from '../handle/HideToggleHandle'
+import { HideColToggleHandle } from '../handle/HideColToggleHandle'
 import { FilterPopover } from '../interaction/FilterPopover'
 import { RowHeightPopover } from '../overlay/RowHeightPopover'
+import { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
 /**
@@ -75,10 +78,12 @@ export class Canvas2DBackend implements GridController {
   private handleLayer: DomHandleLayer
   private fillHandleLayer: DomFillHandleLayer
   private hideToggleHandle: HideToggleHandle
+  private hideColToggleHandle: HideColToggleHandle
   private cellEditor: DomCellEditor
   private contextMenuLayer!: DomContextMenuLayer
   private filterPopover!: FilterPopover
   private rowHeightPopover!: RowHeightPopover
+  private columnWidthPopover!: ColumnWidthPopover
   private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
@@ -152,6 +157,9 @@ export class Canvas2DBackend implements GridController {
     this.hideToggleHandle = new HideToggleHandle(this.container, {
       onUnhide: (ids) => this.runtime.unhideRows(ids),
     })
+    this.hideColToggleHandle = new HideColToggleHandle(this.container, {
+      onUnhide: (ids) => this.runtime.unhideCols(ids),
+    })
 
     this.host = new DomGridHost({
       container: this.container,
@@ -176,6 +184,7 @@ export class Canvas2DBackend implements GridController {
       handleLayer: this.handleLayer,
       fillLayer: this.fillHandleLayer,
       hideToggleHandle: this.hideToggleHandle,
+      hideColToggleHandle: this.hideColToggleHandle,
       viewPipeline: this.pipeline,
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
@@ -210,6 +219,13 @@ export class Canvas2DBackend implements GridController {
       },
     })
     this.runtime.setRowHeightPopover(this.rowHeightPopover)
+    this.columnWidthPopover = new ColumnWidthPopover({
+      onSubmit: (px) => {
+        const ids = this.runtime.getPendingColumnWidthFieldIds()
+        if (ids.length > 0) this.runtime.setColumnWidths(ids, px)
+      },
+    })
+    this.runtime.setColumnWidthPopover(this.columnWidthPopover)
     this.runtime.setClipboardAdapter(this.clipboardAdapter)
     if (gridOptions?.onContextMenuAction) {
       this.runtime.setOnContextMenuAction(gridOptions.onContextMenuAction)
@@ -315,8 +331,10 @@ export class Canvas2DBackend implements GridController {
     this.contextMenuLayer.destroy()
     this.filterPopover.destroy()
     this.rowHeightPopover.destroy()
+    this.columnWidthPopover.destroy()
     this.runtime.destroy()
     this.hideToggleHandle.destroy()
+    this.hideColToggleHandle.destroy()
     this.fillHandleLayer.destroy()
     this.handleLayer.destroy()
     this.cellEditor.destroy()
@@ -392,6 +410,38 @@ export class Canvas2DBackend implements GridController {
 
   invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void {
     this.runtime.invokeRowHeaderContextMenuAction(id, ctx)
+  }
+
+  insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
+    return this.runtime.insertCols(beforeFieldIndex, count)
+  }
+
+  deleteCols(fieldIds: readonly string[]): void {
+    this.runtime.deleteCols(fieldIds)
+  }
+
+  hideCols(fieldIds: readonly string[]): void {
+    this.runtime.hideCols(fieldIds)
+  }
+
+  unhideCols(fieldIds: readonly string[]): void {
+    this.runtime.unhideCols(fieldIds)
+  }
+
+  setColumnWidths(fieldIds: readonly string[], widthPx: number): void {
+    this.runtime.setColumnWidths(fieldIds, widthPx)
+  }
+
+  getHiddenCols(): readonly string[] {
+    return this.runtime.getHiddenCols()
+  }
+
+  getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[] {
+    return this.runtime.getColumnHeaderContextMenuItems(ctx)
+  }
+
+  invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void {
+    this.runtime.invokeColumnHeaderContextMenuAction(id, ctx)
   }
 
   getSortLayer(): SortLayer {

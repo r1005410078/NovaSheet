@@ -3,6 +3,7 @@ import type {
   DataSource,
   FilterLayer,
   FilterSpec,
+  Field,
   FrozenConfig,
   GridEngineOptions,
   GridSelection,
@@ -104,6 +105,22 @@ export interface GridController {
   getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[]
   /** Phase 4.5 — 执行行头右键菜单动作。 */
   invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void
+  /** Phase 4.6 — 在 schema field index 前插入 count 个列字段。 */
+  insertCols(beforeFieldIndex: number, count: number): readonly Field[]
+  /** Phase 4.6 — 按 fieldId 删除列字段。 */
+  deleteCols(fieldIds: readonly string[]): void
+  /** Phase 4.6 — 隐藏给定 fieldId 集合。 */
+  hideCols(fieldIds: readonly string[]): void
+  /** Phase 4.6 — 取消隐藏给定 fieldId 集合。 */
+  unhideCols(fieldIds: readonly string[]): void
+  /** Phase 4.6 — 批量将多列宽度设置为同一值。 */
+  setColumnWidths(fieldIds: readonly string[], widthPx: number): void
+  /** Phase 4.6 — 返回当前隐藏列 fieldId。 */
+  getHiddenCols(): readonly string[]
+  /** Phase 4.6 — 返回列头右键菜单项列表（含结构项）。 */
+  getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[]
+  /** Phase 4.6 — 执行列头右键菜单动作。 */
+  invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void
   getSortLayer(): SortLayer
   getFilterLayer(): FilterLayer
   getViewPipeline(): ViewPipeline

@@ -738,7 +738,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
 
     expect(menu.open).toHaveBeenCalledTimes(1)
     const options = menu.open.mock.calls[0]![0] as { items: readonly { id: string }[] }
-    expect(options.items.map((item) => item.id)).toEqual([
+    expect(options.items.slice(0, 5).map((item) => item.id)).toEqual([
       'filter-open',
       'filter-clear',
       'sort-asc',

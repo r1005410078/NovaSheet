@@ -130,6 +130,8 @@ class FilteredDataSource implements DataSource {
   readonly updateCellByUnderlyingRow?: MutableDataSource['updateCellByUnderlyingRow']
   readonly insertRows?: MutableDataSource['insertRows']
   readonly deleteRows?: MutableDataSource['deleteRows']
+  readonly insertField?: MutableDataSource['insertField']
+  readonly removeField?: MutableDataSource['removeField']
 
   constructor(
     private readonly upstream: DataSource,
@@ -158,6 +160,12 @@ class FilteredDataSource implements DataSource {
       }
       if (mutableUpstream.deleteRows) {
         this.deleteRows = (ids) => mutableUpstream.deleteRows!(ids)
+      }
+      if (mutableUpstream.insertField) {
+        this.insertField = (before, field) => mutableUpstream.insertField!(before, field)
+      }
+      if (mutableUpstream.removeField) {
+        this.removeField = (fieldId) => mutableUpstream.removeField!(fieldId)
       }
     }
     this.rebuild()
