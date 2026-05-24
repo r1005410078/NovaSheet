@@ -66,8 +66,6 @@ describe('Phase 4.6 type probes', () => {
         selectionAfter: emptySelection,
         frozenBefore: { topRows: 0, leftCols: 0, rightCols: 0 },
         frozenAfter: { topRows: 0, leftCols: 0, rightCols: 0 },
-        sortSpecBefore: null,
-        filterSpecBefore: null,
       },
       {
         kind: 'hideCols',

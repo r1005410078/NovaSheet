@@ -2,8 +2,6 @@ import type { CellValue, Field } from '../data/Schema'
 import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { CellRange, GridSelection } from '../interaction/SelectionModel'
 import type { FrozenConfig } from '../layout/FrozenRegions'
-import type { FilterSpec } from '../view/FilterLayer'
-import type { SortSpec } from '../view/SortLayer'
 
 export interface CellWrite {
   readonly rowIndex: number
@@ -104,8 +102,6 @@ export type UndoCommand =
       readonly selectionAfter: GridSelection
       readonly frozenBefore: FrozenConfig
       readonly frozenAfter: FrozenConfig
-      readonly sortSpecBefore: SortSpec | null
-      readonly filterSpecBefore: FilterSpec | null
     }
   | {
       readonly kind: 'hideCols'
