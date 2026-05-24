@@ -337,7 +337,14 @@ export class Canvas2DRenderer {
           rect: { x: gutter, y: bodyTop, width: contentRect.width - gutter, height: bodyHeight },
         })
       }
-      this.paintHeaders(paintOrder, data, colsAxis, excelChrome, ctx.frame.viewPipeline)
+      this.paintHeaders(
+        paintOrder,
+        data,
+        colsAxis,
+        excelChrome,
+        ctx.frame.viewPipeline,
+        ctx.frame.collapsedColGaps,
+      )
       this.paintRowHeaders(regions, rowsAxis, snapshot)
       return
     }
@@ -347,7 +354,14 @@ export class Canvas2DRenderer {
     this.preloadVisibleRows(ctx)
     for (const region of paintOrder)
       this.paintCellContentRegion(region, data, rowsAxis, colsAxis, ctx.frame.cellEdit?.cell)
-    this.paintHeaders(paintOrder, data, colsAxis, excelChrome, ctx.frame.viewPipeline)
+    this.paintHeaders(
+      paintOrder,
+      data,
+      colsAxis,
+      excelChrome,
+      ctx.frame.viewPipeline,
+      ctx.frame.collapsedColGaps,
+    )
     this.paintRowHeaders(regions, rowsAxis, snapshot)
   }
 
@@ -471,6 +485,7 @@ export class Canvas2DRenderer {
     colsAxis: Axis,
     columnLetters: boolean,
     viewPipeline: RenderFrame['viewPipeline'],
+    collapsedColGaps: RenderFrame['collapsedColGaps'],
   ): void {
     for (const region of paintOrder.filter((r) => r.rowBand === 'middle')) {
       if (region.colRange[1] < region.colRange[0]) continue
@@ -483,6 +498,7 @@ export class Canvas2DRenderer {
         scrollOffsetX: region.scrollOffsetX,
         columnLetters,
         viewPipeline,
+        collapsedColGaps,
       })
     }
   }

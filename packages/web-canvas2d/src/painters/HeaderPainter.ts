@@ -13,6 +13,7 @@ import {
   columnIndexToLetter,
   type Axis,
   type IconDef,
+  type RenderFrameCollapsedColGap,
   type Schema,
   type Theme,
   type ViewPipeline,
@@ -42,7 +43,13 @@ export interface HeaderPaintParams {
   columnLetters?: boolean
   /** Phase 4.4 — 提供列头排序/筛选状态装饰。 */
   viewPipeline?: Pick<ViewPipeline, 'collectHeaderDecorations'>
+  /** Phase 4.6 — 折叠列间隙，用于绘制 hide indicator。 */
+  collapsedColGaps?: readonly RenderFrameCollapsedColGap[]
 }
+
+const MIN_HEADER_HEIGHT_FOR_TRIANGLE = 24
+const TRIANGLE_WIDTH = 6
+const TRIANGLE_HEIGHT = 8
 
 /**
  * 列头绘制。M1 只画字段名；M2+ 加排序箭头、字段类型 icon、resize handle 命中区时
@@ -109,7 +116,48 @@ export class HeaderPainter {
     }
 
     this.paintHeaderGridLines(ctx, { colsAxis, colRange, x, width, scrollOffsetX, headerHeight })
+    this.paintCollapsedColGaps(ctx, params)
 
+    ctx.restore()
+  }
+
+  private paintCollapsedColGaps(
+    ctx: CanvasRenderingContext2D,
+    params: HeaderPaintParams,
+  ): void {
+    const gaps = params.collapsedColGaps ?? []
+    if (gaps.length === 0) return
+    const headerHeight = this.theme.metrics.headerHeight
+    if (headerHeight < MIN_HEADER_HEIGHT_FOR_TRIANGLE) return
+
+    const x = params.x ?? 0
+    const width = params.width
+    const { hideColTriangleOffset, hideColTrianglePadY } = this.theme.dimensions
+    const leftPath = new Path2D(
+      `M${TRIANGLE_WIDTH} 0 L0 ${TRIANGLE_HEIGHT / 2} L${TRIANGLE_WIDTH} ${TRIANGLE_HEIGHT} Z`,
+    )
+    const rightPath = new Path2D(
+      `M0 0 L${TRIANGLE_WIDTH} ${TRIANGLE_HEIGHT / 2} L0 ${TRIANGLE_HEIGHT} Z`,
+    )
+    const y = headerHeight - hideColTrianglePadY - TRIANGLE_HEIGHT
+
+    ctx.fillStyle = this.theme.colors.hideIndicator
+    for (const gap of gaps) {
+      if (gap.xPx < x || gap.xPx > x + width) continue
+      this.drawTriangle(ctx, leftPath, gap.xPx - hideColTriangleOffset - TRIANGLE_WIDTH, y)
+      this.drawTriangle(ctx, rightPath, gap.xPx + hideColTriangleOffset, y)
+    }
+  }
+
+  private drawTriangle(
+    ctx: CanvasRenderingContext2D,
+    path: Path2D,
+    x: number,
+    y: number,
+  ): void {
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.fill(path)
     ctx.restore()
   }
 
