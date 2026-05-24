@@ -1393,7 +1393,7 @@ export interface RenderFrame {
 
 ```ts
 const allColGaps = this.computeCollapsedColGaps()
-const { firstVisibleViewCol, lastVisibleViewCol } = this.colsAxis.getVisibleRange(
+const [firstVisibleViewCol, lastVisibleViewCol] = this.colsAxis.getVisibleRange(
   viewport.scrollX,
   viewport.scrollX + viewport.contentRect.width,
 )
