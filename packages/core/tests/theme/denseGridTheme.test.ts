@@ -74,3 +74,10 @@ describe('denseGridTheme — Phase 4.5 tokens', () => {
     expect(denseGridTheme.dimensions.hideTrianglePadX).toBe(6)
   })
 })
+
+describe('denseGridTheme — Phase 4.6 tokens', () => {
+  it('提供 hideColTriangleOffset / hideColTrianglePadY', () => {
+    expect(denseGridTheme.dimensions.hideColTriangleOffset).toBe(4)
+    expect(denseGridTheme.dimensions.hideColTrianglePadY).toBe(6)
+  })
+})

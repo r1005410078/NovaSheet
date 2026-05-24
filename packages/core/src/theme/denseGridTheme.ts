@@ -98,6 +98,8 @@ export const denseGridTheme: Theme = {
   dimensions: {
     hideTriangleOffset: 4,
     hideTrianglePadX: 6,
+    hideColTriangleOffset: 4,
+    hideColTrianglePadY: 6,
   },
   emptyState: {
     viewBoxWidth: 80,

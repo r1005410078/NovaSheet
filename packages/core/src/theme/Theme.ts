@@ -149,6 +149,10 @@ export interface ThemeDimensions {
   readonly hideTriangleOffset: number
   /** 三角 indicator 水平内边距（px） */
   readonly hideTrianglePadX: number
+  /** 列隐藏 indicator 距列边界的水平偏移（px） */
+  readonly hideColTriangleOffset: number
+  /** 列隐藏 indicator 垂直内边距（px） */
+  readonly hideColTrianglePadY: number
 }
 
 /** 完整主题定义接口，所有视觉值必须从此处读取，禁止在 src/render/ 内硬编码 */
