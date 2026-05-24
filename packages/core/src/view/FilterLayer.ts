@@ -73,6 +73,12 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
         this.clearInvalidSpec()
         this.notify?.({ layerId: this.id, reason: 'upstream-reset' })
       },
+      (source, event) => {
+        this.captureSchema(source)
+        if (event.type !== 'colsDeleted') return
+        const removedIds = new Set(event.removed.map((removed) => removed.fieldId))
+        if (this.spec && removedIds.has(this.spec.fieldId)) this.spec = null
+      },
     )
   }
 
@@ -129,6 +135,7 @@ class FilteredDataSource implements DataSource {
     private readonly upstream: DataSource,
     private readonly getSpec: () => FilterSpec | null,
     private readonly onUpstreamReset: (source: DataSource) => void,
+    private readonly onColumnsChanged: (source: DataSource, event: DataSourceEvent) => void,
   ) {
     const mutableUpstream = isMutableDataSource(this.upstream) ? this.upstream : null
     if (mutableUpstream) {
@@ -233,6 +240,25 @@ class FilteredDataSource implements DataSource {
       this.rebuild()
       const newRowCount = this.getRowCount()
       this.emit(filterStructuralEvent(event, newRowCount))
+      return
+    }
+    if (event.type === 'colsDeleted') {
+      const previousRowCount = this.getRowCount()
+      const previousSpec = this.getSpec()
+      this.onColumnsChanged(this.upstream, event)
+      this.rebuild()
+      const newRowCount = this.getRowCount()
+      this.emit(filterStructuralEvent(event, newRowCount))
+      if (previousSpec != null && this.getSpec() == null && previousRowCount !== newRowCount) {
+        this.emit({ type: 'rowCountChanged', newCount: newRowCount })
+        this.emit({ type: 'reset' })
+      }
+      return
+    }
+    if (event.type === 'colsInserted') {
+      this.onColumnsChanged(this.upstream, event)
+      this.rebuild()
+      this.emit(filterStructuralEvent(event, this.getRowCount()))
       return
     }
 

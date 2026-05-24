@@ -69,6 +69,12 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
         if (this.spec && !this.canSortField(this.spec.fieldId)) this.spec = null
         this.notify?.({ layerId: this.id, reason: 'upstream-reset' })
       },
+      (source, event) => {
+        this.captureSchema(source)
+        if (event.type !== 'colsDeleted') return
+        const removedIds = new Set(event.removed.map((removed) => removed.fieldId))
+        if (this.spec && removedIds.has(this.spec.fieldId)) this.spec = null
+      },
     )
   }
 
@@ -128,6 +134,7 @@ class SortedDataSource implements DataSource {
     private readonly upstream: DataSource,
     private readonly getSpec: () => SortSpec | null,
     private readonly onUpstreamReset: (source: DataSource) => void,
+    private readonly onColumnsChanged: (source: DataSource, event: DataSourceEvent) => void,
   ) {
     const mutableUpstream = isMutableDataSource(this.upstream) ? this.upstream : null
     if (mutableUpstream) {
@@ -229,6 +236,18 @@ class SortedDataSource implements DataSource {
       event.type === 'rowsDeleted' ||
       event.type === 'rowCountChanged'
     ) {
+      this.rebuild()
+      this.emit(event)
+      return
+    }
+    if (event.type === 'colsDeleted') {
+      this.onColumnsChanged(this.upstream, event)
+      this.rebuild()
+      this.emit(event)
+      return
+    }
+    if (event.type === 'colsInserted') {
+      this.onColumnsChanged(this.upstream, event)
       this.rebuild()
       this.emit(event)
       return
