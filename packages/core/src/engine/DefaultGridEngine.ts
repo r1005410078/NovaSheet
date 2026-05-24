@@ -584,6 +584,13 @@ export class DefaultGridEngine implements GridEngine {
         this.rebuildViewAxis()
         this.selection.setSelection(cmd.selectionBefore)
         return
+      case 'insertCols':
+      case 'deleteCols':
+      case 'hideCols':
+      case 'unhideCols':
+      case 'resizeColumnsMulti':
+        // Phase 4.6 Task 8 fills in.
+        return
     }
   }
 
@@ -647,6 +654,13 @@ export class DefaultGridEngine implements GridEngine {
         for (const id of cmd.rowIds) this.rawRowsAxis.setSize(id, cmd.newHeight)
         this.rowsAxis = this.buildViewRowsAxis()
         this.selection.setSelection(cmd.selectionAfter)
+        return
+      case 'insertCols':
+      case 'deleteCols':
+      case 'hideCols':
+      case 'unhideCols':
+      case 'resizeColumnsMulti':
+        // Phase 4.6 Task 8 fills in.
         return
     }
   }
