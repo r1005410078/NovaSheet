@@ -9,7 +9,7 @@ export { InMemoryDataSource } from './data/InMemoryDataSource'
 export type { CellValue, Field, FieldType, Row, Schema } from './data/Schema'
 export type { DataSource, DataSourceEvent, DataSourceListener } from './data/DataSource'
 export { isMutableDataSource } from './data/MutableDataSource'
-export type { MutableDataSource } from './data/MutableDataSource'
+export type { MutableDataSource, RemovedFieldSnapshot } from './data/MutableDataSource'
 
 // 主题层
 export { denseGridTheme } from './theme/denseGridTheme'

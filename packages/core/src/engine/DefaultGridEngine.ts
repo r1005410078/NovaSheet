@@ -1,6 +1,7 @@
-import type { CellValue } from '../data/Schema'
-import type { DataSource } from '../data/DataSource'
+import type { CellValue, Field, Row, Schema } from '../data/Schema'
+import type { DataSource, DataSourceEvent, DataSourceListener } from '../data/DataSource'
 import { isMutableDataSource } from '../data/MutableDataSource'
+import type { MutableDataSource, RemovedFieldSnapshot } from '../data/MutableDataSource'
 import { HideRowsLayer } from '../view/HideRowsLayer'
 import { applyPaste } from '../clipboard/ApplyPaste'
 import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
@@ -44,8 +45,9 @@ const DEFAULT_EXCEL_ROW_HEADER_WIDTH = 44
 export class DefaultGridEngine implements GridEngine {
   /** raw 可变数据源（InMemoryDataSource 等）；mutation 方法直接操作此字段。 */
   private rawData: DataSource
-  /** HideRowsLayer 包裹后的视图数据源；getFrame() / getDataSource() 等读取此字段。 */
+  /** HideRowsLayer + 可见列过滤后的视图数据源；getFrame() / getDataSource() 等读取此字段。 */
   private data: DataSource
+  private rowViewData: DataSource
   private readonly hideRowsLayer = new HideRowsLayer()
   private theme: Theme
   private readonly excelHeaders: boolean
@@ -57,7 +59,10 @@ export class DefaultGridEngine implements GridEngine {
    */
   private rawRowsAxis: ChunkedAxis
   private rowsAxis: ChunkedAxis
+  private rawColsAxis: ChunkedAxis
   private colsAxis: ChunkedAxis
+  private hiddenColIds = new Set<string>()
+  private newFieldCounter = 0
   private frozen: FrozenRegions
   private viewport: Viewport
   private selection = new SelectionModel()
@@ -69,16 +74,18 @@ export class DefaultGridEngine implements GridEngine {
     this.theme = options.theme ?? denseGridTheme
     this.excelHeaders = options.excelHeaders === true
     this.explicitDefaultRowHeight = options.defaultRowHeight
-    this.data = this.hideRowsLayer.wrap(this.rawData)
+    this.rowViewData = this.hideRowsLayer.wrap(this.rawData)
+    this.data = this.wrapViewData(this.rowViewData)
     this.rawRowsAxis = new ChunkedAxis({
       count: this.rawData.getRowCount(),
       defaultSize: this.resolveDefaultRowHeight(),
     })
     this.rowsAxis = this.buildViewRowsAxis()
-    this.colsAxis = new ChunkedAxis({
+    this.rawColsAxis = new ChunkedAxis({
       count: this.rawData.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
     })
+    this.colsAxis = this.buildViewColsAxis()
     this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.resolveFrozenConfig(options))
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
@@ -88,6 +95,8 @@ export class DefaultGridEngine implements GridEngine {
 
   setData(data: DataSource): void {
     this.hideRowsLayer.setHidden([])
+    this.hiddenColIds.clear()
+    this.newFieldCounter = 0
     this.rebuildData(data)
     this.undoStack.clear()
   }
@@ -105,16 +114,18 @@ export class DefaultGridEngine implements GridEngine {
 
   private rebuildData(data: DataSource): void {
     this.rawData = data
-    this.data = this.hideRowsLayer.wrap(this.rawData)
+    this.rowViewData = this.hideRowsLayer.wrap(this.rawData)
+    this.data = this.wrapViewData(this.rowViewData)
     this.rawRowsAxis = new ChunkedAxis({
       count: this.rawData.getRowCount(),
       defaultSize: this.resolveDefaultRowHeight(),
     })
     this.rowsAxis = this.buildViewRowsAxis()
-    this.colsAxis = new ChunkedAxis({
+    this.rawColsAxis = new ChunkedAxis({
       count: this.rawData.getSchema().fields.length,
       defaultSize: this.averageColWidth(),
     })
+    this.colsAxis = this.buildViewColsAxis()
     this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
@@ -156,9 +167,11 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   setColumnWidth(fieldId: string, width: number): void {
-    const index = this.getColumnIndex(fieldId)
+    const index = this.getRawColumnIndex(fieldId)
     if (index < 0) return
-    this.colsAxis.setSize(index, width)
+    this.rawColsAxis.setSize(index, width)
+    this.setFieldWidth(fieldId, width)
+    this.rebuildViewColsAxis()
   }
 
   selectCell(cell: CellAddress, options?: SelectCellOptions): void {
@@ -399,6 +412,152 @@ export class DefaultGridEngine implements GridEngine {
     this.undoStack.push({ kind: 'resizeRowsMulti', rowIds, oldHeights, newHeight: h, selectionBefore, selectionAfter })
   }
 
+  /** 在 schema field index 位置前插入 count 个文本列。 */
+  insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
+    if (count <= 0 || !isMutableDataSource(this.rawData) || !this.rawData.insertField) return []
+    const at = Math.max(0, Math.min(beforeFieldIndex, this.rawData.getSchema().fields.length))
+    const selectionBefore = this.selection.getSelection()
+    const frozenBefore = this.frozen.getFrozenConfig()
+    const defaultWidth = this.resolveDefaultColWidth()
+    const newFields: Field[] = []
+    for (let i = 0; i < count; i += 1) {
+      this.newFieldCounter += 1
+      newFields.push({
+        id: `field_${this.newFieldCounter}`,
+        name: `新列 ${this.newFieldCounter}`,
+        type: 'text',
+        width: defaultWidth,
+      })
+    }
+    for (let i = 0; i < newFields.length; i += 1) {
+      this.rawData.insertField(at + i, newFields[i]!)
+    }
+    this.rawColsAxis.insertRange(at, newFields.length, defaultWidth)
+    this.syncFrozenAfterColInsert(at, newFields.length)
+    this.rebuildViewColsAxis()
+    this.selection.remapAfterColsInserted(at, newFields.length)
+    const selectionAfter = this.selection.getSelection()
+    const frozenAfter = this.frozen.getFrozenConfig()
+    this.undoStack.push({
+      kind: 'insertCols',
+      at,
+      count: newFields.length,
+      newFields,
+      selectionBefore,
+      selectionAfter,
+      frozenBefore,
+      frozenAfter,
+    })
+    return newFields
+  }
+
+  /** 按 fieldId 删除列，返回删除快照。 */
+  deleteCols(fieldIds: readonly string[]): readonly RemovedFieldSnapshot[] {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.removeField) return []
+    const schemaBefore = this.rawData.getSchema().fields
+    const removed = fieldIds
+      .map((id) => {
+        const idx = schemaBefore.findIndex((field) => field.id === id)
+        return idx >= 0 ? { id, idx, width: this.rawColsAxis.getSize(idx) } : null
+      })
+      .filter((item): item is { id: string; idx: number; width: number } => item !== null)
+      .sort((a, b) => a.idx - b.idx)
+    if (removed.length === 0) return []
+
+    const selectionBefore = this.selection.getSelection()
+    const frozenBefore = this.frozen.getFrozenConfig()
+    const snapshots: RemovedFieldSnapshot[] = []
+    const deletedWidths: number[] = []
+    for (let i = removed.length - 1; i >= 0; i -= 1) {
+      const item = removed[i]!
+      const snap = this.rawData.removeField(item.id)
+      if (snap) {
+        snapshots.unshift(snap)
+        deletedWidths.unshift(item.width)
+      }
+    }
+    const removedIndices = removed.map((item) => item.idx)
+    this.rawColsAxis.deleteRange(removedIndices)
+    this.syncFrozenAfterColDelete(removedIndices, schemaBefore.length)
+    for (const id of fieldIds) this.hiddenColIds.delete(id)
+    this.rebuildViewColsAxis()
+    this.selection.remapAfterColsDeleted(removedIndices)
+    const selectionAfter = this.selection.getSelection()
+    const frozenAfter = this.frozen.getFrozenConfig()
+    this.undoStack.push({
+      kind: 'deleteCols',
+      snapshots,
+      deletedWidths,
+      selectionBefore,
+      selectionAfter,
+      frozenBefore,
+      frozenAfter,
+    })
+    return snapshots
+  }
+
+  /** 隐藏给定 fieldId 集合。 */
+  hideCols(fieldIds: readonly string[]): void {
+    const known = new Set(this.rawData.getSchema().fields.map((field) => field.id))
+    const newlyHidden = fieldIds.filter((id) => known.has(id) && !this.hiddenColIds.has(id))
+    if (newlyHidden.length === 0) return
+    const selectionBefore = this.selection.getSelection()
+    for (const id of newlyHidden) this.hiddenColIds.add(id)
+    this.rebuildViewColsAxis()
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'hideCols', fieldIds: newlyHidden, selectionBefore, selectionAfter })
+  }
+
+  /** 取消隐藏给定 fieldId 集合。 */
+  unhideCols(fieldIds: readonly string[]): void {
+    const newlyVisible = fieldIds.filter((id) => this.hiddenColIds.has(id))
+    if (newlyVisible.length === 0) return
+    const selectionBefore = this.selection.getSelection()
+    for (const id of newlyVisible) this.hiddenColIds.delete(id)
+    this.rebuildViewColsAxis()
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'unhideCols', fieldIds: newlyVisible, selectionBefore, selectionAfter })
+  }
+
+  /** 批量设置多列宽度为同一个值。 */
+  setColumnWidths(fieldIds: readonly string[], widthPx: number): void {
+    const selectionBefore = this.selection.getSelection()
+    const oldWidths: number[] = []
+    const changed: string[] = []
+    for (const id of fieldIds) {
+      const idx = this.getRawColumnIndex(id)
+      if (idx < 0) continue
+      oldWidths.push(this.rawColsAxis.getSize(idx))
+      changed.push(id)
+      this.rawColsAxis.setSize(idx, widthPx)
+      this.setFieldWidth(id, widthPx)
+    }
+    if (changed.length === 0) return
+    this.rebuildViewColsAxis()
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({
+      kind: 'resizeColumnsMulti',
+      fieldIds: changed,
+      oldWidths,
+      newWidth: widthPx,
+      selectionBefore,
+      selectionAfter,
+    })
+  }
+
+  /** 返回当前隐藏列 fieldId，按 schema 顺序排序。 */
+  getHiddenCols(): readonly string[] {
+    return this.rawData
+      .getSchema()
+      .fields.map((field) => field.id)
+      .filter((id) => this.hiddenColIds.has(id))
+  }
+
+  /** 返回当前冻结配置快照。 */
+  getFrozenConfig(): FrozenConfig {
+    return this.frozen.getFrozenConfig()
+  }
+
   /** Phase 4.5 — 程序化设置选区（不入 undo 栈）。 */
   setSelection(selection: GridSelection): void {
     this.selection.setSelection(selection)
@@ -435,8 +594,13 @@ export class DefaultGridEngine implements GridEngine {
 
   commitColumnResize(colIndex: number, oldWidth: number, newWidth: number): void {
     if (oldWidth === newWidth) return
-    this.colsAxis.setSize(colIndex, newWidth)
-    this.undoStack.push({ kind: 'resizeColumn', colIndex, before: oldWidth, after: newWidth })
+    const rawColIndex = this.getRawColumnIndexForViewIndex(colIndex)
+    if (rawColIndex < 0) return
+    this.rawColsAxis.setSize(rawColIndex, newWidth)
+    const field = this.rawData.getSchema().fields[rawColIndex]
+    if (field) field.width = newWidth
+    this.rebuildViewColsAxis()
+    this.undoStack.push({ kind: 'resizeColumn', colIndex: rawColIndex, before: oldWidth, after: newWidth })
   }
 
   commitPaste(
@@ -526,7 +690,10 @@ export class DefaultGridEngine implements GridEngine {
         this.rebuildViewAxis()
         return
       case 'resizeColumn':
-        this.colsAxis.setSize(cmd.colIndex, cmd.before)
+        this.rawColsAxis.setSize(cmd.colIndex, cmd.before)
+        const beforeField = this.rawData.getSchema().fields[cmd.colIndex]
+        if (beforeField) beforeField.width = cmd.before
+        this.rebuildViewColsAxis()
         return
       case 'insertRows': {
         // unapply insertRows = delete the count rows that were inserted at cmd.at
@@ -585,11 +752,32 @@ export class DefaultGridEngine implements GridEngine {
         this.selection.setSelection(cmd.selectionBefore)
         return
       case 'insertCols':
+        this.unapplyInsertCols(cmd)
+        return
       case 'deleteCols':
+        this.unapplyDeleteCols(cmd)
+        return
       case 'hideCols':
+        for (const id of cmd.fieldIds) this.hiddenColIds.delete(id)
+        this.rebuildViewColsAxis()
+        this.selection.setSelection(cmd.selectionBefore)
+        return
       case 'unhideCols':
+        for (const id of cmd.fieldIds) this.hiddenColIds.add(id)
+        this.rebuildViewColsAxis()
+        this.selection.setSelection(cmd.selectionBefore)
+        return
       case 'resizeColumnsMulti':
-        // Phase 4.6 Task 8 fills in.
+        for (let i = 0; i < cmd.fieldIds.length; i += 1) {
+          const id = cmd.fieldIds[i]!
+          const idx = this.getRawColumnIndex(id)
+          if (idx < 0) continue
+          const width = cmd.oldWidths[i] ?? this.resolveDefaultColWidth()
+          this.rawColsAxis.setSize(idx, width)
+          this.setFieldWidth(id, width)
+        }
+        this.rebuildViewColsAxis()
+        this.selection.setSelection(cmd.selectionBefore)
         return
     }
   }
@@ -617,7 +805,10 @@ export class DefaultGridEngine implements GridEngine {
         this.rowsAxis = this.buildViewRowsAxis()
         return
       case 'resizeColumn':
-        this.colsAxis.setSize(cmd.colIndex, cmd.after)
+        this.rawColsAxis.setSize(cmd.colIndex, cmd.after)
+        const afterField = this.rawData.getSchema().fields[cmd.colIndex]
+        if (afterField) afterField.width = cmd.after
+        this.rebuildViewColsAxis()
         return
       case 'insertRows': {
         // redo insertRows = insert count blank rows at cmd.at
@@ -656,13 +847,97 @@ export class DefaultGridEngine implements GridEngine {
         this.selection.setSelection(cmd.selectionAfter)
         return
       case 'insertCols':
+        this.applyInsertCols(cmd)
+        return
       case 'deleteCols':
+        this.applyDeleteCols(cmd)
+        return
       case 'hideCols':
+        for (const id of cmd.fieldIds) this.hiddenColIds.add(id)
+        this.rebuildViewColsAxis()
+        this.selection.setSelection(cmd.selectionAfter)
+        return
       case 'unhideCols':
+        for (const id of cmd.fieldIds) this.hiddenColIds.delete(id)
+        this.rebuildViewColsAxis()
+        this.selection.setSelection(cmd.selectionAfter)
+        return
       case 'resizeColumnsMulti':
-        // Phase 4.6 Task 8 fills in.
+        for (const id of cmd.fieldIds) {
+          const idx = this.getRawColumnIndex(id)
+          if (idx < 0) continue
+          this.rawColsAxis.setSize(idx, cmd.newWidth)
+          this.setFieldWidth(id, cmd.newWidth)
+        }
+        this.rebuildViewColsAxis()
+        this.selection.setSelection(cmd.selectionAfter)
         return
     }
+  }
+
+  private applyInsertCols(cmd: Extract<UndoCommand, { kind: 'insertCols' }>): void {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.insertField) return
+    for (let i = 0; i < cmd.newFields.length; i += 1) {
+      this.rawData.insertField(cmd.at + i, cmd.newFields[i]!)
+    }
+    this.rawColsAxis.insertRange(cmd.at, cmd.count, this.resolveDefaultColWidth())
+    for (let i = 0; i < cmd.newFields.length; i += 1) {
+      this.rawColsAxis.setSize(cmd.at + i, cmd.newFields[i]!.width)
+    }
+    this.frozen.setFrozen(cmd.frozenAfter)
+    this.rebuildViewColsAxis()
+    this.selection.setSelection(cmd.selectionAfter)
+  }
+
+  private unapplyInsertCols(cmd: Extract<UndoCommand, { kind: 'insertCols' }>): void {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.removeField) return
+    const removed = cmd.newFields
+      .map((field) => this.getRawColumnIndex(field.id))
+      .filter((idx) => idx >= 0)
+      .sort((a, b) => a - b)
+    for (let i = cmd.newFields.length - 1; i >= 0; i -= 1) {
+      this.rawData.removeField(cmd.newFields[i]!.id)
+      this.hiddenColIds.delete(cmd.newFields[i]!.id)
+    }
+    this.rawColsAxis.deleteRange(removed)
+    this.frozen.setFrozen(cmd.frozenBefore)
+    this.rebuildViewColsAxis()
+    this.selection.setSelection(cmd.selectionBefore)
+  }
+
+  private applyDeleteCols(cmd: Extract<UndoCommand, { kind: 'deleteCols' }>): void {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.removeField) return
+    const removed = cmd.snapshots
+      .map((snap) => this.getRawColumnIndex(snap.field.id))
+      .filter((idx) => idx >= 0)
+      .sort((a, b) => a - b)
+    for (let i = cmd.snapshots.length - 1; i >= 0; i -= 1) {
+      this.rawData.removeField(cmd.snapshots[i]!.field.id)
+      this.hiddenColIds.delete(cmd.snapshots[i]!.field.id)
+    }
+    this.rawColsAxis.deleteRange(removed)
+    this.frozen.setFrozen(cmd.frozenAfter)
+    this.rebuildViewColsAxis()
+    this.selection.setSelection(cmd.selectionAfter)
+  }
+
+  private unapplyDeleteCols(cmd: Extract<UndoCommand, { kind: 'deleteCols' }>): void {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.insertField) return
+    const sorted = [...cmd.snapshots].sort((a, b) => a.originalIndex - b.originalIndex)
+    for (const snap of sorted) {
+      const width = cmd.deletedWidths[cmd.snapshots.indexOf(snap)] ?? snap.field.width
+      const restoredField = { ...snap.field, width }
+      this.rawData.insertField(snap.originalIndex, restoredField)
+      this.rawColsAxis.insertRange(snap.originalIndex, 1, width)
+      this.rawColsAxis.setSize(snap.originalIndex, width)
+      for (let rowIndex = 0; rowIndex < snap.cells.length; rowIndex += 1) {
+        const value = snap.cells[rowIndex]
+        if (value !== undefined) this.rawData.updateCell(rowIndex, snap.field.id, value)
+      }
+    }
+    this.frozen.setFrozen(cmd.frozenBefore)
+    this.rebuildViewColsAxis()
+    this.selection.setSelection(cmd.selectionBefore)
   }
 
   private restoreSelectionForWrites(writes: readonly CellWrite[], fallbackRange: CellRange): void {
@@ -829,6 +1104,85 @@ export class DefaultGridEngine implements GridEngine {
     this.viewport.setScroll(snap.scrollX, snap.scrollY)
   }
 
+  private buildViewColsAxis(): ChunkedAxis {
+    const fields = this.rawData.getSchema().fields
+    const visibleIndices: number[] = []
+    for (let i = 0; i < fields.length; i += 1) {
+      if (!this.hiddenColIds.has(fields[i]!.id)) visibleIndices.push(i)
+    }
+    const defaultSize = this.rawColsAxis.getDefaultSize()
+    const viewAxis = new ChunkedAxis({ count: visibleIndices.length, defaultSize })
+    for (let viewCol = 0; viewCol < visibleIndices.length; viewCol += 1) {
+      const rawCol = visibleIndices[viewCol]!
+      const size = this.rawColsAxis.getSize(rawCol)
+      if (size !== defaultSize) viewAxis.setSize(viewCol, size)
+    }
+    return viewAxis
+  }
+
+  private rebuildViewColsAxis(): void {
+    this.colsAxis = this.buildViewColsAxis()
+    const snap = this.viewport.snapshot()
+    this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
+    this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
+    this.viewport.setHeaderHeight(snap.headerHeight)
+    this.viewport.setRowHeaderWidth(snap.rowHeaderWidth)
+    this.viewport.setSize(snap.contentRect.width, snap.contentRect.height)
+    this.viewport.setScroll(snap.scrollX, snap.scrollY)
+  }
+
+  private wrapViewData(data: DataSource): DataSource {
+    return new VisibleColumnsDataSource(data, () => this.hiddenColIds)
+  }
+
+  private syncFrozenAfterColInsert(at: number, count: number): void {
+    const cfg = this.frozen.getFrozenConfig()
+    const oldTotalCols = this.rawData.getSchema().fields.length - count
+    let { leftCols, rightCols } = cfg
+    if (at < leftCols) leftCols += count
+    if (rightCols > 0 && at >= oldTotalCols - rightCols) rightCols += count
+    this.frozen.setFrozen({ topRows: cfg.topRows, leftCols, rightCols })
+  }
+
+  private syncFrozenAfterColDelete(
+    removedIndices: readonly number[],
+    totalColsBefore: number,
+  ): void {
+    const cfg = this.frozen.getFrozenConfig()
+    const leftHit = removedIndices.filter((idx) => idx < cfg.leftCols).length
+    const rightBoundary = totalColsBefore - cfg.rightCols
+    const rightHit = removedIndices.filter((idx) => idx >= rightBoundary).length
+    this.frozen.setFrozen({
+      topRows: cfg.topRows,
+      leftCols: Math.max(0, cfg.leftCols - leftHit),
+      rightCols: Math.max(0, cfg.rightCols - rightHit),
+    })
+  }
+
+  private resolveDefaultColWidth(): number {
+    return this.rawColsAxis.getDefaultSize()
+  }
+
+  private getRawColumnIndex(fieldId: string): number {
+    return this.rawData.getSchema().fields.findIndex((field) => field.id === fieldId)
+  }
+
+  private getRawColumnIndexForViewIndex(viewColIndex: number): number {
+    const fields = this.rawData.getSchema().fields
+    let visibleCol = 0
+    for (let rawCol = 0; rawCol < fields.length; rawCol += 1) {
+      if (this.hiddenColIds.has(fields[rawCol]!.id)) continue
+      if (visibleCol === viewColIndex) return rawCol
+      visibleCol += 1
+    }
+    return -1
+  }
+
+  private setFieldWidth(fieldId: string, width: number): void {
+    const field = this.rawData.getSchema().fields.find((candidate) => candidate.id === fieldId)
+    if (field) field.width = width
+  }
+
   private resolveFrozenConfig(options: GridEngineOptions): FrozenConfig {
     if (options.frozen) {
       return {
@@ -845,7 +1199,7 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private averageColWidth(): number {
-    const fields = this.data.getSchema().fields
+    const fields = this.rawData.getSchema().fields
     if (fields.length === 0) return 100
     const sum = fields.reduce((acc, f) => acc + f.width, 0)
     return Math.max(1, Math.round(sum / fields.length))
@@ -863,13 +1217,71 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private applyFieldWidths(): void {
-    const fields = this.data.getSchema().fields
-    const avg = this.colsAxis.getDefaultSize()
+    const fields = this.rawData.getSchema().fields
+    const avg = this.rawColsAxis.getDefaultSize()
     for (let i = 0; i < fields.length; i++) {
       if (fields[i]!.width !== avg) {
-        this.colsAxis.setSize(i, fields[i]!.width)
+        this.rawColsAxis.setSize(i, fields[i]!.width)
       }
     }
+    this.rebuildViewColsAxis()
+  }
+}
+
+class VisibleColumnsDataSource implements DataSource {
+  readonly updateCell?: MutableDataSource['updateCell']
+  readonly updateCellByUnderlyingRow?: MutableDataSource['updateCellByUnderlyingRow']
+  readonly insertRows?: MutableDataSource['insertRows']
+  readonly deleteRows?: MutableDataSource['deleteRows']
+  readonly insertField?: MutableDataSource['insertField']
+  readonly removeField?: MutableDataSource['removeField']
+
+  constructor(
+    private readonly upstream: DataSource,
+    private readonly getHiddenIds: () => ReadonlySet<string>,
+  ) {
+    const mutableUpstream = isMutableDataSource(this.upstream) ? this.upstream : null
+    if (mutableUpstream) {
+      this.updateCell = (rowIndex, fieldId, value) =>
+        mutableUpstream.updateCell(rowIndex, fieldId, value)
+      this.updateCellByUnderlyingRow = mutableUpstream.updateCellByUnderlyingRow?.bind(mutableUpstream)
+      this.insertRows = mutableUpstream.insertRows?.bind(mutableUpstream)
+      this.deleteRows = mutableUpstream.deleteRows?.bind(mutableUpstream)
+      this.insertField = mutableUpstream.insertField?.bind(mutableUpstream)
+      this.removeField = mutableUpstream.removeField?.bind(mutableUpstream)
+    }
+  }
+
+  getRowCount(): number {
+    return this.upstream.getRowCount()
+  }
+
+  getSchema(): Schema {
+    const hidden = this.getHiddenIds()
+    if (hidden.size === 0) return this.upstream.getSchema()
+    return {
+      fields: this.upstream.getSchema().fields.filter((field) => !hidden.has(field.id)),
+    }
+  }
+
+  getRows(startIndex: number, endIndex: number): Row[] | Promise<Row[]> {
+    return this.upstream.getRows(startIndex, endIndex)
+  }
+
+  getCell(rowIndex: number, fieldId: string): CellValue | undefined {
+    return this.upstream.getCell(rowIndex, fieldId)
+  }
+
+  resolveUnderlyingRow(viewRow: number): number {
+    return this.upstream.resolveUnderlyingRow?.(viewRow) ?? viewRow
+  }
+
+  findViewRow(underlyingRow: number): number {
+    return this.upstream.findViewRow?.(underlyingRow) ?? underlyingRow
+  }
+
+  subscribe(listener: DataSourceListener): () => void {
+    return this.upstream.subscribe((event: DataSourceEvent) => listener(event))
   }
 }
 

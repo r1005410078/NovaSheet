@@ -5,6 +5,8 @@
  */
 
 import type { DataSource } from '../data/DataSource'
+import type { Field } from '../data/Schema'
+import type { RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
@@ -127,4 +129,25 @@ export interface GridEngine {
 
   /** Phase 4.5 — 程序化设置选区。 */
   setSelection(selection: GridSelection): void
+
+  /** Phase 4.6 — 在 schema field index 位置前插入 count 个列字段。 */
+  insertCols(beforeFieldIndex: number, count: number): readonly Field[]
+
+  /** Phase 4.6 — 按 fieldId 删除列字段，返回删除快照。 */
+  deleteCols(fieldIds: readonly string[]): readonly RemovedFieldSnapshot[]
+
+  /** Phase 4.6 — 隐藏给定 fieldId 集合。 */
+  hideCols(fieldIds: readonly string[]): void
+
+  /** Phase 4.6 — 取消隐藏给定 fieldId 集合。 */
+  unhideCols(fieldIds: readonly string[]): void
+
+  /** Phase 4.6 — 批量设置多列宽度。 */
+  setColumnWidths(fieldIds: readonly string[], widthPx: number): void
+
+  /** Phase 4.6 — 返回当前隐藏列 fieldId，按 schema 顺序排序。 */
+  getHiddenCols(): readonly string[]
+
+  /** Phase 4.6 — 返回当前冻结配置快照。 */
+  getFrozenConfig(): FrozenConfig
 }
