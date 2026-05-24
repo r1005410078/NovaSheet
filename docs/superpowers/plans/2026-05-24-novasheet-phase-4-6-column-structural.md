@@ -1395,7 +1395,7 @@ export interface RenderFrame {
 const allColGaps = this.computeCollapsedColGaps()
 const { firstVisibleViewCol, lastVisibleViewCol } = this.colsAxis.getVisibleRange(
   viewport.scrollX,
-  viewport.contentRect.width,
+  viewport.scrollX + viewport.contentRect.width,
 )
 const collapsedColGaps = allColGaps
   .filter((g) => g.atViewCol >= firstVisibleViewCol && g.atViewCol <= lastVisibleViewCol)
