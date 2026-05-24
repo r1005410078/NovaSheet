@@ -641,8 +641,6 @@ it('UndoCommand 含 5 个列结构 variant', () => {
       selectionAfter: emptySelection,
       frozenBefore: { topRows: 0, leftCols: 0, rightCols: 0 },
       frozenAfter: { topRows: 0, leftCols: 0, rightCols: 0 },
-      sortSpecBefore: null,
-      filterSpecBefore: null,
     },
     { kind: 'hideCols', fieldIds: ['x'], selectionBefore: emptySelection, selectionAfter: emptySelection },
     { kind: 'unhideCols', fieldIds: ['x'], selectionBefore: emptySelection, selectionAfter: emptySelection },
@@ -681,8 +679,6 @@ Expected：`UndoCommand` 不含列结构 variant。
 import type { RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { Field } from '../data/Schema'
 import type { FrozenConfig } from '../layout/FrozenRegions'
-import type { SortSpec } from '../view/SortLayer'
-import type { FilterSpec } from '../view/FilterLayer'
 
 export type UndoCommand =
   // ... 既有 11 个 variant（含 4.5 行 mutation 5 个 + resizeRow 等）
@@ -704,8 +700,6 @@ export type UndoCommand =
       readonly selectionAfter: GridSelection
       readonly frozenBefore: FrozenConfig
       readonly frozenAfter: FrozenConfig
-      readonly sortSpecBefore: SortSpec | null
-      readonly filterSpecBefore: FilterSpec | null
     }
   | {
       readonly kind: 'hideCols'
@@ -1038,33 +1032,33 @@ describe('FrozenRegions 自动同步规则（§4.6）', () => {
   it('insert at < leftCols → leftCols += count', () => {
     const engine = mkEngine(2, 0)
     engine.insertCols(0, 1)
-    expect(engine.getFrame().frozen.leftCols).toBe(3)
+    expect(engine.getFrozenConfig().leftCols).toBe(3)
   })
 
   it('insert at == leftCols（边界）→ leftCols 不变', () => {
     const engine = mkEngine(2, 0)
     engine.insertCols(2, 1)
-    expect(engine.getFrame().frozen.leftCols).toBe(2)
+    expect(engine.getFrozenConfig().leftCols).toBe(2)
   })
 
   it('delete 冻结列 → leftCols 减少', () => {
     const engine = mkEngine(2, 0)
     engine.deleteCols(['f0'])
-    expect(engine.getFrame().frozen.leftCols).toBe(1)
+    expect(engine.getFrozenConfig().leftCols).toBe(1)
   })
 
   it('rightCols：insert at > totalCols - rightCols → rightCols += count', () => {
     const engine = mkEngine(0, 2, 6)  // frozen 右 2 列 = f4, f5
     engine.insertCols(5, 1)  // 在 f5 之前插入；新列归右冻结
-    expect(engine.getFrame().frozen.rightCols).toBe(3)
+    expect(engine.getFrozenConfig().rightCols).toBe(3)
   })
 
   it('hide / unhide 不动 frozen counts', () => {
     const engine = mkEngine(2, 0)
     engine.hideCols(['f0'])
-    expect(engine.getFrame().frozen.leftCols).toBe(2)
+    expect(engine.getFrozenConfig().leftCols).toBe(2)
     engine.unhideCols(['f0'])
-    expect(engine.getFrame().frozen.leftCols).toBe(2)
+    expect(engine.getFrozenConfig().leftCols).toBe(2)
   })
 })
 ```
@@ -1190,8 +1184,6 @@ deleteCols(fieldIds: readonly string[]): readonly RemovedFieldSnapshot[] {
   if (!isMutableDataSource(this.rawData) || !this.rawData.removeField) return []
   const selectionBefore = this.selection.getSelection()
   const frozenBefore = { ...this.frozen.getFrozenConfig() }
-  const sortSpecBefore = this.viewPipeline?.get('sort')?.getSpec() as SortSpec | null ?? null
-  const filterSpecBefore = this.viewPipeline?.get('filter')?.getSpec() as FilterSpec | null ?? null
   // 收集删前 schema 中的 index 与 width
   const schemaBefore = this.rawData.getSchema().fields
   const removed = fieldIds
@@ -1225,8 +1217,6 @@ deleteCols(fieldIds: readonly string[]): readonly RemovedFieldSnapshot[] {
     selectionAfter,
     frozenBefore,
     frozenAfter,
-    sortSpecBefore,
-    filterSpecBefore,
   })
   return snapshots
 }
@@ -1307,7 +1297,7 @@ apply (redo)：用 cmd.newFields 中的 field（**不能** 重新走 newFieldCou
 
 unapply (undo)：for each newField id `removeField(id)`；rawColsAxis.deleteRange；rebuildViewColsAxis；frozen.setFrozen(cmd.frozenBefore)；selection.setSelection(cmd.selectionBefore)。
 
-deleteCols 反向：apply = 走 removeField；unapply = 按 snapshots `insertField(originalIndex, field)` + 用 `updateCell` 回填 snap.cells + 恢复列宽 + 恢复 frozen + 恢复 sort/filter spec。
+deleteCols 反向：apply = 走 removeField；unapply = 按 snapshots `insertField(originalIndex, field)` + 用 `updateCell` 回填 snap.cells + 恢复列宽 + 恢复 frozen。core engine 不持有 ViewPipeline，不在此处恢复 sort/filter spec。
 
 hideCols / unhideCols / resizeColumnsMulti 对称展开。
 
@@ -2611,7 +2601,7 @@ git commit -m "docs(repo): Phase 4.6 标记为已落地；下一里程碑改为 
 **Known plan-risk 区域（实现期需要警惕）：**
 
 1. **Task 8 syncFrozenAfterColInsert/Delete 公式**：边界条件 `at == leftCols` + `at + count > totalCols - rightCols` 等微妙；写 Task 8 Step 2 测试时尤其需要覆盖。
-2. **Task 8 deleteCols undo 恢复列宽 + sort/filter spec**：需要 sortSpecBefore / filterSpecBefore 在 deleteCols UndoCommand 中正确存取；实现期看 dispatcher unapply 是否真的恢复。
+2. **Task 8 deleteCols undo 恢复列宽**：`DefaultGridEngine` 不持有 `ViewPipeline`，本 task 只恢复 schema/cell/width/frozen/selection；sort/filter spec 恢复如需保留，后续 web runtime 层单独处理。
 3. **Task 15 viewColToFieldId / collectHiddenInColRange helper**：跨 view col index ↔ fieldId ↔ schema field index 翻译有边界 bug 风险；Task 15 测试覆盖 hideCols 后再 invoke。
 4. **Task 11 Painter SVG rotate 方向**：实现期需用 storybook 真机看一眼三角朝向是否正确（左 gap 三角应朝右、右 gap 三角朝左）。
 5. **insertField 与 redo 一致性**：Task 8 dispatcher apply (redo) 必须复用 cmd.newFields 而不是重新走 counter（spec §6.1 / invariants #3）。

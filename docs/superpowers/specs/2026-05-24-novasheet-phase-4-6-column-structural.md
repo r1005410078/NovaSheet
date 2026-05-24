@@ -229,7 +229,7 @@ getHiddenCols(): readonly string[]
 ### 5.4 一次 col mutation 的内部序列（以 insertCols 为例）
 
 1. 生成 N 个新 Field（auto-id + auto-name + text type + default width）
-2. snapshot：`selectionBefore`, `frozenBefore = frozen.getFrozenConfig()`, `sortSpecBefore = sortLayer.getSpec()`, `filterSpecBefore = filterLayer.getSpec()`
+2. snapshot：`selectionBefore`, `frozenBefore = frozen.getFrozenConfig()`
 3. for i in 0..N-1: `rawData.insertField(at + i, newFields[i])` —— 触发 N 次 `colsInserted`
 4. `rawColsAxis.insertRange(at, N, defaultColWidth)` —— 同步 raw 列轴
 5. `rebuildViewColsAxis()` —— 重建 view 列轴
@@ -280,8 +280,6 @@ export type UndoCommand =
       readonly selectionAfter: GridSelection
       readonly frozenBefore: FrozenConfig
       readonly frozenAfter: FrozenConfig
-      readonly sortSpecBefore: SortSpec | null
-      readonly filterSpecBefore: FilterSpec | null
     }
   | {
       readonly kind: 'hideCols'
@@ -310,7 +308,7 @@ export type UndoCommand =
 | Command | apply (redo) | unapply (undo) |
 | --- | --- | --- |
 | `insertCols` | 调 N 次 `mutableDS.insertField(at + i, newFields[i])` —— **必须用 snapshot 中的 Field（包括 id），不能走 counter 重新生成**；rebuild axis / frozen / selection 按 cmd.*After | for each: `mutableDS.removeField(newFields[i].id)`；恢复 axis / frozen / selection 按 cmd.*Before |
-| `deleteCols` | for each snap: `mutableDS.removeField(snap.field.id)` + 同步 axis / selection / frozen / sort+filter spec invalidate | for each snap: `mutableDS.insertField(snap.originalIndex, snap.field)` + 用 `updateCell` 回填 snap.cells + 恢复 axis 列宽 + 恢复 frozen / selection / sort+filter spec |
+| `deleteCols` | for each snap: `mutableDS.removeField(snap.field.id)` + 同步 axis / selection / frozen；SortLayer / FilterLayer 响应 `colsDeleted` 自行 invalidate spec | for each snap: `mutableDS.insertField(snap.originalIndex, snap.field)` + 用 `updateCell` 回填 snap.cells + 恢复 axis 列宽 + 恢复 frozen / selection；core engine 不持有 ViewPipeline，不恢复 sort/filter spec |
 | `hideCols` / `unhideCols` | `hiddenColIds.add(id) / delete(id)` + rebuildViewColsAxis + selection | mirror |
 | `resizeColumnsMulti` | for each fieldId: `rawColsAxis.setSize(schema.indexOf(id), newWidth)` + rebuildViewColsAxis | 逐 fieldId 还原 oldWidths[i] |
 
@@ -511,7 +509,7 @@ mirror `RowHeightPopover.ts`：
 | --- | --- | --- |
 | OQ1 | 全部 leftCols 列被 hide 后，frozen 区在视图上空，painter 是否需要特判？ | painter 按 view 列迭代天然处理；分隔线位置 = 0px 自然消失。`Phase46.scenarios.test.ts` 覆盖此场景 |
 | OQ2 | 多选不连续列（Ctrl+点）行为？ | 4.6 不支持（SelectionModel 限制）；N 取矩形 colRange |
-| OQ3 | `deleteCols` 删除 sort.fieldId / filter.fieldId 后 spec invalidate — UndoCommand 是否存 `sortSpecBefore / filterSpecBefore`？ | 是（§6.1 已纳入 deleteCols variant）；undo 时一并恢复 |
+| OQ3 | `deleteCols` 删除 sort.fieldId / filter.fieldId 后 spec invalidate — UndoCommand 是否存 `sortSpecBefore / filterSpecBefore`？ | 否。`DefaultGridEngine` 不持有 `ViewPipeline`；SortLayer / FilterLayer 响应 `colsDeleted` 精确事件自行 invalidate。Undo 恢复 schema 后不自动恢复 sort/filter spec；若 web 层需要恢复交互状态，后续在 runtime/pipeline 层补显式命令。 |
 | OQ4 | 新插入字段 name 自动编号 counter 全局还是每 Grid？ | 每 Grid 实例 counter（`engine.newFieldCounter`）；setData 时清零 |
 | OQ5 | `insertCols` 时 MutableDataSource 实现方持有同 id 字段（消费者疏忽 / undo 链冲突）行为？ | `insertField` 实现方应 throw；engine 不 try/catch，让错误冒泡 |
 
