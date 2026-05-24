@@ -604,92 +604,74 @@ git commit -m "feat(core): SelectionModel 加 remapAfterColsInserted/Deleted"
 **Files:**
 - Modify: `packages/core/src/undo/UndoCommand.ts`
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`（applyUndo / applyRedo 各加 5 个 case stub，与 4.5 Task 8 同构）
-- Create: `packages/core/tests/undo/UndoStack.col-mutations.test.ts`
+- Modify: `packages/core/tests/_probe-types-4-6.test.ts`
 
-- [ ] **Step 1: 写 failing 测试**
+- [ ] **Step 1: 追加 typecheck-only failing 测试**
 
-Create `packages/core/tests/undo/UndoStack.col-mutations.test.ts`:
+在 `packages/core/tests/_probe-types-4-6.test.ts` 追加 UndoCommand variant assignability 探针：
 
 ```ts
-import { describe, expect, it } from 'bun:test'
-import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import type { UndoCommand } from '../src/undo/UndoCommand'
 
-const schema = {
-  fields: [
-    { id: 'a', name: 'A', type: 'text' as const, width: 100 },
-    { id: 'b', name: 'B', type: 'number' as const, width: 80 },
-    { id: 'c', name: 'C', type: 'text' as const, width: 120 },
-  ],
+const emptySelection = {
+  activeCell: null,
+  anchorCell: null,
+  extentCell: null,
+  selectedRange: null,
 }
 
-function mkEngine() {
-  const ds = new InMemoryDataSource({
-    schema,
-    rows: [
-      { a: 'r0', b: 0, c: 'x' },
-      { a: 'r1', b: 1, c: 'y' },
-    ],
-  })
-  return new DefaultGridEngine({ data: ds, theme: denseGridTheme })
-}
-
-describe('UndoStack — insertCols', () => {
-  it('insertCols + undo 完全还原 schema 字段数', () => {
-    const engine = mkEngine()
-    // @ts-expect-error Task 8 engine API
-    engine.insertCols(1, 2)
-    expect(engine.getDataSource().getSchema().fields).toHaveLength(5)
-    engine.undo()
-    expect(engine.getDataSource().getSchema().fields).toHaveLength(3)
-  })
-})
-
-describe('UndoStack — deleteCols', () => {
-  it('deleteCols + undo 还原字段定义 + 列 cell 值', () => {
-    const engine = mkEngine()
-    // @ts-expect-error Task 8 engine API
-    engine.deleteCols(['b'])
-    expect(engine.getDataSource().getSchema().fields.map((f) => f.id)).toEqual(['a', 'c'])
-    engine.undo()
-    const fields = engine.getDataSource().getSchema().fields
-    expect(fields.map((f) => f.id)).toEqual(['a', 'b', 'c'])
-    expect(engine.getDataSource().getCell(0, 'b')).toBe(0)
-  })
-})
-
-describe('UndoStack — hideCols / unhideCols', () => {
-  it('hideCols + undo + redo', () => {
-    const engine = mkEngine()
-    // @ts-expect-error Task 8 engine API
-    engine.hideCols(['b'])
-    // @ts-expect-error Task 8 engine API
-    expect(engine.getHiddenCols()).toEqual(['b'])
-    engine.undo()
-    // @ts-expect-error Task 8 engine API
-    expect(engine.getHiddenCols()).toEqual([])
-    engine.redo()
-    // @ts-expect-error Task 8 engine API
-    expect(engine.getHiddenCols()).toEqual(['b'])
-  })
-})
-
-describe('UndoStack — resizeColumnsMulti', () => {
-  it('多列宽度变更 + undo 各列还原', () => {
-    const engine = mkEngine()
-    // @ts-expect-error Task 8 engine API
-    engine.setColumnWidths(['a', 'c'], 200)
-    engine.undo()
-    // a / c 列宽回到 schema 中 100 / 120
-    const fields = engine.getDataSource().getSchema().fields
-    expect(fields.find((f) => f.id === 'a')!.width).toBe(100)
-    expect(fields.find((f) => f.id === 'c')!.width).toBe(120)
-  })
+it('UndoCommand 含 5 个列结构 variant', () => {
+  const field: Field = { id: 'x', name: 'X', type: 'text', width: 100 }
+  const cmds: UndoCommand[] = [
+    {
+      kind: 'insertCols',
+      at: 0,
+      count: 1,
+      newFields: [field],
+      selectionBefore: emptySelection,
+      selectionAfter: emptySelection,
+      frozenBefore: { topRows: 0, leftCols: 0, rightCols: 0 },
+      frozenAfter: { topRows: 0, leftCols: 0, rightCols: 0 },
+    },
+    {
+      kind: 'deleteCols',
+      snapshots: [{ originalIndex: 0, field, cells: ['a'] }],
+      deletedWidths: [100],
+      selectionBefore: emptySelection,
+      selectionAfter: emptySelection,
+      frozenBefore: { topRows: 0, leftCols: 0, rightCols: 0 },
+      frozenAfter: { topRows: 0, leftCols: 0, rightCols: 0 },
+      sortSpecBefore: null,
+      filterSpecBefore: null,
+    },
+    { kind: 'hideCols', fieldIds: ['x'], selectionBefore: emptySelection, selectionAfter: emptySelection },
+    { kind: 'unhideCols', fieldIds: ['x'], selectionBefore: emptySelection, selectionAfter: emptySelection },
+    {
+      kind: 'resizeColumnsMulti',
+      fieldIds: ['x'],
+      oldWidths: [100],
+      newWidth: 120,
+      selectionBefore: emptySelection,
+      selectionAfter: emptySelection,
+    },
+  ]
+  expect(cmds.map((cmd) => cmd.kind)).toEqual([
+    'insertCols',
+    'deleteCols',
+    'hideCols',
+    'unhideCols',
+    'resizeColumnsMulti',
+  ])
 })
 ```
 
-注：4 个 `@ts-expect-error` 标记 Task 8 落地后会被移除（同 4.5 Task 8 模式）。
+- [ ] **Step 1b: 验证 RED**
+
+```bash
+bun run --filter @novasheet/core typecheck
+```
+
+Expected：`UndoCommand` 不含列结构 variant。
 
 - [ ] **Step 2: 扩 UndoCommand union**
 
@@ -755,7 +737,7 @@ export type UndoCommand =
 
 ```bash
 bun run --filter @novasheet/core typecheck   # MUST pass
-bun test packages/core   # 既有测试不退化；UndoStack.col-mutations 暂时 RED runtime
+bun test packages/core/tests/_probe-types-4-6.test.ts
 ```
 
 - [ ] **Step 5: Commit**
@@ -763,7 +745,7 @@ bun test packages/core   # 既有测试不退化；UndoStack.col-mutations 暂�
 ```bash
 git add packages/core/src/undo/UndoCommand.ts \
         packages/core/src/engine/DefaultGridEngine.ts \
-        packages/core/tests/undo/UndoStack.col-mutations.test.ts
+        packages/core/tests/_probe-types-4-6.test.ts
 git commit -m "feat(core): UndoCommand 加 insertCols/deleteCols/hideCols/unhideCols/resizeColumnsMulti 5 个 variant"
 ```
 
