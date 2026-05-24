@@ -1,10 +1,17 @@
-import type { CellValue } from './Schema'
+import type { CellValue, Field } from './Schema'
 import type { DataSource } from './DataSource'
 
 /** 被 `deleteRows` 返回，供 undo 还原 */
 export interface DeletedRowSnapshot {
   readonly originalUnderlyingRow: number
   readonly cells: Readonly<Record<string, CellValue>>
+}
+
+/** 被 `removeField` 返回，供 undo 还原 */
+export interface RemovedFieldSnapshot {
+  readonly originalIndex: number
+  readonly field: Field
+  readonly cells: ReadonlyArray<CellValue | undefined>
 }
 
 /** 支持同步写单元格的数据源（`InMemoryDataSource` 等）。 */
@@ -25,6 +32,12 @@ export interface MutableDataSource extends DataSource {
    * 同步触发 `rowsDeleted` + `rowCountChanged`。
    */
   deleteRows?(underlyingRowIds: readonly number[]): readonly DeletedRowSnapshot[]
+
+  /** 在 schema.fields 的 beforeIndex 位置之前插入 1 个新字段，返回实际插入字段。 */
+  insertField?(beforeIndex: number, field: Field): Field
+
+  /** 按 fieldId 删除字段，返回字段定义与列值快照；未知 fieldId 返回 null。 */
+  removeField?(fieldId: string): RemovedFieldSnapshot | null
 }
 
 export function isMutableDataSource(data: DataSource): data is MutableDataSource {

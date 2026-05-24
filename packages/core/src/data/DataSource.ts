@@ -1,4 +1,4 @@
-import type { CellValue, Row, Schema } from './Schema'
+import type { CellValue, Field, Row, Schema } from './Schema'
 
 /**
  * DataSource 发出的变更事件。Renderer 收到后会 invalidate，触发下一帧重绘。
@@ -7,12 +7,15 @@ import type { CellValue, Row, Schema } from './Schema'
  * - schemaChanged：字段定义变化（M3 加列重排、字段增删时使用）
  * - rowCountChanged：行数变化
  * - rowsInserted / rowsDeleted：行结构变更（Phase 4.5+）；订阅方按需重建本地缓存
+ * - colsInserted / colsDeleted：列结构变更（Phase 4.6+）；订阅方按需重建本地缓存
  */
 export type DataSourceEvent =
   | { type: 'reset' }
   | { type: 'rowsChanged'; startIndex: number; endIndex: number }
   | { type: 'rowsInserted'; at: number; count: number }
   | { type: 'rowsDeleted'; removed: readonly number[] }
+  | { type: 'colsInserted'; at: number; field: Field }
+  | { type: 'colsDeleted'; removed: readonly { index: number; fieldId: string }[] }
   | { type: 'schemaChanged' }
   | { type: 'rowCountChanged'; newCount: number }
 
