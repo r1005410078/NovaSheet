@@ -7,6 +7,7 @@
 
 import type { GridIndexBounds, SelectionNavigationIntent } from './SelectionNavigation'
 import { applySelectionNavigation } from './SelectionNavigation'
+import { remapRowIndexAfterDelete, remapRowIndexAfterInsert } from '../coords/remap'
 
 export interface CellAddress {
   readonly rowIndex: number
@@ -113,10 +114,10 @@ export class SelectionModel {
     return applySelectionNavigation(this, intent, bounds)
   }
 
-  /** Phase 4.5 — 插入行后平移选区；at 之前的行号不变，at 及之后的行号 +count。 */
+  /** Phase 4.5 — 插入行后平移选区；委托给 `coords/remap.ts`。 */
   remapAfterRowsInserted(at: number, count: number): void {
     if (this.selection.selectedRange == null) return
-    const shift = (r: number) => (r < at ? r : r + count)
+    const shift = (r: number) => remapRowIndexAfterInsert(r, at, count)
     const range = this.selection.selectedRange
     this.selection = {
       activeCell: this.selection.activeCell
@@ -133,43 +134,27 @@ export class SelectionModel {
   }
 
   /**
-   * Phase 4.5 — 删除行后收缩选区。
-   * removedSorted 必须是升序的行索引数组（删除前的行号）。
-   * 若选区内所有行均被删除则 clear；否则折叠到存活行并重新映射行号。
+   * Phase 4.5 — 删除行后收缩选区。委托给 `coords/remap.ts`；该函数对被删行返回 null。
+   * removedSorted 必须升序。整 range 全部被删 → clear；否则折叠到首/末存活行。
    */
   remapAfterRowsDeleted(removedSorted: readonly number[]): void {
     if (this.selection.selectedRange == null) return
-    const removed = new Set(removedSorted)
-    const shift = (r: number): number => {
-      let count = 0
-      for (const x of removedSorted) {
-        if (x < r) count += 1
-        else break
-      }
-      return r - count
-    }
     const range = this.selection.selectedRange
-    // 整 range 都在 removed 集合内 → clear
-    let allInRemoved = true
+    const survivors: number[] = []
     for (let r = range.startRow; r <= range.endRow; r += 1) {
-      if (!removed.has(r)) {
-        allInRemoved = false
-        break
-      }
+      const mapped = remapRowIndexAfterDelete(r, removedSorted)
+      if (mapped !== null) survivors.push(mapped)
     }
-    if (allInRemoved) {
+    if (survivors.length === 0) {
       this.selection = { activeCell: null, anchorCell: null, extentCell: null, selectedRange: null }
       return
     }
-    // 否则折叠到存活行并重映射
-    const survivors: number[] = []
-    for (let r = range.startRow; r <= range.endRow; r += 1) if (!removed.has(r)) survivors.push(r)
-    const startRow = shift(survivors[0]!)
-    const endRow = shift(survivors[survivors.length - 1]!)
+    const startRow = survivors[0]!
+    const endRow = survivors[survivors.length - 1]!
     const remap = (cell: { rowIndex: number; colIndex: number } | null) => {
       if (cell == null) return null
-      if (removed.has(cell.rowIndex)) return { ...cell, rowIndex: startRow }
-      return { ...cell, rowIndex: shift(cell.rowIndex) }
+      const mapped = remapRowIndexAfterDelete(cell.rowIndex, removedSorted)
+      return { ...cell, rowIndex: mapped ?? startRow }
     }
     this.selection = {
       activeCell: remap(this.selection.activeCell),
