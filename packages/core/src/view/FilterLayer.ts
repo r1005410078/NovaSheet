@@ -122,6 +122,8 @@ class FilteredDataSource implements DataSource {
   private disposed = false
   readonly updateCell?: MutableDataSource['updateCell']
   readonly updateCellByUnderlyingRow?: MutableDataSource['updateCellByUnderlyingRow']
+  readonly insertRows?: MutableDataSource['insertRows']
+  readonly deleteRows?: MutableDataSource['deleteRows']
 
   constructor(
     private readonly upstream: DataSource,
@@ -142,6 +144,13 @@ class FilteredDataSource implements DataSource {
         }
         const upstreamRow = this.upstream.findViewRow?.(underlyingRow) ?? underlyingRow
         mutableUpstream.updateCell(upstreamRow, fieldId, value)
+      }
+      // insertRows / deleteRows use underlying coordinates — proxy directly to upstream
+      if (mutableUpstream.insertRows) {
+        this.insertRows = (before, count) => mutableUpstream.insertRows!(before, count)
+      }
+      if (mutableUpstream.deleteRows) {
+        this.deleteRows = (ids) => mutableUpstream.deleteRows!(ids)
       }
     }
     this.rebuild()
@@ -211,6 +220,19 @@ class FilteredDataSource implements DataSource {
     if (this.disposed) return
     if (event.type === 'rowsChanged') {
       this.emit(event)
+      return
+    }
+    // Phase 4.5：行插入/删除/行数变化只更新本层 index，不触发 pipeline.rebuild
+    // （否则 pipeline 会在事件传播中替换 wrappers，新 wrapper 加入 listener set
+    // 后被 emit 的 for-of 继续访问 → 无限循环）。schema 不变，wrappers 复用即可。
+    if (
+      event.type === 'rowsInserted' ||
+      event.type === 'rowsDeleted' ||
+      event.type === 'rowCountChanged'
+    ) {
+      this.rebuild()
+      const newRowCount = this.getRowCount()
+      this.emit(filterStructuralEvent(event, newRowCount))
       return
     }
 

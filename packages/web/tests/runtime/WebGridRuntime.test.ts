@@ -96,6 +96,12 @@ function makeEngine(): GridEngine {
     commitPaste: mock(() => {}),
     commitFill: mock(() => null),
     unhideRows: mock(() => {}),
+    getHiddenRows: mock(() => [] as readonly number[]),
+    insertRows: mock(() => [] as readonly number[]),
+    deleteRows: mock(() => {}),
+    hideRows: mock(() => {}),
+    setRowHeights: mock(() => {}),
+    setSelection: mock(() => {}),
   }
 }
 

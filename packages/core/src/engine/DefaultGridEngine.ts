@@ -383,6 +383,11 @@ export class DefaultGridEngine implements GridEngine {
     this.undoStack.push({ kind: 'resizeRowsMulti', rowIds, oldHeights, newHeight: h, selectionBefore, selectionAfter })
   }
 
+  /** Phase 4.5 — 程序化设置选区（不入 undo 栈）。 */
+  setSelection(selection: GridSelection): void {
+    this.selection.setSelection(selection)
+  }
+
   undo(): UndoCommand | undefined {
     const cmd = this.undoStack.popUndo()
     if (!cmd) return undefined

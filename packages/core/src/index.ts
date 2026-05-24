@@ -92,6 +92,7 @@ export type { CellEditSession } from './interaction/CellEditModel'
 export {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
+  getRowHeaderContextMenuItems,
 } from './interaction/ContextMenuModel'
 export type {
   CellMenuContext,
@@ -99,6 +100,7 @@ export type {
   ContextMenuContext,
   ContextMenuItem,
   ContextMenuTargetKind,
+  RowHeaderMenuContext,
 } from './interaction/ContextMenuModel'
 export { computeCellRect } from './interaction/CellLayout'
 export type { CellRect } from './interaction/CellLayout'

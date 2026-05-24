@@ -18,12 +18,14 @@ import {
   SortLayer,
   ViewPipeline,
   type CellRange,
+  type ContextMenuItem,
   type ContextMenuAction,
   type ContextMenuContext,
   type DataSource,
   type FilterSpec,
   type FrozenConfig,
   type GridEngineOptions,
+  type GridSelection,
   type PasteSkippedCell,
   type SortSpec,
   type Theme,
@@ -348,6 +350,38 @@ export class Canvas2DBackend implements GridController {
 
   unhideRows(underlyingRowIds: readonly number[]): void {
     this.runtime.unhideRows(underlyingRowIds)
+  }
+
+  getHiddenRows(): readonly number[] {
+    return this.runtime.getHiddenRows()
+  }
+
+  insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
+    return this.runtime.insertRows(beforeUnderlyingRow, count)
+  }
+
+  deleteRows(underlyingRowIds: readonly number[]): void {
+    this.runtime.deleteRows(underlyingRowIds)
+  }
+
+  hideRows(underlyingRowIds: readonly number[]): void {
+    this.runtime.hideRows(underlyingRowIds)
+  }
+
+  setRowHeights(rowIds: readonly number[], h: number): void {
+    this.runtime.setRowHeights(rowIds, h)
+  }
+
+  setSelection(selection: GridSelection): void {
+    this.runtime.setSelection(selection)
+  }
+
+  getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
+    return this.runtime.getRowHeaderContextMenuItems(ctx)
+  }
+
+  invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void {
+    this.runtime.invokeRowHeaderContextMenuAction(id, ctx)
   }
 
   getSortLayer(): SortLayer {
