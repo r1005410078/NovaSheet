@@ -2137,22 +2137,9 @@ getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly Conte
   const sel = this.engine.getSelection().selectedRange
   const startCol = sel?.startCol ?? ctx.targetColIndex
   const endCol = sel?.endCol ?? ctx.targetColIndex
-  // view col → schema col 翻译：通过 frame.viewToFieldId 或类似映射
-  // ...
+  // view col → visible fieldId：通过 frame.data.getSchema()（hidden columns 已过滤）
   const n = endCol - startCol + 1
-  // 检查选区内是否含 hidden col（通过 hiddenSet 与 selection 范围对照）
-  const hidden = new Set(this.engine.getHiddenCols())
-  let hasHidden = false
-  const fields = this.engine.getData().getSchema().fields
-  // 选区在 view-col 空间；翻译到 schema field idx
-  for (let viewCol = startCol; viewCol <= endCol && !hasHidden; viewCol += 1) {
-    const fieldId = this.viewColToFieldId(viewCol)  // helper：view col → fieldId
-    // 检查是否存在 hidden 列在 fieldId 与下一个 visible 之间
-    const schemaIdx = fields.findIndex((f) => f.id === fieldId)
-    if (schemaIdx >= 0 && schemaIdx + 1 < fields.length) {
-      if (hidden.has(fields[schemaIdx + 1]!.id)) hasHidden = true
-    }
-  }
+  const hasHidden = this.collectHiddenInViewColRange(startCol, endCol).length > 0
   // ... 然后调 getColumnHeaderContextMenuItems(ctx, viewPipeline) 拼最终菜单
   // pipeline ctx + selectedColCount/hasHiddenInSelection 扩展字段填好
   // ...
@@ -2167,16 +2154,13 @@ invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number })
   for (let viewCol = startCol; viewCol <= endCol; viewCol += 1) {
     fieldIds.push(this.viewColToFieldId(viewCol))
   }
-  const fields = this.engine.getData().getSchema().fields
-  const startSchemaIdx = fields.findIndex((f) => f.id === fieldIds[0])
-  const endSchemaIdx = fields.findIndex((f) => f.id === fieldIds[fieldIds.length - 1]!)
   const N = endCol - startCol + 1
   switch (id) {
     case 'insert-col-left':
-      this.insertCols(startSchemaIdx, N)
+      this.insertCols(this.rawSchemaIndexBeforeViewCol(startCol), N)
       break
     case 'insert-col-right':
-      this.insertCols(endSchemaIdx + 1, N)
+      this.insertCols(this.rawSchemaIndexAfterViewCol(endCol), N)
       break
     case 'delete-cols':
       this.deleteCols(fieldIds)
@@ -2185,12 +2169,12 @@ invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number })
       this.hideCols(fieldIds)
       break
     case 'unhide-cols':
-      // 收集选区内 hidden field ids（schemaIdx 在 startSchemaIdx..endSchemaIdx 范围里）
-      this.unhideCols(this.collectHiddenInColRange(startSchemaIdx, endSchemaIdx))
+      this.unhideCols(this.collectHiddenInViewColRange(startCol, endCol))
       break
     case 'resize-column-width':
       if (!this.columnWidthPopover || fieldIds.length === 0) return
       this.pendingColumnWidthFieldIds = fieldIds
+      const fields = this.engine.getData().getSchema().fields
       const currentWidth = fields.find((f) => f.id === fieldIds[0])?.width ?? 100
       const pt = this.lastContextMenuPoint
       const triggerRect = pt
@@ -2203,23 +2187,33 @@ invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number })
 
 private viewColToFieldId(viewCol: number): string {
   const fields = this.engine.getData().getSchema().fields
-  const hidden = this.engine.getHiddenCols()
-  const hiddenSet = new Set(hidden)
-  let count = 0
-  for (const f of fields) {
-    if (hiddenSet.has(f.id)) continue
-    if (count === viewCol) return f.id
-    count += 1
-  }
+  if (fields[viewCol]) return fields[viewCol]!.id
   return fields[fields.length - 1]!.id  // fallback
 }
 
-private collectHiddenInColRange(startIdx: number, endIdx: number): readonly string[] {
-  const fields = this.engine.getData().getSchema().fields
-  const hidden = new Set(this.engine.getHiddenCols())
+private rawSchemaIndexBeforeViewCol(viewCol: number): number {
+  const gaps = this.engine.getFrame().collapsedColGaps
+  const hiddenBefore = gaps
+    .filter((gap) => gap.atViewCol < viewCol)
+    .reduce((sum, gap) => sum + gap.hiddenCount, 0)
+  return viewCol + hiddenBefore
+}
+
+private rawSchemaIndexAfterViewCol(viewCol: number): number {
+  const gaps = this.engine.getFrame().collapsedColGaps
+  const hiddenThrough = gaps
+    .filter((gap) => gap.atViewCol <= viewCol)
+    .reduce((sum, gap) => sum + gap.hiddenCount, 0)
+  return viewCol + 1 + hiddenThrough
+}
+
+private collectHiddenInViewColRange(startCol: number, endCol: number): readonly string[] {
+  const gaps = this.engine.getFrame().collapsedColGaps
   const out: string[] = []
-  for (let i = startIdx; i <= endIdx; i += 1) {
-    if (hidden.has(fields[i]!.id)) out.push(fields[i]!.id)
+  for (const gap of gaps) {
+    if (gap.atViewCol >= startCol - 1 && gap.atViewCol < endCol) {
+      out.push(...gap.hiddenFieldIds)
+    }
   }
   return out
 }
