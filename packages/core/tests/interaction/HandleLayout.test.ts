@@ -47,6 +47,7 @@ function makeFrame(excel = false): RenderFrame {
     colsAxis,
     viewport: viewport.snapshot(),
     collapsedRowGaps: [],
+    collapsedColGaps: [],
   }
 }
 

@@ -71,6 +71,7 @@ function makeEngine(): GridEngine {
         ],
       } as never,
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     })),
     getRowsTotalSize: () => 280,
     getColsTotalSize: () => 200,
@@ -103,6 +104,13 @@ function makeEngine(): GridEngine {
     hideRows: mock(() => {}),
     setRowHeights: mock(() => {}),
     setSelection: mock(() => {}),
+    insertCols: mock(() => [] as never),
+    deleteCols: mock(() => [] as never),
+    hideCols: mock(() => {}),
+    unhideCols: mock(() => {}),
+    setColumnWidths: mock(() => {}),
+    getHiddenCols: mock(() => [] as readonly string[]),
+    getFrozenConfig: mock(() => ({ topRows: 0, leftCols: 0, rightCols: 0 })),
   }
 }
 
@@ -381,6 +389,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
         scrollY: 0,
       } as never,
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     }))
 
     const host = makeHost()
@@ -450,6 +459,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
         draft: 'x',
       },
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     }))
 
     const renderer = makeRenderer()
@@ -505,6 +515,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
         scrollY: 0,
       } as never,
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
 
@@ -607,6 +618,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
         ],
       } as never,
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     }))
     const runtime = new WebGridRuntime({
       engine,
@@ -661,6 +673,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
         ],
       } as never,
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.handleHostPointerDown({ x: 50, y: 60, shiftKey: false, button: 2 })
@@ -700,6 +713,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
         ],
       } as never,
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     const editor = {
@@ -889,6 +903,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
         ],
       } as never,
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.setContextMenuLayer(makeContextMenu() as never)

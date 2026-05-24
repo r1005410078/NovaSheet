@@ -46,6 +46,7 @@ function makeFrame(): RenderFrame {
     colsAxis,
     viewport: viewport.snapshot(),
     collapsedRowGaps: [],
+    collapsedColGaps: [],
   }
 }
 

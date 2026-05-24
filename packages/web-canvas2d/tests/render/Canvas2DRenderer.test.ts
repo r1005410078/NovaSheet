@@ -111,6 +111,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       colsAxis,
       viewport: viewport.snapshot(),
       collapsedRowGaps: [],
+      collapsedColGaps: [],
     }
     viewport.setScroll(0, 0)
     ops.length = 0
@@ -134,6 +135,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       colsAxis,
       viewport: viewport.snapshot(),
       collapsedRowGaps: [],
+      collapsedColGaps: [],
       viewPipeline: {
         collectHeaderDecorations: (field: { id: string }) =>
           field.id === 'name' ? { sortIndicator: 'desc' as const, filterActive: true } : {},
@@ -153,6 +155,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       colsAxis,
       viewport: viewport.snapshot(),
       collapsedRowGaps: [],
+      collapsedColGaps: [],
       cellEdit: {
         cell: { rowIndex: 0, colIndex: 0 },
         fieldId: 'name',
@@ -471,6 +474,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       colsAxis,
       viewport: viewport.snapshot(),
       collapsedRowGaps: [],
+      collapsedColGaps: [],
       selection: {
         activeCell: { rowIndex: 1, colIndex: 1 },
         anchorCell: { rowIndex: 1, colIndex: 1 },
@@ -507,6 +511,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       colsAxis,
       viewport: viewport.snapshot(),
       collapsedRowGaps: [],
+      collapsedColGaps: [],
       selection: {
         activeCell: { rowIndex: 1, colIndex: 0 },
         anchorCell: { rowIndex: 1, colIndex: 0 },
@@ -572,6 +577,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       colsAxis,
       viewport: viewport.snapshot(),
       collapsedRowGaps: [],
+      collapsedColGaps: [],
       selection: {
         activeCell: { rowIndex: 1, colIndex: 1 },
         anchorCell: { rowIndex: 1, colIndex: 1 },

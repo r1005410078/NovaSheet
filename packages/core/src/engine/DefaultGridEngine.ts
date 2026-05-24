@@ -21,7 +21,7 @@ import {
 import { ChunkedAxis } from '../layout/ChunkedAxis'
 import { FrozenRegions, type FrozenConfig } from '../layout/FrozenRegions'
 import { Viewport } from '../layout/Viewport'
-import type { RenderFrame } from '../render/RenderFrame'
+import type { RenderFrame, RenderFrameCollapsedColGap } from '../render/RenderFrame'
 import { denseGridTheme } from '../theme/denseGridTheme'
 import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
@@ -271,6 +271,17 @@ export class DefaultGridEngine implements GridEngine {
         ...g,
         yPx: this.rowsAxis.indexToPosition(g.atViewRow + 1) - vpSnap.scrollY,
       }))
+    const allColGaps = this.computeCollapsedColGaps()
+    const [firstVisibleCol, lastVisibleCol] = this.colsAxis.getVisibleRange(
+      vpSnap.scrollX,
+      vpSnap.scrollX + vpSnap.contentRect.width,
+    )
+    const collapsedColGaps = allColGaps
+      .filter((g) => g.atViewCol >= firstVisibleCol && g.atViewCol <= lastVisibleCol)
+      .map((g) => ({
+        ...g,
+        xPx: this.colsAxis.indexToPosition(g.atViewCol + 1) - vpSnap.scrollX,
+      }))
     return {
       data: this.data,
       theme: this.theme,
@@ -280,6 +291,7 @@ export class DefaultGridEngine implements GridEngine {
       selection: this.selection.getSelection(),
       cellEdit: this.cellEdit.getSession() ?? undefined,
       collapsedRowGaps,
+      collapsedColGaps,
     }
   }
 
@@ -1133,6 +1145,49 @@ export class DefaultGridEngine implements GridEngine {
 
   private wrapViewData(data: DataSource): DataSource {
     return new VisibleColumnsDataSource(data, () => this.hiddenColIds)
+  }
+
+  private computeCollapsedColGaps(): readonly Omit<RenderFrameCollapsedColGap, 'xPx'>[] {
+    if (this.hiddenColIds.size === 0) return []
+    const fields = this.rawData.getSchema().fields
+    const hiddenSchemaIndices: number[] = []
+    for (let i = 0; i < fields.length; i += 1) {
+      if (this.hiddenColIds.has(fields[i]!.id)) hiddenSchemaIndices.push(i)
+    }
+
+    const gaps: Omit<RenderFrameCollapsedColGap, 'xPx'>[] = []
+    let run: number[] = []
+    for (const schemaIndex of hiddenSchemaIndices) {
+      if (run.length === 0 || schemaIndex === run[run.length - 1]! + 1) {
+        run.push(schemaIndex)
+        continue
+      }
+      gaps.push(this.makeColGap(run, fields))
+      run = [schemaIndex]
+    }
+    if (run.length > 0) gaps.push(this.makeColGap(run, fields))
+    return gaps
+  }
+
+  private makeColGap(
+    run: readonly number[],
+    fields: readonly Field[],
+  ): Omit<RenderFrameCollapsedColGap, 'xPx'> {
+    const upperRawCol = run[0]! - 1
+    let atViewCol = -1
+    if (upperRawCol >= 0) {
+      let visibleCount = 0
+      for (let rawCol = 0; rawCol <= upperRawCol; rawCol += 1) {
+        if (this.hiddenColIds.has(fields[rawCol]!.id)) continue
+        if (rawCol === upperRawCol) atViewCol = visibleCount
+        visibleCount += 1
+      }
+    }
+    return {
+      atViewCol,
+      hiddenCount: run.length,
+      hiddenFieldIds: run.map((rawCol) => fields[rawCol]!.id),
+    }
   }
 
   private syncFrozenAfterColInsert(at: number, count: number): void {

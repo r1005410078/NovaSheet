@@ -22,6 +22,13 @@ export interface RenderFrameCollapsedGap extends CollapsedGap {
   readonly yPx: number
 }
 
+export interface RenderFrameCollapsedColGap {
+  readonly atViewCol: number
+  readonly hiddenCount: number
+  readonly hiddenFieldIds: readonly string[]
+  readonly xPx: number
+}
+
 export interface RenderFrame {
   data: DataSource
   theme: Theme
@@ -35,4 +42,6 @@ export interface RenderFrame {
   cellEdit?: CellEditSession
   /** Phase 4.5 — 当前可见区域内的折叠行间隙列表（含像素坐标）。 */
   collapsedRowGaps: readonly RenderFrameCollapsedGap[]
+  /** Phase 4.6 — 当前可见区域内的折叠列间隙列表（含像素坐标）。 */
+  collapsedColGaps: readonly RenderFrameCollapsedColGap[]
 }
