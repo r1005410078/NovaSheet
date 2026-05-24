@@ -43,3 +43,46 @@ describe('SelectionModel.remapAfterRowsDeleted', () => {
     expect(sel.getSelection().selectedRange).toBeNull()
   })
 })
+
+describe('SelectionModel.remapAfterColsInserted', () => {
+  it('选区在 at 之后整体右移', () => {
+    const sel = new SelectionModel()
+    sel.setSelection({
+      activeCell: { rowIndex: 0, colIndex: 5 },
+      anchorCell: { rowIndex: 0, colIndex: 5 },
+      extentCell: { rowIndex: 2, colIndex: 7 },
+      selectedRange: { startRow: 0, endRow: 2, startCol: 5, endCol: 7 },
+    })
+    sel.remapAfterColsInserted(3, 2)
+    const s = sel.getSelection()
+    expect(s.activeCell?.colIndex).toBe(7)
+    expect(s.selectedRange).toEqual({ startRow: 0, endRow: 2, startCol: 7, endCol: 9 })
+  })
+})
+
+describe('SelectionModel.remapAfterColsDeleted', () => {
+  it('选区跨越被删列 → 折叠到存活列', () => {
+    const sel = new SelectionModel()
+    sel.setSelection({
+      activeCell: { rowIndex: 0, colIndex: 3 },
+      anchorCell: { rowIndex: 0, colIndex: 3 },
+      extentCell: { rowIndex: 0, colIndex: 5 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 3, endCol: 5 },
+    })
+    sel.remapAfterColsDeleted([4])
+    const s = sel.getSelection()
+    expect(s.selectedRange).toEqual({ startRow: 0, endRow: 0, startCol: 3, endCol: 4 })
+  })
+
+  it('选区全部被删 → clear', () => {
+    const sel = new SelectionModel()
+    sel.setSelection({
+      activeCell: { rowIndex: 0, colIndex: 2 },
+      anchorCell: { rowIndex: 0, colIndex: 2 },
+      extentCell: { rowIndex: 0, colIndex: 3 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 2, endCol: 3 },
+    })
+    sel.remapAfterColsDeleted([2, 3])
+    expect(sel.getSelection().selectedRange).toBeNull()
+  })
+})
