@@ -353,7 +353,7 @@ export function remapColIndexAfterDelete(
 | --- | --- |
 | `packages/core/src/render/RenderFrame.ts` | 加 `collapsedColGaps: readonly RenderFrameCollapsedColGap[]`（mirror 4.5 `collapsedRowGaps`） |
 | `packages/core/src/engine/DefaultGridEngine.ts` | `getFrame()` 填 `collapsedColGaps`（可见区裁剪 + xPx）；输出 `colsAxis` = view 列轴 |
-| `packages/web-canvas2d/src/painters/HeaderColumnPainter.ts` | 消费 `frame.collapsedColGaps`，每 gap 的 view-col 右边界 X 处画一对水平三角 |
+| `packages/web-canvas2d/src/painters/HeaderPainter.ts` | 消费 `frame.collapsedColGaps`，每 gap 的 view-col 右边界 X 处画一对水平三角 |
 | `packages/core/src/theme/denseGridTheme.ts` | 加 `dimensions.hideColTriangleOffset / hideColTrianglePadY`；icons 复用 4.5 |
 | `packages/web/src/handle/HideColToggleHandle.ts` | 新建：mirror `HideToggleHandle.ts`，每 col gap 渲染透明命中区位于列头区域 |
 | `packages/web/src/runtime/WebGridRuntime.ts` | 装配 `HideColToggleHandle` + 每帧 sync；invokeColumnHeaderContextMenuAction 内 resize-column-width 分支接 ColumnWidthPopover |
@@ -419,7 +419,7 @@ mirror `RowHeightPopover.ts`：
 | `packages/core/tests/engine/DefaultGridEngine.frozen-cols-sync.test.ts` | §4.6 Frozen 自动调整：插入冻结区内 → leftCols++；删除冻结列 → leftCols--；边界 (at == leftCols) 插入不变；hide/unhide 不动 |
 | `packages/core/tests/engine/DefaultGridEngine.col-undo.test.ts` | UndoCommand 5 个新 variant apply/unapply 对称；insertCols redo 用 newFields 稳定 id |
 | `packages/core/tests/view/SortFilter.cols-deleted.test.ts` | deleteCols 后 sort/filter spec 命中已删 fieldId → 自动 invalidate；SortLayer.handleUpstreamEvent 新增 colsDeleted 对称处理 |
-| `packages/web-canvas2d/tests/painters/HeaderColumnPainter.hide.test.ts` | RecordingContext2D 三角 path/fill；headerHeight < 24 时跳过 |
+| `packages/web-canvas2d/tests/painters/HeaderPainter.hide.test.ts` | RecordingContext2D 三角 path/fill；headerHeight < 24 时跳过 |
 | `packages/web/tests/Grid.col-menu.test.ts` | 列头右键菜单 5 个新项 + 触发各 Grid facade 方法；不破坏 4.4 sort/filter 入口 |
 | `packages/web/tests/overlay/ColumnWidthPopover.test.ts` | open + Enter 提交 + Esc / 失焦 + destroy 幂等 |
 | `packages/web/tests/handle/HideColToggleHandle.test.ts` | gap handle 点击触发 onUnhide(fieldIds) |
@@ -455,7 +455,7 @@ mirror `RowHeightPopover.ts`：
 
 | ADR | 是否影响 | 说明 |
 | --- | --- | --- |
-| §A.1 单 Canvas 全可见区重绘 | 不影响 | HeaderColumnPainter 多绘三角，仍在单 canvas 内 |
+| §A.1 单 Canvas 全可见区重绘 | 不影响 | HeaderPainter 多绘三角，仍在单 canvas 内 |
 | §A.2 原生滚动 + 非线性 scrollTop | 不影响 | colsInserted/Deleted → ScrollMapper 重算 spacer 走既有 path |
 | §A.3 ChunkedAxis CHUNK_SIZE = 1024 | 不影响 | 复用 4.5 既有 insertRange / deleteRange |
 | §A.4 DataSource endIndex INCLUSIVE | **小幅修订** | `MutableDataSource` 增 2 个 optional 方法（`insertField` / `removeField`） + `RemovedFieldSnapshot` 类型；`DataSourceEvent` 加 `colsInserted` / `colsDeleted` 2 个 variant |

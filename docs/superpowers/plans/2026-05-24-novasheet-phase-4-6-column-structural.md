@@ -57,7 +57,7 @@
 | `packages/core/src/render/RenderFrame.ts` | 加 `collapsedColGaps: readonly RenderFrameCollapsedColGap[]` 字段 |
 | `packages/core/src/theme/Theme.ts` | `ThemeDimensions` 加 `hideColTriangleOffset` / `hideColTrianglePadY` |
 | `packages/core/src/theme/denseGridTheme.ts` | 填新 dimension 值 |
-| `packages/web-canvas2d/src/painters/HeaderColumnPainter.ts` | 消费 `frame.collapsedColGaps` 画三角 |
+| `packages/web-canvas2d/src/painters/HeaderPainter.ts` | 消费 `frame.collapsedColGaps` 画三角 |
 | `packages/web/src/grid/GridController.ts` | 接口加 6 个新方法 |
 | `packages/web/src/runtime/WebGridRuntime.ts` | 6 个新方法 + `setColumnWidthPopover` / `setHideColToggleHandle` setter + `syncHideColToggleHandles` + invokeColumnHeaderContextMenuAction（mirror invokeRowHeaderContextMenuAction）+ contextmenu router 增加 col header 结构项分支 |
 | `packages/web/src/backends/Canvas2DBackend.ts` | 实例化 `ColumnWidthPopover` + `HideColToggleHandle` 注入 runtime；`destroy()` 调两者 destroy；门面 6 个新方法转发 |
@@ -74,7 +74,7 @@
 | `packages/core/tests/engine/DefaultGridEngine.frozen-cols-sync.test.ts` | §4.6 Frozen 规则：插入冻结区内 → leftCols++；删除冻结列 → leftCols--；边界 (at == leftCols) 插入不变；hide / unhide 不动 frozen |
 | `packages/core/tests/engine/DefaultGridEngine.col-undo.test.ts` | 5 个新 UndoCommand variant apply / unapply 对称；`insertCols` redo 用 newFields 稳定 id |
 | `packages/core/tests/view/SortFilter.cols-deleted.test.ts` | deleteCols 后 sort/filter spec 命中已删 fieldId → 自动 invalidate；SortLayer/FilterLayer 不触发 pipeline.rebuild（继承 4.5 freeze fix） |
-| `packages/web-canvas2d/tests/painters/HeaderColumnPainter.hide.test.ts` | RecordingContext2D 三角 path/fill；headerHeight < 24 时跳过 |
+| `packages/web-canvas2d/tests/painters/HeaderPainter.hide.test.ts` | RecordingContext2D 三角 path/fill；headerHeight < 24 时跳过 |
 | `packages/web/tests/Grid.col-menu.test.ts` | 列头右键菜单 5 个新项 + 触发各 Grid facade 方法；不破坏 4.4 sort/filter 入口 |
 | `packages/web/tests/overlay/ColumnWidthPopover.test.ts` | open + Enter / Esc / 失焦 + destroy 幂等 |
 | `packages/web/tests/handle/HideColToggleHandle.test.ts` | gap handle 点击触发 onUnhide(fieldIds) |
@@ -1530,20 +1530,20 @@ git commit -m "feat(core): denseGridTheme 加 hideCol 三角 dimensions tokens"
 
 ---
 
-## Task 11: `HeaderColumnPainter` 画 col-hide 三角
+## Task 11: `HeaderPainter` 画 col-hide 三角
 
 **Files:**
-- Modify: `packages/web-canvas2d/src/painters/HeaderColumnPainter.ts`
-- Create: `packages/web-canvas2d/tests/painters/HeaderColumnPainter.hide.test.ts`
+- Modify: `packages/web-canvas2d/src/painters/HeaderPainter.ts`
+- Create: `packages/web-canvas2d/tests/painters/HeaderPainter.hide.test.ts`
 
 - [ ] **Step 1: 写 failing 测试**
 
-Create `packages/web-canvas2d/tests/painters/HeaderColumnPainter.hide.test.ts`:
+Create `packages/web-canvas2d/tests/painters/HeaderPainter.hide.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'bun:test'
 import { createRecordingContext } from '../helpers/recording-context'
-import { HeaderColumnPainter } from '../../src/painters/HeaderColumnPainter'
+import { HeaderPainter } from '../../src/painters/HeaderPainter'
 import { denseGridTheme } from '@novasheet/core'
 
 // 复用 frameWithCollapsedColGaps fixture
@@ -1552,17 +1552,19 @@ function frameWithGaps(
   headerHeight: number,
 ) {
   return {
-    headerHeight,
+    schema,
+    colsAxis,
+    colRange: [0, 3],
+    width: 400,
     collapsedColGaps: gaps,
-    theme: denseGridTheme,
-    // ... 其它必需字段按既有 HeaderColumnPainter 测试 helper 补
+    theme: { ...denseGridTheme, metrics: { ...denseGridTheme.metrics, headerHeight } },
   } as any
 }
 
-describe('HeaderColumnPainter — col-hide 三角', () => {
+describe('HeaderPainter — col-hide 三角', () => {
   it('headerHeight ≥ 24 时为每个 gap 画两个三角 fill', () => {
     const ctx = createRecordingContext()
-    const painter = new HeaderColumnPainter(denseGridTheme)
+    const painter = new HeaderPainter(denseGridTheme)
     painter.paint(ctx as any, frameWithGaps([
       { atViewCol: 2, hiddenCount: 3, hiddenFieldIds: ['f3', 'f4', 'f5'], xPx: 200 },
     ], 30))
@@ -1573,7 +1575,7 @@ describe('HeaderColumnPainter — col-hide 三角', () => {
   it('headerHeight < 24 时跳过', () => {
     const ctx = createRecordingContext()
     const ctxNoGap = createRecordingContext()
-    const painter = new HeaderColumnPainter(denseGridTheme)
+    const painter = new HeaderPainter(denseGridTheme)
     painter.paint(ctx as any, frameWithGaps([
       { atViewCol: 2, hiddenCount: 3, hiddenFieldIds: ['f3', 'f4', 'f5'], xPx: 200 },
     ], 20))
@@ -1585,17 +1587,17 @@ describe('HeaderColumnPainter — col-hide 三角', () => {
 })
 ```
 
-注：精确 fixture 结构需读 `HeaderColumnPainter.ts` 既有 paint 入口 + `createRecordingContext` 真实 API（参考 4.5 Task 13 `HeaderRowPainter.hide.test.ts` 中 frame fixture 的真实形状，可直接 copy 调整）。
+注：精确 fixture 结构需读 `HeaderPainter.ts` 既有 paint 入口 + `createRecordingContext` 真实 API（参考 4.5 Task 13 `HeaderRowPainter.hide.test.ts` 中 frame fixture 的真实形状，可直接 copy 调整）。
 
 - [ ] **Step 2: 实现**
 
-在 `HeaderColumnPainter.paint` 既有列头绘制后追加：
+在 `HeaderPainter.paint` 既有列头绘制后追加：
 
 ```ts
-if (frame.headerHeight >= 24) {
-  for (const gap of frame.collapsedColGaps) {
-    drawColHideTriangle(ctx, this.theme, gap.xPx, frame.headerHeight, 'left')
-    drawColHideTriangle(ctx, this.theme, gap.xPx, frame.headerHeight, 'right')
+if (this.theme.metrics.headerHeight >= 24) {
+  for (const gap of params.collapsedColGaps ?? []) {
+    drawColHideTriangle(ctx, this.theme, gap.xPx, this.theme.metrics.headerHeight, 'left')
+    drawColHideTriangle(ctx, this.theme, gap.xPx, this.theme.metrics.headerHeight, 'right')
   }
 }
 ```
@@ -1605,11 +1607,11 @@ if (frame.headerHeight >= 24) {
 - [ ] **Step 3: 验证 GREEN + Commit**
 
 ```bash
-bun test packages/web-canvas2d/tests/painters/HeaderColumnPainter.hide.test.ts
+bun test packages/web-canvas2d/tests/painters/HeaderPainter.hide.test.ts
 bun test packages/web-canvas2d
-git add packages/web-canvas2d/src/painters/HeaderColumnPainter.ts \
-        packages/web-canvas2d/tests/painters/HeaderColumnPainter.hide.test.ts
-git commit -m "feat(canvas2d): HeaderColumnPainter 画 col-hide 三角指示器"
+git add packages/web-canvas2d/src/painters/HeaderPainter.ts \
+        packages/web-canvas2d/tests/painters/HeaderPainter.hide.test.ts
+git commit -m "feat(canvas2d): HeaderPainter 画 col-hide 三角指示器"
 ```
 
 ---
