@@ -4,7 +4,7 @@
 - **Status**: Brainstorm（待评审）
 - **Scope**: 行 insert / delete / hide / unhide / 多行高度 resize + 行头右键菜单 + Sheets 式 hide 三角指示器 + 全部进 undo/redo
 - **Out of scope（明确推迟）**：
-  - 列 insert / delete / hide → Phase 4.6
+  - 列 insert / delete / hide → Phase 4.6 已交付
   - 列拖拽重排 + 列头 DOM overlay 命中层 → Phase 4.7
   - 行拖拽重排 → 暂不列入路线图
   - 非连续多选 row range（Ctrl+点） → Phase 5 SelectionModel 演进时再考虑
@@ -554,7 +554,7 @@ dimensions: {
 
 | 项 | 状态 | 后续 phase |
 | --- | --- | --- |
-| 列 insert / delete / hide | 不交付 | Phase 4.6 |
+| 列 insert / delete / hide | ✅ 已交付 | Phase 4.6 |
 | 列拖拽重排 + 列头 DOM overlay 层 | 不交付 | Phase 4.7 |
 | 行拖拽重排 | 不交付 | 暂不入路线图 |
 | 非连续多选 row range（Ctrl+点） | 不交付 | Phase 5 SelectionModel 演进时考虑 |

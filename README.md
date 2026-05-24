@@ -10,12 +10,12 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ## 当前状态
 
-最近交付：**Phase 4.5 行结构 + 行头菜单**。下一里程碑：**Phase 4.6 列结构 + 列头菜单扩展**。
+最近交付：**Phase 4.6 列结构 + 列头菜单扩展**。下一里程碑：**Phase 4.7 列拖拽重排**。
 
 | 维度                     | 数值                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d`                                                     |
-| 测试                     | 520 passing（bun:test，跨三包）                                                                                      |
+| 测试                     | 644 passing（bun:test，跨三包）                                                                                      |
 | Lint / Typecheck / Build | 全部 clean                                                                                                           |
 | 公共 API                 | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
 
@@ -42,7 +42,7 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 | Phase 4.3 填充柄                  | 选区右下角 fill handle · 四方向 · 单值 / 数字等差 / 文本尾号 / Date 序列 · 进 undo                            | ✅        | [spec](docs/superpowers/specs/2026-05-21-fill-handle-design.md)                                        |
 | Phase 4.4 排序 / 筛选             | ViewLayer / ViewPipeline · 列头菜单 · header 图标 · DOM FilterPopover · 底层行语义                            | ✅        | [spec](docs/superpowers/specs/2026-05-22-sort-filter-design.md)                                        |
 | Phase 4.5 行结构 + 行头菜单       | 行 insert / delete / hide · 行头右键菜单 · HideRowsLayer · 三角 unhide handle · 行高弹层                      | ✅        | [spec](docs/superpowers/specs/2026-05-23-novasheet-phase-4-5-row-structural.md)                       |
-| Phase 4.6 列结构 + 列头菜单扩展   | 列 insert / delete / hide · 列头菜单新增结构项 · 列头 unhide 入口                                             | 计划中    | —                                                                                                      |
+| Phase 4.6 列结构 + 列头菜单扩展   | 列 insert / delete / hide · 列头菜单新增结构项 · 列头 unhide 入口                                             | ✅        | [spec](docs/superpowers/specs/2026-05-24-novasheet-phase-4-6-column-structural.md)                       |
 | Phase 4.7 列拖拽重排              | 列序拖拽 · 列头 DOM overlay 命中层 · 拖拽预览                                                                 | 计划中    | —                                                                                                      |
 | Phase 5 合并 / 格式化             | 单元格合并 / 对齐 / 数字 · 日期 · 百分比 · 货币格式化 · 条件格式                                              | 计划中    | —                                                                                                      |
 | Phase 6 字段类型 + Schema         | 字段编辑器 · Schema 校验 · 单元格校验 · lookup / rollup · 分组 / 聚合                                         | 计划中    | —                                                                                                      |

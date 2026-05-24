@@ -6,7 +6,7 @@
 - **Out of scope（明确推迟）**：
   - 列头右键菜单的排序 / 筛选项 → Phase 4.4 已接管（sort / filter 菜单）
   - 行头右键菜单 → Phase 4.5（行 insert / delete / hide）
-  - 列头右键菜单的结构项 → Phase 4.6（列 insert / delete / hide）
+  - 列头右键菜单的结构项 → Phase 4.6 已接管（列 insert / delete / hide）
   - 剪贴板真正读写 + 快捷键 → Phase 4.1
   - 触摸 long-press → Phase 4.0.1（如需）
   - 菜单插件 / i18n 框架 → 路线图后续，4.0 硬编码中英 label
