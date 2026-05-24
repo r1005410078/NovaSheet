@@ -1,6 +1,6 @@
 import type { DataSource, DataSourceEvent, DataSourceListener } from './DataSource'
-import type { CellValue, Row, Schema } from './Schema'
-import type { DeletedRowSnapshot } from './MutableDataSource'
+import type { CellValue, Field, Row, Schema } from './Schema'
+import type { DeletedRowSnapshot, RemovedFieldSnapshot } from './MutableDataSource'
 
 /**
  * 全内存 DataSource——M1 的默认实现，所有方法同步。
@@ -112,6 +112,35 @@ export class InMemoryDataSource implements DataSource {
     this.emit({ type: 'rowsDeleted', removed: underlyingRowIds })
     this.emit({ type: 'rowCountChanged', newCount: this.rows.length })
     return snapshots
+  }
+
+  /** 在 beforeIndex 位置插入字段；新字段 cell 值保持 undefined。 */
+  insertField(beforeIndex: number, field: Field): Field {
+    if (this.schema.fields.some((candidate) => candidate.id === field.id)) {
+      throw new Error(`InMemoryDataSource.insertField: duplicate field id "${field.id}"`)
+    }
+    const fields = [...this.schema.fields]
+    const at = Math.max(0, Math.min(beforeIndex, fields.length))
+    fields.splice(at, 0, field)
+    this.schema = { ...this.schema, fields }
+    this.emit({ type: 'colsInserted', at, field })
+    return field
+  }
+
+  /** 删除 fieldId 对应字段并返回列值快照；未知 fieldId 返回 null。 */
+  removeField(fieldId: string): RemovedFieldSnapshot | null {
+    const idx = this.schema.fields.findIndex((field) => field.id === fieldId)
+    if (idx < 0) return null
+    const field = this.schema.fields[idx]!
+    const cells = this.rows.map((row) => row[fieldId])
+    for (const row of this.rows) {
+      delete row[fieldId]
+    }
+    const fields = [...this.schema.fields]
+    fields.splice(idx, 1)
+    this.schema = { ...this.schema, fields }
+    this.emit({ type: 'colsDeleted', removed: [{ index: idx, fieldId }] })
+    return { originalIndex: idx, field, cells }
   }
 
   private makeDefaultRow(): Row {
