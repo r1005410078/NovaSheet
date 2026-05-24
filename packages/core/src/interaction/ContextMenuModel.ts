@@ -20,6 +20,12 @@ export type ContextMenuAction =
   | 'sort-none'
   | 'filter-open'
   | 'filter-clear'
+  | 'insert-col-left'
+  | 'insert-col-right'
+  | 'delete-cols'
+  | 'hide-cols'
+  | 'unhide-cols'
+  | 'resize-column-width'
   | 'insert-above'
   | 'insert-below'
   | 'delete-rows'
@@ -37,6 +43,8 @@ export interface CellMenuContext {
 
 export interface ColumnHeaderMenuContext extends PipelineColumnHeaderMenuContext {
   readonly multiSelect?: boolean
+  readonly selectedColCount?: number
+  readonly hasHiddenInSelection?: boolean
 }
 
 /** Phase 4.5 — 行头右键菜单上下文。 */
@@ -66,11 +74,57 @@ export function getColumnHeaderContextMenuItems(
   ctx: ColumnHeaderMenuContext,
   pipeline: ViewPipeline,
 ): readonly ContextMenuItem[] {
-  const items = pipeline.collectColumnHeaderMenuItems(ctx)
-  if (!ctx.multiSelect) return items
-  return items.map((item) =>
-    item.id === 'sort-asc' || item.id === 'sort-desc' ? { ...item, disabled: true } : item,
+  const pipelineItems = pipeline.collectColumnHeaderMenuItems(ctx)
+  const items = ctx.multiSelect
+    ? pipelineItems.map((item) =>
+        item.id === 'sort-asc' || item.id === 'sort-desc' ? { ...item, disabled: true } : item,
+      )
+    : pipelineItems
+  const merged = [...items]
+  if (merged.length > 0) {
+    const last = merged[merged.length - 1]!
+    merged[merged.length - 1] = { ...last, separatorAfter: true }
+  }
+  merged.push(
+    ...getColumnHeaderStructuralMenuItems(
+      ctx.selectedColCount ?? 1,
+      ctx.hasHiddenInSelection ?? false,
+    ),
   )
+  return merged
+}
+
+/** Phase 4.6 — 生成列头结构操作菜单项（追加在 sort/filter 之后）。 */
+export function getColumnHeaderStructuralMenuItems(
+  n: number,
+  hasHiddenInSelection: boolean,
+): readonly ContextMenuItem[] {
+  const items: ContextMenuItem[] = [
+    { id: 'insert-col-left', label: `在左侧插入 ${n} 列`, disabled: false, separatorAfter: false },
+    { id: 'insert-col-right', label: `在右侧插入 ${n} 列`, disabled: false, separatorAfter: true },
+    { id: 'delete-cols', label: `删除 ${n} 列`, disabled: false, separatorAfter: false },
+    { id: 'hide-cols', label: `隐藏 ${n} 列`, disabled: false, separatorAfter: false },
+  ]
+  if (hasHiddenInSelection) {
+    items.push({
+      id: 'unhide-cols',
+      label: '显示选区内隐藏列',
+      disabled: false,
+      separatorAfter: false,
+    })
+  }
+  items.push({
+    id: 'resize-column-width',
+    label: '调整列宽…',
+    disabled: false,
+    separatorAfter: false,
+  })
+  const resizeIdx = items.findIndex((item) => item.id === 'resize-column-width')
+  if (resizeIdx > 0) {
+    const prev = items[resizeIdx - 1]!
+    items[resizeIdx - 1] = { ...prev, separatorAfter: true }
+  }
+  return items
 }
 
 /** Phase 4.5 — 生成行头右键菜单项列表。

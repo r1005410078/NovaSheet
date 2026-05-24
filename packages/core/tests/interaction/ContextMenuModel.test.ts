@@ -99,7 +99,7 @@ describe('getColumnHeaderContextMenuItems — Phase 4.4', () => {
       pipeline,
     )
 
-    expect(items.map((item) => item.id)).toEqual([
+    expect(items.slice(0, 5).map((item) => item.id)).toEqual([
       'filter-open',
       'filter-clear',
       'sort-asc',
