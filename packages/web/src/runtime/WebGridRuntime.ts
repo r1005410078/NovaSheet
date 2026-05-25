@@ -302,6 +302,10 @@ export class WebGridRuntime {
     active: boolean
     targetBeforeFieldId: string | null | undefined
   } | null = null
+  /** 当前列头拖选状态；仅用于形成连续整列选区，不触发 reorder。 */
+  private columnHeaderSelectDrag: {
+    anchorCol: number
+  } | null = null
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: WebGridRuntimeOptions) {
@@ -1166,6 +1170,7 @@ export class WebGridRuntime {
     this.refresh()
     this.contextMenuLayer?.close()
     this.fillLayer?.hidePreview()
+    this.columnHeaderSelectDrag = null
   }
 
   /** 滚动到指定行，并按给定对齐方式放入 viewport。 */
@@ -1296,6 +1301,7 @@ export class WebGridRuntime {
     const target = this.fillDrag.target
     this.fillDrag = null
     this.columnReorderDrag = null
+    this.columnHeaderSelectDrag = null
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     if (!target) return
@@ -1372,6 +1378,7 @@ export class WebGridRuntime {
     this.cancelCellEdit()
     this.resizeDrag = null
     this.fillDrag = null
+    this.columnHeaderSelectDrag = null
     this.fillLayer?.hidePreview()
     this.scheduler.cancel('renderer:flush')
     this.scheduler.cancel(HOST_RESIZE_KEY)
@@ -1423,6 +1430,7 @@ export class WebGridRuntime {
   /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
   handleHostPointerMove(event: WebPointerEvent): void {
     if (this.updateColumnReorderDrag(event)) return
+    if (this.updateColumnHeaderSelectDrag(event)) return
     if (this.destroyed) return
     if (!this.lastDragPointer) {
       this.updateColumnHeaderCursor(event)
@@ -1442,6 +1450,10 @@ export class WebGridRuntime {
   handleHostPointerUp(): void {
     if (this.columnReorderDrag) {
       this.commitColumnReorderDrag()
+      return
+    }
+    if (this.columnHeaderSelectDrag) {
+      this.columnHeaderSelectDrag = null
       return
     }
     this.draggingSelection = false
@@ -1537,6 +1549,15 @@ export class WebGridRuntime {
 
     const selection = this.engine.getSelection()
     const range = selection.selectedRange
+    if (event.shiftKey) {
+      const anchorCol =
+        range && this.isWholeColumnSelection(range) ? selection.anchorCell?.colIndex : undefined
+      this.selectWholeColumnRange(anchorCol ?? hit.colIndex, hit.colIndex)
+      this.columnHeaderSelectDrag = { anchorCol: anchorCol ?? hit.colIndex }
+      this.refresh()
+      return true
+    }
+
     if (
       !range ||
       !this.isWholeColumnSelection(range) ||
@@ -1544,6 +1565,7 @@ export class WebGridRuntime {
       hit.colIndex > range.endCol
     ) {
       this.selectWholeColumn(hit.colIndex)
+      this.columnHeaderSelectDrag = { anchorCol: hit.colIndex }
       this.refresh()
       return true
     }
@@ -1573,6 +1595,16 @@ export class WebGridRuntime {
     })
     this.host.setCursor('grabbing')
     this.closeContextMenu()
+    return true
+  }
+
+  private updateColumnHeaderSelectDrag(event: WebPointerEvent): boolean {
+    const drag = this.columnHeaderSelectDrag
+    if (!drag) return false
+    const hit = this.hitTestColumnHeader(event)
+    if (!hit) return true
+    this.selectWholeColumnRange(drag.anchorCol, hit.colIndex)
+    this.refresh()
     return true
   }
 
@@ -1670,14 +1702,20 @@ export class WebGridRuntime {
   }
 
   private selectWholeColumn(colIndex: number): void {
+    this.selectWholeColumnRange(colIndex, colIndex)
+  }
+
+  private selectWholeColumnRange(anchorCol: number, extentCol: number): void {
     const frame = this.engine.getFrame()
     const rowCount = frame.data.getRowCount()
     if (rowCount <= 0) return
+    const startCol = Math.min(anchorCol, extentCol)
+    const endCol = Math.max(anchorCol, extentCol)
     this.engine.setSelection({
-      activeCell: { rowIndex: 0, colIndex },
-      anchorCell: { rowIndex: 0, colIndex },
-      extentCell: { rowIndex: rowCount - 1, colIndex },
-      selectedRange: { startRow: 0, endRow: rowCount - 1, startCol: colIndex, endCol: colIndex },
+      activeCell: { rowIndex: 0, colIndex: extentCol },
+      anchorCell: { rowIndex: 0, colIndex: anchorCol },
+      extentCell: { rowIndex: rowCount - 1, colIndex: extentCol },
+      selectedRange: { startRow: 0, endRow: rowCount - 1, startCol, endCol },
     })
   }
 

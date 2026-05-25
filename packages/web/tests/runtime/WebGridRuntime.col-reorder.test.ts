@@ -230,7 +230,6 @@ describe('WebGridRuntime column reorder drag', () => {
     })
 
     runtime.handleHostPointerDown({ x: 220, y: 10, shiftKey: false, button: 0 })
-    runtime.handleHostPointerMove({ x: 390, y: 10, shiftKey: false })
     runtime.handleHostPointerUp()
 
     expect(engine.getData().getSchema().fields.map((field) => field.id)).toEqual([
@@ -248,6 +247,52 @@ describe('WebGridRuntime column reorder drag', () => {
     expect(overlay.show).not.toHaveBeenCalled()
   })
 
+  it('shift-clicking a column header extends contiguous whole-column selection', () => {
+    const engine = makeEngine()
+    selectCols(engine, 1, 1)
+    const overlay = makeOverlay()
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      columnReorderOverlay: overlay,
+    })
+
+    runtime.handleHostPointerDown({ x: 320, y: 10, shiftKey: true, button: 0 })
+    runtime.handleHostPointerUp()
+
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 1,
+      startCol: 1,
+      endCol: 3,
+    })
+    expect(overlay.show).not.toHaveBeenCalled()
+  })
+
+  it('dragging from an unselected column header selects contiguous whole columns', () => {
+    const engine = makeEngine()
+    const overlay = makeOverlay()
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      columnReorderOverlay: overlay,
+    })
+
+    runtime.handleHostPointerDown({ x: 120, y: 10, shiftKey: false, button: 0 })
+    runtime.handleHostPointerMove({ x: 320, y: 10, shiftKey: false })
+    runtime.handleHostPointerUp()
+
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 1,
+      startCol: 1,
+      endCol: 3,
+    })
+    expect(overlay.show).not.toHaveBeenCalled()
+  })
+
   it('cell range selection in the same column does not seed column reorder', () => {
     const engine = makeEngine()
     selectCellRange(engine, 0, 0, 1, 1)
@@ -260,7 +305,6 @@ describe('WebGridRuntime column reorder drag', () => {
     })
 
     runtime.handleHostPointerDown({ x: 120, y: 10, shiftKey: false, button: 0 })
-    runtime.handleHostPointerMove({ x: 390, y: 10, shiftKey: false })
     runtime.handleHostPointerUp()
 
     expect(engine.getData().getSchema().fields.map((field) => field.id)).toEqual([
