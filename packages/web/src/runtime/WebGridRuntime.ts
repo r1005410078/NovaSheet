@@ -1537,7 +1537,12 @@ export class WebGridRuntime {
 
     const selection = this.engine.getSelection()
     const range = selection.selectedRange
-    if (!range || hit.colIndex < range.startCol || hit.colIndex > range.endCol) {
+    if (
+      !range ||
+      !this.isWholeColumnSelection(range) ||
+      hit.colIndex < range.startCol ||
+      hit.colIndex > range.endCol
+    ) {
       this.selectWholeColumn(hit.colIndex)
       this.refresh()
       return true
@@ -1634,8 +1639,17 @@ export class WebGridRuntime {
     const hit = this.hitTestColumnHeader(event)
     const range = this.engine.getSelection().selectedRange
     const canDrag =
-      hit && range && hit.colIndex >= range.startCol && hit.colIndex <= range.endCol
+      hit &&
+      range &&
+      this.isWholeColumnSelection(range) &&
+      hit.colIndex >= range.startCol &&
+      hit.colIndex <= range.endCol
     this.host.setCursor(canDrag ? 'grab' : null)
+  }
+
+  private isWholeColumnSelection(range: CellRange): boolean {
+    const rowCount = this.engine.getFrame().data.getRowCount()
+    return rowCount > 0 && range.startRow === 0 && range.endRow === rowCount - 1
   }
 
   private hitTestColumnHeader(event: WebPointerEvent): { colIndex: number; fieldId: string } | null {

@@ -72,6 +72,21 @@ function selectCols(engine: GridEngine, startCol: number, endCol: number): void 
   })
 }
 
+function selectCellRange(
+  engine: GridEngine,
+  startRow: number,
+  endRow: number,
+  startCol: number,
+  endCol: number,
+): void {
+  engine.setSelection({
+    activeCell: { rowIndex: startRow, colIndex: startCol },
+    anchorCell: { rowIndex: startRow, colIndex: startCol },
+    extentCell: { rowIndex: endRow, colIndex: endCol },
+    selectedRange: { startRow, endRow, startCol, endCol },
+  })
+}
+
 describe('WebGridRuntime column reorder drag', () => {
   it('shows preview and grabbing cursor immediately on selected header pointerdown', () => {
     const engine = makeEngine()
@@ -229,6 +244,36 @@ describe('WebGridRuntime column reorder drag', () => {
       endRow: 1,
       startCol: 2,
       endCol: 2,
+    })
+    expect(overlay.show).not.toHaveBeenCalled()
+  })
+
+  it('cell range selection in the same column does not seed column reorder', () => {
+    const engine = makeEngine()
+    selectCellRange(engine, 0, 0, 1, 1)
+    const overlay = makeOverlay()
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      columnReorderOverlay: overlay,
+    })
+
+    runtime.handleHostPointerDown({ x: 120, y: 10, shiftKey: false, button: 0 })
+    runtime.handleHostPointerMove({ x: 390, y: 10, shiftKey: false })
+    runtime.handleHostPointerUp()
+
+    expect(engine.getData().getSchema().fields.map((field) => field.id)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+    ])
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 1,
+      startCol: 1,
+      endCol: 1,
     })
     expect(overlay.show).not.toHaveBeenCalled()
   })
