@@ -6,6 +6,8 @@
 
 **Architecture:** Core owns schema order mutation (`moveFields` / `moveCols`) and undo/redo. Web runtime owns the pointer state machine and DOM-only preview overlay. Canvas remains unchanged except for normal repaint after schema order changes.
 
+**Critical invariant:** `targetBeforeFieldId = null` means explicit drop-to-end only. Invalid/self drop must stay distinct from drop-to-end, keep the preview visible during drag, and no-op on pointerup.
+
 **Tech Stack:** TypeScript, bun:test, `@novasheet/core`, `@novasheet/web`, Storybook HTML.
 
 ---

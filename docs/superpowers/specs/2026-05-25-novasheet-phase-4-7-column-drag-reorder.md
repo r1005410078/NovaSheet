@@ -90,11 +90,13 @@ hidden col gap 不作为拖拽起点，也不作为独立 drop target。若可�
 | --- | --- | --- |
 | D:E | G 前 | D:E 移到 G 前 |
 | D:E | 末尾 | D:E 移到最后 |
+| D:E | pointer 仍在 D:E 内 | no-op；预览列带保持显示，不隐藏，不移动到末尾 |
 | D:E | D 前 / E 后（选区内部等价位置） | no-op，不入 undo |
 | D:E | E/F 之间（删除 D:E 后等价仍在原位） | no-op，不入 undo |
 | D:E | hidden gap | 不可 drop |
 
 内部实现使用 `normalizeMoveCols(fieldIds, beforeFieldId)` 判断 no-op，避免 UI 与 engine 各算一套。
+`targetBeforeFieldId = null` 只能表示明确 drop-to-end；当前无有效 target / self drop 必须单独表达，不能复用 `null`，否则 pointerup 会误执行 move-to-end。
 
 ---
 
