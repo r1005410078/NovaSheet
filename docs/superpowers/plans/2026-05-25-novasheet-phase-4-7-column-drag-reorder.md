@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build Google Sheets-style selected-column drag reorder: select one or more visible columns, drag from the selected column header, show a DOM target band + drop line, and commit schema reorder on pointerup.
+**Goal:** Build Google Sheets-style selected-column drag reorder: select one or more visible columns, drag from the selected column header, show a DOM drag-following band + snapped drop line, and commit schema reorder on pointerup.
 
 **Architecture:** Core owns schema order mutation (`moveFields` / `moveCols`) and undo/redo. Web runtime owns the pointer state machine and DOM-only preview overlay. Canvas remains unchanged except for normal repaint after schema order changes.
 
@@ -22,7 +22,7 @@
 | `packages/core/src/undo/UndoCommand.ts` | Add `moveCols` variant |
 | `packages/web/src/grid/GridController.ts` | Add controller API |
 | `packages/web/src/Grid.ts` | Add facade API + `onColumnsMoved` callback |
-| `packages/web/src/overlay/ColumnReorderOverlay.ts` | DOM target band + drop line |
+| `packages/web/src/overlay/ColumnReorderOverlay.ts` | DOM drag-following band + snapped drop line |
 | `packages/web/src/backends/Canvas2DBackend.ts` | Instantiate overlay |
 | `packages/web/src/runtime/WebGridRuntime.ts` | Header drag state machine + preview/drop commit |
 | `apps/storybook/src/stories/ColumnReorder.stories.ts` | Manual demo stories |
@@ -319,16 +319,16 @@ import { describe, expect, it } from 'bun:test'
 import { ColumnReorderOverlay } from '../../src/overlay/ColumnReorderOverlay'
 
 describe('ColumnReorderOverlay', () => {
-  it('shows target band and drop line, then hides them', () => {
+  it('shows drag-following band and snapped drop line, then hides them', () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
     const overlay = new ColumnReorderOverlay(root)
 
-    overlay.show({ lineX: 240, bandX: 240, bandWidth: 260, height: 600 })
+    overlay.show({ lineX: 240, dragBandX: 180, bandWidth: 260, height: 600 })
 
     const band = root.querySelector('[data-novasheet-column-reorder-band]') as HTMLElement
     const line = root.querySelector('[data-novasheet-column-reorder-line]') as HTMLElement
-    expect(band.style.left).toBe('240px')
+    expect(band.style.left).toBe('180px')
     expect(band.style.width).toBe('260px')
     expect(line.style.left).toBe('240px')
 

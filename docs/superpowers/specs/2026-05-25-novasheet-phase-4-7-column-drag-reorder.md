@@ -31,7 +31,7 @@ NovaSheet 现有渲染与交互分层决定 4.7 不应把列拖拽预览画进 c
 1. 支持从列头拖拽重排列。
 2. 支持连续多列一起移动：先选 D:E，再在 D/E 列头内按下拖动。
 3. 拖动中列本身不跟手、不 ghost、不实时重排 canvas。
-4. 拖动预览贴近 Google Sheets：原选区保持蓝色；目标位置显示灰色半透明目标列带 + 深色竖向 drop line。
+4. 拖动预览贴近 Google Sheets：原选区保持蓝色；灰色半透明列带跟随拖动中的列组；深色竖向 drop line 吸附到目标插入边界。
 5. 松手时一次性提交 `moveCols(fieldIds, beforeFieldId | null)`，进入 undo/redo。
 6. 与现有 drag-select / resize / hidden col toggle / contextmenu 不冲突。
 7. hidden cols 继续按 fieldId 锚定；drop 只落到可见列边界。
@@ -60,12 +60,12 @@ NovaSheet 现有渲染与交互分层决定 4.7 不应把列拖拽预览画进 c
 
 预览由 DOM `ColumnReorderOverlay` 渲染，挂在现有 grid container 的 overlay/handle 层之上：
 
-- `targetBand`: 灰色半透明矩形，宽度 = 被移动列组总宽度，高度覆盖 header + body viewport。
-- `dropLine`: 深灰竖线，位于目标插入边界，覆盖 header + body viewport。
+- `dragBand`: 灰色半透明矩形，宽度 = 被移动列组总宽度，高度覆盖 header + body viewport；水平位置跟随 pointer delta，而不是吸附到目标列。
+- `dropLine`: 深灰竖线，吸附到目标插入边界，覆盖 header + body viewport。
 - `pointer-events: none`，不参与命中。
 - 原选区继续由 canvas overlay 绘制蓝色选区，不被 DOM preview 覆盖语义替代。
 
-Google 参考效果对应：原列 D 保持蓝色；目标 E:F 位置出现灰色投影；E/F 边界有深色竖线。
+Google 参考效果对应：原列 D 保持蓝色；灰色投影随 D 的拖动位置移动；E/F 边界有深色竖线表示松手后的插入点。
 
 ### 3.3 Drop Target
 
@@ -175,7 +175,7 @@ API：
 ```ts
 export interface ColumnReorderPreview {
   readonly lineX: number
-  readonly bandX: number
+  readonly dragBandX: number
   readonly bandWidth: number
   readonly height: number
 }
@@ -189,7 +189,7 @@ export class ColumnReorderOverlay {
 
 样式：
 
-- target band: `background: rgba(60, 64, 67, 0.12)`
+- drag band: `background: rgba(60, 64, 67, 0.12)`
 - drop line: `background: rgba(60, 64, 67, 0.72)`，宽 3px
 - z-index 高于 canvas，低于 context menu / popover
 
@@ -293,7 +293,7 @@ onColumnsMoved?: (event: {
 
 - [x] 采用用户确认的 A+，B/C 明确 out of scope
 - [x] 先选后拖、多列、阈值、no-op、drop target 都有规则
-- [x] Google 参考效果拆成 DOM target band + drop line
+- [x] Google 参考效果拆成 DOM drag band + drop line
 - [x] 与现有 resize / hide toggle / contextmenu / body drag-select 优先级明确
 - [x] Engine / DataSource / Undo / Web Runtime / Grid facade / Storybook / tests 都有覆盖
 - [x] 不改变 Canvas 单画布架构，不引入列块跟手或 ghost
