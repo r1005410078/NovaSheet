@@ -300,7 +300,7 @@ export class WebGridRuntime {
     startBandX: number
     totalWidth: number
     active: boolean
-    targetBeforeFieldId: string | null
+    targetBeforeFieldId: string | null | undefined
   } | null = null
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
@@ -1592,8 +1592,14 @@ export class WebGridRuntime {
 
     const target = this.computeColumnReorderTarget(event, drag)
     if (!target) {
-      this.columnReorderOverlay?.hide()
-      drag.targetBeforeFieldId = null
+      drag.targetBeforeFieldId = undefined
+      this.columnReorderOverlay?.show({
+        lineX: drag.startBandX,
+        dragBandX: drag.startBandX + (event.x - drag.startX),
+        bandWidth: drag.totalWidth,
+        height: this.host.getContainerSize().height,
+      })
+      this.host.setCursor('grabbing')
       return true
     }
     drag.targetBeforeFieldId = target.beforeFieldId
@@ -1608,6 +1614,7 @@ export class WebGridRuntime {
     this.columnReorderOverlay?.hide()
     this.host.setCursor(null)
     if (!drag?.active) return
+    if (drag.targetBeforeFieldId === undefined) return
     if (this.engine.moveCols(drag.selectedFieldIds, drag.targetBeforeFieldId)) {
       this.afterEngineMutation()
     }

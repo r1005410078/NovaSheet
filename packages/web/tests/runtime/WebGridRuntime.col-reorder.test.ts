@@ -148,6 +148,37 @@ describe('WebGridRuntime column reorder drag', () => {
     })
   })
 
+  it('keeps preview visible and no-ops when released inside the dragged column', () => {
+    const engine = makeEngine()
+    selectCols(engine, 1, 1)
+    const overlay = makeOverlay()
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      columnReorderOverlay: overlay,
+    })
+
+    runtime.handleHostPointerDown({ x: 120, y: 10, shiftKey: false, button: 0 })
+    runtime.handleHostPointerMove({ x: 135, y: 10, shiftKey: false })
+
+    expect(overlay.show).toHaveBeenLastCalledWith({
+      lineX: 100,
+      dragBandX: 115,
+      bandWidth: 100,
+      height: 240,
+    })
+
+    runtime.handleHostPointerUp()
+
+    expect(engine.getData().getSchema().fields.map((field) => field.id)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+    ])
+  })
+
   it('moves selected multiple columns on pointerup and hides preview', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 2)
