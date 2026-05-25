@@ -7,9 +7,9 @@ describe('UndoStack — moveCols', () => {
       data: new InMemoryDataSource({
         schema: {
           fields: [
-            { id: 'a', name: 'A', type: 'text' },
-            { id: 'b', name: 'B', type: 'text' },
-            { id: 'c', name: 'C', type: 'text' },
+            { id: 'a', name: 'A', type: 'text', width: 100 },
+            { id: 'b', name: 'B', type: 'text', width: 100 },
+            { id: 'c', name: 'C', type: 'text', width: 100 },
           ],
         },
         rows: [],

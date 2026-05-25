@@ -4,10 +4,10 @@ import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
 
 const schema = {
   fields: [
-    { id: 'a', name: 'A', type: 'text' as const },
-    { id: 'b', name: 'B', type: 'text' as const },
-    { id: 'c', name: 'C', type: 'text' as const },
-    { id: 'd', name: 'D', type: 'text' as const },
+    { id: 'a', name: 'A', type: 'text' as const, width: 100 },
+    { id: 'b', name: 'B', type: 'text' as const, width: 100 },
+    { id: 'c', name: 'C', type: 'text' as const, width: 100 },
+    { id: 'd', name: 'D', type: 'text' as const, width: 100 },
   ],
 }
 
