@@ -71,6 +71,7 @@ import type { HideColToggleHandle } from '../handle/HideColToggleHandle'
 import type { FilterPopover } from '../interaction/FilterPopover'
 import type { RowHeightPopover } from '../overlay/RowHeightPopover'
 import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
+import type { ColumnReorderOverlay, ColumnReorderPreview } from '../overlay/ColumnReorderOverlay'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -129,6 +130,8 @@ export interface WebGridRuntimeOptions {
   hideToggleHandle?: HideToggleHandle
   /** Phase 4.6 — DOM hide-col-toggle 点击区 layer。 */
   hideColToggleHandle?: HideColToggleHandle
+  /** Phase 4.7 — DOM column reorder preview overlay. */
+  columnReorderOverlay?: ColumnReorderOverlay
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -160,6 +163,7 @@ const HOST_RESIZE_KEY = 'host:resize'
 const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
 const DRAG_AUTO_SCROLL_EDGE_PX = 32
 const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
+const COLUMN_REORDER_DRAG_THRESHOLD_PX = 6
 
 /** 去重行号并保持首次出现顺序。 */
 function uniqueRows(rows: readonly number[]): readonly number[] {
@@ -210,6 +214,8 @@ export class WebGridRuntime {
   private hideToggleHandle?: HideToggleHandle
   /** Phase 4.6 — DOM hide-col-toggle 点击区 layer。 */
   private hideColToggleHandle?: HideColToggleHandle
+  /** Phase 4.7 — DOM reorder preview layer. */
+  private columnReorderOverlay?: ColumnReorderOverlay
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
   /** DOM 右键菜单 layer。 */
@@ -285,6 +291,16 @@ export class WebGridRuntime {
     /** 最近一次 fill drag pointer。 */
     lastPointer: WebPointerEvent | null
   } | null = null
+  /** 当前列重排拖拽状态；pointerdown 命中已选列头后先 seed，超过阈值才 active。 */
+  private columnReorderDrag: {
+    startX: number
+    startY: number
+    selectedFieldIds: readonly string[]
+    selectedRange: CellRange
+    totalWidth: number
+    active: boolean
+    targetBeforeFieldId: string | null
+  } | null = null
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: WebGridRuntimeOptions) {
@@ -301,6 +317,7 @@ export class WebGridRuntime {
     this.filterLayer = opts.filterLayer
     this.hideToggleHandle = opts.hideToggleHandle
     this.hideColToggleHandle = opts.hideColToggleHandle
+    this.columnReorderOverlay = opts.columnReorderOverlay
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -991,6 +1008,7 @@ export class WebGridRuntime {
     this.filterPopoverFieldId = ctx.field.id
     this.contextMenuLayer?.close()
     this.fillLayer?.hidePreview()
+    this.columnReorderOverlay?.hide()
     this.filterPopover.open(point, {
       field: ctx.field,
       op: currentSpec?.fieldId === ctx.field.id ? currentSpec.op : null,
@@ -1268,7 +1286,9 @@ export class WebGridRuntime {
     if (!this.fillDrag || this.fillDrag.pointerId !== pointerId) return
     const target = this.fillDrag.target
     this.fillDrag = null
+    this.columnReorderDrag = null
     this.fillLayer?.hidePreview()
+    this.columnReorderOverlay?.hide()
     if (!target) return
     const result = this.engine.commitFill(target.source, target.fill, target.direction)
     if (!result) return
@@ -1379,6 +1399,7 @@ export class WebGridRuntime {
     if (this.destroyed) return
     // 仅左键进入 drag-select；右键 / 中键留给 contextmenu / 其它路径
     if ((event.button ?? 0) !== 0) return
+    if (this.tryHandleColumnHeaderPointerDown(event)) return
     if (this.engine.isCellEditing()) {
       this.commitCellEdit(false)
     }
@@ -1392,6 +1413,7 @@ export class WebGridRuntime {
 
   /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
   handleHostPointerMove(event: WebPointerEvent): void {
+    if (this.updateColumnReorderDrag(event)) return
     if (this.destroyed || !this.lastDragPointer) return
     this.draggingSelection = true
     this.lastDragPointer = event
@@ -1405,6 +1427,10 @@ export class WebGridRuntime {
 
   /** 处理 host pointerup，结束选区拖拽并恢复 fill handle。 */
   handleHostPointerUp(): void {
+    if (this.columnReorderDrag) {
+      this.commitColumnReorderDrag()
+      return
+    }
     this.draggingSelection = false
     this.lastDragPointer = null
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
@@ -1423,6 +1449,10 @@ export class WebGridRuntime {
   /** Phase 3.3 / 3.5 — 导航；选中后直接键入进入编辑（Sheets 式）。 */
   handleHostKeyDown(event: WebKeyboardEvent): boolean {
     if (this.destroyed) return false
+    if (event.key === 'Escape' && this.columnReorderDrag) {
+      this.cancelColumnReorderDrag()
+      return true
+    }
     if (this.filterPopover?.isOpen()) return false
     if (this.engine.isCellEditing()) return false
 
@@ -1484,6 +1514,166 @@ export class WebGridRuntime {
     if (focus) this.ensureCellVisible(focus)
     this.refresh()
     return true
+  }
+
+  private tryHandleColumnHeaderPointerDown(event: WebPointerEvent): boolean {
+    if (this.resizeDrag || this.draggingSelection || this.fillDrag) return false
+    const hit = this.hitTestColumnHeader(event)
+    if (!hit) return false
+    if (this.engine.isCellEditing()) this.commitCellEdit(false)
+
+    const selection = this.engine.getSelection()
+    const range = selection.selectedRange
+    if (!range || hit.colIndex < range.startCol || hit.colIndex > range.endCol) {
+      this.selectWholeColumn(hit.colIndex)
+      this.refresh()
+      return true
+    }
+
+    const fields = this.engine.getFrame().data.getSchema().fields
+    const selectedFieldIds = fields
+      .slice(range.startCol, range.endCol + 1)
+      .map((field) => field.id)
+    if (selectedFieldIds.length === 0) return true
+    const totalWidth = this.sumVisibleColWidths(range.startCol, range.endCol)
+    this.columnReorderDrag = {
+      startX: event.x,
+      startY: event.y,
+      selectedFieldIds,
+      selectedRange: range,
+      totalWidth,
+      active: false,
+      targetBeforeFieldId: null,
+    }
+    this.closeContextMenu()
+    return true
+  }
+
+  private updateColumnReorderDrag(event: WebPointerEvent): boolean {
+    const drag = this.columnReorderDrag
+    if (!drag) return false
+    if (!drag.active) {
+      const dx = event.x - drag.startX
+      const dy = event.y - drag.startY
+      if (Math.hypot(dx, dy) < COLUMN_REORDER_DRAG_THRESHOLD_PX) return true
+      drag.active = true
+    }
+
+    const target = this.computeColumnReorderTarget(event, drag)
+    if (!target) {
+      this.columnReorderOverlay?.hide()
+      drag.targetBeforeFieldId = null
+      return true
+    }
+    drag.targetBeforeFieldId = target.beforeFieldId
+    this.columnReorderOverlay?.show(target.preview)
+    return true
+  }
+
+  private commitColumnReorderDrag(): void {
+    const drag = this.columnReorderDrag
+    this.columnReorderDrag = null
+    this.columnReorderOverlay?.hide()
+    if (!drag?.active) return
+    if (this.engine.moveCols(drag.selectedFieldIds, drag.targetBeforeFieldId)) {
+      this.afterEngineMutation()
+    }
+  }
+
+  private cancelColumnReorderDrag(): void {
+    this.columnReorderDrag = null
+    this.columnReorderOverlay?.hide()
+  }
+
+  private hitTestColumnHeader(event: WebPointerEvent): { colIndex: number; fieldId: string } | null {
+    const frame = this.engine.getFrame()
+    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
+    if (event.y < 0 || event.y >= headerHeight) return null
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    if (event.x < rowHeaderWidth) return null
+    const scrollX = frame.viewport.scrollX ?? 0
+    const logicalX = event.x - rowHeaderWidth + scrollX
+    const totalSize = this.getColsTotalSizeForFrame(frame)
+    if (logicalX < 0 || logicalX >= totalSize) return null
+    const colIndex = frame.colsAxis.positionToIndex(logicalX)
+    if (typeof frame.data.getSchema !== 'function') return null
+    const field = frame.data.getSchema().fields[colIndex]
+    if (!field) return null
+    return { colIndex, fieldId: field.id }
+  }
+
+  private selectWholeColumn(colIndex: number): void {
+    const frame = this.engine.getFrame()
+    const rowCount = frame.data.getRowCount()
+    if (rowCount <= 0) return
+    this.engine.setSelection({
+      activeCell: { rowIndex: 0, colIndex },
+      anchorCell: { rowIndex: 0, colIndex },
+      extentCell: { rowIndex: rowCount - 1, colIndex },
+      selectedRange: { startRow: 0, endRow: rowCount - 1, startCol: colIndex, endCol: colIndex },
+    })
+  }
+
+  private sumVisibleColWidths(startCol: number, endCol: number): number {
+    const axis = this.engine.getFrame().colsAxis
+    let total = 0
+    for (let col = startCol; col <= endCol; col += 1) total += axis.getSize(col)
+    return total
+  }
+
+  private computeColumnReorderTarget(
+    event: WebPointerEvent,
+    drag: NonNullable<WebGridRuntime['columnReorderDrag']>,
+  ): { beforeFieldId: string | null; preview: ColumnReorderPreview } | null {
+    const frame = this.engine.getFrame()
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    if (event.x < rowHeaderWidth) return null
+    const fields = frame.data.getSchema().fields
+    if (fields.length === 0) return null
+    const scrollX = frame.viewport.scrollX ?? 0
+    const totalSize = this.getColsTotalSizeForFrame(frame)
+    const logicalX = event.x - rowHeaderWidth + scrollX
+    let beforeIndex: number
+    if (logicalX >= totalSize) {
+      beforeIndex = fields.length
+    } else if (logicalX < 0) {
+      beforeIndex = 0
+    } else {
+      const colIndex = frame.colsAxis.positionToIndex(logicalX)
+      const colStart = frame.colsAxis.indexToPosition(colIndex)
+      const colMid = colStart + frame.colsAxis.getSize(colIndex) / 2
+      beforeIndex = logicalX < colMid ? colIndex : colIndex + 1
+    }
+
+    if (beforeIndex >= drag.selectedRange.startCol && beforeIndex <= drag.selectedRange.endCol + 1) {
+      return null
+    }
+
+    const beforeFieldId = beforeIndex >= fields.length ? null : fields[beforeIndex]?.id ?? null
+    const lineLogicalX =
+      beforeIndex >= fields.length ? totalSize : frame.colsAxis.indexToPosition(beforeIndex)
+    const lineX = rowHeaderWidth + lineLogicalX - scrollX
+    const bandX = beforeFieldId === null ? lineX - drag.totalWidth : lineX
+    const { height } = this.host.getContainerSize()
+    return {
+      beforeFieldId,
+      preview: {
+        lineX,
+        bandX,
+        bandWidth: drag.totalWidth,
+        height,
+      },
+    }
+  }
+
+  private getColsTotalSizeForFrame(frame: ReturnType<GridEngine['getFrame']>): number {
+    const axis = frame.colsAxis
+    if (typeof axis.getTotalSize === 'function') return axis.getTotalSize()
+    const engineTotal = this.engine.getColsTotalSize()
+    if (engineTotal > 0) return engineTotal
+    const count = axis.getCount()
+    if (count <= 0) return 0
+    return axis.indexToPosition(count - 1) + axis.getSize(count - 1)
   }
 
   /**

@@ -54,6 +54,7 @@ import { HideColToggleHandle } from '../handle/HideColToggleHandle'
 import { FilterPopover } from '../interaction/FilterPopover'
 import { RowHeightPopover } from '../overlay/RowHeightPopover'
 import { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
+import { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
 /**
@@ -84,6 +85,7 @@ export class Canvas2DBackend implements GridController {
   private filterPopover!: FilterPopover
   private rowHeightPopover!: RowHeightPopover
   private columnWidthPopover!: ColumnWidthPopover
+  private columnReorderOverlay: ColumnReorderOverlay
   private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
@@ -160,6 +162,7 @@ export class Canvas2DBackend implements GridController {
     this.hideColToggleHandle = new HideColToggleHandle(this.container, {
       onUnhide: (ids) => this.runtime.unhideCols(ids),
     })
+    this.columnReorderOverlay = new ColumnReorderOverlay(this.container)
 
     this.host = new DomGridHost({
       container: this.container,
@@ -185,6 +188,7 @@ export class Canvas2DBackend implements GridController {
       fillLayer: this.fillHandleLayer,
       hideToggleHandle: this.hideToggleHandle,
       hideColToggleHandle: this.hideColToggleHandle,
+      columnReorderOverlay: this.columnReorderOverlay,
       viewPipeline: this.pipeline,
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
@@ -332,6 +336,7 @@ export class Canvas2DBackend implements GridController {
     this.filterPopover.destroy()
     this.rowHeightPopover.destroy()
     this.columnWidthPopover.destroy()
+    this.columnReorderOverlay.destroy()
     this.runtime.destroy()
     this.hideToggleHandle.destroy()
     this.hideColToggleHandle.destroy()
