@@ -571,6 +571,63 @@ Review against spec invariants:
 
 ---
 
+### Follow-up: Excel Row Header Whole-Row Selection Parity
+
+**Reason:** Phase 4.5 spec already defines row header click as whole-row selection, but the current Excel chrome only has the row-header right-click path and shallow row-header selection sync. This follow-up keeps row headers symmetric with the selected-column behavior added during Phase 4.7.
+
+**Files:**
+- Modify: `packages/web/src/runtime/WebGridRuntime.ts`
+- Modify: `packages/web/tests/runtime/WebGridRuntime.test.ts`
+- Modify: `packages/web-canvas2d/src/painters/RowHeaderPainter.ts`
+- Modify: `packages/web-canvas2d/tests/painters/RowHeaderPainter.test.ts`
+- Modify: `packages/web-canvas2d/src/render/Canvas2DRenderer.ts`
+- Modify: `packages/web-canvas2d/tests/render/Canvas2DRenderer.test.ts`
+
+- [ ] **Step 1: RED tests**
+
+Add tests for:
+
+1. Left pointerdown in row-header gutter selects `{ startCol: 0, endCol: colCount - 1 }`.
+2. Shift-click / pointer drag in row-header gutter extends to a contiguous whole-row range.
+3. Whole-row selection paints row header with `selectionBorder` background and `selectionText`; ordinary cell/range selection keeps shallow `selectionBg` sync.
+
+Run:
+
+```bash
+bun test packages/web/tests/runtime/WebGridRuntime.test.ts packages/web-canvas2d/tests/painters/RowHeaderPainter.test.ts packages/web-canvas2d/tests/render/Canvas2DRenderer.test.ts
+```
+
+Expected: FAIL because row-header left click / drag and strong row-header state do not exist.
+
+- [ ] **Step 2: GREEN implementation**
+
+Implement a row-header pointerdown path before body hit-test:
+
+- ignore non-left button and non-Excel gutter;
+- select whole row on click;
+- Shift-click extends from existing whole-row anchor when present;
+- pointermove while seeded in row header extends the whole-row range;
+- pointerup clears row-header select drag.
+
+Renderer rule:
+
+- `RowHeaderPainter.paint` accepts `selectedRowRange?: { startRow; endRow }`;
+- whole-row selected rows paint strong background + selected text during content layer;
+- overlay shallow row-header sync returns early for whole-row ranges.
+
+- [ ] **Step 3: Verify and commit**
+
+Run the focused tests, then commit:
+
+```bash
+git add docs/superpowers/specs/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md docs/superpowers/plans/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md
+git commit -m "docs(plan): 补充行头整行选择规则"
+git add packages/web/src/runtime/WebGridRuntime.ts packages/web/tests/runtime/WebGridRuntime.test.ts packages/web-canvas2d/src/painters/RowHeaderPainter.ts packages/web-canvas2d/tests/painters/RowHeaderPainter.test.ts packages/web-canvas2d/src/render/Canvas2DRenderer.ts packages/web-canvas2d/tests/render/Canvas2DRenderer.test.ts
+git commit -m "feat(web): 支持行头整行选择"
+```
+
+---
+
 ## Plan Self-Review
 
 - [x] Spec coverage: data protocol, engine, undo, DOM overlay, runtime, facade, Storybook, docs, final gates

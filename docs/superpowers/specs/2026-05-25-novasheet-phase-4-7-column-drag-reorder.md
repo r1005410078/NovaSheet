@@ -300,6 +300,7 @@ onColumnsMoved?: (event: {
 6. resize handle / hide toggle 的 DOM pointerdown 必须 stopPropagation，优先于 reorder。
 7. `moveCols` no-op 不入 undo 栈，不触发 `onColumnsMoved`。
 8. 多列拖拽只支持连续矩形 selection；非连续多选继续 out of scope。
+9. Excel 门面中行头选择与列头选择保持对称：左键行头选中整行，Shift/拖动行头连续多选整行；整行选中时行头使用强选中态，普通 cell/range selection 只同步浅色行头高亮。
 
 ---
 
