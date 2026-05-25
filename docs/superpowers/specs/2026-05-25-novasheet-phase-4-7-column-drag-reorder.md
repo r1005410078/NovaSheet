@@ -51,12 +51,15 @@ NovaSheet 现有渲染与交互分层决定 4.7 不应把列拖拽预览画进 c
 | hover 已选列头 D/E | cursor 显示 `grab` |
 | 在已选列头 D/E 内 pointerdown | 立即显示 DOM 预览列带，cursor 切到 `grabbing`；未超过阈值不提交 reorder |
 | pointerdown 后移动超过阈值 | 进入 active column reorder drag，drop line 按目标边界吸附 |
+| 普通单元格选区覆盖 D，但不是整列 D | 列头 pointerdown 先选中整列 D；本次不进入 reorder |
 | 在未选列头 F pointerdown | 先选中 F；本次不进入多列拖拽 |
 | 在列 resize handle pointerdown | resize 优先，不进入 reorder |
 | 在 hidden col triangle pointerdown | unhide 优先，不进入 reorder |
 | 右键列头 | contextmenu 优先，不进入 reorder |
 
 拖拽阈值：`COLUMN_REORDER_DRAG_THRESHOLD_PX = 6`。小于阈值仍视为点击/选列，pointerup 不提交 reorder；但已选列头 pointerdown 后应立即显示灰色预览列带，提供“已抓取”的反馈。
+
+“已选列头”必须是整列选区：`selectedRange.startRow = 0` 且 `selectedRange.endRow = rowCount - 1`。普通 cell/range selection 不能作为 column reorder 的 drag seed。
 
 ### 3.2 拖动预览
 

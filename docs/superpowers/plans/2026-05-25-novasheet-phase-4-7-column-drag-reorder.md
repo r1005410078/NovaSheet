@@ -8,6 +8,8 @@
 
 **Critical invariant:** `targetBeforeFieldId = null` means explicit drop-to-end only. Invalid/self drop must stay distinct from drop-to-end, keep the preview visible during drag, and no-op on pointerup.
 
+**Drag seed invariant:** column reorder can only start from a whole-column header selection (`selectedRange` spans all rows). Cell/range selections that merely include the column must be converted to whole-column selection first and must not reorder on the same pointerdown.
+
 **Tech Stack:** TypeScript, bun:test, `@novasheet/core`, `@novasheet/web`, Storybook HTML.
 
 ---
