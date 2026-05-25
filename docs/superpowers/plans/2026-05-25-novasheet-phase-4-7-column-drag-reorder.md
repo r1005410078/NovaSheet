@@ -10,6 +10,8 @@
 
 **Drag seed invariant:** column reorder can only start from a whole-column header selection (`selectedRange` spans all rows). Cell/range selections that merely include the column must be converted to whole-column selection first and must not reorder on the same pointerdown.
 
+**Column multi-select invariant:** Phase 4.7 supports contiguous whole-column multi-select via Shift-click and header horizontal drag. It does not support Cmd/Ctrl non-contiguous column sets.
+
 **Tech Stack:** TypeScript, bun:test, `@novasheet/core`, `@novasheet/web`, Storybook HTML.
 
 ---
