@@ -132,6 +132,7 @@ class FilteredDataSource implements DataSource {
   readonly deleteRows?: MutableDataSource['deleteRows']
   readonly insertField?: MutableDataSource['insertField']
   readonly removeField?: MutableDataSource['removeField']
+  readonly moveFields?: MutableDataSource['moveFields']
 
   constructor(
     private readonly upstream: DataSource,
@@ -166,6 +167,10 @@ class FilteredDataSource implements DataSource {
       }
       if (mutableUpstream.removeField) {
         this.removeField = (fieldId) => mutableUpstream.removeField!(fieldId)
+      }
+      if (mutableUpstream.moveFields) {
+        this.moveFields = (fieldIds, beforeFieldId) =>
+          mutableUpstream.moveFields!(fieldIds, beforeFieldId)
       }
     }
     this.rebuild()
@@ -263,7 +268,7 @@ class FilteredDataSource implements DataSource {
       }
       return
     }
-    if (event.type === 'colsInserted') {
+    if (event.type === 'colsInserted' || event.type === 'colsMoved') {
       this.onColumnsChanged(this.upstream, event)
       this.rebuild()
       this.emit(filterStructuralEvent(event, this.getRowCount()))

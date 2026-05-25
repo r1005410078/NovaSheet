@@ -131,6 +131,7 @@ class SortedDataSource implements DataSource {
   readonly deleteRows?: MutableDataSource['deleteRows']
   readonly insertField?: MutableDataSource['insertField']
   readonly removeField?: MutableDataSource['removeField']
+  readonly moveFields?: MutableDataSource['moveFields']
 
   constructor(
     private readonly upstream: DataSource,
@@ -165,6 +166,10 @@ class SortedDataSource implements DataSource {
       }
       if (mutableUpstream.removeField) {
         this.removeField = (fieldId) => mutableUpstream.removeField!(fieldId)
+      }
+      if (mutableUpstream.moveFields) {
+        this.moveFields = (fieldIds, beforeFieldId) =>
+          mutableUpstream.moveFields!(fieldIds, beforeFieldId)
       }
     }
     this.rebuild()
@@ -254,7 +259,7 @@ class SortedDataSource implements DataSource {
       this.emit(event)
       return
     }
-    if (event.type === 'colsInserted') {
+    if (event.type === 'colsInserted' || event.type === 'colsMoved') {
       this.onColumnsChanged(this.upstream, event)
       this.rebuild()
       this.emit(event)

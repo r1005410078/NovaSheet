@@ -530,6 +530,14 @@ export class WebGridRuntime {
     return this.engine.getHiddenCols()
   }
 
+  /** Phase 4.7 — 按 fieldId 移动连续列组。 */
+  moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.moveCols(fieldIds, beforeFieldId)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
   /** Phase 4.5 — 生成行头右键菜单项列表（含条件 unhide 项）。 */
   getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
     const sel = this.engine.getSelection().selectedRange

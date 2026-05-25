@@ -59,6 +59,8 @@ export interface GridOptions extends GridEngineOptions {
   onColumnsDeleted?: (event: { removed: readonly { index: number; fieldId: string }[] }) => void
   /** Phase 4.6 — 列隐藏状态变化时触发（hide / unhide 均触发）。 */
   onHideColsChange?: (event: { hidden: readonly string[] }) => void
+  /** Phase 4.7 — 列拖拽/程序化重排完成时触发。 */
+  onColumnsMoved?: (event: { fieldIds: readonly string[]; beforeFieldId: string | null }) => void
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -84,6 +86,7 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
     onColumnsInserted: _ci,
     onColumnsDeleted: _cd,
     onHideColsChange: _hcc,
+    onColumnsMoved: _cm,
     ...engineOptions
   } = options
   void _r
@@ -101,6 +104,7 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
   void _ci
   void _cd
   void _hcc
+  void _cm
   return engineOptions
 }
 
@@ -330,6 +334,13 @@ export class Grid {
   /** Phase 4.6 — 批量将多列宽度设置为同一值。 */
   setColumnWidths(fieldIds: readonly string[], widthPx: number): void {
     this.delegate.setColumnWidths(fieldIds, widthPx)
+  }
+
+  /** Phase 4.7 — 按 fieldId 移动连续列组；`beforeFieldId=null` 表示移动到末尾。 */
+  moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
+    const changed = this.delegate.moveCols(fieldIds, beforeFieldId)
+    if (changed) this.options.onColumnsMoved?.({ fieldIds, beforeFieldId })
+    return changed
   }
 
   /** Phase 4.6 — 返回列头右键菜单项列表（含结构项）。 */

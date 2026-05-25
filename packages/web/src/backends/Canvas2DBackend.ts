@@ -441,6 +441,10 @@ export class Canvas2DBackend implements GridController {
     return this.runtime.getHiddenCols()
   }
 
+  moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
+    return this.runtime.moveCols(fieldIds, beforeFieldId)
+  }
+
   getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[] {
     return this.runtime.getColumnHeaderContextMenuItems(ctx)
   }

@@ -117,6 +117,8 @@ export interface GridController {
   setColumnWidths(fieldIds: readonly string[], widthPx: number): void
   /** Phase 4.6 — 返回当前隐藏列 fieldId。 */
   getHiddenCols(): readonly string[]
+  /** Phase 4.7 — 按 fieldId 移动连续列组；`beforeFieldId=null` 表示移动到末尾。 */
+  moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean
   /** Phase 4.6 — 返回列头右键菜单项列表（含结构项）。 */
   getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[]
   /** Phase 4.6 — 执行列头右键菜单动作。 */
