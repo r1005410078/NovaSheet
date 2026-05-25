@@ -12,6 +12,7 @@
 import {
   columnIndexToLetter,
   type Axis,
+  type CellRange,
   type IconDef,
   type RenderFrameCollapsedColGap,
   type Schema,
@@ -45,6 +46,8 @@ export interface HeaderPaintParams {
   viewPipeline?: Pick<ViewPipeline, 'collectHeaderDecorations'>
   /** Phase 4.6 — 折叠列间隙，用于绘制 hide indicator。 */
   collapsedColGaps?: readonly RenderFrameCollapsedColGap[]
+  /** Phase 4.7 — 整列选中时需要强高亮的列头范围。 */
+  selectedColumnRange?: Pick<CellRange, 'startCol' | 'endCol'>
 }
 
 const MIN_HEADER_HEIGHT_FOR_TRIANGLE = 24
@@ -84,7 +87,6 @@ export class HeaderPainter {
       return
     }
 
-    ctx.fillStyle = this.theme.colors.headerText
     ctx.textBaseline = 'middle'
     ctx.textAlign = 'left'
 
@@ -94,6 +96,13 @@ export class HeaderPainter {
       if (!columnLetters && !schema.fields[c]) continue
       const colLeft = x + colsAxis.indexToPosition(c) - scrollOffsetX
       const colWidth = colsAxis.getSize(c)
+      const selected = this.isSelectedColumn(c, params.selectedColumnRange)
+      if (selected) {
+        ctx.fillStyle = this.theme.colors.selectionBorder
+        ctx.fillRect(colLeft, 0, colWidth, headerHeight)
+      }
+      const textColor = selected ? this.theme.colors.selectionText : this.theme.colors.headerText
+      ctx.fillStyle = textColor
       const y = headerHeight / 2
       if (columnLetters) {
         ctx.textAlign = 'center'
@@ -111,6 +120,7 @@ export class HeaderPainter {
           colWidth,
           y,
           padX,
+          color: textColor,
         })
       }
     }
@@ -187,6 +197,7 @@ export class HeaderPainter {
       colWidth: number
       y: number
       padX: number
+      color: string
     },
   ): void {
     if (icons.length === 0) return
@@ -201,10 +212,17 @@ export class HeaderPainter {
         icon.path,
         { width: 16, height: 16 },
         { x: iconX, y: iconY, width: headerIconSize, height: headerIconSize },
-        { fill: this.theme.colors.headerText },
+        { fill: params.color },
       )
       iconX += headerIconSize + headerIconGap
     }
+  }
+
+  private isSelectedColumn(
+    colIndex: number,
+    range: Pick<CellRange, 'startCol' | 'endCol'> | undefined,
+  ): boolean {
+    return range !== undefined && colIndex >= range.startCol && colIndex <= range.endCol
   }
 
   private paintHeaderGridLines(

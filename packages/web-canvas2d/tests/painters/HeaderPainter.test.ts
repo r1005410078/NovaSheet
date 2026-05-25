@@ -86,6 +86,30 @@ describe('HeaderPainter — 列头', () => {
     expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.headerText })
   })
 
+  it('整列选中时列头使用强选中背景与选中文字色', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA,
+      colsAxis,
+      colRange: [0, 2],
+      width: 400,
+      selectedColumnRange: { startCol: 1, endCol: 1 },
+    })
+
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBorder })
+    expect(ops).toContainEqual({
+      op: 'fillRect',
+      args: [100, 0, 100, denseGridTheme.metrics.headerHeight],
+    })
+    const selectedTextColorIndex = ops.findIndex(
+      (o) => o.op === 'set:fillStyle' && o.value === denseGridTheme.colors.selectionText,
+    )
+    const ageTextIndex = ops.findIndex((o) => o.op === 'fillText' && o.args[0] === 'Age')
+    expect(selectedTextColorIndex).toBeGreaterThan(-1)
+    expect(ageTextIndex).toBeGreaterThan(selectedTextColorIndex)
+  })
+
   it('scrollOffsetX 使列头随横向滚动', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })

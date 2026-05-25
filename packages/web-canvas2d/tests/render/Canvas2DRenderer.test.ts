@@ -533,7 +533,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(ops).toContainEqual({ op: 'lineTo', args: [99.5, 87.5] })
   })
 
-  it('Excel 模式下选区同步高亮列头与左侧行号', () => {
+  it('Excel 模式下普通选区同步浅色高亮列头与左侧行号', () => {
     const { ctx, ops } = createRecordingContext()
     const data = new InMemoryDataSource({
       schema: {
@@ -597,5 +597,35 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(ops).toContainEqual({ op: 'fillRect', args: [0, 60, 44, 28] }) // row 2
     expect(ops).toContainEqual({ op: 'fillRect', args: [0, 88, 44, 28] }) // row 3
     expect(ops).toContainEqual({ op: 'fillRect', args: [0, 116, 44, 28] }) // row 4
+  })
+
+  it('Excel 模式下整列选区使用强列头选中态', () => {
+    const { ops, data, rowsAxis, colsAxis, renderer, viewport } = setup()
+    viewport.setRowHeaderWidth(0)
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 1 },
+        anchorCell: { rowIndex: 0, colIndex: 1 },
+        extentCell: { rowIndex: data.getRowCount() - 1, colIndex: 1 },
+        selectedRange: {
+          startRow: 0,
+          endRow: data.getRowCount() - 1,
+          startCol: 1,
+          endCol: 1,
+        },
+      },
+    })
+
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBorder })
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionText })
+    expect(ops).toContainEqual({ op: 'fillRect', args: [100, 0, 100, 32] })
   })
 })

@@ -42,6 +42,7 @@ export const denseGridTheme: Theme = {
     hoverRowBg: '#f6f8fa',
     selectionBg: 'rgba(9,105,218,0.10)',
     selectionBorder: '#0969da',
+    selectionText: '#ffffff',
     menuItemHover: '#f6f8fa',
     hideIndicator: '#6b7280',
   },

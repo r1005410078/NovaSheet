@@ -39,6 +39,7 @@ describe('denseGridTheme — 默认主题', () => {
   it('颜色含网格线与背景', () => {
     expect(denseGridTheme.colors.background).toMatch(/^#|^rgb/)
     expect(denseGridTheme.colors.gridLine).toMatch(/^#|^rgb/)
+    expect(denseGridTheme.colors.selectionText).toMatch(/^#|^rgb/)
   })
 
   it('暴露冻结分隔线样式', () => {

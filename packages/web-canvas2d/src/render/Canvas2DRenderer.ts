@@ -344,6 +344,7 @@ export class Canvas2DRenderer {
         excelChrome,
         ctx.frame.viewPipeline,
         ctx.frame.collapsedColGaps,
+        this.getSelectedColumnHeaderRange(ctx.frame),
       )
       this.paintRowHeaders(regions, rowsAxis, snapshot)
       return
@@ -361,6 +362,7 @@ export class Canvas2DRenderer {
       excelChrome,
       ctx.frame.viewPipeline,
       ctx.frame.collapsedColGaps,
+      this.getSelectedColumnHeaderRange(ctx.frame),
     )
     this.paintRowHeaders(regions, rowsAxis, snapshot)
   }
@@ -421,6 +423,7 @@ export class Canvas2DRenderer {
     const { colsAxis, snapshot, theme } = ctx
     const headerHeight = snapshot.headerHeight
     if (headerHeight <= 0) return
+    if (this.getSelectedColumnHeaderRange(ctx.frame)) return
 
     const headerRegions = ctx.paintOrder.filter((region) => region.rowBand === 'middle')
     this.ctx.fillStyle = theme.colors.selectionBg
@@ -486,6 +489,7 @@ export class Canvas2DRenderer {
     columnLetters: boolean,
     viewPipeline: RenderFrame['viewPipeline'],
     collapsedColGaps: RenderFrame['collapsedColGaps'],
+    selectedColumnRange?: Pick<CellRange, 'startCol' | 'endCol'>,
   ): void {
     for (const region of paintOrder.filter((r) => r.rowBand === 'middle')) {
       if (region.colRange[1] < region.colRange[0]) continue
@@ -499,8 +503,19 @@ export class Canvas2DRenderer {
         columnLetters,
         viewPipeline,
         collapsedColGaps,
+        selectedColumnRange,
       })
     }
+  }
+
+  private getSelectedColumnHeaderRange(
+    frame: RenderFrame,
+  ): Pick<CellRange, 'startCol' | 'endCol'> | undefined {
+    const range = frame.selection?.selectedRange
+    if (!range) return undefined
+    const rowCount = frame.data.getRowCount()
+    if (rowCount <= 0 || range.startRow !== 0 || range.endRow !== rowCount - 1) return undefined
+    return { startCol: range.startCol, endCol: range.endCol }
   }
 
   private paintRowHeaders(

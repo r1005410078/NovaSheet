@@ -66,6 +66,8 @@ export interface ThemeColors {
   readonly selectionBg: string
   /** 选区边框颜色（Phase 4.0） */
   readonly selectionBorder: string
+  /** 强选中区域文字颜色（Phase 4.7 列头选中态） */
+  readonly selectionText: string
   /** 菜单项悬停背景色（Phase 4.0 Context menu） */
   readonly menuItemHover: string
   /** 隐藏行 indicator 三角颜色（Phase 4.5） */
