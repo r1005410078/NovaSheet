@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build Google Sheets-style selected-column drag reorder: select one or more visible columns, drag from the selected column header, show a DOM drag-following band + snapped drop line, and commit schema reorder on pointerup.
+**Goal:** Build Google Sheets-style selected-column drag reorder: select one or more visible columns, drag from the selected column header, show a DOM drag-following band immediately on pointerdown, show a snapped drop line for active drag, and commit schema reorder on pointerup.
 
 **Architecture:** Core owns schema order mutation (`moveFields` / `moveCols`) and undo/redo. Web runtime owns the pointer state machine and DOM-only preview overlay. Canvas remains unchanged except for normal repaint after schema order changes.
 

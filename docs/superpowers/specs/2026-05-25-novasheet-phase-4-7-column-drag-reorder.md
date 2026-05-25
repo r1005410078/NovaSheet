@@ -48,22 +48,26 @@ NovaSheet 现有渲染与交互分层决定 4.7 不应把列拖拽预览画进 c
 | --- | --- |
 | 左键点击列头 D | 选中整列 D |
 | Shift/拖选形成连续 D:E | 选中连续列 D:E |
-| 在已选列头 D/E 内 pointerdown，然后移动超过阈值 | 进入 column reorder drag |
+| hover 已选列头 D/E | cursor 显示 `grab` |
+| 在已选列头 D/E 内 pointerdown | 立即显示 DOM 预览列带，cursor 切到 `grabbing`；未超过阈值不提交 reorder |
+| pointerdown 后移动超过阈值 | 进入 active column reorder drag，drop line 按目标边界吸附 |
 | 在未选列头 F pointerdown | 先选中 F；本次不进入多列拖拽 |
 | 在列 resize handle pointerdown | resize 优先，不进入 reorder |
 | 在 hidden col triangle pointerdown | unhide 优先，不进入 reorder |
 | 右键列头 | contextmenu 优先，不进入 reorder |
 
-拖拽阈值：`COLUMN_REORDER_DRAG_THRESHOLD_PX = 6`。小于阈值仍视为点击/选列，不显示预览。
+拖拽阈值：`COLUMN_REORDER_DRAG_THRESHOLD_PX = 6`。小于阈值仍视为点击/选列，pointerup 不提交 reorder；但已选列头 pointerdown 后应立即显示灰色预览列带，提供“已抓取”的反馈。
 
 ### 3.2 拖动预览
 
 预览由 DOM `ColumnReorderOverlay` 渲染，挂在现有 grid container 的 overlay/handle 层之上：
 
 - `dragBand`: 灰色半透明矩形，宽度 = 被移动列组总宽度，高度覆盖 header + body viewport；水平位置跟随 pointer delta，而不是吸附到目标列。
-- `dropLine`: 深灰竖线，吸附到目标插入边界，覆盖 header + body viewport。
+- `dropLine`: 深灰竖线，active drag 中吸附到目标插入边界，覆盖 header + body viewport。
 - `pointer-events: none`，不参与命中。
 - 原选区继续由 canvas overlay 绘制蓝色选区，不被 DOM preview 覆盖语义替代。
+
+pointerdown 即时预览使用被选列组当前 viewport x 作为 `dragBandX`，`dropLine` 可先落在列组起始边界；超过阈值后 `dragBandX = startBandX + pointerDeltaX`，`dropLine` 改由 drop target 计算。
 
 Google 参考效果对应：原列 D 保持蓝色；灰色投影随 D 的拖动位置移动；E/F 边界有深色竖线表示松手后的插入点。
 
@@ -214,7 +218,7 @@ type ColumnReorderDrag =
 事件：
 
 - `handleHostPointerDown`: header + left button + selected header hit → seed `columnReorderDrag`，但不立即 active。
-- `handleHostPointerMove`: 超阈值后 active；更新 target + overlay preview；不触发 body drag-select。
+- `handleHostPointerMove`: hover 已选列头时设置 `grab` cursor；已 seed 的 reorder drag 更新 preview；超阈值后 active 并更新 target；不触发 body drag-select。
 - `handleHostPointerUp`: active 且 target 有效 → `moveCols`; hide overlay; refresh。
 - `pointercancel` / `Escape`: hide overlay; clear drag。
 
