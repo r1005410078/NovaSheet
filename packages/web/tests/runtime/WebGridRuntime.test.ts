@@ -120,6 +120,7 @@ function makeHost(): WebHost {
     attach: mock(() => {}),
     applyScrollbarTheme: mock(() => {}),
     setScrollSize: mock(() => {}),
+    setCursor: mock(() => {}),
     scrollTo: mock(() => {}),
     getDpr: () => 1,
     getContainerSize: () => ({ width: 400, height: 300 }),

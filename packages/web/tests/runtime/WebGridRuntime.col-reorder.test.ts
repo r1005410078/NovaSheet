@@ -34,6 +34,7 @@ function makeHost(): WebHost {
     attach: mock(() => {}),
     applyScrollbarTheme: mock(() => {}),
     setScrollSize: mock(() => {}),
+    setCursor: mock(() => {}),
     scrollTo: mock(() => {}),
     getScrollPosition: () => ({ scrollTop: 0, scrollLeft: 0 }),
     getDpr: () => 1,
@@ -72,6 +73,51 @@ function selectCols(engine: GridEngine, startCol: number, endCol: number): void 
 }
 
 describe('WebGridRuntime column reorder drag', () => {
+  it('shows preview and grabbing cursor immediately on selected header pointerdown', () => {
+    const engine = makeEngine()
+    selectCols(engine, 1, 2)
+    const host = makeHost()
+    const overlay = makeOverlay()
+    const runtime = new WebGridRuntime({
+      engine,
+      host,
+      renderer: makeRenderer(),
+      columnReorderOverlay: overlay,
+    })
+
+    runtime.handleHostPointerDown({ x: 120, y: 10, shiftKey: false, button: 0 })
+
+    expect(overlay.show).toHaveBeenCalledWith({
+      lineX: 100,
+      dragBandX: 100,
+      bandWidth: 200,
+      height: 240,
+    })
+    expect(host.setCursor).toHaveBeenCalledWith('grabbing')
+
+    runtime.handleHostPointerUp()
+    expect(overlay.hide).toHaveBeenCalled()
+    expect(host.setCursor).toHaveBeenLastCalledWith(null)
+  })
+
+  it('uses grab cursor only when hovering a selected column header', () => {
+    const engine = makeEngine()
+    selectCols(engine, 1, 1)
+    const host = makeHost()
+    const runtime = new WebGridRuntime({
+      engine,
+      host,
+      renderer: makeRenderer(),
+      columnReorderOverlay: makeOverlay(),
+    })
+
+    runtime.handleHostPointerMove({ x: 120, y: 10, shiftKey: false })
+    expect(host.setCursor).toHaveBeenLastCalledWith('grab')
+
+    runtime.handleHostPointerMove({ x: 220, y: 10, shiftKey: false })
+    expect(host.setCursor).toHaveBeenLastCalledWith(null)
+  })
+
   it('starts column reorder only after pointer moves beyond threshold from a selected header', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)
@@ -85,7 +131,12 @@ describe('WebGridRuntime column reorder drag', () => {
 
     runtime.handleHostPointerDown({ x: 120, y: 10, shiftKey: false, button: 0 })
     runtime.handleHostPointerMove({ x: 123, y: 10, shiftKey: false })
-    expect(overlay.show).not.toHaveBeenCalled()
+    expect(overlay.show).toHaveBeenLastCalledWith({
+      lineX: 100,
+      dragBandX: 103,
+      bandWidth: 100,
+      height: 240,
+    })
 
     runtime.handleHostPointerMove({ x: 260, y: 10, shiftKey: false })
 

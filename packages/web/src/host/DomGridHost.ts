@@ -142,6 +142,11 @@ export class DomGridHost implements WebHost {
     return { left: rect.left, top: rect.top }
   }
 
+  setCursor(cursor: string | null): void {
+    if (!this.scrollHost) return
+    this.scrollHost.style.cursor = cursor ?? ''
+  }
+
   getContainerSize(): { width: number; height: number } {
     const width = this.container.clientWidth || this.container.getBoundingClientRect().width || 400
     const height =

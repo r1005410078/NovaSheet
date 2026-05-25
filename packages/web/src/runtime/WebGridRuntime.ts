@@ -1423,7 +1423,11 @@ export class WebGridRuntime {
   /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
   handleHostPointerMove(event: WebPointerEvent): void {
     if (this.updateColumnReorderDrag(event)) return
-    if (this.destroyed || !this.lastDragPointer) return
+    if (this.destroyed) return
+    if (!this.lastDragPointer) {
+      this.updateColumnHeaderCursor(event)
+      return
+    }
     this.draggingSelection = true
     this.lastDragPointer = event
     const hit = hitTestCell(this.engine.getFrame(), event)
@@ -1556,6 +1560,13 @@ export class WebGridRuntime {
       active: false,
       targetBeforeFieldId: null,
     }
+    this.columnReorderOverlay?.show({
+      lineX: startBandX,
+      dragBandX: startBandX,
+      bandWidth: totalWidth,
+      height: this.host.getContainerSize().height,
+    })
+    this.host.setCursor('grabbing')
     this.closeContextMenu()
     return true
   }
@@ -1566,7 +1577,16 @@ export class WebGridRuntime {
     if (!drag.active) {
       const dx = event.x - drag.startX
       const dy = event.y - drag.startY
-      if (Math.hypot(dx, dy) < COLUMN_REORDER_DRAG_THRESHOLD_PX) return true
+      if (Math.hypot(dx, dy) < COLUMN_REORDER_DRAG_THRESHOLD_PX) {
+        this.columnReorderOverlay?.show({
+          lineX: drag.startBandX,
+          dragBandX: drag.startBandX + dx,
+          bandWidth: drag.totalWidth,
+          height: this.host.getContainerSize().height,
+        })
+        this.host.setCursor('grabbing')
+        return true
+      }
       drag.active = true
     }
 
@@ -1578,6 +1598,7 @@ export class WebGridRuntime {
     }
     drag.targetBeforeFieldId = target.beforeFieldId
     this.columnReorderOverlay?.show(target.preview)
+    this.host.setCursor('grabbing')
     return true
   }
 
@@ -1585,6 +1606,7 @@ export class WebGridRuntime {
     const drag = this.columnReorderDrag
     this.columnReorderDrag = null
     this.columnReorderOverlay?.hide()
+    this.host.setCursor(null)
     if (!drag?.active) return
     if (this.engine.moveCols(drag.selectedFieldIds, drag.targetBeforeFieldId)) {
       this.afterEngineMutation()
@@ -1594,6 +1616,19 @@ export class WebGridRuntime {
   private cancelColumnReorderDrag(): void {
     this.columnReorderDrag = null
     this.columnReorderOverlay?.hide()
+    this.host.setCursor(null)
+  }
+
+  private updateColumnHeaderCursor(event: WebPointerEvent): void {
+    if (this.resizeDrag || this.draggingSelection || this.fillDrag) {
+      this.host.setCursor(null)
+      return
+    }
+    const hit = this.hitTestColumnHeader(event)
+    const range = this.engine.getSelection().selectedRange
+    const canDrag =
+      hit && range && hit.colIndex >= range.startCol && hit.colIndex <= range.endCol
+    this.host.setCursor(canDrag ? 'grab' : null)
   }
 
   private hitTestColumnHeader(event: WebPointerEvent): { colIndex: number; fieldId: string } | null {

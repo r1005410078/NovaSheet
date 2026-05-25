@@ -288,6 +288,7 @@ function makeHost(offset: { left: number; top: number } = { left: 0, top: 0 }): 
     attach: mock(() => {}),
     applyScrollbarTheme: mock(() => {}),
     setScrollSize: mock(() => {}),
+    setCursor: mock(() => {}),
     scrollTo: mock(() => {}),
     getDpr: () => 1,
     getContainerSize: () => ({ width: 400, height: 300 }),
