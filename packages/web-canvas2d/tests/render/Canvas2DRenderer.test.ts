@@ -628,4 +628,34 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionText })
     expect(ops).toContainEqual({ op: 'fillRect', args: [100, 0, 100, 32] })
   })
+
+  it('Excel 模式下整行选区使用强行头选中态', () => {
+    const { ops, data, rowsAxis, colsAxis, renderer, viewport } = setup()
+    viewport.setRowHeaderWidth(44)
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      selection: {
+        activeCell: { rowIndex: 1, colIndex: 0 },
+        anchorCell: { rowIndex: 1, colIndex: 0 },
+        extentCell: { rowIndex: 1, colIndex: SCHEMA.fields.length - 1 },
+        selectedRange: {
+          startRow: 1,
+          endRow: 1,
+          startCol: 0,
+          endCol: SCHEMA.fields.length - 1,
+        },
+      },
+    })
+
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBorder })
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionText })
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 60, 44, 28] })
+  })
 })

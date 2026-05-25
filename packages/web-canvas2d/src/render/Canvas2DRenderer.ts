@@ -346,7 +346,7 @@ export class Canvas2DRenderer {
         ctx.frame.collapsedColGaps,
         this.getSelectedColumnHeaderRange(ctx.frame),
       )
-      this.paintRowHeaders(regions, rowsAxis, snapshot)
+      this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
       return
     }
 
@@ -364,7 +364,7 @@ export class Canvas2DRenderer {
       ctx.frame.collapsedColGaps,
       this.getSelectedColumnHeaderRange(ctx.frame),
     )
-    this.paintRowHeaders(regions, rowsAxis, snapshot)
+    this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
   }
 
   private paintGridLayer(ctx: Canvas2DPaintFrameContext): void {
@@ -451,6 +451,7 @@ export class Canvas2DRenderer {
     const { rowsAxis, snapshot, theme } = ctx
     const gutter = snapshot.rowHeaderWidth
     if (gutter <= 0) return
+    if (this.getSelectedRowHeaderRange(ctx.frame)) return
 
     const rowRegions = ctx.paintOrder.filter((region) => region.colBand === 'center')
     this.ctx.fillStyle = theme.colors.selectionBg
@@ -518,10 +519,21 @@ export class Canvas2DRenderer {
     return { startCol: range.startCol, endCol: range.endCol }
   }
 
+  private getSelectedRowHeaderRange(
+    frame: RenderFrame,
+  ): Pick<CellRange, 'startRow' | 'endRow'> | undefined {
+    const range = frame.selection?.selectedRange
+    if (!range) return undefined
+    const colCount = frame.data.getSchema().fields.length
+    if (colCount <= 0 || range.startCol !== 0 || range.endCol !== colCount - 1) return undefined
+    return { startRow: range.startRow, endRow: range.endRow }
+  }
+
   private paintRowHeaders(
     regions: RenderRegion[],
     rowsAxis: Axis,
     snapshot: RenderFrame['viewport'],
+    selectedRowRange?: Pick<CellRange, 'startRow' | 'endRow'>,
   ): void {
     const gutter = snapshot.rowHeaderWidth
     if (gutter <= 0) return
@@ -535,6 +547,7 @@ export class Canvas2DRenderer {
         rowRange: topRegion.rowRange,
         rect: { x: 0, y: topRegion.rect.y, width: gutter, height: topRegion.rect.height },
         scrollOffsetY: topRegion.scrollOffsetY,
+        selectedRowRange,
       })
     }
 
@@ -545,6 +558,7 @@ export class Canvas2DRenderer {
         rowRange: main.rowRange,
         rect: { x: 0, y: main.rect.y, width: gutter, height: main.rect.height },
         scrollOffsetY: main.scrollOffsetY,
+        selectedRowRange,
       })
     }
   }

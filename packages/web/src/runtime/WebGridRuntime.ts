@@ -306,6 +306,10 @@ export class WebGridRuntime {
   private columnHeaderSelectDrag: {
     anchorCol: number
   } | null = null
+  /** 当前行头拖选状态；仅用于形成连续整行选区。 */
+  private rowHeaderSelectDrag: {
+    anchorRow: number
+  } | null = null
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: WebGridRuntimeOptions) {
@@ -1419,6 +1423,7 @@ export class WebGridRuntime {
     if (this.engine.isCellEditing()) {
       this.commitCellEdit(false)
     }
+    if (this.tryHandleRowHeaderPointerDown(event)) return
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return
     if (event.shiftKey) this.engine.selectCell(hit, { extend: true })
@@ -1431,6 +1436,7 @@ export class WebGridRuntime {
   handleHostPointerMove(event: WebPointerEvent): void {
     if (this.updateColumnReorderDrag(event)) return
     if (this.updateColumnHeaderSelectDrag(event)) return
+    if (this.updateRowHeaderSelectDrag(event)) return
     if (this.destroyed) return
     if (!this.lastDragPointer) {
       this.updateColumnHeaderCursor(event)
@@ -1454,6 +1460,10 @@ export class WebGridRuntime {
     }
     if (this.columnHeaderSelectDrag) {
       this.columnHeaderSelectDrag = null
+      return
+    }
+    if (this.rowHeaderSelectDrag) {
+      this.rowHeaderSelectDrag = null
       return
     }
     this.draggingSelection = false
@@ -1608,6 +1618,34 @@ export class WebGridRuntime {
     return true
   }
 
+  private tryHandleRowHeaderPointerDown(event: WebPointerEvent): boolean {
+    if (this.resizeDrag || this.draggingSelection || this.fillDrag) return false
+    const hit = this.hitTestRowHeader(event)
+    if (!hit) return false
+
+    const selection = this.engine.getSelection()
+    const range = selection.selectedRange
+    const anchorRow =
+      event.shiftKey && range && this.isWholeRowSelection(range)
+        ? selection.anchorCell?.rowIndex ?? hit.rowIndex
+        : hit.rowIndex
+
+    this.selectWholeRowRange(anchorRow, hit.rowIndex)
+    this.rowHeaderSelectDrag = { anchorRow }
+    this.refresh()
+    return true
+  }
+
+  private updateRowHeaderSelectDrag(event: WebPointerEvent): boolean {
+    const drag = this.rowHeaderSelectDrag
+    if (!drag) return false
+    const hit = this.hitTestRowHeader(event)
+    if (!hit) return true
+    this.selectWholeRowRange(drag.anchorRow, hit.rowIndex)
+    this.refresh()
+    return true
+  }
+
   private updateColumnReorderDrag(event: WebPointerEvent): boolean {
     const drag = this.columnReorderDrag
     if (!drag) return false
@@ -1684,6 +1722,11 @@ export class WebGridRuntime {
     return rowCount > 0 && range.startRow === 0 && range.endRow === rowCount - 1
   }
 
+  private isWholeRowSelection(range: CellRange): boolean {
+    const colCount = this.engine.getFrame().data.getSchema().fields.length
+    return colCount > 0 && range.startCol === 0 && range.endCol === colCount - 1
+  }
+
   private hitTestColumnHeader(event: WebPointerEvent): { colIndex: number; fieldId: string } | null {
     const frame = this.engine.getFrame()
     const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
@@ -1701,6 +1744,20 @@ export class WebGridRuntime {
     return { colIndex, fieldId: field.id }
   }
 
+  private hitTestRowHeader(event: WebPointerEvent): { rowIndex: number } | null {
+    const frame = this.engine.getFrame()
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    if (rowHeaderWidth <= 0 || event.x < 0 || event.x >= rowHeaderWidth) return null
+    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
+    if (event.y < headerHeight) return null
+    const scrollY = frame.viewport.scrollY ?? 0
+    const logicalY = event.y - headerHeight + scrollY
+    if (logicalY < 0) return null
+    const rowIndex = frame.rowsAxis.positionToIndex(logicalY)
+    if (rowIndex < 0 || rowIndex >= frame.rowsAxis.getCount()) return null
+    return { rowIndex }
+  }
+
   private selectWholeColumn(colIndex: number): void {
     this.selectWholeColumnRange(colIndex, colIndex)
   }
@@ -1716,6 +1773,20 @@ export class WebGridRuntime {
       anchorCell: { rowIndex: 0, colIndex: anchorCol },
       extentCell: { rowIndex: rowCount - 1, colIndex: extentCol },
       selectedRange: { startRow: 0, endRow: rowCount - 1, startCol, endCol },
+    })
+  }
+
+  private selectWholeRowRange(anchorRow: number, extentRow: number): void {
+    const frame = this.engine.getFrame()
+    const colCount = frame.data.getSchema().fields.length
+    if (colCount <= 0) return
+    const startRow = Math.min(anchorRow, extentRow)
+    const endRow = Math.max(anchorRow, extentRow)
+    this.engine.setSelection({
+      activeCell: { rowIndex: extentRow, colIndex: 0 },
+      anchorCell: { rowIndex: anchorRow, colIndex: 0 },
+      extentCell: { rowIndex: extentRow, colIndex: colCount - 1 },
+      selectedRange: { startRow, endRow, startCol: 0, endCol: colCount - 1 },
     })
   }
 

@@ -10,6 +10,7 @@ export interface RowHeaderPaintParams {
   rowRange: [number, number]
   rect: { x: number; y: number; width: number; height: number }
   scrollOffsetY: number
+  selectedRowRange?: { startRow: number; endRow: number }
 }
 
 export class RowHeaderPainter {
@@ -55,7 +56,6 @@ export class RowHeaderPainter {
     ctx.fillStyle = this.theme.colors.headerBackground
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
 
-    ctx.fillStyle = this.theme.colors.headerText
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.font = `${this.theme.metrics.fontSize}px ${this.theme.metrics.fontFamily}`
@@ -63,14 +63,29 @@ export class RowHeaderPainter {
     for (let r = rowRange[0]; r <= rowRange[1]; r++) {
       const yTop = rowsAxis.indexToPosition(r)
       const rowHeight = rowsAxis.getSize(r)
+      const rowY = rect.y + yTop - scrollOffsetY
       const y = rect.y + yTop - scrollOffsetY + rowHeight / 2
       if (y + rowHeight / 2 < rect.y || y - rowHeight / 2 > rect.y + rect.height) continue
+      if (this.isSelectedRow(r, params.selectedRowRange)) {
+        ctx.fillStyle = this.theme.colors.selectionBorder
+        ctx.fillRect(rect.x, rowY, rect.width, rowHeight)
+        ctx.fillStyle = this.theme.colors.selectionText
+      } else {
+        ctx.fillStyle = this.theme.colors.headerText
+      }
       ctx.fillText(String(r + 1), rect.x + rect.width / 2, y)
     }
 
     this.paintRowHeaderGridLines(ctx, { rowsAxis, rowRange, rect, scrollOffsetY })
 
     ctx.restore()
+  }
+
+  private isSelectedRow(
+    rowIndex: number,
+    range: RowHeaderPaintParams['selectedRowRange'],
+  ): boolean {
+    return range !== undefined && rowIndex >= range.startRow && rowIndex <= range.endRow
   }
 
   private paintRowHeaderGridLines(
