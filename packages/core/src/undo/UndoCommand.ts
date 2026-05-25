@@ -123,3 +123,11 @@ export type UndoCommand =
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
     }
+  | {
+      readonly kind: 'moveCols'
+      readonly fieldIds: readonly string[]
+      readonly beforeFieldId: string | null
+      readonly inverseBeforeFieldId: string | null
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }

@@ -150,4 +150,7 @@ export interface GridEngine {
 
   /** Phase 4.6 — 返回当前冻结配置快照。 */
   getFrozenConfig(): FrozenConfig
+
+  /** Phase 4.7 — 按 fieldId 移动列组；`beforeFieldId=null` 表示移动到末尾。 */
+  moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean
 }

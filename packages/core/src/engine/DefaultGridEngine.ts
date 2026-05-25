@@ -570,6 +570,32 @@ export class DefaultGridEngine implements GridEngine {
     return this.frozen.getFrozenConfig()
   }
 
+  /** 按 fieldId 移动列组；cell 值、hidden 状态与列宽都按 fieldId 锚定。 */
+  moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.moveFields) return false
+    const normalized = this.normalizeMoveCols(fieldIds, beforeFieldId)
+    if (!normalized) return false
+
+    this.finishActiveEdit()
+    const selectionBefore = this.selection.getSelection()
+    const visibleFieldIdsBefore = this.data.getSchema().fields.map((field) => field.id)
+    const widthById = this.captureRawColWidths()
+    this.rawData.moveFields(normalized.fieldIds, normalized.beforeFieldId)
+    this.rebuildRawColsAxisFromWidths(widthById)
+    this.rebuildViewColsAxis()
+    this.restoreSelectionByVisibleFieldIds(selectionBefore, visibleFieldIdsBefore)
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({
+      kind: 'moveCols',
+      fieldIds: normalized.fieldIds,
+      beforeFieldId: normalized.beforeFieldId,
+      inverseBeforeFieldId: normalized.inverseBeforeFieldId,
+      selectionBefore,
+      selectionAfter,
+    })
+    return true
+  }
+
   /** Phase 4.5 — 程序化设置选区（不入 undo 栈）。 */
   setSelection(selection: GridSelection): void {
     this.selection.setSelection(selection)
@@ -791,6 +817,9 @@ export class DefaultGridEngine implements GridEngine {
         this.rebuildViewColsAxis()
         this.selection.setSelection(cmd.selectionBefore)
         return
+      case 'moveCols':
+        this.applyMoveColsCommand(cmd.fieldIds, cmd.inverseBeforeFieldId, cmd.selectionBefore)
+        return
     }
   }
 
@@ -884,7 +913,25 @@ export class DefaultGridEngine implements GridEngine {
         this.rebuildViewColsAxis()
         this.selection.setSelection(cmd.selectionAfter)
         return
+      case 'moveCols':
+        this.applyMoveColsCommand(cmd.fieldIds, cmd.beforeFieldId, cmd.selectionAfter)
+        return
     }
+  }
+
+  private applyMoveColsCommand(
+    fieldIds: readonly string[],
+    beforeFieldId: string | null,
+    selection: GridSelection,
+  ): void {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.moveFields) return
+    const normalized = this.normalizeMoveCols(fieldIds, beforeFieldId)
+    if (!normalized) return
+    const widthById = this.captureRawColWidths()
+    this.rawData.moveFields(normalized.fieldIds, normalized.beforeFieldId)
+    this.rebuildRawColsAxisFromWidths(widthById)
+    this.rebuildViewColsAxis()
+    this.selection.setSelection(selection)
   }
 
   private applyInsertCols(cmd: Extract<UndoCommand, { kind: 'insertCols' }>): void {
@@ -1214,6 +1261,123 @@ export class DefaultGridEngine implements GridEngine {
     })
   }
 
+  private normalizeMoveCols(
+    fieldIds: readonly string[],
+    beforeFieldId: string | null,
+  ): {
+    readonly fieldIds: readonly string[]
+    readonly beforeFieldId: string | null
+    readonly inverseBeforeFieldId: string | null
+  } | null {
+    const fields = this.rawData.getSchema().fields
+    const requested = new Set(fieldIds)
+    const moving = fields.filter((field) => requested.has(field.id)).map((field) => field.id)
+    if (moving.length === 0) return null
+    if (!this.isContiguousFieldGroup(moving)) return null
+    const movingSet = new Set(moving)
+    if (beforeFieldId !== null) {
+      if (movingSet.has(beforeFieldId)) return null
+      if (!fields.some((field) => field.id === beforeFieldId)) return null
+    }
+
+    const remaining = fields.filter((field) => !movingSet.has(field.id)).map((field) => field.id)
+    const insertAt = beforeFieldId === null ? remaining.length : remaining.indexOf(beforeFieldId)
+    if (insertAt < 0) return null
+
+    const next = remaining.slice()
+    next.splice(insertAt, 0, ...moving)
+    const current = fields.map((field) => field.id)
+    if (sameStringOrder(current, next)) return null
+
+    const firstMovingIndex = current.findIndex((id) => movingSet.has(id))
+    let inverseBeforeFieldId: string | null = null
+    for (let i = firstMovingIndex + moving.length; i < current.length; i += 1) {
+      const id = current[i]!
+      if (!movingSet.has(id)) {
+        inverseBeforeFieldId = id
+        break
+      }
+    }
+    return { fieldIds: moving, beforeFieldId, inverseBeforeFieldId }
+  }
+
+  private captureRawColWidths(): Map<string, number> {
+    const widths = new Map<string, number>()
+    const fields = this.rawData.getSchema().fields
+    for (let i = 0; i < fields.length; i += 1) {
+      widths.set(fields[i]!.id, this.rawColsAxis.getSize(i))
+    }
+    return widths
+  }
+
+  private isContiguousFieldGroup(fieldIds: readonly string[]): boolean {
+    const fields = this.rawData.getSchema().fields
+    const indices = fieldIds
+      .map((id) => fields.findIndex((field) => field.id === id))
+      .filter((index) => index >= 0)
+      .sort((a, b) => a - b)
+    if (indices.length !== fieldIds.length) return false
+    for (let i = 1; i < indices.length; i += 1) {
+      if (indices[i]! !== indices[i - 1]! + 1) return false
+    }
+    return true
+  }
+
+  private rebuildRawColsAxisFromWidths(widthById: ReadonlyMap<string, number>): void {
+    const fields = this.rawData.getSchema().fields
+    const defaultWidth = this.rawColsAxis.getDefaultSize()
+    this.rawColsAxis = new ChunkedAxis({ count: fields.length, defaultSize: defaultWidth })
+    for (let i = 0; i < fields.length; i += 1) {
+      const field = fields[i]!
+      const width = widthById.get(field.id) ?? field.width
+      if (width !== defaultWidth) this.rawColsAxis.setSize(i, width)
+      field.width = width
+    }
+  }
+
+  private restoreSelectionByVisibleFieldIds(
+    selection: GridSelection,
+    visibleFieldIdsBefore: readonly string[],
+  ): void {
+    if (
+      !selection.activeCell ||
+      !selection.anchorCell ||
+      !selection.extentCell ||
+      !selection.selectedRange
+    ) {
+      this.selection.clear()
+      return
+    }
+
+    const fieldsAfter = this.data.getSchema().fields
+    const indexAfterById = new Map<string, number>()
+    for (let i = 0; i < fieldsAfter.length; i += 1) {
+      indexAfterById.set(fieldsAfter[i]!.id, i)
+    }
+    const mapCell = (cell: CellAddress): CellAddress | null => {
+      const fieldId = visibleFieldIdsBefore[cell.colIndex]
+      if (!fieldId) return null
+      const colIndex = indexAfterById.get(fieldId)
+      if (colIndex === undefined) return null
+      return { rowIndex: cell.rowIndex, colIndex }
+    }
+
+    const activeCell = mapCell(selection.activeCell)
+    const anchorCell = mapCell(selection.anchorCell)
+    const extentCell = mapCell(selection.extentCell)
+    if (!activeCell || !anchorCell || !extentCell) {
+      this.selection.clear()
+      return
+    }
+
+    this.selection.setSelection({
+      activeCell,
+      anchorCell,
+      extentCell,
+      selectedRange: normalizeCellRange(anchorCell, extentCell),
+    })
+  }
+
   private resolveDefaultColWidth(): number {
     return this.rawColsAxis.getDefaultSize()
   }
@@ -1290,6 +1454,7 @@ class VisibleColumnsDataSource implements DataSource {
   readonly deleteRows?: MutableDataSource['deleteRows']
   readonly insertField?: MutableDataSource['insertField']
   readonly removeField?: MutableDataSource['removeField']
+  readonly moveFields?: MutableDataSource['moveFields']
 
   constructor(
     private readonly upstream: DataSource,
@@ -1304,6 +1469,7 @@ class VisibleColumnsDataSource implements DataSource {
       this.deleteRows = mutableUpstream.deleteRows?.bind(mutableUpstream)
       this.insertField = mutableUpstream.insertField?.bind(mutableUpstream)
       this.removeField = mutableUpstream.removeField?.bind(mutableUpstream)
+      this.moveFields = mutableUpstream.moveFields?.bind(mutableUpstream)
     }
   }
 
@@ -1350,4 +1516,21 @@ function areContiguousRows(rows: readonly number[]): boolean {
   const minRow = Math.min(...rows)
   const maxRow = Math.max(...rows)
   return maxRow - minRow + 1 === rows.length
+}
+
+function sameStringOrder(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
+}
+
+function normalizeCellRange(a: CellAddress, b: CellAddress): CellRange {
+  return {
+    startRow: Math.min(a.rowIndex, b.rowIndex),
+    endRow: Math.max(a.rowIndex, b.rowIndex),
+    startCol: Math.min(a.colIndex, b.colIndex),
+    endCol: Math.max(a.colIndex, b.colIndex),
+  }
 }
