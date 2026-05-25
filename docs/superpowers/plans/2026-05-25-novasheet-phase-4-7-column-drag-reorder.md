@@ -12,6 +12,8 @@
 
 **Column multi-select invariant:** Phase 4.7 supports contiguous whole-column multi-select via Shift-click and header horizontal drag. It does not support Cmd/Ctrl non-contiguous column sets.
 
+**Header selected visual invariant:** whole-column selection paints selected column headers with strong selected background (`selectionBorder`) and selected text (`selectionText`). Body selection remains the existing translucent fill.
+
 **Tech Stack:** TypeScript, bun:test, `@novasheet/core`, `@novasheet/web`, Storybook HTML.
 
 ---

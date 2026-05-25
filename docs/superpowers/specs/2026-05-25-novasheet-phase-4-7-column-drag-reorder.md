@@ -64,6 +64,8 @@ NovaSheet 现有渲染与交互分层决定 4.7 不应把列拖拽预览画进 c
 
 列多选仅支持连续整列选区。4.7 不做 Cmd/Ctrl 非连续列集合；这与 `moveCols` 的连续列组约束一致。
 
+整列选中时，列头必须有强选中态：选中列头背景使用 `selectionBorder`，列头文字使用 `selectionText`，与 body 区域浅色选区形成层次差异。普通 cell/range selection 不触发列头强选中态。
+
 ### 3.2 拖动预览
 
 预览由 DOM `ColumnReorderOverlay` 渲染，挂在现有 grid container 的 overlay/handle 层之上：
