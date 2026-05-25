@@ -89,7 +89,12 @@ describe('WebGridRuntime column reorder drag', () => {
 
     runtime.handleHostPointerMove({ x: 260, y: 10, shiftKey: false })
 
-    expect(overlay.show).toHaveBeenCalled()
+    expect(overlay.show).toHaveBeenCalledWith({
+      lineX: 300,
+      dragBandX: 240,
+      bandWidth: 100,
+      height: 240,
+    })
   })
 
   it('moves selected multiple columns on pointerup and hides preview', () => {

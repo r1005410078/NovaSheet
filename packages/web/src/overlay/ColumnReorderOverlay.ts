@@ -1,11 +1,11 @@
 export interface ColumnReorderPreview {
   readonly lineX: number
-  readonly bandX: number
+  readonly dragBandX: number
   readonly bandWidth: number
   readonly height: number
 }
 
-/** Phase 4.7 — 列拖拽重排的 DOM 预览层：目标列带 + 落点竖线。 */
+/** Phase 4.7 — 列拖拽重排的 DOM 预览层：跟手列带 + 落点竖线。 */
 export class ColumnReorderOverlay {
   private band: HTMLDivElement
   private line: HTMLDivElement
@@ -43,7 +43,7 @@ export class ColumnReorderOverlay {
     if (this.destroyed) return
     Object.assign(this.band.style, {
       display: 'block',
-      left: `${preview.bandX}px`,
+      left: `${preview.dragBandX}px`,
       width: `${preview.bandWidth}px`,
       height: `${preview.height}px`,
     })

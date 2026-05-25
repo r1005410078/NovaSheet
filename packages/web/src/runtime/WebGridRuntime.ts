@@ -297,6 +297,7 @@ export class WebGridRuntime {
     startY: number
     selectedFieldIds: readonly string[]
     selectedRange: CellRange
+    startBandX: number
     totalWidth: number
     active: boolean
     targetBeforeFieldId: string | null
@@ -1543,12 +1544,14 @@ export class WebGridRuntime {
       .slice(range.startCol, range.endCol + 1)
       .map((field) => field.id)
     if (selectedFieldIds.length === 0) return true
+    const startBandX = this.getColViewportX(range.startCol)
     const totalWidth = this.sumVisibleColWidths(range.startCol, range.endCol)
     this.columnReorderDrag = {
       startX: event.x,
       startY: event.y,
       selectedFieldIds,
       selectedRange: range,
+      startBandX,
       totalWidth,
       active: false,
       targetBeforeFieldId: null,
@@ -1661,17 +1664,23 @@ export class WebGridRuntime {
     const lineLogicalX =
       beforeIndex >= fields.length ? totalSize : frame.colsAxis.indexToPosition(beforeIndex)
     const lineX = rowHeaderWidth + lineLogicalX - scrollX
-    const bandX = beforeFieldId === null ? lineX - drag.totalWidth : lineX
     const { height } = this.host.getContainerSize()
     return {
       beforeFieldId,
       preview: {
         lineX,
-        bandX,
+        dragBandX: drag.startBandX + (event.x - drag.startX),
         bandWidth: drag.totalWidth,
         height,
       },
     }
+  }
+
+  private getColViewportX(colIndex: number): number {
+    const frame = this.engine.getFrame()
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    const scrollX = frame.viewport.scrollX ?? 0
+    return rowHeaderWidth + frame.colsAxis.indexToPosition(colIndex) - scrollX
   }
 
   private getColsTotalSizeForFrame(frame: ReturnType<GridEngine['getFrame']>): number {
