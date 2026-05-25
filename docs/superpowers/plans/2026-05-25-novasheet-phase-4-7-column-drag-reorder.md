@@ -506,7 +506,7 @@ Run:
 
 ```bash
 bun run --filter @novasheet/storybook typecheck
-bun run --filter @novasheet/storybook build
+bun run --filter @novasheet/storybook build-storybook
 ```
 
 Expected: PASS.
