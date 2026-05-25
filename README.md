@@ -15,7 +15,7 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 | 维度                     | 数值                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d`                                                     |
-| 测试                     | 663 passing（bun:test，跨三包）                                                                                      |
+| 测试                     | 664 passing（bun:test，跨三包）                                                                                      |
 | Lint / Typecheck / Build | 全部 clean                                                                                                           |
 | 公共 API                 | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
 
