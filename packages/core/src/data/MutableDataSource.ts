@@ -38,6 +38,9 @@ export interface MutableDataSource extends DataSource {
 
   /** 按 fieldId 删除字段，返回字段定义与列值快照；未知 fieldId 返回 null。 */
   removeField?(fieldId: string): RemovedFieldSnapshot | null
+
+  /** 按 schema 顺序移动字段组；`beforeFieldId=null` 表示移动到末尾。 */
+  moveFields?(fieldIds: readonly string[], beforeFieldId: string | null): void
 }
 
 export function isMutableDataSource(data: DataSource): data is MutableDataSource {

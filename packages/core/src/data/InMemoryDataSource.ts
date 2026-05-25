@@ -143,6 +143,29 @@ export class InMemoryDataSource implements DataSource {
     return { originalIndex: idx, field, cells }
   }
 
+  /** 按当前 schema 顺序移动字段组；cell 值按 fieldId 锚定，无需改 row object。 */
+  moveFields(fieldIds: readonly string[], beforeFieldId: string | null): void {
+    const movingIds = new Set(fieldIds)
+    const moving = this.schema.fields.filter((field) => movingIds.has(field.id))
+    if (moving.length === 0) return
+    if (beforeFieldId !== null && movingIds.has(beforeFieldId)) return
+
+    const remaining = this.schema.fields.filter((field) => !movingIds.has(field.id))
+    const at =
+      beforeFieldId === null
+        ? remaining.length
+        : remaining.findIndex((field) => field.id === beforeFieldId)
+    if (at < 0) return
+
+    const nextFields = remaining.slice()
+    nextFields.splice(at, 0, ...moving)
+    if (sameFieldOrder(this.schema.fields, nextFields)) return
+
+    const movedFieldIds = moving.map((field) => field.id)
+    this.schema = { ...this.schema, fields: nextFields }
+    this.emit({ type: 'colsMoved', fieldIds: movedFieldIds, beforeFieldId })
+  }
+
   private makeDefaultRow(): Row {
     const out: Record<string, CellValue> = {}
     for (const field of this.schema.fields) {
@@ -155,4 +178,12 @@ export class InMemoryDataSource implements DataSource {
   private emit(event: DataSourceEvent): void {
     for (const l of this.listeners) l(event)
   }
+}
+
+function sameFieldOrder(a: readonly Field[], b: readonly Field[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i]!.id !== b[i]!.id) return false
+  }
+  return true
 }

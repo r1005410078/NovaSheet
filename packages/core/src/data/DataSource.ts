@@ -8,6 +8,7 @@ import type { CellValue, Field, Row, Schema } from './Schema'
  * - rowCountChanged：行数变化
  * - rowsInserted / rowsDeleted：行结构变更（Phase 4.5+）；订阅方按需重建本地缓存
  * - colsInserted / colsDeleted：列结构变更（Phase 4.6+）；订阅方按需重建本地缓存
+ * - colsMoved：列顺序变更（Phase 4.7+）；字段定义与单元格值仍按 fieldId 锚定
  */
 export type DataSourceEvent =
   | { type: 'reset' }
@@ -16,6 +17,7 @@ export type DataSourceEvent =
   | { type: 'rowsDeleted'; removed: readonly number[] }
   | { type: 'colsInserted'; at: number; field: Field }
   | { type: 'colsDeleted'; removed: readonly { index: number; fieldId: string }[] }
+  | { type: 'colsMoved'; fieldIds: readonly string[]; beforeFieldId: string | null }
   | { type: 'schemaChanged' }
   | { type: 'rowCountChanged'; newCount: number }
 
