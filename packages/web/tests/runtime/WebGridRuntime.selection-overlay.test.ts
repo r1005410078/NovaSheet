@@ -1,0 +1,304 @@
+import { describe, expect, it, mock } from 'bun:test'
+import {
+  denseGridTheme,
+  InMemoryDataSource,
+  type DataSource,
+  type GridEngine,
+  type GridSelection,
+} from '@novasheet/core'
+import { Grid } from '../../src/Grid'
+import type { WebHost } from '../../src/host/WebHost'
+import type { WebRenderer } from '../../src/render/WebRenderer'
+import type { SelectionOverlay, SelectionOverlayState } from '../../src/overlay/SelectionOverlay'
+import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+
+describe('WebGridRuntime selection overlay', () => {
+  it('syncs DOM selection overlay after setSelection render flush', () => {
+    const container = document.createElement('div')
+    Object.assign(container.style, { width: '480px', height: '320px' })
+    document.body.appendChild(container)
+    const raf = captureRaf()
+
+    const grid = new Grid(container, {
+      data: new InMemoryDataSource({
+        schema: {
+          fields: [
+            { id: 'a', name: 'A', type: 'text', width: 80 },
+            { id: 'b', name: 'B', type: 'text', width: 80 },
+          ],
+        },
+        rows: [{ a: 'A1', b: 'B1' }],
+      }),
+      excelHeaders: true,
+    })
+
+    grid.setSelection({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 1 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 1 },
+    })
+    raf.flush()
+
+    expect(container.querySelectorAll('[data-novasheet-selection-range]').length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('[data-novasheet-selection-active]').length).toBe(1)
+    grid.destroy()
+    raf.restore()
+  })
+
+  it('clears DOM selection overlay when selection is empty', () => {
+    const container = document.createElement('div')
+    Object.assign(container.style, { width: '480px', height: '320px' })
+    document.body.appendChild(container)
+    const raf = captureRaf()
+
+    const grid = new Grid(container, {
+      data: new InMemoryDataSource({
+        schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 80 }] },
+        rows: [{ a: 'A1' }],
+      }),
+      excelHeaders: true,
+    })
+
+    grid.setSelection({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+    })
+    raf.flush()
+    expect(container.querySelectorAll('[data-novasheet-selection-range]').length).toBeGreaterThan(0)
+
+    grid.setSelection({
+      activeCell: null,
+      anchorCell: null,
+      extentCell: null,
+      selectedRange: null,
+    })
+    raf.flush()
+
+    expect(container.querySelectorAll('[data-novasheet-selection-range]').length).toBe(0)
+    expect(container.querySelectorAll('[data-novasheet-selection-active]').length).toBe(0)
+    grid.destroy()
+    raf.restore()
+  })
+
+  it('syncs selection overlay from the same frame passed to renderer.render', () => {
+    const selectionOverlay = makeSelectionOverlay()
+    const frame = makeFrame({
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 0, colIndex: 0 },
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      },
+      columnWidth: 80,
+    })
+    const laterFrame = makeFrame({
+      selection: frame.selection!,
+      columnWidth: 140,
+    })
+    const engine = makeEngine(frame)
+    let getFrameCalls = 0
+    engine.getFrame = mock(() => {
+      getFrameCalls += 1
+      return getFrameCalls === 1 ? frame : laterFrame
+    }) as GridEngine['getFrame']
+    const renderer = makeRenderer()
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer,
+      selectionOverlay,
+    })
+
+    ;(runtime as unknown as { paintSync(): void }).paintSync()
+
+    expect(renderer.render).toHaveBeenLastCalledWith(frame)
+    expect(selectionOverlay.sync).toHaveBeenLastCalledWith({
+      rangeRects: [{ x: 0, y: 30, width: 80, height: 30 }],
+      activeRect: { x: 0, y: 30, width: 80, height: 30 },
+    })
+  })
+
+  it('clears selection overlay while cell editing', () => {
+    const selectionOverlay = makeSelectionOverlay()
+    const engine = makeEngine(
+      makeFrame({
+        selection: {
+          activeCell: { rowIndex: 0, colIndex: 0 },
+          anchorCell: { rowIndex: 0, colIndex: 0 },
+          extentCell: { rowIndex: 0, colIndex: 0 },
+          selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+        },
+        columnWidth: 80,
+      }),
+    )
+    engine.isCellEditing = mock(() => true) as GridEngine['isCellEditing']
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      selectionOverlay,
+    })
+
+    ;(runtime as unknown as { paintSync(): void }).paintSync()
+
+    expect(selectionOverlay.sync).toHaveBeenLastCalledWith(null)
+  })
+})
+
+function captureRaf(): { flush: () => void; restore: () => void } {
+  const original = globalThis.requestAnimationFrame
+  const callbacks: FrameRequestCallback[] = []
+  globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+    callbacks.push(cb)
+    return callbacks.length
+  }) as typeof requestAnimationFrame
+  return {
+    flush: () => callbacks.shift()?.(performance.now()),
+    restore: () => {
+      globalThis.requestAnimationFrame = original
+    },
+  }
+}
+
+function makeSelectionOverlay(): SelectionOverlay {
+  return {
+    sync: mock((_state: SelectionOverlayState | null) => {}),
+    destroy: mock(() => {}),
+  } as unknown as SelectionOverlay
+}
+
+function makeFrame(options: {
+  selection: GridSelection
+  columnWidth: number
+}): ReturnType<GridEngine['getFrame']> {
+  const data = {
+    getRowCount: () => 1,
+    getSchema: () => ({
+      fields: [{ id: 'a', name: 'A', type: 'text', width: options.columnWidth }],
+    }),
+    getRows: () => [],
+    getCell: () => null,
+    subscribe: () => () => {},
+  } as unknown as DataSource
+  return {
+    data,
+    theme: denseGridTheme,
+    rowsAxis: {
+      getCount: () => 1,
+      indexToPosition: (i: number) => i * 30,
+      positionToIndex: (pos: number) => Math.floor(pos / 30),
+      getSize: () => 30,
+    } as never,
+    colsAxis: {
+      getCount: () => 1,
+      indexToPosition: (i: number) => i * options.columnWidth,
+      positionToIndex: (pos: number) => Math.floor(pos / options.columnWidth),
+      getSize: () => options.columnWidth,
+    } as never,
+    viewport: {
+      contentRect: { width: 400, height: 300 },
+      regions: [
+        {
+          id: 'main',
+          rowBand: 'middle',
+          colBand: 'center',
+          rowRange: [0, 0],
+          colRange: [0, 0],
+          rect: { x: 0, y: 30, width: options.columnWidth, height: 270 },
+          scrollOffsetX: 0,
+          scrollOffsetY: 0,
+          zIndex: 0,
+        },
+      ],
+    } as never,
+    collapsedRowGaps: [],
+    collapsedColGaps: [],
+    selection: options.selection,
+  }
+}
+
+function makeEngine(frame: ReturnType<GridEngine['getFrame']>): GridEngine {
+  return {
+    setData: mock(() => {}),
+    setViewData: mock(() => {}),
+    setTheme: mock(() => {}),
+    setFrozen: mock(() => {}),
+    setViewportSize: mock(() => {}),
+    setHeaderHeight: mock(() => {}),
+    setScroll: mock(() => {}),
+    setRowHeight: mock(() => {}),
+    getRowHeight: mock(() => 30),
+    setColumnWidth: mock(() => {}),
+    selectCell: mock(() => {}),
+    navigateSelection: mock(() => false),
+    beginCellEdit: mock(() => false),
+    updateCellEditDraft: mock(() => {}),
+    cancelCellEdit: mock(() => {}),
+    commitCellEdit: mock(() => false),
+    isCellEditing: mock(() => false),
+    clearRange: mock(() => {}),
+    clearSelection: mock(() => {}),
+    getSelection: mock(() => frame.selection),
+    getFrame: mock(() => frame),
+    getRowsTotalSize: () => 30,
+    getColsTotalSize: () => 80,
+    getColumnIndex: () => 0,
+    getTheme: () => denseGridTheme,
+    getRowsAxis: () => frame.rowsAxis,
+    getColsAxis: () => frame.colsAxis,
+    getViewport: mock(() => frame.viewport),
+    getData: mock(() => frame.data),
+    undo: mock(() => undefined),
+    redo: mock(() => undefined),
+    canUndo: mock(() => false),
+    canRedo: mock(() => false),
+    commitRowResize: mock(() => {}),
+    commitColumnResize: mock(() => {}),
+    commitPaste: mock(() => {}),
+    commitFill: mock(() => null),
+    unhideRows: mock(() => {}),
+    getHiddenRows: mock(() => [] as readonly number[]),
+    insertRows: mock(() => [] as readonly number[]),
+    deleteRows: mock(() => {}),
+    hideRows: mock(() => {}),
+    setRowHeights: mock(() => {}),
+    setSelection: mock(() => {}),
+    insertCols: mock(() => [] as never),
+    deleteCols: mock(() => [] as never),
+    hideCols: mock(() => {}),
+    unhideCols: mock(() => {}),
+    setColumnWidths: mock(() => {}),
+    getHiddenCols: mock(() => [] as readonly string[]),
+    getFrozenConfig: mock(() => ({ topRows: 0, leftCols: 0, rightCols: 0 })),
+    moveCols: mock(() => false),
+    moveRows: mock(() => false),
+  } as unknown as GridEngine
+}
+
+function makeHost(): WebHost {
+  return {
+    attach: mock(() => {}),
+    applyScrollbarTheme: mock(() => {}),
+    setScrollSize: mock(() => {}),
+    setCursor: mock(() => {}),
+    scrollTo: mock(() => {}),
+    getDpr: () => 1,
+    getContainerSize: () => ({ width: 400, height: 300 }),
+    getContainerBoundingRect: () => ({ left: 0, top: 0 }),
+    getScrollPosition: () => ({ scrollTop: 0, scrollLeft: 0 }),
+    focusScrollHost: mock(() => {}),
+    destroy: mock(() => {}),
+  }
+}
+
+function makeRenderer(): WebRenderer {
+  return {
+    mount: mock(() => {}),
+    resize: mock(() => {}),
+    render: mock(() => {}),
+    destroy: mock(() => {}),
+  }
+}

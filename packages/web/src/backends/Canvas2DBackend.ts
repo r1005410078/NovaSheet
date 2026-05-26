@@ -56,6 +56,7 @@ import { RowHeightPopover } from '../overlay/RowHeightPopover'
 import { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
 import { RowReorderOverlay } from '../overlay/RowReorderOverlay'
+import { SelectionOverlay } from '../overlay/SelectionOverlay'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
 /**
@@ -88,6 +89,7 @@ export class Canvas2DBackend implements GridController {
   private columnWidthPopover!: ColumnWidthPopover
   private columnReorderOverlay: ColumnReorderOverlay
   private rowReorderOverlay: RowReorderOverlay
+  private selectionOverlay: SelectionOverlay
   private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
@@ -164,6 +166,7 @@ export class Canvas2DBackend implements GridController {
     this.hideColToggleHandle = new HideColToggleHandle(this.container, {
       onUnhide: (ids) => this.runtime.unhideCols(ids),
     })
+    this.selectionOverlay = new SelectionOverlay(this.container)
     this.columnReorderOverlay = new ColumnReorderOverlay(this.container)
     this.rowReorderOverlay = new RowReorderOverlay(this.container)
 
@@ -193,6 +196,7 @@ export class Canvas2DBackend implements GridController {
       hideColToggleHandle: this.hideColToggleHandle,
       columnReorderOverlay: this.columnReorderOverlay,
       rowReorderOverlay: this.rowReorderOverlay,
+      selectionOverlay: this.selectionOverlay,
       viewPipeline: this.pipeline,
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
@@ -342,6 +346,7 @@ export class Canvas2DBackend implements GridController {
     this.columnWidthPopover.destroy()
     this.columnReorderOverlay.destroy()
     this.rowReorderOverlay.destroy()
+    this.selectionOverlay.destroy()
     this.runtime.destroy()
     this.hideToggleHandle.destroy()
     this.hideColToggleHandle.destroy()

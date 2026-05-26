@@ -73,6 +73,7 @@ import type { RowHeightPopover } from '../overlay/RowHeightPopover'
 import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import type { ColumnReorderOverlay, ColumnReorderPreview } from '../overlay/ColumnReorderOverlay'
 import type { RowReorderOverlay, RowReorderPreview } from '../overlay/RowReorderOverlay'
+import type { SelectionOverlay } from '../overlay/SelectionOverlay'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -135,6 +136,8 @@ export interface WebGridRuntimeOptions {
   columnReorderOverlay?: ColumnReorderOverlay
   /** Phase 4.7 follow-up — DOM row reorder preview overlay. */
   rowReorderOverlay?: RowReorderOverlay
+  /** DOM body selection overlay; synced from the same frame as renderer.render. */
+  selectionOverlay?: SelectionOverlay
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -221,6 +224,8 @@ export class WebGridRuntime {
   private columnReorderOverlay?: ColumnReorderOverlay
   /** Phase 4.7 follow-up — DOM row reorder preview layer. */
   private rowReorderOverlay?: RowReorderOverlay
+  /** DOM body selection overlay. */
+  private selectionOverlay?: SelectionOverlay
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
   /** DOM 右键菜单 layer。 */
@@ -344,6 +349,7 @@ export class WebGridRuntime {
     this.hideColToggleHandle = opts.hideColToggleHandle
     this.columnReorderOverlay = opts.columnReorderOverlay
     this.rowReorderOverlay = opts.rowReorderOverlay
+    this.selectionOverlay = opts.selectionOverlay
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -2084,6 +2090,7 @@ export class WebGridRuntime {
       if (this.destroyed) return
       const frame = this.getRenderFrame()
       this.renderer.render(frame)
+      this.syncSelectionOverlay(frame)
       this.syncResizeHandles()
       this.syncFillHandle()
       this.syncHideToggleHandles()
@@ -2096,6 +2103,7 @@ export class WebGridRuntime {
   private paintSync(): void {
     const frame = this.getRenderFrame()
     this.renderer.render(frame)
+    this.syncSelectionOverlay(frame)
     this.syncResizeHandles()
     this.syncFillHandle()
     this.syncHideToggleHandles()
@@ -2148,6 +2156,34 @@ export class WebGridRuntime {
       return
     }
     this.fillLayer.sync(computeFillHandleRect(this.engine.getFrame(), range))
+  }
+
+  /** 根据 renderer 同一份 frame 同步 DOM body selection overlay。 */
+  private syncSelectionOverlay(frame = this.getRenderFrame()): void {
+    if (!this.selectionOverlay) return
+    if (this.engine.isCellEditing()) {
+      this.selectionOverlay.sync(null)
+      return
+    }
+    const selection = frame.selection
+    const range = selection?.selectedRange
+    if (!range) {
+      this.selectionOverlay.sync(null)
+      return
+    }
+    const active = selection.activeCell
+    const activeRect = active
+      ? computeRangeOverlayRects(frame, {
+          startRow: active.rowIndex,
+          endRow: active.rowIndex,
+          startCol: active.colIndex,
+          endCol: active.colIndex,
+        }).at(-1) ?? null
+      : null
+    this.selectionOverlay.sync({
+      rangeRects: computeRangeOverlayRects(frame, range),
+      activeRect,
+    })
   }
 
   /** 根据 pointer 位置启动或取消选区拖拽的边缘自动滚动。 */
