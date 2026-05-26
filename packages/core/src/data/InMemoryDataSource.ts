@@ -114,6 +114,18 @@ export class InMemoryDataSource implements DataSource {
     return snapshots
   }
 
+  /** 移动连续行块；行内 cell 对象随行一起移动。 */
+  moveRows(underlyingRowIds: readonly number[], beforeRowId: number | null): void {
+    const normalized = normalizeMoveRows(this.rows.length, underlyingRowIds, beforeRowId)
+    if (!normalized) return
+
+    const moving = this.rows.slice(normalized.start, normalized.end + 1)
+    const remaining = this.rows.filter((_, index) => index < normalized.start || index > normalized.end)
+    remaining.splice(normalized.insertAt, 0, ...moving)
+    this.rows = remaining
+    this.emit({ type: 'rowsMoved', rowIds: normalized.rowIds, beforeRowId })
+  }
+
   /** 在 beforeIndex 位置插入字段；新字段 cell 值保持 undefined。 */
   insertField(beforeIndex: number, field: Field): Field {
     if (this.schema.fields.some((candidate) => candidate.id === field.id)) {
@@ -186,4 +198,33 @@ function sameFieldOrder(a: readonly Field[], b: readonly Field[]): boolean {
     if (a[i]!.id !== b[i]!.id) return false
   }
   return true
+}
+
+function normalizeMoveRows(
+  count: number,
+  rowIds: readonly number[],
+  beforeRowId: number | null,
+): { rowIds: readonly number[]; start: number; end: number; insertAt: number } | null {
+  if (rowIds.length === 0) return null
+  const sorted = [...rowIds].sort((a, b) => a - b)
+  for (let i = 0; i < sorted.length; i += 1) {
+    const id = sorted[i]!
+    if (id < 0 || id >= count) return null
+    if (i > 0 && id !== sorted[i - 1]! + 1) return null
+  }
+  const start = sorted[0]!
+  const end = sorted[sorted.length - 1]!
+  if (beforeRowId !== null && (beforeRowId < 0 || beforeRowId > count)) return null
+  if (beforeRowId !== null && beforeRowId >= start && beforeRowId <= end + 1) return null
+  const insertAt =
+    beforeRowId === null ? count - sorted.length : beforeRowId > end ? beforeRowId - sorted.length : beforeRowId
+  const current = Array.from({ length: count }, (_, index) => index)
+  const moving = current.slice(start, end + 1)
+  const remaining = current.filter((index) => index < start || index > end)
+  const next = remaining.slice()
+  next.splice(insertAt, 0, ...moving)
+  for (let i = 0; i < current.length; i += 1) {
+    if (current[i] !== next[i]) return { rowIds: sorted, start, end, insertAt }
+  }
+  return null
 }

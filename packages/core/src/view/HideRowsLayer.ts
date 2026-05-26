@@ -166,6 +166,7 @@ class HiddenDataSource implements DataSource {
   readonly updateCellByUnderlyingRow?: MutableDataSource['updateCellByUnderlyingRow']
   readonly insertRows?: MutableDataSource['insertRows']
   readonly deleteRows?: MutableDataSource['deleteRows']
+  readonly moveRows?: MutableDataSource['moveRows']
 
   constructor(
     private readonly upstream: DataSource,
@@ -193,6 +194,10 @@ class HiddenDataSource implements DataSource {
       }
       if (mutableUpstream.deleteRows) {
         this.deleteRows = (underlyingRowIds) => mutableUpstream.deleteRows!(underlyingRowIds)
+      }
+      if (mutableUpstream.moveRows) {
+        this.moveRows = (underlyingRowIds, beforeRowId) =>
+          mutableUpstream.moveRows!(underlyingRowIds, beforeRowId)
       }
     }
     this.unsubscribeFromUpstream = this.upstream.subscribe((event) =>

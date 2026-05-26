@@ -85,6 +85,15 @@ export type UndoCommand =
       readonly selectionAfter: GridSelection
     }
   | {
+      readonly kind: 'moveRows'
+      readonly rowIds: readonly number[]
+      readonly beforeRowId: number | null
+      readonly inverseRowIds: readonly number[]
+      readonly inverseBeforeRowId: number | null
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }
+  | {
       readonly kind: 'insertCols'
       readonly at: number
       readonly count: number

@@ -127,6 +127,9 @@ export interface GridEngine {
   /** Phase 4.5 — 批量将多行高度设置为同一值 h，并入 undo 栈。 */
   setRowHeights(rowIds: readonly number[], h: number): void
 
+  /** Phase 4.7 follow-up — 移动连续行组；`beforeRowId=null` 表示移动到末尾。 */
+  moveRows(rowIds: readonly number[], beforeRowId: number | null): boolean
+
   /** Phase 4.5 — 程序化设置选区。 */
   setSelection(selection: GridSelection): void
 

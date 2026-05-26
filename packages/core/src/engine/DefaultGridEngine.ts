@@ -424,6 +424,34 @@ export class DefaultGridEngine implements GridEngine {
     this.undoStack.push({ kind: 'resizeRowsMulti', rowIds, oldHeights, newHeight: h, selectionBefore, selectionAfter })
   }
 
+  /** 移动连续行组；当前仅支持 raw/view 行一一对应的连续 block。 */
+  moveRows(rowIds: readonly number[], beforeRowId: number | null): boolean {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.moveRows) return false
+    if (this.data.getRowCount() !== this.rawData.getRowCount()) return false
+    const normalized = this.normalizeMoveRows(rowIds, beforeRowId)
+    if (!normalized) return false
+
+    this.finishActiveEdit()
+    const selectionBefore = this.selection.getSelection()
+    const sizesBefore = this.captureRawRowHeights()
+    this.rawData.moveRows(normalized.rowIds, normalized.beforeRowId)
+    this.rebuildRawRowsAxisFromHeights(reorderByIndexMap(sizesBefore, normalized.indexMap))
+    this.remapHiddenRowsByIndexMap(normalized.indexMap)
+    this.rebuildViewAxis()
+    this.restoreSelectionByRowIndexMap(selectionBefore, normalized.indexMap)
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({
+      kind: 'moveRows',
+      rowIds: normalized.rowIds,
+      beforeRowId: normalized.beforeRowId,
+      inverseRowIds: normalized.inverseRowIds,
+      inverseBeforeRowId: normalized.inverseBeforeRowId,
+      selectionBefore,
+      selectionAfter,
+    })
+    return true
+  }
+
   /** 在 schema field index 位置前插入 count 个文本列。 */
   insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
     if (count <= 0 || !isMutableDataSource(this.rawData) || !this.rawData.insertField) return []
@@ -789,6 +817,9 @@ export class DefaultGridEngine implements GridEngine {
         this.rebuildViewAxis()
         this.selection.setSelection(cmd.selectionBefore)
         return
+      case 'moveRows':
+        this.applyMoveRowsCommand(cmd.inverseRowIds, cmd.inverseBeforeRowId, cmd.selectionBefore)
+        return
       case 'insertCols':
         this.unapplyInsertCols(cmd)
         return
@@ -887,6 +918,9 @@ export class DefaultGridEngine implements GridEngine {
         this.rowsAxis = this.buildViewRowsAxis()
         this.selection.setSelection(cmd.selectionAfter)
         return
+      case 'moveRows':
+        this.applyMoveRowsCommand(cmd.rowIds, cmd.beforeRowId, cmd.selectionAfter)
+        return
       case 'insertCols':
         this.applyInsertCols(cmd)
         return
@@ -931,6 +965,22 @@ export class DefaultGridEngine implements GridEngine {
     this.rawData.moveFields(normalized.fieldIds, normalized.beforeFieldId)
     this.rebuildRawColsAxisFromWidths(widthById)
     this.rebuildViewColsAxis()
+    this.selection.setSelection(selection)
+  }
+
+  private applyMoveRowsCommand(
+    rowIds: readonly number[],
+    beforeRowId: number | null,
+    selection: GridSelection,
+  ): void {
+    if (!isMutableDataSource(this.rawData) || !this.rawData.moveRows) return
+    const normalized = this.normalizeMoveRows(rowIds, beforeRowId)
+    if (!normalized) return
+    const sizesBefore = this.captureRawRowHeights()
+    this.rawData.moveRows(normalized.rowIds, normalized.beforeRowId)
+    this.rebuildRawRowsAxisFromHeights(reorderByIndexMap(sizesBefore, normalized.indexMap))
+    this.remapHiddenRowsByIndexMap(normalized.indexMap)
+    this.rebuildViewAxis()
     this.selection.setSelection(selection)
   }
 
@@ -1301,6 +1351,61 @@ export class DefaultGridEngine implements GridEngine {
     return { fieldIds: moving, beforeFieldId, inverseBeforeFieldId }
   }
 
+  private normalizeMoveRows(
+    rowIds: readonly number[],
+    beforeRowId: number | null,
+  ): {
+    readonly rowIds: readonly number[]
+    readonly beforeRowId: number | null
+    readonly inverseRowIds: readonly number[]
+    readonly inverseBeforeRowId: number | null
+    readonly indexMap: ReadonlyMap<number, number>
+  } | null {
+    const count = this.rawData.getRowCount()
+    if (rowIds.length === 0) return null
+    const moving = [...rowIds].sort((a, b) => a - b)
+    if (!areContiguousRows(moving)) return null
+    const start = moving[0]!
+    const end = moving[moving.length - 1]!
+    if (start < 0 || end >= count) return null
+    if (beforeRowId !== null && (beforeRowId < 0 || beforeRowId > count)) return null
+    if (beforeRowId !== null && beforeRowId >= start && beforeRowId <= end + 1) return null
+
+    const nextOrder = moveIndexBlock(count, start, end, beforeRowId)
+    const currentOrder = Array.from({ length: count }, (_, index) => index)
+    if (sameNumberOrder(currentOrder, nextOrder)) return null
+
+    const indexMap = new Map<number, number>()
+    for (let nextIndex = 0; nextIndex < nextOrder.length; nextIndex += 1) {
+      indexMap.set(nextOrder[nextIndex]!, nextIndex)
+    }
+    const inverseRowIds = moving.map((id) => indexMap.get(id)!).sort((a, b) => a - b)
+    const inverseSourceRow = end + 1 < count ? end + 1 : null
+    const inverseBeforeRowId = inverseSourceRow === null ? null : indexMap.get(inverseSourceRow)!
+    return { rowIds: moving, beforeRowId, inverseRowIds, inverseBeforeRowId, indexMap }
+  }
+
+  private captureRawRowHeights(): number[] {
+    return Array.from({ length: this.rawRowsAxis.getCount() }, (_, index) =>
+      this.rawRowsAxis.getSize(index),
+    )
+  }
+
+  private rebuildRawRowsAxisFromHeights(heights: readonly number[]): void {
+    const defaultHeight = this.resolveDefaultRowHeight()
+    this.rawRowsAxis = new ChunkedAxis({ count: heights.length, defaultSize: defaultHeight })
+    for (let i = 0; i < heights.length; i += 1) {
+      if (heights[i] !== defaultHeight) this.rawRowsAxis.setSize(i, heights[i]!)
+    }
+  }
+
+  private remapHiddenRowsByIndexMap(indexMap: ReadonlyMap<number, number>): void {
+    const remapped = this.getHiddenRows()
+      .map((rowId) => indexMap.get(rowId))
+      .filter((rowId): rowId is number => rowId !== undefined)
+    this.hideRowsLayer.setHidden(remapped)
+  }
+
   private captureRawColWidths(): Map<string, number> {
     const widths = new Map<string, number>()
     const fields = this.rawData.getSchema().fields
@@ -1370,6 +1475,39 @@ export class DefaultGridEngine implements GridEngine {
       return
     }
 
+    this.selection.setSelection({
+      activeCell,
+      anchorCell,
+      extentCell,
+      selectedRange: normalizeCellRange(anchorCell, extentCell),
+    })
+  }
+
+  private restoreSelectionByRowIndexMap(
+    selection: GridSelection,
+    indexMap: ReadonlyMap<number, number>,
+  ): void {
+    if (
+      !selection.activeCell ||
+      !selection.anchorCell ||
+      !selection.extentCell ||
+      !selection.selectedRange
+    ) {
+      this.selection.clear()
+      return
+    }
+    const mapCell = (cell: CellAddress): CellAddress | null => {
+      const rowIndex = indexMap.get(cell.rowIndex)
+      if (rowIndex === undefined) return null
+      return { rowIndex, colIndex: cell.colIndex }
+    }
+    const activeCell = mapCell(selection.activeCell)
+    const anchorCell = mapCell(selection.anchorCell)
+    const extentCell = mapCell(selection.extentCell)
+    if (!activeCell || !anchorCell || !extentCell) {
+      this.selection.clear()
+      return
+    }
     this.selection.setSelection({
       activeCell,
       anchorCell,
@@ -1452,6 +1590,7 @@ class VisibleColumnsDataSource implements DataSource {
   readonly updateCellByUnderlyingRow?: MutableDataSource['updateCellByUnderlyingRow']
   readonly insertRows?: MutableDataSource['insertRows']
   readonly deleteRows?: MutableDataSource['deleteRows']
+  readonly moveRows?: MutableDataSource['moveRows']
   readonly insertField?: MutableDataSource['insertField']
   readonly removeField?: MutableDataSource['removeField']
   readonly moveFields?: MutableDataSource['moveFields']
@@ -1467,6 +1606,7 @@ class VisibleColumnsDataSource implements DataSource {
       this.updateCellByUnderlyingRow = mutableUpstream.updateCellByUnderlyingRow?.bind(mutableUpstream)
       this.insertRows = mutableUpstream.insertRows?.bind(mutableUpstream)
       this.deleteRows = mutableUpstream.deleteRows?.bind(mutableUpstream)
+      this.moveRows = mutableUpstream.moveRows?.bind(mutableUpstream)
       this.insertField = mutableUpstream.insertField?.bind(mutableUpstream)
       this.removeField = mutableUpstream.removeField?.bind(mutableUpstream)
       this.moveFields = mutableUpstream.moveFields?.bind(mutableUpstream)
@@ -1524,6 +1664,39 @@ function sameStringOrder(a: readonly string[], b: readonly string[]): boolean {
     if (a[i] !== b[i]) return false
   }
   return true
+}
+
+function sameNumberOrder(a: readonly number[], b: readonly number[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
+}
+
+function moveIndexBlock(
+  count: number,
+  start: number,
+  end: number,
+  beforeRowId: number | null,
+): number[] {
+  const current = Array.from({ length: count }, (_, index) => index)
+  const moving = current.slice(start, end + 1)
+  const remaining = current.filter((index) => index < start || index > end)
+  const insertAt =
+    beforeRowId === null ? remaining.length : beforeRowId > end ? beforeRowId - moving.length : beforeRowId
+  const next = remaining.slice()
+  next.splice(insertAt, 0, ...moving)
+  return next
+}
+
+function reorderByIndexMap<T>(values: readonly T[], indexMap: ReadonlyMap<number, number>): T[] {
+  const next = values.slice()
+  for (let oldIndex = 0; oldIndex < values.length; oldIndex += 1) {
+    const newIndex = indexMap.get(oldIndex)
+    if (newIndex !== undefined) next[newIndex] = values[oldIndex]!
+  }
+  return next
 }
 
 function normalizeCellRange(a: CellAddress, b: CellAddress): CellRange {

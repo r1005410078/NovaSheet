@@ -130,6 +130,7 @@ class FilteredDataSource implements DataSource {
   readonly updateCellByUnderlyingRow?: MutableDataSource['updateCellByUnderlyingRow']
   readonly insertRows?: MutableDataSource['insertRows']
   readonly deleteRows?: MutableDataSource['deleteRows']
+  readonly moveRows?: MutableDataSource['moveRows']
   readonly insertField?: MutableDataSource['insertField']
   readonly removeField?: MutableDataSource['removeField']
   readonly moveFields?: MutableDataSource['moveFields']
@@ -161,6 +162,9 @@ class FilteredDataSource implements DataSource {
       }
       if (mutableUpstream.deleteRows) {
         this.deleteRows = (ids) => mutableUpstream.deleteRows!(ids)
+      }
+      if (mutableUpstream.moveRows) {
+        this.moveRows = (ids, beforeRowId) => mutableUpstream.moveRows!(ids, beforeRowId)
       }
       if (mutableUpstream.insertField) {
         this.insertField = (before, field) => mutableUpstream.insertField!(before, field)
@@ -248,6 +252,7 @@ class FilteredDataSource implements DataSource {
     if (
       event.type === 'rowsInserted' ||
       event.type === 'rowsDeleted' ||
+      event.type === 'rowsMoved' ||
       event.type === 'rowCountChanged'
     ) {
       this.rebuild()

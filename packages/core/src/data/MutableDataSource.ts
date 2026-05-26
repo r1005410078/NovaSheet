@@ -33,6 +33,9 @@ export interface MutableDataSource extends DataSource {
    */
   deleteRows?(underlyingRowIds: readonly number[]): readonly DeletedRowSnapshot[]
 
+  /** 移动连续 underlying row block；`beforeRowId=null` 表示移动到末尾。 */
+  moveRows?(underlyingRowIds: readonly number[], beforeRowId: number | null): void
+
   /** 在 schema.fields 的 beforeIndex 位置之前插入 1 个新字段，返回实际插入字段。 */
   insertField?(beforeIndex: number, field: Field): Field
 
