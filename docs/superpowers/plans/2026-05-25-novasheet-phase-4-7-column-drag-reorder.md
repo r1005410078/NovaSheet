@@ -628,6 +628,112 @@ git commit -m "feat(web): 支持行头整行选择"
 
 ---
 
+### Follow-up: Excel Row Drag Reorder
+
+**Reason:** After row-header whole-row selection is available, row drag reorder can mirror the shipped column reorder interaction with minimal new code: selected row header drag seed, DOM preview band/line, pointerup commit. Do not introduce a generic axis reorder abstraction yet; keep row and column paths explicit until both are stable.
+
+**Scope:**
+
+- Support continuous whole-row selections only.
+- Drag seed must start from an already selected row header.
+- Unselected row-header drag continues to create a continuous row selection and must not reorder on the same pointerdown.
+- Commit happens only on pointerup; movement below threshold is no-op.
+- Drop inside the dragged row block is no-op.
+- Current follow-up supports continuous view rows that map to continuous underlying rows. Non-contiguous hidden/sorted row moves are out of scope.
+
+**Files:**
+
+- Modify: `packages/core/src/data/DataSource.ts`
+- Modify: `packages/core/src/data/MutableDataSource.ts`
+- Modify: `packages/core/src/data/InMemoryDataSource.ts`
+- Modify: `packages/core/src/undo/UndoCommand.ts`
+- Modify: `packages/core/src/engine/GridEngine.ts`
+- Modify: `packages/core/src/engine/DefaultGridEngine.ts`
+- Create: `packages/core/tests/data/InMemoryDataSource.moveRows.test.ts`
+- Create: `packages/core/tests/engine/DefaultGridEngine.row-reorder.test.ts`
+- Create: `packages/core/tests/undo/UndoStack.row-reorder.test.ts`
+- Create: `packages/web/src/overlay/RowReorderOverlay.ts`
+- Create: `packages/web/tests/overlay/RowReorderOverlay.test.ts`
+- Modify: `packages/web/src/runtime/WebGridRuntime.ts`
+- Create: `packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts`
+- Optionally modify: `packages/web/src/backends/Canvas2DBackend.ts`, `packages/web/src/Grid.ts`, `packages/web/src/grid/GridController.ts` if exposing `Grid.moveRows`.
+
+- [ ] **Task A: Core row block move**
+
+RED:
+
+```bash
+bun test packages/core/tests/data/InMemoryDataSource.moveRows.test.ts packages/core/tests/engine/DefaultGridEngine.row-reorder.test.ts packages/core/tests/undo/UndoStack.row-reorder.test.ts
+```
+
+Expected: FAIL because `moveRows` / `rowsMoved` / undo command do not exist.
+
+GREEN:
+
+- Add `MutableDataSource.moveRows?(rowIds, beforeRowId)` and `DataSourceEvent { type: 'rowsMoved' }`.
+- Implement `InMemoryDataSource.moveRows` for contiguous row index blocks.
+- Add `DefaultGridEngine.moveRows(rowIds, beforeRowId)` mirroring `moveCols`:
+  - normalize contiguous row block;
+  - compute inverse target;
+  - move raw rows;
+  - rebuild raw/view row axes with heights moved with rows;
+  - remap selection through old-index → new-index mapping;
+  - push `UndoCommand { kind: 'moveRows' }`.
+
+- [ ] **Task B: DOM row reorder overlay**
+
+RED:
+
+```bash
+bun test packages/web/tests/overlay/RowReorderOverlay.test.ts
+```
+
+Expected: FAIL because overlay does not exist.
+
+GREEN:
+
+- Add `RowReorderOverlay` as the row-oriented sibling of `ColumnReorderOverlay`.
+- Use horizontal band (`top`, `height`, full `width`) and horizontal line (`top`, `height: 3px`, full `width`).
+
+- [ ] **Task C: Runtime row drag**
+
+RED:
+
+```bash
+bun test packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts
+```
+
+Expected: FAIL because runtime has no row reorder state.
+
+GREEN:
+
+- Add `rowReorderDrag` state beside `columnReorderDrag`.
+- In `tryHandleRowHeaderPointerDown`:
+  - Shift or unselected row header keeps row selection behavior.
+  - Already selected whole-row header seeds row reorder and shows preview immediately.
+- In pointermove:
+  - update row reorder before row-header selection drag and body drag-select;
+  - below threshold updates follow band only;
+  - active drag computes `beforeRowId | null | undefined`.
+- In pointerup / Escape / destroy:
+  - hide overlay, reset cursor;
+  - commit only if active and target is valid.
+
+- [ ] **Task D: Final verification**
+
+Run:
+
+```bash
+bun run lint
+bun run --filter '*' typecheck
+bun test
+bun run --filter @novasheet/web build && bun run --filter @novasheet/web-canvas2d build && bun run --filter @novasheet/core build
+```
+
+Expected: all pass. Update README test count if `bun test` count changes.
+
+---
+
 ## Plan Self-Review
 
 - [x] Spec coverage: data protocol, engine, undo, DOM overlay, runtime, facade, Storybook, docs, final gates

@@ -301,6 +301,7 @@ onColumnsMoved?: (event: {
 7. `moveCols` no-op 不入 undo 栈，不触发 `onColumnsMoved`。
 8. 多列拖拽只支持连续矩形 selection；非连续多选继续 out of scope。
 9. Excel 门面中行头选择与列头选择保持对称：左键行头选中整行，Shift/拖动行头连续多选整行；整行选中时行头使用强选中态，普通 cell/range selection 只同步浅色行头高亮。
+10. 行拖拽重排采用列拖拽的最小镜像：必须先选中连续整行，再从已选行头拖动；拖动中只显示 DOM 横向行带 + 吸附横线，pointerup 才提交连续 row block move。当前只支持连续 view 行映射到连续 underlying 行；非连续 hidden/sort 复杂场景不在本 follow-up 内。
 
 ---
 
