@@ -112,6 +112,7 @@ function makeEngine(): GridEngine {
     getHiddenCols: mock(() => [] as readonly string[]),
     getFrozenConfig: mock(() => ({ topRows: 0, leftCols: 0, rightCols: 0 })),
     moveCols: mock(() => false),
+    moveRows: mock(() => false),
   }
 }
 

@@ -72,6 +72,7 @@ import type { FilterPopover } from '../interaction/FilterPopover'
 import type { RowHeightPopover } from '../overlay/RowHeightPopover'
 import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import type { ColumnReorderOverlay, ColumnReorderPreview } from '../overlay/ColumnReorderOverlay'
+import type { RowReorderOverlay, RowReorderPreview } from '../overlay/RowReorderOverlay'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -132,6 +133,8 @@ export interface WebGridRuntimeOptions {
   hideColToggleHandle?: HideColToggleHandle
   /** Phase 4.7 — DOM column reorder preview overlay. */
   columnReorderOverlay?: ColumnReorderOverlay
+  /** Phase 4.7 follow-up — DOM row reorder preview overlay. */
+  rowReorderOverlay?: RowReorderOverlay
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -216,6 +219,8 @@ export class WebGridRuntime {
   private hideColToggleHandle?: HideColToggleHandle
   /** Phase 4.7 — DOM reorder preview layer. */
   private columnReorderOverlay?: ColumnReorderOverlay
+  /** Phase 4.7 follow-up — DOM row reorder preview layer. */
+  private rowReorderOverlay?: RowReorderOverlay
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
   /** DOM 右键菜单 layer。 */
@@ -302,6 +307,17 @@ export class WebGridRuntime {
     active: boolean
     targetBeforeFieldId: string | null | undefined
   } | null = null
+  /** 当前行重排拖拽状态；pointerdown 命中已选行头后先 seed，超过阈值才 active。 */
+  private rowReorderDrag: {
+    startX: number
+    startY: number
+    rowIds: readonly number[]
+    selectedRange: CellRange
+    startBandY: number
+    totalHeight: number
+    active: boolean
+    targetBeforeRowId: number | null | undefined
+  } | null = null
   /** 当前列头拖选状态；仅用于形成连续整列选区，不触发 reorder。 */
   private columnHeaderSelectDrag: {
     anchorCol: number
@@ -327,6 +343,7 @@ export class WebGridRuntime {
     this.hideToggleHandle = opts.hideToggleHandle
     this.hideColToggleHandle = opts.hideColToggleHandle
     this.columnReorderOverlay = opts.columnReorderOverlay
+    this.rowReorderOverlay = opts.rowReorderOverlay
     this.scrollMapper = new ScrollMapper()
   }
 
@@ -1175,6 +1192,7 @@ export class WebGridRuntime {
     this.contextMenuLayer?.close()
     this.fillLayer?.hidePreview()
     this.columnHeaderSelectDrag = null
+    this.rowHeaderSelectDrag = null
   }
 
   /** 滚动到指定行，并按给定对齐方式放入 viewport。 */
@@ -1305,9 +1323,12 @@ export class WebGridRuntime {
     const target = this.fillDrag.target
     this.fillDrag = null
     this.columnReorderDrag = null
+    this.rowReorderDrag = null
     this.columnHeaderSelectDrag = null
+    this.rowHeaderSelectDrag = null
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
+    this.rowReorderOverlay?.hide()
     if (!target) return
     const result = this.engine.commitFill(target.source, target.fill, target.direction)
     if (!result) return
@@ -1382,8 +1403,13 @@ export class WebGridRuntime {
     this.cancelCellEdit()
     this.resizeDrag = null
     this.fillDrag = null
+    this.columnReorderDrag = null
+    this.rowReorderDrag = null
     this.columnHeaderSelectDrag = null
+    this.rowHeaderSelectDrag = null
     this.fillLayer?.hidePreview()
+    this.columnReorderOverlay?.hide()
+    this.rowReorderOverlay?.hide()
     this.scheduler.cancel('renderer:flush')
     this.scheduler.cancel(HOST_RESIZE_KEY)
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
@@ -1435,11 +1461,12 @@ export class WebGridRuntime {
   /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
   handleHostPointerMove(event: WebPointerEvent): void {
     if (this.updateColumnReorderDrag(event)) return
+    if (this.updateRowReorderDrag(event)) return
     if (this.updateColumnHeaderSelectDrag(event)) return
     if (this.updateRowHeaderSelectDrag(event)) return
     if (this.destroyed) return
     if (!this.lastDragPointer) {
-      this.updateColumnHeaderCursor(event)
+      this.updateHeaderCursor(event)
       return
     }
     this.draggingSelection = true
@@ -1456,6 +1483,10 @@ export class WebGridRuntime {
   handleHostPointerUp(): void {
     if (this.columnReorderDrag) {
       this.commitColumnReorderDrag()
+      return
+    }
+    if (this.rowReorderDrag) {
+      this.commitRowReorderDrag()
       return
     }
     if (this.columnHeaderSelectDrag) {
@@ -1486,6 +1517,10 @@ export class WebGridRuntime {
     if (this.destroyed) return false
     if (event.key === 'Escape' && this.columnReorderDrag) {
       this.cancelColumnReorderDrag()
+      return true
+    }
+    if (event.key === 'Escape' && this.rowReorderDrag) {
+      this.cancelRowReorderDrag()
       return true
     }
     if (this.filterPopover?.isOpen()) return false
@@ -1625,6 +1660,40 @@ export class WebGridRuntime {
 
     const selection = this.engine.getSelection()
     const range = selection.selectedRange
+    if (
+      !event.shiftKey &&
+      range &&
+      this.isWholeRowSelection(range) &&
+      hit.rowIndex >= range.startRow &&
+      hit.rowIndex <= range.endRow
+    ) {
+      const rowIds = Array.from(
+        { length: range.endRow - range.startRow + 1 },
+        (_, index) => range.startRow + index,
+      )
+      const startBandY = this.getRowViewportY(range.startRow)
+      const totalHeight = this.sumVisibleRowHeights(range.startRow, range.endRow)
+      this.rowReorderDrag = {
+        startX: event.x,
+        startY: event.y,
+        rowIds,
+        selectedRange: range,
+        startBandY,
+        totalHeight,
+        active: false,
+        targetBeforeRowId: null,
+      }
+      this.rowReorderOverlay?.show({
+        lineY: startBandY,
+        dragBandY: startBandY,
+        bandHeight: totalHeight,
+        width: this.host.getContainerSize().width,
+      })
+      this.host.setCursor('grabbing')
+      this.closeContextMenu()
+      return true
+    }
+
     const anchorRow =
       event.shiftKey && range && this.isWholeRowSelection(range)
         ? selection.anchorCell?.rowIndex ?? hit.rowIndex
@@ -1643,6 +1712,43 @@ export class WebGridRuntime {
     if (!hit) return true
     this.selectWholeRowRange(drag.anchorRow, hit.rowIndex)
     this.refresh()
+    return true
+  }
+
+  private updateRowReorderDrag(event: WebPointerEvent): boolean {
+    const drag = this.rowReorderDrag
+    if (!drag) return false
+    if (!drag.active) {
+      const dx = event.x - drag.startX
+      const dy = event.y - drag.startY
+      if (Math.hypot(dx, dy) < COLUMN_REORDER_DRAG_THRESHOLD_PX) {
+        this.rowReorderOverlay?.show({
+          lineY: drag.startBandY,
+          dragBandY: drag.startBandY + dy,
+          bandHeight: drag.totalHeight,
+          width: this.host.getContainerSize().width,
+        })
+        this.host.setCursor('grabbing')
+        return true
+      }
+      drag.active = true
+    }
+
+    const target = this.computeRowReorderTarget(event, drag)
+    if (!target) {
+      drag.targetBeforeRowId = undefined
+      this.rowReorderOverlay?.show({
+        lineY: drag.startBandY,
+        dragBandY: drag.startBandY + (event.y - drag.startY),
+        bandHeight: drag.totalHeight,
+        width: this.host.getContainerSize().width,
+      })
+      this.host.setCursor('grabbing')
+      return true
+    }
+    drag.targetBeforeRowId = target.beforeRowId
+    this.rowReorderOverlay?.show(target.preview)
+    this.host.setCursor('grabbing')
     return true
   }
 
@@ -1701,7 +1807,25 @@ export class WebGridRuntime {
     this.host.setCursor(null)
   }
 
-  private updateColumnHeaderCursor(event: WebPointerEvent): void {
+  private commitRowReorderDrag(): void {
+    const drag = this.rowReorderDrag
+    this.rowReorderDrag = null
+    this.rowReorderOverlay?.hide()
+    this.host.setCursor(null)
+    if (!drag?.active) return
+    if (drag.targetBeforeRowId === undefined) return
+    if (this.engine.moveRows(drag.rowIds, drag.targetBeforeRowId)) {
+      this.afterEngineMutation()
+    }
+  }
+
+  private cancelRowReorderDrag(): void {
+    this.rowReorderDrag = null
+    this.rowReorderOverlay?.hide()
+    this.host.setCursor(null)
+  }
+
+  private updateHeaderCursor(event: WebPointerEvent): void {
     if (this.resizeDrag || this.draggingSelection || this.fillDrag) {
       this.host.setCursor(null)
       return
@@ -1714,7 +1838,20 @@ export class WebGridRuntime {
       this.isWholeColumnSelection(range) &&
       hit.colIndex >= range.startCol &&
       hit.colIndex <= range.endCol
-    this.host.setCursor(canDrag ? 'grab' : null)
+    if (canDrag) {
+      this.host.setCursor('grab')
+      return
+    }
+
+    const rowHit = this.hitTestRowHeader(event)
+    const rowRange = this.engine.getSelection().selectedRange
+    const canRowDrag =
+      rowHit &&
+      rowRange &&
+      this.isWholeRowSelection(rowRange) &&
+      rowHit.rowIndex >= rowRange.startRow &&
+      rowHit.rowIndex <= rowRange.endRow
+    this.host.setCursor(canRowDrag ? 'grab' : null)
   }
 
   private isWholeColumnSelection(range: CellRange): boolean {
@@ -1797,6 +1934,13 @@ export class WebGridRuntime {
     return total
   }
 
+  private sumVisibleRowHeights(startRow: number, endRow: number): number {
+    const axis = this.engine.getFrame().rowsAxis
+    let total = 0
+    for (let row = startRow; row <= endRow; row += 1) total += axis.getSize(row)
+    return total
+  }
+
   private computeColumnReorderTarget(
     event: WebPointerEvent,
     drag: NonNullable<WebGridRuntime['columnReorderDrag']>,
@@ -1841,11 +1985,62 @@ export class WebGridRuntime {
     }
   }
 
+  private computeRowReorderTarget(
+    event: WebPointerEvent,
+    drag: NonNullable<WebGridRuntime['rowReorderDrag']>,
+  ): { beforeRowId: number | null; preview: RowReorderPreview } | null {
+    const frame = this.engine.getFrame()
+    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
+    if (event.y < headerHeight) return null
+    const rowCount = frame.rowsAxis.getCount()
+    if (rowCount === 0) return null
+    const scrollY = frame.viewport.scrollY ?? 0
+    const totalSize = frame.rowsAxis.getTotalSize()
+    const logicalY = event.y - headerHeight + scrollY
+    let beforeIndex: number
+    if (logicalY >= totalSize) {
+      beforeIndex = rowCount
+    } else if (logicalY < 0) {
+      beforeIndex = 0
+    } else {
+      const rowIndex = frame.rowsAxis.positionToIndex(logicalY)
+      const rowStart = frame.rowsAxis.indexToPosition(rowIndex)
+      const rowMid = rowStart + frame.rowsAxis.getSize(rowIndex) / 2
+      beforeIndex = logicalY < rowMid ? rowIndex : rowIndex + 1
+    }
+
+    if (beforeIndex >= drag.selectedRange.startRow && beforeIndex <= drag.selectedRange.endRow + 1) {
+      return null
+    }
+
+    const beforeRowId = beforeIndex >= rowCount ? null : beforeIndex
+    const lineLogicalY =
+      beforeIndex >= rowCount ? totalSize : frame.rowsAxis.indexToPosition(beforeIndex)
+    const lineY = headerHeight + lineLogicalY - scrollY
+    const { width } = this.host.getContainerSize()
+    return {
+      beforeRowId,
+      preview: {
+        lineY,
+        dragBandY: drag.startBandY + (event.y - drag.startY),
+        bandHeight: drag.totalHeight,
+        width,
+      },
+    }
+  }
+
   private getColViewportX(colIndex: number): number {
     const frame = this.engine.getFrame()
     const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
     const scrollX = frame.viewport.scrollX ?? 0
     return rowHeaderWidth + frame.colsAxis.indexToPosition(colIndex) - scrollX
+  }
+
+  private getRowViewportY(rowIndex: number): number {
+    const frame = this.engine.getFrame()
+    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
+    const scrollY = frame.viewport.scrollY ?? 0
+    return headerHeight + frame.rowsAxis.indexToPosition(rowIndex) - scrollY
   }
 
   private getColsTotalSizeForFrame(frame: ReturnType<GridEngine['getFrame']>): number {
