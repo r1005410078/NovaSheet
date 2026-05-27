@@ -392,31 +392,6 @@ export class Canvas2DRenderer {
       this.paintSelectedColumnHeaders(ctx, selection.selectedRange)
       this.paintSelectedRowHeaders(ctx, selection.selectedRange)
     }
-
-    for (const region of ctx.paintOrder) {
-      this.paintSelectionRangeInRegion(
-        region,
-        selection.selectedRange,
-        ctx.rowsAxis,
-        ctx.colsAxis,
-        ctx.theme,
-      )
-    }
-
-    if (selection.activeCell) {
-      for (const region of [...ctx.paintOrder].reverse()) {
-        if (
-          this.paintActiveCellInRegion(
-            region,
-            selection.activeCell,
-            ctx.rowsAxis,
-            ctx.colsAxis,
-            ctx.theme,
-          )
-        )
-          break
-      }
-    }
   }
 
   private paintSelectedColumnHeaders(ctx: Canvas2DPaintFrameContext, range: CellRange): void {
@@ -619,68 +594,6 @@ export class Canvas2DRenderer {
       scrollOffsetX,
       scrollOffsetY,
     })
-  }
-
-  private paintSelectionRangeInRegion(
-    region: RenderRegion,
-    range: CellRange,
-    rowsAxis: Axis,
-    colsAxis: Axis,
-    theme: Theme,
-  ): void {
-    const startRow = Math.max(range.startRow, region.rowRange[0])
-    const endRow = Math.min(range.endRow, region.rowRange[1])
-    const startCol = Math.max(range.startCol, region.colRange[0])
-    const endCol = Math.min(range.endCol, region.colRange[1])
-    if (endRow < startRow || endCol < startCol) return
-
-    ctxClipRect(this.ctx, region.rect)
-    this.ctx.fillStyle = theme.colors.selectionBg
-    for (let r = startRow; r <= endRow; r++) {
-      const y = region.rect.y + rowsAxis.indexToPosition(r) - region.scrollOffsetY
-      const height = rowsAxis.getSize(r)
-      for (let c = startCol; c <= endCol; c++) {
-        const x = region.rect.x + colsAxis.indexToPosition(c) - region.scrollOffsetX
-        const width = colsAxis.getSize(c)
-        this.ctx.fillRect(x, y, width, height)
-      }
-    }
-    this.ctx.restore()
-  }
-
-  private paintActiveCellInRegion(
-    region: RenderRegion,
-    cell: CellAddress,
-    rowsAxis: Axis,
-    colsAxis: Axis,
-    theme: Theme,
-  ): boolean {
-    if (
-      cell.rowIndex < region.rowRange[0] ||
-      cell.rowIndex > region.rowRange[1] ||
-      cell.colIndex < region.colRange[0] ||
-      cell.colIndex > region.colRange[1]
-    ) {
-      return false
-    }
-
-    const x = region.rect.x + colsAxis.indexToPosition(cell.colIndex) - region.scrollOffsetX
-    const y = region.rect.y + rowsAxis.indexToPosition(cell.rowIndex) - region.scrollOffsetY
-    const width = colsAxis.getSize(cell.colIndex)
-    const height = rowsAxis.getSize(cell.rowIndex)
-
-    ctxClipRect(this.ctx, region.rect)
-    this.ctx.strokeStyle = theme.colors.selectionBorder
-    this.ctx.lineWidth = 2
-    this.ctx.beginPath()
-    this.ctx.moveTo(x + 0.5, y + 0.5)
-    this.ctx.lineTo(x + width - 0.5, y + 0.5)
-    this.ctx.lineTo(x + width - 0.5, y + height - 0.5)
-    this.ctx.lineTo(x + 0.5, y + height - 0.5)
-    this.ctx.lineTo(x + 0.5, y + 0.5)
-    this.ctx.stroke()
-    this.ctx.restore()
-    return true
   }
 
   /**

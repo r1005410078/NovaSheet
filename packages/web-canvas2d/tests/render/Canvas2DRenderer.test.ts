@@ -463,7 +463,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(texts).not.toContain('Alice')
   })
 
-  it('overlay 层根据 frame.selection 绘制选区填充与 active cell 边框', () => {
+  it('overlay 层不再绘制 body 选区与 active cell，交给 DOM SelectionOverlay', () => {
     const { renderer, ops, data, viewport, rowsAxis, colsAxis } = setup()
     ops.length = 0
 
@@ -488,49 +488,10 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       },
     })
 
-    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBg })
-    expect(ops).toContainEqual({ op: 'fillRect', args: [100, 60, 100, 28] })
-    expect(ops).toContainEqual({
-      op: 'set:strokeStyle',
-      value: denseGridTheme.colors.selectionBorder,
-    })
-    expect(ops).toContainEqual({ op: 'moveTo', args: [100.5, 60.5] })
-    expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 60.5] })
-    expect(ops).toContainEqual({ op: 'lineTo', args: [199.5, 87.5] })
-    expect(ops).toContainEqual({ op: 'lineTo', args: [100.5, 87.5] })
-  })
-
-  it('overlay 层绘制多格 selectedRange，active cell 边框仍留在 anchor 起点', () => {
-    const { renderer, ops, data, viewport, rowsAxis, colsAxis } = setup()
-    ops.length = 0
-
-    renderer.render({
-      data,
-      theme: denseGridTheme,
-      rowsAxis,
-      colsAxis,
-      viewport: viewport.snapshot(),
-      collapsedRowGaps: [],
-      collapsedColGaps: [],
-      selection: {
-        activeCell: { rowIndex: 1, colIndex: 0 },
-        anchorCell: { rowIndex: 1, colIndex: 0 },
-        extentCell: { rowIndex: 2, colIndex: 1 },
-        selectedRange: {
-          startRow: 1,
-          endRow: 2,
-          startCol: 0,
-          endCol: 1,
-        },
-      },
-    })
-
-    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 60, 100, 28] })
-    expect(ops).toContainEqual({ op: 'fillRect', args: [100, 60, 100, 28] })
-    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 88, 100, 28] })
-    expect(ops).toContainEqual({ op: 'fillRect', args: [100, 88, 100, 28] })
-    expect(ops).toContainEqual({ op: 'moveTo', args: [0.5, 60.5] })
-    expect(ops).toContainEqual({ op: 'lineTo', args: [99.5, 87.5] })
+    expect(ops).not.toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBg })
+    expect(ops).not.toContainEqual({ op: 'set:strokeStyle', value: denseGridTheme.colors.selectionBorder })
+    expect(ops).not.toContainEqual({ op: 'fillRect', args: [100, 60, 100, 28] })
+    expect(ops).not.toContainEqual({ op: 'moveTo', args: [100.5, 60.5] })
   })
 
   it('Excel 模式下普通选区同步浅色高亮列头与左侧行号', () => {
