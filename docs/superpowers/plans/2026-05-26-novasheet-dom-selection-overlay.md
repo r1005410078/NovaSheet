@@ -546,9 +546,178 @@ If README did not need changes, skip this commit and document the unchanged test
 
 ---
 
+### Task 5: Final Review Fixes
+
+**Files:**
+- Modify: `packages/web/src/interaction/RangeOverlayRects.ts`
+- Modify: `packages/web/tests/interaction/RangeOverlayRects.test.ts`
+- Modify: `packages/web/src/overlay/SelectionOverlay.ts`
+- Modify: `packages/web/tests/overlay/SelectionOverlay.test.ts`
+- Modify: `packages/web/src/backends/Canvas2DBackend.ts`
+- Modify: `packages/web/src/runtime/WebGridRuntime.ts`
+- Modify: `packages/web/tests/runtime/WebGridRuntime.selection-overlay.test.ts`
+- Modify: `README.md`
+
+- [ ] **Step 1: Write failing clipping regression**
+
+In `packages/web/tests/interaction/RangeOverlayRects.test.ts`, add a case where a partially scrolled first visible cell would otherwise cross the visible region boundary:
+
+```ts
+it('clips partially scrolled rects to the visible region rect', () => {
+  const frame = makeFrame({
+    regions: [
+      {
+        rowRange: [0, 1],
+        colRange: [0, 1],
+        rect: { x: 40, y: 32, width: 160, height: 56 },
+        scrollOffsetX: 15,
+        scrollOffsetY: 10,
+        rowBand: 'middle',
+        colBand: 'center',
+        zIndex: 0,
+      },
+    ],
+  })
+
+  expect(computeRangeOverlayRects(frame, { startRow: 0, endRow: 0, startCol: 0, endCol: 0 })).toEqual([
+    { x: 40, y: 32, width: 65, height: 18 },
+  ])
+})
+```
+
+Use the existing helper shapes in that test file; if helper names differ, adapt the object to the local `RenderFrame` fixture.
+
+- [ ] **Step 2: Verify clipping RED**
+
+Run:
+
+```bash
+bun test packages/web/tests/interaction/RangeOverlayRects.test.ts
+```
+
+Expected: FAIL because returned rect starts before `region.rect.x/y`.
+
+- [ ] **Step 3: Implement region clipping**
+
+In `packages/web/src/interaction/RangeOverlayRects.ts`, clip computed range bounds to `region.rect`:
+
+```ts
+const clippedX = Math.max(x, region.rect.x)
+const clippedY = Math.max(y, region.rect.y)
+const clippedRight = Math.min(right, region.rect.x + region.rect.width)
+const clippedBottom = Math.min(bottom, region.rect.y + region.rect.height)
+if (clippedRight <= clippedX || clippedBottom <= clippedY) continue
+rects.push({
+  x: clippedX,
+  y: clippedY,
+  width: clippedRight - clippedX,
+  height: clippedBottom - clippedY,
+})
+```
+
+Do not change the inclusive row/col math or `Axis.getSize()` use.
+
+- [ ] **Step 4: Write failing theme sync tests**
+
+Add tests that prove `SelectionOverlay` consumes theme tokens and `Grid.setTheme()` updates existing DOM selection:
+
+```ts
+const customTheme = {
+  ...denseGridTheme,
+  colors: {
+    ...denseGridTheme.colors,
+    selectionBg: 'rgba(255, 0, 0, 0.25)',
+    selectionBorder: '#ff0000',
+  },
+}
+```
+
+In `SelectionOverlay.test.ts`, assert `overlay.applyTheme(customTheme)` sets layer CSS variables:
+
+```ts
+expect(layer.style.getPropertyValue('--novasheet-selection-bg')).toBe(customTheme.colors.selectionBg)
+expect(layer.style.getPropertyValue('--novasheet-selection-border')).toBe(customTheme.colors.selectionBorder)
+```
+
+In `WebGridRuntime.selection-overlay.test.ts`, create a grid, select a cell, call `grid.setTheme(customTheme)`, await the existing flush pattern, and assert the layer CSS variables match the custom theme.
+
+- [ ] **Step 5: Verify theme RED**
+
+Run:
+
+```bash
+bun test packages/web/tests/overlay/SelectionOverlay.test.ts packages/web/tests/runtime/WebGridRuntime.selection-overlay.test.ts
+```
+
+Expected: FAIL because `SelectionOverlay.applyTheme()` and runtime theme sync do not exist.
+
+- [ ] **Step 6: Implement theme sync**
+
+In `packages/web/src/overlay/SelectionOverlay.ts`, import `Theme` as a type and add:
+
+```ts
+applyTheme(theme: Theme): void {
+  this.layer.style.setProperty('--novasheet-selection-bg', theme.colors.selectionBg)
+  this.layer.style.setProperty('--novasheet-selection-border', theme.colors.selectionBorder)
+  this.layer.style.setProperty('--novasheet-selection-border-width', `${theme.metrics.borderWidth}px`)
+}
+```
+
+Use those variables in range/active styles:
+
+```ts
+border: 'var(--novasheet-selection-border-width, 1px) solid var(--novasheet-selection-border)'
+```
+
+For active cell, keep the Google-like stronger active border by using `calc(var(--novasheet-selection-border-width, 1px) * 2)` if supported by tests, or set an `--novasheet-selection-active-border-width` variable from `Math.max(2, theme.metrics.borderWidth * 2)`.
+
+In `Canvas2DBackend`, call `selectionOverlay.applyTheme(this.engine.getTheme())` or the local initial theme before/after runtime construction.
+
+In `WebGridRuntime.setTheme()`, add `this.selectionOverlay?.applyTheme(theme)` before `afterEngineMutation()`.
+
+- [ ] **Step 7: Verify focused GREEN**
+
+Run:
+
+```bash
+bun test packages/web/tests/interaction/RangeOverlayRects.test.ts packages/web/tests/overlay/SelectionOverlay.test.ts packages/web/tests/runtime/WebGridRuntime.selection-overlay.test.ts
+```
+
+Expected: PASS.
+
+- [ ] **Step 8: Run package typechecks**
+
+Run:
+
+```bash
+bun run --filter @novasheet/web typecheck
+bun run --filter @novasheet/web-canvas2d typecheck
+```
+
+Expected: both exit code 0.
+
+- [ ] **Step 9: Run full test suite and update README count**
+
+Run:
+
+```bash
+bun test
+```
+
+Expected: PASS. Update `README.md` from `690 passing` to the actual new count if it changed.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add packages/web/src/interaction/RangeOverlayRects.ts packages/web/tests/interaction/RangeOverlayRects.test.ts packages/web/src/overlay/SelectionOverlay.ts packages/web/tests/overlay/SelectionOverlay.test.ts packages/web/src/backends/Canvas2DBackend.ts packages/web/src/runtime/WebGridRuntime.ts packages/web/tests/runtime/WebGridRuntime.selection-overlay.test.ts README.md
+git commit -m "fix(web): 修正 DOM 选区裁剪与主题同步"
+```
+
+---
+
 ## Self-Review
 
-- **Spec coverage:** Tasks cover DOM `SelectionOverlay`, render-frame sync timing, reuse of `computeRangeOverlayRects()`, Canvas body-selection removal, header/row-header preservation, and full gates.
+- **Spec coverage:** Tasks cover DOM `SelectionOverlay`, render-frame sync timing, clipped `computeRangeOverlayRects()`, theme-token sync, Canvas body-selection removal, header/row-header preservation, and full gates.
 - **Scope:** No core selection model, clipboard, undo/redo, data source, React, or WebGL changes.
 - **Known risk:** Runtime tests depend on RAF/microtask flushing in happy-dom. If `await Promise.resolve()` is insufficient, use the existing runtime test helper pattern from nearby `WebGridRuntime.*.test.ts` files rather than adding sleeps.
 - **Placeholder scan:** No `TBD`, `TODO`, or deferred unspecified implementation steps remain.
