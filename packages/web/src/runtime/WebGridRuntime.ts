@@ -1133,6 +1133,7 @@ export class WebGridRuntime {
     this.syncCellEditorTheme()
     this.syncContextMenuTheme()
     this.syncFilterPopoverTheme()
+    this.selectionOverlay?.applyTheme(theme)
     this.afterEngineMutation()
   }
 

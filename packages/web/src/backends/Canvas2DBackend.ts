@@ -167,6 +167,7 @@ export class Canvas2DBackend implements GridController {
       onUnhide: (ids) => this.runtime.unhideCols(ids),
     })
     this.selectionOverlay = new SelectionOverlay(this.container)
+    this.selectionOverlay.applyTheme(this.engine.getTheme())
     this.columnReorderOverlay = new ColumnReorderOverlay(this.container)
     this.rowReorderOverlay = new RowReorderOverlay(this.container)
 

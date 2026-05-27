@@ -19,6 +19,28 @@ describe('RangeOverlayRects', () => {
     ).toEqual([])
   })
 
+  it('clips partially scrolled rects to the visible region rect', () => {
+    const frame = makeFrame({
+      regions: [
+        {
+          id: 'main',
+          rowBand: 'middle',
+          colBand: 'center',
+          rowRange: [0, 1],
+          colRange: [0, 1],
+          rect: { x: 40, y: 32, width: 160, height: 56 },
+          scrollOffsetX: 15,
+          scrollOffsetY: 10,
+          zIndex: 0,
+        },
+      ],
+    })
+
+    expect(
+      computeRangeOverlayRects(frame, { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }),
+    ).toEqual([{ x: 40, y: 32, width: 85, height: 20 }])
+  })
+
   it('anchors fill handle at bottom-right of the visible source range', () => {
     expect(
       computeFillHandleRect(makeFrame(), { startRow: 1, endRow: 2, startCol: 1, endCol: 2 }),
@@ -31,7 +53,7 @@ describe('RangeOverlayRects', () => {
   })
 })
 
-function makeFrame(): RenderFrame {
+function makeFrame(overrides: Partial<RenderFrame['viewport']> = {}): RenderFrame {
   return {
     data: { getSchema: () => ({ fields: [] }) } as never,
     theme: { metrics: { headerHeight: 30 } } as never,
@@ -62,6 +84,7 @@ function makeFrame(): RenderFrame {
           zIndex: 0,
         },
       ],
+      ...overrides,
     },
     selection: undefined,
   } as unknown as RenderFrame

@@ -83,6 +83,48 @@ describe('WebGridRuntime selection overlay', () => {
     raf.restore()
   })
 
+  it('updates existing DOM selection overlay styles when theme changes', () => {
+    const container = document.createElement('div')
+    Object.assign(container.style, { width: '480px', height: '320px' })
+    document.body.appendChild(container)
+    const raf = captureRaf()
+    const grid = new Grid(container, {
+      data: new InMemoryDataSource({
+        schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 80 }] },
+        rows: [{ a: 'A1' }],
+      }),
+      excelHeaders: true,
+    })
+    const customTheme = {
+      ...denseGridTheme,
+      colors: {
+        ...denseGridTheme.colors,
+        selectionBg: 'rgba(255, 0, 0, 0.25)',
+        selectionBorder: '#ff0000',
+      },
+    }
+
+    grid.setSelection({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 0 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+    })
+    raf.flush()
+    grid.setTheme(customTheme)
+    raf.flush()
+
+    const layer = container.querySelector<HTMLElement>('[data-novasheet-selection-layer]')!
+    expect(layer.style.getPropertyValue('--novasheet-selection-bg')).toBe(
+      customTheme.colors.selectionBg,
+    )
+    expect(layer.style.getPropertyValue('--novasheet-selection-border')).toBe(
+      customTheme.colors.selectionBorder,
+    )
+    grid.destroy()
+    raf.restore()
+  })
+
   it('syncs selection overlay from the same frame passed to renderer.render', () => {
     const selectionOverlay = makeSelectionOverlay()
     const frame = makeFrame({

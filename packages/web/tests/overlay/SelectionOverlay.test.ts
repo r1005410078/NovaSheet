@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { denseGridTheme } from '@novasheet/core'
 import { SelectionOverlay } from '../../src/overlay/SelectionOverlay'
 import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
 
@@ -34,5 +35,28 @@ describe('SelectionOverlay', () => {
     overlay.destroy()
     overlay.destroy()
     expect(root.querySelector('[data-novasheet-selection-layer]')).toBeNull()
+  })
+
+  it('applies selection colors from theme tokens to the layer', () => {
+    const root = document.createElement('div')
+    const overlay = new SelectionOverlay(root)
+    const customTheme = {
+      ...denseGridTheme,
+      colors: {
+        ...denseGridTheme.colors,
+        selectionBg: 'rgba(255, 0, 0, 0.25)',
+        selectionBorder: '#ff0000',
+      },
+    }
+
+    overlay.applyTheme(customTheme)
+
+    const layer = root.querySelector<HTMLElement>('[data-novasheet-selection-layer]')!
+    expect(layer.style.getPropertyValue('--novasheet-selection-bg')).toBe(
+      customTheme.colors.selectionBg,
+    )
+    expect(layer.style.getPropertyValue('--novasheet-selection-border')).toBe(
+      customTheme.colors.selectionBorder,
+    )
   })
 })

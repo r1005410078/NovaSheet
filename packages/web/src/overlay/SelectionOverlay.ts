@@ -1,3 +1,4 @@
+import type { Theme } from '@novasheet/core'
 import type { OverlayRect } from '../interaction/RangeOverlayRects'
 
 export interface SelectionOverlayState {
@@ -37,7 +38,8 @@ export class SelectionOverlay {
         pointerEvents: 'none',
         boxSizing: 'border-box',
         background: 'var(--novasheet-selection-bg, rgba(9, 105, 218, 0.12))',
-        border: '1px solid var(--novasheet-selection-border, #0969da)',
+        border:
+          'var(--novasheet-selection-border-width, 1px) solid var(--novasheet-selection-border, #0969da)',
         left: `${rect.x}px`,
         top: `${rect.y}px`,
         width: `${rect.width}px`,
@@ -48,6 +50,19 @@ export class SelectionOverlay {
     }
 
     if (state.activeRect) this.renderActive(state.activeRect)
+  }
+
+  applyTheme(theme: Theme): void {
+    this.layer.style.setProperty('--novasheet-selection-bg', theme.colors.selectionBg)
+    this.layer.style.setProperty('--novasheet-selection-border', theme.colors.selectionBorder)
+    this.layer.style.setProperty(
+      '--novasheet-selection-border-width',
+      `${theme.metrics.borderWidth}px`,
+    )
+    this.layer.style.setProperty(
+      '--novasheet-selection-active-border-width',
+      `${Math.max(2, theme.metrics.borderWidth * 2)}px`,
+    )
   }
 
   destroy(): void {
@@ -65,7 +80,8 @@ export class SelectionOverlay {
       pointerEvents: 'none',
       boxSizing: 'border-box',
       background: 'transparent',
-      border: '2px solid var(--novasheet-selection-border, #0969da)',
+      border:
+        'var(--novasheet-selection-active-border-width, 2px) solid var(--novasheet-selection-border, #0969da)',
       left: `${rect.x}px`,
       top: `${rect.y}px`,
       width: `${rect.width}px`,

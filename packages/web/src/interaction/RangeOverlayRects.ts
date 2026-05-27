@@ -32,7 +32,17 @@ export function computeRangeOverlayRects(frame: RenderFrame, range: CellRange): 
       frame.rowsAxis.indexToPosition(endRow) -
       region.scrollOffsetY +
       frame.rowsAxis.getSize(endRow)
-    rects.push({ x, y, width: right - x, height: bottom - y })
+    const clippedX = Math.max(x, region.rect.x)
+    const clippedY = Math.max(y, region.rect.y)
+    const clippedRight = Math.min(right, region.rect.x + region.rect.width)
+    const clippedBottom = Math.min(bottom, region.rect.y + region.rect.height)
+    if (clippedRight <= clippedX || clippedBottom <= clippedY) continue
+    rects.push({
+      x: clippedX,
+      y: clippedY,
+      width: clippedRight - clippedX,
+      height: clippedBottom - clippedY,
+    })
   }
   return rects
 }
