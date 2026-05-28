@@ -394,11 +394,17 @@ export class DefaultGridEngine implements GridEngine {
 
   /** 把单个合并区域从 raw 坐标翻译为 view 坐标；隐藏行列或行序非连续时返回 null。 */
   private mergeRegionToView(region: MergeRegion): MergeRegion | null {
+    // 逐行检查 raw→view 映射，确保合并区域的每一行在 view 空间中严格连续。
+    // 仅比对端点跨度无法发现内部行被排序打散的情况（端点跨度可能恰好吻合）。
     const startRow = findViewRow(this.data, region.range.startRow)
-    const endRow = findViewRow(this.data, region.range.endRow)
-    if (startRow === -1 || endRow === -1) return null
-    // 行段在 view 空间必须仍连续，长度才不变（排序/隐藏会破坏，跳过）。
-    if (endRow - startRow !== region.range.endRow - region.range.startRow) return null
+    if (startRow === -1) return null
+    let prevViewRow = startRow
+    for (let raw = region.range.startRow + 1; raw <= region.range.endRow; raw += 1) {
+      const viewRow = findViewRow(this.data, raw)
+      if (viewRow === -1 || viewRow !== prevViewRow + 1) return null
+      prevViewRow = viewRow
+    }
+    const endRow = prevViewRow
     const startCol = this.getViewColumnIndexForRawIndex(region.range.startCol)
     const endCol = this.getViewColumnIndexForRawIndex(region.range.endCol)
     if (startCol === -1 || endCol === -1) return null
