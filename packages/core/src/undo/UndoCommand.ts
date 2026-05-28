@@ -57,6 +57,10 @@ export type UndoCommand =
       readonly newIds: readonly number[]
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
+      readonly formatBefore: readonly FormatLayer[]
+      readonly formatAfter: readonly FormatLayer[]
+      readonly mergeBefore: readonly MergeRegion[]
+      readonly mergeAfter: readonly MergeRegion[]
     }
   | {
       readonly kind: 'deleteRows'
@@ -65,6 +69,10 @@ export type UndoCommand =
       readonly deletedHeights: readonly number[]
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
+      readonly formatBefore: readonly FormatLayer[]
+      readonly formatAfter: readonly FormatLayer[]
+      readonly mergeBefore: readonly MergeRegion[]
+      readonly mergeAfter: readonly MergeRegion[]
     }
   | {
       readonly kind: 'hideRows'
@@ -94,6 +102,10 @@ export type UndoCommand =
       readonly inverseBeforeRowId: number | null
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
+      readonly formatBefore: readonly FormatLayer[]
+      readonly formatAfter: readonly FormatLayer[]
+      readonly mergeBefore: readonly MergeRegion[]
+      readonly mergeAfter: readonly MergeRegion[]
     }
   | {
       readonly kind: 'insertCols'
@@ -104,6 +116,10 @@ export type UndoCommand =
       readonly selectionAfter: GridSelection
       readonly frozenBefore: FrozenConfig
       readonly frozenAfter: FrozenConfig
+      readonly formatBefore: readonly FormatLayer[]
+      readonly formatAfter: readonly FormatLayer[]
+      readonly mergeBefore: readonly MergeRegion[]
+      readonly mergeAfter: readonly MergeRegion[]
     }
   | {
       readonly kind: 'deleteCols'
@@ -113,6 +129,10 @@ export type UndoCommand =
       readonly selectionAfter: GridSelection
       readonly frozenBefore: FrozenConfig
       readonly frozenAfter: FrozenConfig
+      readonly formatBefore: readonly FormatLayer[]
+      readonly formatAfter: readonly FormatLayer[]
+      readonly mergeBefore: readonly MergeRegion[]
+      readonly mergeAfter: readonly MergeRegion[]
     }
   | {
       readonly kind: 'hideCols'
@@ -141,6 +161,10 @@ export type UndoCommand =
       readonly inverseBeforeFieldId: string | null
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
+      readonly formatBefore: readonly FormatLayer[]
+      readonly formatAfter: readonly FormatLayer[]
+      readonly mergeBefore: readonly MergeRegion[]
+      readonly mergeAfter: readonly MergeRegion[]
     }
   | {
       readonly kind: 'format'

@@ -479,6 +479,8 @@ export class DefaultGridEngine implements GridEngine {
   insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
     if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return []
     const selectionBefore = this.selection.getSelection()
+    const formatBefore = this.formatStore.snapshot()
+    const mergeBefore = this.mergeStore.snapshot()
     const newIds = this.rawData.insertRows(beforeUnderlyingRow, count)
     this.rawRowsAxis.insertRange(beforeUnderlyingRow, count, this.resolveDefaultRowHeight())
     this.rebuildViewAxis()
@@ -486,7 +488,18 @@ export class DefaultGridEngine implements GridEngine {
     this.mergeStore.remapAfterRowsInserted(beforeUnderlyingRow, count)
     this.selection.remapAfterRowsInserted(beforeUnderlyingRow, count)
     const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'insertRows', at: beforeUnderlyingRow, count, newIds, selectionBefore, selectionAfter })
+    this.undoStack.push({
+      kind: 'insertRows',
+      at: beforeUnderlyingRow,
+      count,
+      newIds,
+      selectionBefore,
+      selectionAfter,
+      formatBefore,
+      formatAfter: this.formatStore.snapshot(),
+      mergeBefore,
+      mergeAfter: this.mergeStore.snapshot(),
+    })
     return newIds
   }
 
@@ -497,6 +510,8 @@ export class DefaultGridEngine implements GridEngine {
   deleteRows(underlyingRowIds: readonly number[]): void {
     if (!isMutableDataSource(this.rawData) || !this.rawData.deleteRows) return
     const selectionBefore = this.selection.getSelection()
+    const formatBefore = this.formatStore.snapshot()
+    const mergeBefore = this.mergeStore.snapshot()
     // 捕获删前高度，需在 axis 更新之前读取
     const deletedHeights = underlyingRowIds.map((id) => this.rawRowsAxis.getSize(id))
     const snapshots = this.rawData.deleteRows(underlyingRowIds)
@@ -507,7 +522,17 @@ export class DefaultGridEngine implements GridEngine {
     this.mergeStore.remapAfterRowsDeleted(removedRowsSorted)
     this.selection.remapAfterRowsDeleted(underlyingRowIds)
     const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'deleteRows', snapshots, deletedHeights, selectionBefore, selectionAfter })
+    this.undoStack.push({
+      kind: 'deleteRows',
+      snapshots,
+      deletedHeights,
+      selectionBefore,
+      selectionAfter,
+      formatBefore,
+      formatAfter: this.formatStore.snapshot(),
+      mergeBefore,
+      mergeAfter: this.mergeStore.snapshot(),
+    })
   }
 
   /**
@@ -559,6 +584,8 @@ export class DefaultGridEngine implements GridEngine {
 
     this.finishActiveEdit()
     const selectionBefore = this.selection.getSelection()
+    const formatBefore = this.formatStore.snapshot()
+    const mergeBefore = this.mergeStore.snapshot()
     const sizesBefore = this.captureRawRowHeights()
     this.rawData.moveRows(normalized.rowIds, normalized.beforeRowId)
     this.rebuildRawRowsAxisFromHeights(reorderByIndexMap(sizesBefore, normalized.indexMap))
@@ -576,6 +603,10 @@ export class DefaultGridEngine implements GridEngine {
       inverseBeforeRowId: normalized.inverseBeforeRowId,
       selectionBefore,
       selectionAfter,
+      formatBefore,
+      formatAfter: this.formatStore.snapshot(),
+      mergeBefore,
+      mergeAfter: this.mergeStore.snapshot(),
     })
     return true
   }
@@ -585,6 +616,8 @@ export class DefaultGridEngine implements GridEngine {
     if (count <= 0 || !isMutableDataSource(this.rawData) || !this.rawData.insertField) return []
     const at = Math.max(0, Math.min(beforeFieldIndex, this.rawData.getSchema().fields.length))
     const selectionBefore = this.selection.getSelection()
+    const formatBefore = this.formatStore.snapshot()
+    const mergeBefore = this.mergeStore.snapshot()
     const frozenBefore = this.frozen.getFrozenConfig()
     const defaultWidth = this.resolveDefaultColWidth()
     const newFields: Field[] = []
@@ -617,6 +650,10 @@ export class DefaultGridEngine implements GridEngine {
       selectionAfter,
       frozenBefore,
       frozenAfter,
+      formatBefore,
+      formatAfter: this.formatStore.snapshot(),
+      mergeBefore,
+      mergeAfter: this.mergeStore.snapshot(),
     })
     return newFields
   }
@@ -635,6 +672,8 @@ export class DefaultGridEngine implements GridEngine {
     if (removed.length === 0) return []
 
     const selectionBefore = this.selection.getSelection()
+    const formatBefore = this.formatStore.snapshot()
+    const mergeBefore = this.mergeStore.snapshot()
     const frozenBefore = this.frozen.getFrozenConfig()
     const snapshots: RemovedFieldSnapshot[] = []
     const deletedWidths: number[] = []
@@ -664,6 +703,10 @@ export class DefaultGridEngine implements GridEngine {
       selectionAfter,
       frozenBefore,
       frozenAfter,
+      formatBefore,
+      formatAfter: this.formatStore.snapshot(),
+      mergeBefore,
+      mergeAfter: this.mergeStore.snapshot(),
     })
     return snapshots
   }
@@ -738,6 +781,8 @@ export class DefaultGridEngine implements GridEngine {
 
     this.finishActiveEdit()
     const selectionBefore = this.selection.getSelection()
+    const formatBefore = this.formatStore.snapshot()
+    const mergeBefore = this.mergeStore.snapshot()
     const visibleFieldIdsBefore = this.data.getSchema().fields.map((field) => field.id)
     // Trap 1：moveCols 走 fieldId 路径，normalizeMoveCols 不产出数值 index map。
     // 在 moveFields 前后各取 raw 字段序，按 fieldId 配对出 oldRawIndex → newRawIndex。
@@ -758,6 +803,10 @@ export class DefaultGridEngine implements GridEngine {
       inverseBeforeFieldId: normalized.inverseBeforeFieldId,
       selectionBefore,
       selectionAfter,
+      formatBefore,
+      formatAfter: this.formatStore.snapshot(),
+      mergeBefore,
+      mergeAfter: this.mergeStore.snapshot(),
     })
     return true
   }
@@ -1063,6 +1112,8 @@ export class DefaultGridEngine implements GridEngine {
         this.rawData.deleteRows(idsToRemove)
         this.rawRowsAxis.deleteRange(idsToRemove)
         this.rebuildViewAxis()
+        this.formatStore.restore(cmd.formatBefore)
+        this.mergeStore.restore(cmd.mergeBefore)
         this.selection.setSelection(cmd.selectionBefore)
         return
       }
@@ -1089,6 +1140,8 @@ export class DefaultGridEngine implements GridEngine {
           }
         }
         this.rebuildViewAxis()
+        this.formatStore.restore(cmd.formatBefore)
+        this.mergeStore.restore(cmd.mergeBefore)
         this.selection.setSelection(cmd.selectionBefore)
         return
       }
@@ -1114,12 +1167,18 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'moveRows':
         this.applyMoveRowsCommand(cmd.inverseRowIds, cmd.inverseBeforeRowId, cmd.selectionBefore)
+        this.formatStore.restore(cmd.formatBefore)
+        this.mergeStore.restore(cmd.mergeBefore)
         return
       case 'insertCols':
         this.unapplyInsertCols(cmd)
+        this.formatStore.restore(cmd.formatBefore)
+        this.mergeStore.restore(cmd.mergeBefore)
         return
       case 'deleteCols':
         this.unapplyDeleteCols(cmd)
+        this.formatStore.restore(cmd.formatBefore)
+        this.mergeStore.restore(cmd.mergeBefore)
         return
       case 'hideCols':
         for (const id of cmd.fieldIds) this.hiddenColIds.delete(id)
@@ -1145,6 +1204,8 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'moveCols':
         this.applyMoveColsCommand(cmd.fieldIds, cmd.inverseBeforeFieldId, cmd.selectionBefore)
+        this.formatStore.restore(cmd.formatBefore)
+        this.mergeStore.restore(cmd.mergeBefore)
         return
       case 'format':
         this.formatStore.restore(cmd.before)
@@ -1192,6 +1253,8 @@ export class DefaultGridEngine implements GridEngine {
         this.rawData.insertRows(cmd.at, cmd.count)
         this.rawRowsAxis.insertRange(cmd.at, cmd.count, this.resolveDefaultRowHeight())
         this.rowsAxis = this.buildViewRowsAxis()
+        this.formatStore.restore(cmd.formatAfter)
+        this.mergeStore.restore(cmd.mergeAfter)
         this.selection.setSelection(cmd.selectionAfter)
         return
       }
@@ -1204,6 +1267,8 @@ export class DefaultGridEngine implements GridEngine {
         this.rawData.deleteRows(ids)
         this.rawRowsAxis.deleteRange(ids)
         this.rowsAxis = this.buildViewRowsAxis()
+        this.formatStore.restore(cmd.formatAfter)
+        this.mergeStore.restore(cmd.mergeAfter)
         this.selection.setSelection(cmd.selectionAfter)
         return
       }
@@ -1224,12 +1289,18 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'moveRows':
         this.applyMoveRowsCommand(cmd.rowIds, cmd.beforeRowId, cmd.selectionAfter)
+        this.formatStore.restore(cmd.formatAfter)
+        this.mergeStore.restore(cmd.mergeAfter)
         return
       case 'insertCols':
         this.applyInsertCols(cmd)
+        this.formatStore.restore(cmd.formatAfter)
+        this.mergeStore.restore(cmd.mergeAfter)
         return
       case 'deleteCols':
         this.applyDeleteCols(cmd)
+        this.formatStore.restore(cmd.formatAfter)
+        this.mergeStore.restore(cmd.mergeAfter)
         return
       case 'hideCols':
         for (const id of cmd.fieldIds) this.hiddenColIds.add(id)
@@ -1253,6 +1324,8 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'moveCols':
         this.applyMoveColsCommand(cmd.fieldIds, cmd.beforeFieldId, cmd.selectionAfter)
+        this.formatStore.restore(cmd.formatAfter)
+        this.mergeStore.restore(cmd.mergeAfter)
         return
       case 'format':
         this.formatStore.restore(cmd.after)
