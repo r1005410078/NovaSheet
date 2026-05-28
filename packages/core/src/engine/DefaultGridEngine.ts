@@ -788,7 +788,8 @@ export class DefaultGridEngine implements GridEngine {
 
   /**
    * Phase 5-A — 给 view `range` 设置填充色；`color === null` 走 clearFill。
-   * 写入前把 view range 翻译为 raw range；快照前后一致则不入栈。返回是否产生变化。
+   * 写入前把 view range 翻译为 raw range；`range` 须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
+   * 快照前后一致则不入栈并返回 false。
    */
   setFillColor(range: CellRange, color: string | null): boolean {
     this.finishActiveEdit()
@@ -806,7 +807,8 @@ export class DefaultGridEngine implements GridEngine {
 
   /**
    * Phase 5-A — 给 view `range` 设置基础边框；`preset === 'clear'` 需 `border === null` 并清除。
-   * 仅支持 `lineStyle === 'solid'`，其余样式返回 false。写入前把 view range 翻译为 raw range。
+   * 仅支持 `lineStyle === 'solid'`，其余样式返回 false。`range` 须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
+   * 写入前把 view range 翻译为 raw range；快照前后一致则不入栈并返回 false。
    */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
     this.finishActiveEdit()
@@ -880,15 +882,14 @@ export class DefaultGridEngine implements GridEngine {
     return { start: first, end: prev }
   }
 
-  /** 快照前后一致时回滚（无副作用），否则入栈一条 format 命令。返回是否产生变化。 */
+  /** 快照前后一致时说明 store 未变动（无副作用），直接返回 false；否则入栈一条 format 命令并返回 true。 */
   private commitFormatChange(
     before: readonly FormatLayer[],
     selectionBefore: GridSelection,
   ): boolean {
     const after = this.formatStore.snapshot()
     if (sameFormatLayers(before, after)) {
-      // No effective change (e.g. clearing an already-empty range): drop the appended layer.
-      this.formatStore.restore(before)
+      // Store unchanged: no-op (clearFill/clearBorders already skipped push when no layers intersected).
       return false
     }
     const selectionAfter = this.selection.getSelection()

@@ -38,4 +38,27 @@ describe('RangeStyleStore', () => {
     expect(store.resolveCell(0, 0)).toBeUndefined()
     expect(store.resolveCell(0, 1)?.fillColor).toBe('#fff2cc')
   })
+
+  it('clearFill on a range with no prior formatting does NOT push a layer (no-op)', () => {
+    const store = new RangeStyleStore()
+    const range = { startRow: 5, endRow: 5, startCol: 5, endCol: 5 }
+    store.clearFill(range)
+    expect(store.getLayerCount()).toBe(0)
+  })
+
+  it('clearFill on a range that intersects a prior fill pushes a clear layer', () => {
+    const store = new RangeStyleStore()
+    store.apply({ startRow: 0, endRow: 2, startCol: 0, endCol: 2 }, { fillColor: '#ff0000' })
+    expect(store.getLayerCount()).toBe(1)
+    store.clearFill({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 })
+    expect(store.getLayerCount()).toBe(2)
+    expect(store.resolveCell(1, 1)).toBeUndefined()
+    expect(store.resolveCell(0, 0)?.fillColor).toBe('#ff0000')
+  })
+
+  it('clearBorders on a range with no prior formatting does NOT push a layer (no-op)', () => {
+    const store = new RangeStyleStore()
+    store.clearBorders({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+    expect(store.getLayerCount()).toBe(0)
+  })
 })

@@ -12,11 +12,24 @@ export class RangeStyleStore {
   }
 
   clearFill(range: CellRange): void {
+    // Only push a clear layer when at least one existing layer intersects the target range;
+    // otherwise there is nothing to clear and the store stays unchanged (no-op, no undo entry).
+    if (!this.anyLayerIntersects(range)) return
     this.layers.push({ range, patch: {}, clearFill: true, order: this.nextOrder++ })
   }
 
   clearBorders(range: CellRange): void {
+    // Same guard as clearFill: skip push when no existing layer can contribute borders here.
+    if (!this.anyLayerIntersects(range)) return
     this.layers.push({ range, patch: {}, clearBorders: true, order: this.nextOrder++ })
+  }
+
+  /** Returns true when at least one existing layer's range overlaps `target`. O(layers). */
+  private anyLayerIntersects(target: CellRange): boolean {
+    for (const layer of this.layers) {
+      if (rangesIntersect(layer.range, target)) return true
+    }
+    return false
   }
 
   /**
@@ -108,4 +121,9 @@ export class RangeStyleStore {
 
 function inRange(row: number, col: number, range: CellRange): boolean {
   return row >= range.startRow && row <= range.endRow && col >= range.startCol && col <= range.endCol
+}
+
+function rangesIntersect(a: CellRange, b: CellRange): boolean {
+  return a.startRow <= b.endRow && a.endRow >= b.startRow &&
+    a.startCol <= b.endCol && a.endCol >= b.startCol
 }

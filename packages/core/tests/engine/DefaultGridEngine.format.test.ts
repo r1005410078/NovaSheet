@@ -44,4 +44,34 @@ describe('DefaultGridEngine format APIs', () => {
     expect(engine.setBorders(range, 'clear', null)).toBe(true)
     expect(engine.getCellFormat(0, 0)?.borders).toBeUndefined()
   })
+
+  it('setBorders with non-solid lineStyle returns false and writes nothing', () => {
+    const engine = makeEngine()
+    const dashedBorder: BorderStyle = { color: '#000', width: 'thin', lineStyle: 'dashed' }
+    const range = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
+
+    expect(engine.setBorders(range, 'outer', dashedBorder)).toBe(false)
+    expect(engine.getCellFormat(0, 0)).toBeUndefined()
+    expect(engine.undo()).toBeUndefined()
+  })
+
+  it('setBorders with preset=clear and non-null border returns false', () => {
+    const engine = makeEngine()
+    const border: BorderStyle = { color: '#000', width: 'thin', lineStyle: 'solid' }
+    const range = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
+
+    expect(engine.setBorders(range, 'clear', border)).toBe(false)
+    expect(engine.getCellFormat(0, 0)).toBeUndefined()
+    expect(engine.undo()).toBeUndefined()
+  })
+
+  it('setFillColor with null on an unformatted range returns false and adds no undo entry', () => {
+    const engine = makeEngine()
+    const range = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
+
+    expect(engine.setFillColor(range, null)).toBe(false)
+    expect(engine.getCellFormat(0, 0)).toBeUndefined()
+    // No undo entry should have been added
+    expect(engine.undo()).toBeUndefined()
+  })
 })

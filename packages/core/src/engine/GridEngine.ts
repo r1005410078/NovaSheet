@@ -161,12 +161,14 @@ export interface GridEngine {
   /**
    * Phase 5-A — 为 view `range` 设置填充色；`color=null` 清除填充。
    * 仅在格式实际变化时入 undo 栈并返回 true。
+   * `range` 必须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
    */
   setFillColor(range: CellRange, color: string | null): boolean
 
   /**
    * Phase 5-A — 为 view `range` 设置基础边框；`preset='clear'` 需 `border=null`。
    * 非 solid 线型在 5-A 返回 false；仅在格式实际变化时入栈并返回 true。
+   * `range` 必须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
    */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean
 
