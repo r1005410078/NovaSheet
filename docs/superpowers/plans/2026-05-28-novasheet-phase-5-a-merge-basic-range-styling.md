@@ -1017,6 +1017,56 @@ git commit -m "feat(core): 同步结构变更中的格式与合并坐标"
 
 ---
 
+## Task 7b: Structural Undo/Redo Store Alignment
+
+> **Plan-gap fix (caught during Task 7 execution).** Task 7 wired forward remap into the six structural mutation methods, but `applyUndo`/`applyRedo` for structural commands mutate `rawData`/axes **directly** (not via the public mutation methods), so they bypass the new `formatStore`/`mergeStore` remaps. Result: after formatting/merging then undoing a structural op the stores misalign; worse, `deleteRows`/`deleteCols` drop formats/merges that are captured nowhere, so undo cannot restore them even in principle. This task closes that gap with **Option A** (snapshot-based), which is robust and uniformly fixes the delete-loses-data case without inverse index maps.
+
+**Files:**
+- Modify: `packages/core/src/undo/UndoCommand.ts`
+- Modify: `packages/core/src/engine/DefaultGridEngine.ts`
+- Test: `packages/core/tests/engine/DefaultGridEngine.format-merge-structural-undo.test.ts`
+
+- [ ] **Step 1: Write failing tests**
+
+Create `DefaultGridEngine.format-merge-structural-undo.test.ts` asserting that after a format/merge plus a structural op, **undo and redo realign the stores**. Cover at least:
+- `setFillColor` a cell, `insertRows` before it, `undo()` → fill returns to its original raw coords; `redo()` → shifted again.
+- `setFillColor` a cell on a row, `deleteRows` that row, `undo()` → the fill is **restored** (delete-loses-data case); `redo()` → dropped again.
+- `mergeCells` a range, `moveRows` so it shifts, `undo()` → merge returns to original rows; `redo()` → shifted.
+- One column analogue (`deleteCols` or `moveCols`) for both stores.
+
+- [ ] **Step 2: Verify RED** — run the new test; it fails because structural undo/redo ignore the stores.
+
+- [ ] **Step 3: Implement Option A**
+
+Add to EACH of the six structural `UndoCommand` variants (`insertRows`, `deleteRows`, `insertCols`, `deleteCols`, `moveRows`, `moveCols`):
+
+```ts
+readonly formatBefore: readonly FormatLayer[]
+readonly formatAfter: readonly FormatLayer[]
+readonly mergeBefore: readonly MergeRegion[]
+readonly mergeAfter: readonly MergeRegion[]
+```
+
+In each forward structural mutation method: capture `formatStore.snapshot()` + `mergeStore.snapshot()` **before** the mutation and **after** the forward remap, and store both on the pushed command. In `applyUndo`: after the existing raw/axis/selection restore, call `formatStore.restore(cmd.formatBefore)` + `mergeStore.restore(cmd.mergeBefore)`. In `applyRedo`: restore the `*After` snapshots. (Snapshots are O(layers/regions) sparse arrays — cheap. Reference-swap restore.) Keep the forward remap from Task 7 unchanged.
+
+- [ ] **Step 4: Verify GREEN**
+
+```bash
+bun test packages/core/tests/engine/DefaultGridEngine.format-merge-structural-undo.test.ts
+bun run --filter '*' typecheck
+bun test
+```
+
+Expected: PASS; full suite green (you changed shared structural `UndoCommand` shapes — fix any test that constructs those literals).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git commit -m "fix(core): 结构 undo/redo 同步格式与合并快照"
+```
+
+---
+
 ## Task 8: Merge-Aware Rendering
 
 **Files:**
@@ -1315,6 +1365,7 @@ git commit -m "docs(repo): 更新 Phase 5-A 交付状态"
 | undo/redo for format | Task 3 |
 | merge/unmerge | Tasks 6, 8 |
 | row/col structural remap | Task 7 |
+| 结构 undo/redo 同步格式/合并 | Task 7b |
 | raw store → view 渲染坐标翻译 | Coordinate Space Invariant + Tasks 3, 6, 8 |
 | single canvas internal render stages | Tasks 4, 5, 8 |
 | internal clipboard merge guard | Task 9 |
