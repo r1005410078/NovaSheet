@@ -22,6 +22,21 @@ If any task finds that merge + sort/filter semantics contradict current architec
 
 ---
 
+## Coordinate Space Invariant（raw vs view）
+
+`RangeStyleStore` / `MergeStore` 一律按 **raw underlying row index + raw col index** 存储与 remap（Task 7 的 insert/delete/move 都按 raw 坐标重映；hide/unhide 不 remap）。
+
+但 `getFrame()` 输出的 `data` / `rowsAxis` / `colsAxis` 全是 **view 空间**（HideRowsLayer + 列过滤后），painter 也按 view 坐标绘制。因此构帧时必须把可见 view range 内的每个 `(viewRow, viewCol)` 翻译成 `(rawRow, rawCol)` 再查 store，`cellFormats` / `mergeRegions` 最终以 **view 坐标** 输出；painter 不做任何坐标翻译。
+
+- 行 view→raw 复用引擎已有的 view→underlying 行解析（`getFrame()` 已能拿到 view 数据源与折叠信息）。
+- 列 view→raw 用可见列 `fieldId → raw col index` 映射。
+- 无 hide/sort/filter 激活时 raw === view，退化为恒等映射；这也是 5-A 多数测试的运行场景。
+- **若实现发现 view↔raw 翻译在 5-A 体量过大，STOP 并拆成独立任务**，绝不能让 painter 直接吃 raw 坐标（否则隐藏行/筛选/排序下会画错单元格）。必须补一条「隐藏行下填充跟随正确行」的渲染测试。
+
+`RenderFrame.cellFormats` / `RenderFrame.mergeRegions` 声明为**可选字段**（与现有 `selection?` / `cellEdit?` 一致），避免打断约 27 处现存 `RenderFrame` 字面量构造点。renderer 读取时一律 `frame.cellFormats ?? []` / `frame.mergeRegions ?? []`；painter 边界仍是必填数组。
+
+---
+
 ## File Map
 
 | File | Responsibility |
@@ -334,7 +349,12 @@ import type { BorderStyle } from '../../src'
 
 function makeEngine() {
   const data = new InMemoryDataSource({
-    schema: { fields: [{ id: 'a', name: 'A', type: 'text' }, { id: 'b', name: 'B', type: 'text' }] },
+    schema: {
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: 100 },
+        { id: 'b', name: 'B', type: 'text', width: 100 },
+      ],
+    },
     rows: [{ a: 'A1', b: 'B1' }, { a: 'A2', b: 'B2' }],
   })
   return new DefaultGridEngine({ data })
@@ -347,7 +367,7 @@ describe('DefaultGridEngine format APIs', () => {
 
     expect(engine.setFillColor(range, '#fff2cc')).toBe(true)
     expect(engine.getCellFormat(0, 0)?.fillColor).toBe('#fff2cc')
-    expect(engine.getFrame().cellFormats.find((f) => f.rowIndex === 0 && f.colIndex === 0)?.format.fillColor).toBe(
+    expect(engine.getFrame().cellFormats?.find((f) => f.rowIndex === 0 && f.colIndex === 0)?.format.fillColor).toBe(
       '#fff2cc',
     )
 
@@ -384,14 +404,14 @@ Expected: FAIL because engine APIs and `RenderFrame.cellFormats` do not exist.
 
 - [ ] **Step 3: Implement engine APIs**
 
-Add to `RenderFrame`:
+Add to `RenderFrame`（**可选字段**，见 Coordinate Space Invariant；不要改成必填，否则打断现存 ~27 处 frame 构造点）：
 
 ```ts
 import type { ResolvedCellFormat } from '../format/CellFormat'
 
 export interface RenderFrame {
   // existing fields...
-  cellFormats: readonly ResolvedCellFormat[]
+  cellFormats?: readonly ResolvedCellFormat[]
 }
 ```
 
@@ -429,6 +449,7 @@ Rules:
 - `preset === 'clear'` requires `border === null` and clears borders.
 - `lineStyle !== 'solid'` returns `false` in 5-A.
 - `getFrame()` resolves formats only for `main` visible range for this task; later tasks can broaden to frozen regions if tests expose gaps.
+- `getFrame()` 必须把可见 view 单元格翻译成 raw 坐标后查 `formatStore`，再以 **view 坐标** 填入 `cellFormats`（见 Coordinate Space Invariant）。无 hide/sort/filter 时为恒等映射；本任务测试在无 view 变换场景下运行，但翻译层不可省略。
 
 Update `applyUndo` / `applyRedo` for `kind: 'format'` via `formatStore.restore(...)`.
 
@@ -686,7 +707,12 @@ import { DefaultGridEngine, InMemoryDataSource } from '../../src'
 function makeEngine() {
   return new DefaultGridEngine({
     data: new InMemoryDataSource({
-      schema: { fields: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] },
+      schema: {
+        fields: [
+          { id: 'a', name: 'A', type: 'text', width: 100 },
+          { id: 'b', name: 'B', type: 'text', width: 100 },
+        ],
+      },
       rows: [{ a: 'A1', b: 'B1' }, { a: 'A2', b: 'B2' }],
     }),
   })
@@ -740,10 +766,10 @@ snapshot(): readonly MergeRegion[]
 restore(regions: readonly MergeRegion[]): void
 ```
 
-Add to `RenderFrame`:
+Add to `RenderFrame`（**可选字段**，与 `cellFormats?` 同处理；renderer 读取时 `?? []`）：
 
 ```ts
-mergeRegions: readonly MergeRegion[]
+mergeRegions?: readonly MergeRegion[]
 ```
 
 Add `UndoCommand` variants:
@@ -760,7 +786,7 @@ Add `UndoCommand` variants:
 - Successful merge selects the full merge range.
 - `unmergeCells(range)` removes every merge region touched by `range`.
 - Undo/redo restore merge snapshots and selection snapshots.
-- `getFrame()` includes all merge regions intersecting visible range.
+- `getFrame()` includes all merge regions intersecting visible range，并按 Coordinate Space Invariant 翻译为 **view 坐标** 后填入 `mergeRegions`（raw store → view）。
 
 - [ ] **Step 4: Verify GREEN**
 
@@ -884,7 +910,13 @@ import { DefaultGridEngine, InMemoryDataSource } from '../../src'
 function makeEngine() {
   return new DefaultGridEngine({
     data: new InMemoryDataSource({
-      schema: { fields: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }] },
+      schema: {
+        fields: [
+          { id: 'a', name: 'A', type: 'text', width: 100 },
+          { id: 'b', name: 'B', type: 'text', width: 100 },
+          { id: 'c', name: 'C', type: 'text', width: 100 },
+        ],
+      },
       rows: [{ a: 'A1', b: 'B1', c: 'C1' }, { a: 'A2', b: 'B2', c: 'C2' }, { a: 'A3', b: 'B3', c: 'C3' }],
     }),
   })
@@ -908,11 +940,14 @@ describe('DefaultGridEngine format/merge structural remap', () => {
     engine.setFillColor({ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }, '#fff2cc')
     engine.mergeCells({ startRow: 0, endRow: 1, startCol: 1, endCol: 2 })
 
+    // 行：把 row 0,1 移到末尾 → 顺序 [2,0,1]，fill row0→1、merge rows0-1→1-2。
     expect(engine.moveRows([0, 1], null)).toBe(true)
-    expect(engine.moveCols(['b', 'c'], null)).toBe(true)
+    // 列：把 col 'a' 移到末尾 → 顺序 [b,c,a]，col index map {0→2,1→0,2→1}，fill col1→0、merge cols1-2→0-1。
+    // 注意：moveCols(['b','c'], null) 是 no-op（b,c 已在末尾），会返回 false，不能用作 reorder 用例。
+    expect(engine.moveCols(['a'], null)).toBe(true)
 
-    expect(engine.getCellFormat(1, 1)?.fillColor).toBe('#fff2cc')
-    expect(engine.getMergeRegion(1, 1)?.range).toEqual({ startRow: 1, endRow: 2, startCol: 1, endCol: 2 })
+    expect(engine.getCellFormat(1, 0)?.fillColor).toBe('#fff2cc')
+    expect(engine.getMergeRegion(1, 0)?.range).toEqual({ startRow: 1, endRow: 2, startCol: 0, endCol: 1 })
   })
 })
 ```
@@ -957,6 +992,8 @@ Call these methods from existing `DefaultGridEngine` row/col structural mutation
 - `deleteCols`
 - `moveRows`
 - `moveCols`
+
+**行/列 reorder 的 index map 不对称（实现前必读）：** `moveRows` 已经在 `normalizeMoveRows` 产出 `indexMap`（`oldRawIndex → newIndex`，见 `DefaultGridEngine.moveRows`），直接传给 `remapByRowIndexMap`。但 `moveCols` 走 fieldId 路径，`normalizeMoveCols` **不产出** 数值 index map。需在 `moveCols` 内由「移动前 raw 字段序」与「移动后 raw 字段序」推导出 `oldColIndex → newColIndex` map（两份顺序都在 `normalizeMoveCols` 作用域内可得），再传给 `remapByColIndexMap`。index map 语义须与 `MergeStore.remap` 单测一致（`oldIndex → newIndex`，对 range 的 start/end 各自映射后重新规整）。
 
 Do not remap on hide/unhide; hidden rows/cols affect view visibility, not raw format coordinates.
 
@@ -1018,7 +1055,7 @@ Expected: FAIL because renderer ignores `mergeRegions`.
 
 Rules:
 
-- Build a per-frame lookup from covered cell key `row:col` to merge region.
+- Build a per-frame lookup from covered cell key `row:col` to merge region. `frame.mergeRegions` / `frame.cellFormats` 为可选，读取时用 `?? []`（见 Coordinate Space Invariant）。
 - In normal cell loop:
   - skip non-anchor cells covered by a merge.
   - for anchor cells, compute merged rect by summing axis `getSize()` across the merge range.
@@ -1074,7 +1111,12 @@ describe('Grid Phase 5-A APIs', () => {
     const container = document.createElement('div')
     const grid = new Grid(container, {
       data: new InMemoryDataSource({
-        schema: { fields: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] },
+        schema: {
+          fields: [
+            { id: 'a', name: 'A', type: 'text', width: 100 },
+            { id: 'b', name: 'B', type: 'text', width: 100 },
+          ],
+        },
         rows: [{ a: 'A1', b: 'B1' }, { a: 'A2', b: 'B2' }],
       }),
     })
@@ -1273,6 +1315,7 @@ git commit -m "docs(repo): 更新 Phase 5-A 交付状态"
 | undo/redo for format | Task 3 |
 | merge/unmerge | Tasks 6, 8 |
 | row/col structural remap | Task 7 |
+| raw store → view 渲染坐标翻译 | Coordinate Space Invariant + Tasks 3, 6, 8 |
 | single canvas internal render stages | Tasks 4, 5, 8 |
 | internal clipboard merge guard | Task 9 |
 | public API | Task 9 |
@@ -1282,3 +1325,5 @@ git commit -m "docs(repo): 更新 Phase 5-A 交付状态"
 Known implementation gate:
 
 - Merge + sort/filter is conservative; if current runtime cannot block or reason about it cleanly, stop and amend this plan before implementation.
+- 格式/合并按 raw 坐标存储，渲染按 view 坐标绘制（见 Coordinate Space Invariant）。若 `getFrame()` 的 view↔raw 翻译在 5-A 体量过大，STOP 并拆任务；不得让 painter 直接吃 raw 坐标。必须补一条「隐藏行下填充跟随正确行」渲染测试。
+- 行列 reorder remap 的 index map 不对称：`moveRows` 现成有 `indexMap`，`moveCols` 需在引擎内自行推导 `oldColIndex → newColIndex`（Task 7 step 3）。
