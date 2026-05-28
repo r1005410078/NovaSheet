@@ -8,6 +8,7 @@
  */
 
 import type { ResolvedCellFormat } from '@novasheet/core'
+import { MergeLookup, mergedRectSize } from '../paint/merge-lookup'
 
 /** FormatFillPainter.paint() 所需参数（axes duck-typed，便于单测注入最简 stub） */
 export interface FormatFillPaintArgs {
@@ -27,6 +28,11 @@ export interface FormatFillPaintArgs {
   scrollOffsetY: number
   /** 已解析的单元格格式列表（view 坐标） */
   cellFormats: readonly ResolvedCellFormat[]
+  /**
+   * 合并查找表（Phase 5-A）。可选；缺省时按单格填充。
+   * anchor 单元格的填充扩展为整块合并矩形；被覆盖的非 anchor 单元格忽略其填充。
+   */
+  merges?: MergeLookup
 }
 
 /**
@@ -37,7 +43,7 @@ export interface FormatFillPaintArgs {
  */
 export class FormatFillPainter {
   paint(ctx: CanvasRenderingContext2D, args: FormatFillPaintArgs): void {
-    const { rowsAxis, colsAxis, rect, scrollOffsetX, scrollOffsetY, cellFormats } = args
+    const { rowsAxis, colsAxis, rect, scrollOffsetX, scrollOffsetY, cellFormats, merges } = args
     if (cellFormats.length === 0) return
 
     ctx.save()
@@ -54,13 +60,18 @@ export class FormatFillPainter {
       if (rowIndex < rowFirst || rowIndex > rowLast) continue
       if (colIndex < colFirst || colIndex > colLast) continue
 
+      // 合并区域：非 anchor 被覆盖格忽略填充；anchor 扩展为整块合并矩形。
+      const region = merges?.regionAt(rowIndex, colIndex)
+      if (region && !merges!.isAnchor(region, rowIndex, colIndex)) continue
+
       const x = rect.x + colsAxis.indexToPosition(colIndex) - scrollOffsetX
       const y = rect.y + rowsAxis.indexToPosition(rowIndex) - scrollOffsetY
-      const width = colsAxis.getSize(colIndex)
-      const height = rowsAxis.getSize(rowIndex)
+      const size = region
+        ? mergedRectSize(region.range, rowsAxis, colsAxis)
+        : { width: colsAxis.getSize(colIndex), height: rowsAxis.getSize(rowIndex) }
 
       ctx.fillStyle = fillColor
-      ctx.fillRect(x, y, width, height)
+      ctx.fillRect(x, y, size.width, size.height)
     }
 
     ctx.restore()

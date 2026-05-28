@@ -65,6 +65,7 @@ import type {
   Theme,
 } from '@novasheet/core'
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
+import { MergeLookup, mergedRectSize } from '../paint/merge-lookup'
 import { CellPainter } from '../painters/CellPainter'
 import { EmptyStatePainter } from '../painters/EmptyStatePainter'
 import { FormatBorderPainter } from '../painters/FormatBorderPainter'
@@ -358,6 +359,9 @@ export class Canvas2DRenderer {
       return
     }
 
+    // 合并查找表：anchor 绘制合并矩形、跳过被覆盖的非 anchor 单元格，填充与文本共用一份。
+    const merges = new MergeLookup(ctx.frame.mergeRegions ?? [])
+
     // 格式填充背景：先于文本绘制，确保文字不被遮挡；content layer 最靠后的阶段
     const cellFormats = ctx.frame.cellFormats ?? []
     if (cellFormats.length > 0) {
@@ -371,6 +375,7 @@ export class Canvas2DRenderer {
           scrollOffsetX: region.scrollOffsetX,
           scrollOffsetY: region.scrollOffsetY,
           cellFormats,
+          merges,
         })
       }
     }
@@ -379,7 +384,7 @@ export class Canvas2DRenderer {
     this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
     this.preloadVisibleRows(ctx)
     for (const region of paintOrder)
-      this.paintCellContentRegion(region, data, rowsAxis, colsAxis, ctx.frame.cellEdit?.cell)
+      this.paintCellContentRegion(region, data, rowsAxis, colsAxis, merges, ctx.frame.cellEdit?.cell)
     this.paintHeaders(
       paintOrder,
       data,
@@ -402,6 +407,7 @@ export class Canvas2DRenderer {
       // 自定义边框：在默认格线之上绘制，确保用户颜色/宽度覆盖默认格线。
       const cellFormats = ctx.frame.cellFormats ?? []
       if (cellFormats.length > 0) {
+        const merges = new MergeLookup(ctx.frame.mergeRegions ?? [])
         for (const region of paintOrder) {
           this.formatBorderPainter.paint(this.ctx, {
             rowsAxis,
@@ -412,6 +418,7 @@ export class Canvas2DRenderer {
             scrollOffsetX: region.scrollOffsetX,
             scrollOffsetY: region.scrollOffsetY,
             cellFormats,
+            merges,
           })
         }
       }
@@ -591,6 +598,7 @@ export class Canvas2DRenderer {
     data: DataSource,
     rowsAxis: Axis,
     colsAxis: Axis,
+    merges: MergeLookup,
     editingCell?: CellAddress,
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
@@ -608,9 +616,13 @@ export class Canvas2DRenderer {
         if (editingCell && editingCell.rowIndex === r && editingCell.colIndex === c) continue
         const field = schema.fields[c]
         if (!field) continue
+
+        // 合并区域整体在独立 anchor pass 绘制（含 anchor 滚出可见范围的情形），这里全部跳过。
+        if (merges.regionAt(r, c)) continue
+
         const xLeft = colsAxis.indexToPosition(c)
-        const colWidth = colsAxis.getSize(c)
         const cellX = rect.x + xLeft - scrollOffsetX
+        const colWidth = colsAxis.getSize(c)
         const value = data.getCell(r, field.id)
         this.cellPainter.paint(this.ctx, {
           value,
@@ -620,7 +632,51 @@ export class Canvas2DRenderer {
       }
     }
 
+    this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, editingCell)
+
     this.ctx.restore()
+  }
+
+  /**
+   * 合并区域 anchor 绘制 pass（content layer）。
+   *
+   * 与单格循环分离：anchor 可能在可见 row/col 范围之外（向上/左滚出），单格循环不会访问它，
+   * 但区域仍与可见区相交、内容应跨入可见区。这里按区域 anchor 的计算位置绘制一次合并矩形；
+   * 负坐标由外层 clip 处理。仅绘制与本 region 可见范围相交的合并区域。
+   */
+  private paintMergeAnchors(
+    region: RenderRegion,
+    data: DataSource,
+    rowsAxis: Axis,
+    colsAxis: Axis,
+    merges: MergeLookup,
+    editingCell?: CellAddress,
+  ): void {
+    if (merges.isEmpty) return
+    const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
+    const schema = data.getSchema()
+
+    for (const merge of merges.regions) {
+      const { range } = merge
+      // 仅处理与本 region 可见 row/col 范围相交的合并区域。
+      if (range.endRow < rowRange[0] || range.startRow > rowRange[1]) continue
+      if (range.endCol < colRange[0] || range.startCol > colRange[1]) continue
+
+      const { rowIndex: ar, colIndex: ac } = merge.anchor
+      if (editingCell && editingCell.rowIndex === ar && editingCell.colIndex === ac) continue
+      const field = schema.fields[ac]
+      if (!field) continue
+
+      const cellX = rect.x + colsAxis.indexToPosition(ac) - scrollOffsetX
+      const cellY = rect.y + rowsAxis.indexToPosition(ar) - scrollOffsetY
+      const { width, height } = mergedRectSize(range, rowsAxis, colsAxis)
+      const value = data.getCell(ar, field.id)
+      this.cellPainter.paint(this.ctx, {
+        value,
+        rect: { x: cellX, y: cellY, width, height },
+        field,
+      })
+    }
   }
 
   private paintGridLinesRegion(region: RenderRegion, rowsAxis: Axis, colsAxis: Axis): void {

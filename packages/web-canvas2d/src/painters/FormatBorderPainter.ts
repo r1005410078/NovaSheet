@@ -10,6 +10,7 @@
 
 import type { ResolvedCellFormat } from '@novasheet/core'
 import { snapLineInside } from '../paint/line-snap'
+import type { MergeLookup } from '../paint/merge-lookup'
 
 /** FormatBorderPainter.paint() 所需参数（axes duck-typed，便于单测注入最简 stub） */
 export interface FormatBorderPaintArgs {
@@ -21,6 +22,11 @@ export interface FormatBorderPaintArgs {
   scrollOffsetX: number
   scrollOffsetY: number
   cellFormats: readonly ResolvedCellFormat[]
+  /**
+   * 合并查找表（Phase 5-A）。可选；提供时过滤合并区域内部边（相邻被覆盖格之间的边），
+   * 避免合并区域内出现重复内线；外框边仍正常绘制。
+   */
+  merges?: MergeLookup
 }
 
 /** 语义线宽到像素的映射。 */
@@ -41,7 +47,7 @@ interface EdgeCmd {
  */
 export class FormatBorderPainter {
   paint(ctx: CanvasRenderingContext2D, args: FormatBorderPaintArgs): void {
-    const { rowsAxis, colsAxis, rect, scrollOffsetX, scrollOffsetY, cellFormats } = args
+    const { rowsAxis, colsAxis, rect, scrollOffsetX, scrollOffsetY, cellFormats, merges } = args
     if (cellFormats.length === 0) return
 
     const [rowFirst, rowLast] = args.rowRange
@@ -66,11 +72,19 @@ export class FormatBorderPainter {
       const rectTop = rect.y
       const rectBottom = rect.y + rect.height
 
+      // 合并区域内部边过滤：被覆盖格只保留与区域外框重合的边，丢弃相邻覆盖格之间的内部边。
+      const region = merges?.regionAt(rowIndex, colIndex)
+      const range = region?.range
+      const skipTop = range !== undefined && rowIndex > range.startRow
+      const skipBottom = range !== undefined && rowIndex < range.endRow
+      const skipLeft = range !== undefined && colIndex > range.startCol
+      const skipRight = range !== undefined && colIndex < range.endCol
+
       const sides = [
-        { edge: borders.top, isH: true, rawCoord: cellY, xA: cellX, xB: cellX + cellW },
-        { edge: borders.bottom, isH: true, rawCoord: cellY + cellH, xA: cellX, xB: cellX + cellW },
-        { edge: borders.left, isH: false, rawCoord: cellX, yA: cellY, yB: cellY + cellH },
-        { edge: borders.right, isH: false, rawCoord: cellX + cellW, yA: cellY, yB: cellY + cellH },
+        { edge: skipTop ? undefined : borders.top, isH: true, rawCoord: cellY, xA: cellX, xB: cellX + cellW },
+        { edge: skipBottom ? undefined : borders.bottom, isH: true, rawCoord: cellY + cellH, xA: cellX, xB: cellX + cellW },
+        { edge: skipLeft ? undefined : borders.left, isH: false, rawCoord: cellX, yA: cellY, yB: cellY + cellH },
+        { edge: skipRight ? undefined : borders.right, isH: false, rawCoord: cellX + cellW, yA: cellY, yB: cellY + cellH },
       ] as const
 
       for (const side of sides) {
