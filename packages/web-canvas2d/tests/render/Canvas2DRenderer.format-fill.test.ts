@@ -68,7 +68,7 @@ describe('Canvas2DRenderer — format fill 阶段', () => {
 
     // 填充（set:fillStyle '#fff2cc'）必须在文字 'Hello' 的 fillText 之前
     const fillStyleIdx = ops.findIndex(
-      (o) => o.op === 'set:fillStyle' && o.op === 'set:fillStyle' && (o as { op: 'set:fillStyle'; value: unknown }).value === '#fff2cc',
+      (o) => o.op === 'set:fillStyle' && (o as { op: 'set:fillStyle'; value: unknown }).value === '#fff2cc',
     )
     const fillTextIdx = ops.findIndex(
       (o) => o.op === 'fillText' && (o as { op: 'fillText'; args: [string, number, number] }).args[0] === 'Hello',

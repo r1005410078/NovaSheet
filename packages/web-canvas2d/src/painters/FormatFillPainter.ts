@@ -45,9 +45,14 @@ export class FormatFillPainter {
     ctx.rect(rect.x, rect.y, rect.width, rect.height)
     ctx.clip()
 
+    const [rowFirst, rowLast] = args.rowRange
+    const [colFirst, colLast] = args.colRange
+
     for (const { rowIndex, colIndex, format } of cellFormats) {
       const { fillColor } = format
       if (!fillColor) continue
+      if (rowIndex < rowFirst || rowIndex > rowLast) continue
+      if (colIndex < colFirst || colIndex > colLast) continue
 
       const x = rect.x + colsAxis.indexToPosition(colIndex) - scrollOffsetX
       const y = rect.y + rowsAxis.indexToPosition(rowIndex) - scrollOffsetY
