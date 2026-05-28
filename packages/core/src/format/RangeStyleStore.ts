@@ -1,5 +1,6 @@
 import type { CellRange } from '../interaction/SelectionModel'
-import type { CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
+import type { BorderPreset, BorderStyle, CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
+import { borderPatchForCell } from './BorderPreset'
 
 /** Append-only sparse manual format store. Later layers win over earlier ones. */
 export class RangeStyleStore {
@@ -12,6 +13,32 @@ export class RangeStyleStore {
 
   clearFill(range: CellRange): void {
     this.layers.push({ range, patch: {}, clearFill: true, order: this.nextOrder++ })
+  }
+
+  clearBorders(range: CellRange): void {
+    this.layers.push({ range, patch: {}, clearBorders: true, order: this.nextOrder++ })
+  }
+
+  /**
+   * Applies border patches for every cell in `range` using the given preset.
+   * `preset === 'clear'` routes to `clearBorders`. The store expands per-cell;
+   * callers must not pass 1M-row ranges.
+   */
+  applyBorders(range: CellRange, preset: BorderPreset, border: BorderStyle): void {
+    if (preset === 'clear') {
+      this.clearBorders(range)
+      return
+    }
+    for (let row = range.startRow; row <= range.endRow; row++) {
+      for (let col = range.startCol; col <= range.endCol; col++) {
+        const patch = borderPatchForCell(range, row, col, preset, border)
+        // Only push a layer when the patch actually sets at least one edge.
+        if (Object.keys(patch).length > 0) {
+          const cellRange: CellRange = { startRow: row, endRow: row, startCol: col, endCol: col }
+          this.layers.push({ range: cellRange, patch: { borders: patch }, order: this.nextOrder++ })
+        }
+      }
+    }
   }
 
   resolveCell(rowIndex: number, colIndex: number): CellFormat | undefined {
@@ -27,6 +54,9 @@ export class RangeStyleStore {
       if (layer.clearFill) {
         fillColor = undefined
         fillActive = false
+      } else if (layer.clearBorders) {
+        borders = undefined
+        hasBorders = false
       } else {
         if (layer.patch.fillColor !== undefined) {
           fillColor = layer.patch.fillColor

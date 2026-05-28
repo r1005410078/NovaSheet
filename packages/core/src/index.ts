@@ -151,6 +151,7 @@ export type { AutofitRowsParams, AutofitRowsResult } from './engine/AutofitRowHe
 export type { UndoCommand, CellWrite } from './undo/UndoCommand'
 
 export { RangeStyleStore } from './format/RangeStyleStore'
+export { borderPatchForCell } from './format/BorderPreset'
 export type {
   BorderLineStyle,
   BorderPreset,

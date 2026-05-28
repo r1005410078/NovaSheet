@@ -32,5 +32,7 @@ export interface FormatLayer {
   readonly range: CellRange
   readonly patch: CellFormat
   readonly clearFill?: boolean
+  /** When true, clears `borders` accumulated from prior layers for covered cells. */
+  readonly clearBorders?: boolean
   readonly order: number
 }
