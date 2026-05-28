@@ -67,6 +67,7 @@ import type {
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { CellPainter } from '../painters/CellPainter'
 import { EmptyStatePainter } from '../painters/EmptyStatePainter'
+import { FormatFillPainter } from '../painters/FormatFillPainter'
 import { GridLinesPainter } from '../painters/GridLinesPainter'
 import { HeaderPainter } from '../painters/HeaderPainter'
 import { RowHeaderPainter } from '../painters/RowHeaderPainter'
@@ -144,6 +145,8 @@ export class Canvas2DRenderer {
   private rowHeaderPainter: RowHeaderPainter
   /** 无数据插画绘制器 */
   private emptyStatePainter: EmptyStatePainter
+  /** 格式填充背景绘制器（Phase 5-A） */
+  private formatFillPainter: FormatFillPainter
 
   /**
    * 组装单帧绘制管线。
@@ -192,6 +195,7 @@ export class Canvas2DRenderer {
     this.headerPainter = new HeaderPainter(this.theme)
     this.rowHeaderPainter = new RowHeaderPainter(this.theme)
     this.emptyStatePainter = new EmptyStatePainter(this.theme)
+    this.formatFillPainter = new FormatFillPainter()
   }
 
   /** 注入或替换 TextMeasurer。autofit 触发或 backend 切换 measurer 时调用。 */
@@ -348,6 +352,23 @@ export class Canvas2DRenderer {
       )
       this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
       return
+    }
+
+    // 格式填充背景：先于文本绘制，确保文字不被遮挡；content layer 最靠后的阶段
+    const cellFormats = ctx.frame.cellFormats ?? []
+    if (cellFormats.length > 0) {
+      for (const region of paintOrder) {
+        this.formatFillPainter.paint(this.ctx, {
+          rowsAxis,
+          colsAxis,
+          rect: region.rect,
+          rowRange: region.rowRange,
+          colRange: region.colRange,
+          scrollOffsetX: region.scrollOffsetX,
+          scrollOffsetY: region.scrollOffsetY,
+          cellFormats,
+        })
+      }
     }
 
     // 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
