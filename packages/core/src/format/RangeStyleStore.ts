@@ -15,24 +15,35 @@ export class RangeStyleStore {
   }
 
   resolveCell(rowIndex: number, colIndex: number): CellFormat | undefined {
+    // Accumulate field-level overrides in write order; undefined fields do not clear prior values.
+    // A cleared cell and a never-formatted cell both resolve to undefined by design.
     let fillColor: string | undefined
-    let fillCleared = false
+    let fillActive = false   // true once a fillColor has been set (not cleared)
+    let borders: CellFormat['borders']
+    let hasBorders = false
 
-    // Iterate layers in order; later entries override earlier
     for (const layer of this.layers) {
       if (!inRange(rowIndex, colIndex, layer.range)) continue
       if (layer.clearFill) {
-        fillCleared = true
         fillColor = undefined
-      } else if (layer.patch.fillColor !== undefined) {
-        fillCleared = false
-        fillColor = layer.patch.fillColor
+        fillActive = false
+      } else {
+        if (layer.patch.fillColor !== undefined) {
+          fillColor = layer.patch.fillColor
+          fillActive = true
+        }
+        if (layer.patch.borders !== undefined) {
+          borders = layer.patch.borders
+          hasBorders = true
+        }
       }
     }
 
-    if (fillColor === undefined && fillCleared) return undefined
-    if (fillColor === undefined) return undefined
-    return { fillColor }
+    if (!fillActive && !hasBorders) return undefined
+    const result: { fillColor?: string; borders?: CellFormat['borders'] } = {}
+    if (fillActive) result.fillColor = fillColor
+    if (hasBorders) result.borders = borders
+    return result
   }
 
   resolveVisible(range: CellRange): readonly ResolvedCellFormat[] {
@@ -54,7 +65,7 @@ export class RangeStyleStore {
 
   restore(layers: readonly FormatLayer[]): void {
     this.layers = [...layers]
-    this.nextOrder = layers.length === 0 ? 0 : Math.max(...layers.map(l => l.order)) + 1
+    this.nextOrder = layers.reduce((m, l) => Math.max(m, l.order), -1) + 1
   }
 
   getLayerCount(): number {

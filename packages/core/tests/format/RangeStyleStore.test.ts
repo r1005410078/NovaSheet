@@ -18,6 +18,18 @@ describe('RangeStyleStore', () => {
     ])
   })
 
+  it('borders field is preserved through generic merge and not erased by a later fillColor layer', () => {
+    const store = new RangeStyleStore()
+    store.apply({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, {
+      borders: { top: { color: '#000', width: 'thin', lineStyle: 'solid' } },
+    })
+    store.apply({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, { fillColor: '#fff2cc' })
+
+    const result = store.resolveCell(0, 0)
+    expect(result?.borders?.top?.color).toBe('#000')
+    expect(result?.fillColor).toBe('#fff2cc')
+  })
+
   it('clearFill removes only fillColor while keeping other fields available for later tasks', () => {
     const store = new RangeStyleStore()
     store.apply({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 }, { fillColor: '#fff2cc' })

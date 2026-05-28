@@ -150,7 +150,6 @@ export { autofitRowHeights } from './engine/AutofitRowHeights'
 export type { AutofitRowsParams, AutofitRowsResult } from './engine/AutofitRowHeights'
 export type { UndoCommand, CellWrite } from './undo/UndoCommand'
 
-// Phase 5-A: range format types and store
 export { RangeStyleStore } from './format/RangeStyleStore'
 export type {
   BorderLineStyle,
