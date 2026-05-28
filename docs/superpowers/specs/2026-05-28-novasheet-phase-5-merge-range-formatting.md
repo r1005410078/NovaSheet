@@ -205,6 +205,20 @@ getMergeRegion(rowIndex: number, colIndex: number): MergeRegion | null
 
 ## 8. Rendering
 
+### 8.0 渲染架构决策
+
+Phase 5-A 采用 **single canvas 内部多渲染阶段**：
+
+- 不新增第二个 canvas。
+- 不新增 DOM cell / DOM format overlay。
+- 不改变 NovaSheet 的 Single Canvas + full visible-region redraw ADR。
+- 在现有 `Canvas2DRenderer` 调度中插入独立 painter：
+  - `FormatFillPainter`：只画用户填充色。
+  - `FormatBorderPainter`：只画用户自定义边框。
+- `CellPainter` 继续只负责文字；`GridLinesPainter` 继续只负责 theme 默认网格线。
+
+Rejected option：多真实 canvas 分层（例如 `fillCanvas` / `baseCanvas` / `borderCanvas`）。它的物理隔离和局部重绘优势不足以抵消 DPR、native scroll、frozen region、resize 和 compositor 合成同步成本；且 3-canvas 方案会违反当前 Single Canvas ADR。
+
 ### 8.1 绘制顺序
 
 | 顺序 | 内容 |
@@ -272,6 +286,7 @@ bun run --filter @novasheet/web build && bun run --filter @novasheet/web-canvas2
 | range style clear 泄漏旧样式 | 对 clear 行为写纯函数单测；不要依赖 ad hoc 覆盖 |
 | 大范围格式导致内存爆炸 | sparse store + visible resolve；禁止 per-cell 展开 |
 | custom border 与 default grid line 重叠 | 自定义 border 后绘制，覆盖默认 grid line |
+| 多真实 canvas 同步复杂 | 5-A 明确不新增 canvas；用 single canvas 内部 painter/stage 分层 |
 | 结构变更 remap 漏边界 | Phase 5-A plan 必须把 insert/delete/reorder/hide 的 remap 单独成任务 |
 | theme 与用户样式边界混淆 | theme 管默认视觉；CellFormat 管用户数据样式 |
 
@@ -285,3 +300,4 @@ bun run --filter @novasheet/web build && bun run --filter @novasheet/web-canvas2
 4. Range style store 必须 sparse，不按 1M 行展开。
 5. 5-A 的 border 类型预留 dashed/dotted/double，但 UI 和 renderer 只写 `solid`。
 6. 条件格式与数字格式进入 Phase 5 规划，但必须后续独立 spec/plan。
+7. 渲染采用 single canvas 内部多阶段；不做多真实 canvas 分层。
