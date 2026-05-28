@@ -67,6 +67,7 @@ import type {
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { CellPainter } from '../painters/CellPainter'
 import { EmptyStatePainter } from '../painters/EmptyStatePainter'
+import { FormatBorderPainter } from '../painters/FormatBorderPainter'
 import { FormatFillPainter } from '../painters/FormatFillPainter'
 import { GridLinesPainter } from '../painters/GridLinesPainter'
 import { HeaderPainter } from '../painters/HeaderPainter'
@@ -147,6 +148,8 @@ export class Canvas2DRenderer {
   private emptyStatePainter: EmptyStatePainter
   /** 格式填充背景绘制器（Phase 5-A） */
   private formatFillPainter: FormatFillPainter
+  /** 自定义边框绘制器（Phase 5-A） */
+  private formatBorderPainter: FormatBorderPainter
 
   /**
    * 组装单帧绘制管线。
@@ -196,6 +199,7 @@ export class Canvas2DRenderer {
     this.rowHeaderPainter = new RowHeaderPainter(this.theme)
     this.emptyStatePainter = new EmptyStatePainter(this.theme)
     this.formatFillPainter = new FormatFillPainter()
+    this.formatBorderPainter = new FormatBorderPainter()
   }
 
   /** 注入或替换 TextMeasurer。autofit 触发或 backend 切换 measurer 时调用。 */
@@ -394,6 +398,23 @@ export class Canvas2DRenderer {
     if (!ctx.isEmpty) {
       for (const region of paintOrder) this.paintGridLinesRegion(region, rowsAxis, colsAxis)
       this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
+
+      // 自定义边框：在默认格线之上绘制，确保用户颜色/宽度覆盖默认格线。
+      const cellFormats = ctx.frame.cellFormats ?? []
+      if (cellFormats.length > 0) {
+        for (const region of paintOrder) {
+          this.formatBorderPainter.paint(this.ctx, {
+            rowsAxis,
+            colsAxis,
+            rect: region.rect,
+            rowRange: region.rowRange,
+            colRange: region.colRange,
+            scrollOffsetX: region.scrollOffsetX,
+            scrollOffsetY: region.scrollOffsetY,
+            cellFormats,
+          })
+        }
+      }
     }
 
     // 视口外框：单元格网格线不覆盖 canvas 右/底边，内容不足一屏时需单独描边。
