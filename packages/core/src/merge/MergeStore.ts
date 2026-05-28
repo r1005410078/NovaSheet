@@ -1,4 +1,9 @@
 import type { CellRange } from '../interaction/SelectionModel'
+import {
+  remapSpanAfterDelete,
+  remapSpanAfterInsert,
+  remapSpanByIndexMap,
+} from '../coords/remap'
 
 /**
  * 一个合并单元格区域。`range` 为矩形覆盖范围，`anchor` 固定为左上角单元格
@@ -76,6 +81,86 @@ export class MergeStore {
     this.regions = [...regions]
     this.nextCounter = regions.reduce((max, region) => Math.max(max, parseMergeIdSeq(region.id)), 0) + 1
   }
+
+  /** 行结构变更（raw 坐标）：在 `at` 前插入 `count` 行，平移所有区域的行区间。 */
+  remapAfterRowsInserted(at: number, count: number): void {
+    if (count <= 0) return
+    this.remapRegions((range) => {
+      const rows = remapSpanAfterInsert({ start: range.startRow, end: range.endRow }, at, count)
+      return { ...range, startRow: rows.start, endRow: rows.end }
+    })
+  }
+
+  /** 行结构变更（raw 坐标）：删除 `removedSorted` 行；被任一删除行触及的区域整体移除（5-A 不收缩）。 */
+  remapAfterRowsDeleted(removedSorted: readonly number[]): void {
+    if (removedSorted.length === 0) return
+    this.remapRegions((range) => {
+      const rows = remapSpanAfterDelete({ start: range.startRow, end: range.endRow }, removedSorted)
+      if (!rows || spanTouchedByDeletions(range.startRow, range.endRow, removedSorted)) return null
+      return { ...range, startRow: rows.start, endRow: rows.end }
+    })
+  }
+
+  /** 列结构变更（raw 坐标）：在 `at` 前插入 `count` 列，平移所有区域的列区间。 */
+  remapAfterColsInserted(at: number, count: number): void {
+    if (count <= 0) return
+    this.remapRegions((range) => {
+      const cols = remapSpanAfterInsert({ start: range.startCol, end: range.endCol }, at, count)
+      return { ...range, startCol: cols.start, endCol: cols.end }
+    })
+  }
+
+  /** 列结构变更（raw 坐标）：删除 `removedSorted` 列；被任一删除列触及的区域整体移除（5-A 不收缩）。 */
+  remapAfterColsDeleted(removedSorted: readonly number[]): void {
+    if (removedSorted.length === 0) return
+    this.remapRegions((range) => {
+      const cols = remapSpanAfterDelete({ start: range.startCol, end: range.endCol }, removedSorted)
+      if (!cols || spanTouchedByDeletions(range.startCol, range.endCol, removedSorted)) return null
+      return { ...range, startCol: cols.start, endCol: cols.end }
+    })
+  }
+
+  /** 行 reorder（raw 坐标）：用 `oldIndex → newIndex` map 映射每个区域行区间后重规整。 */
+  remapByRowIndexMap(indexMap: ReadonlyMap<number, number>): void {
+    this.remapRegions((range) => {
+      const rows = remapSpanByIndexMap({ start: range.startRow, end: range.endRow }, indexMap)
+      if (!rows) return null
+      return { ...range, startRow: rows.start, endRow: rows.end }
+    })
+  }
+
+  /** 列 reorder（raw 坐标）：用 `oldIndex → newIndex` map 映射每个区域列区间后重规整。 */
+  remapByColIndexMap(indexMap: ReadonlyMap<number, number>): void {
+    this.remapRegions((range) => {
+      const cols = remapSpanByIndexMap({ start: range.startCol, end: range.endCol }, indexMap)
+      if (!cols) return null
+      return { ...range, startCol: cols.start, endCol: cols.end }
+    })
+  }
+
+  /** 对每个区域 range 应用 `remap`；返回 null 的区域被移除，其余按新 range 重建 anchor。 */
+  private remapRegions(remap: (range: CellRange) => CellRange | null): void {
+    const next: MergeRegion[] = []
+    for (const region of this.regions) {
+      const range = remap(region.range)
+      if (!range) continue
+      next.push({
+        id: region.id,
+        range,
+        anchor: { rowIndex: range.startRow, colIndex: range.startCol },
+      })
+    }
+    this.regions = next
+  }
+}
+
+/** 区间 `[start, end]`（含两端）是否与任一被删除索引相交。 */
+function spanTouchedByDeletions(start: number, end: number, removedSorted: readonly number[]): boolean {
+  for (const removed of removedSorted) {
+    if (removed > end) break
+    if (removed >= start) return true
+  }
+  return false
 }
 
 function isSingleCell(range: CellRange): boolean {

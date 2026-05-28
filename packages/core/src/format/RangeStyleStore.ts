@@ -1,6 +1,11 @@
 import type { CellRange } from '../interaction/SelectionModel'
 import type { BorderPreset, BorderStyle, CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
 import { borderPatchForCell } from './BorderPreset'
+import {
+  remapSpanAfterDelete,
+  remapSpanAfterInsert,
+  remapSpanByIndexMap,
+} from '../coords/remap'
 
 /** Append-only sparse manual format store. Later layers win over earlier ones. */
 export class RangeStyleStore {
@@ -116,6 +121,72 @@ export class RangeStyleStore {
 
   getLayerCount(): number {
     return this.layers.length
+  }
+
+  /** 行结构变更（raw 坐标）：在 `at` 前插入 `count` 行，平移每层的行区间。 */
+  remapAfterRowsInserted(at: number, count: number): void {
+    if (count <= 0) return
+    this.remapLayers((range) => {
+      const rows = remapSpanAfterInsert({ start: range.startRow, end: range.endRow }, at, count)
+      return { ...range, startRow: rows.start, endRow: rows.end }
+    })
+  }
+
+  /** 行结构变更（raw 坐标）：删除 `removedSorted` 行；无幸存行的层被丢弃。 */
+  remapAfterRowsDeleted(removedSorted: readonly number[]): void {
+    if (removedSorted.length === 0) return
+    this.remapLayers((range) => {
+      const rows = remapSpanAfterDelete({ start: range.startRow, end: range.endRow }, removedSorted)
+      if (!rows) return null
+      return { ...range, startRow: rows.start, endRow: rows.end }
+    })
+  }
+
+  /** 列结构变更（raw 坐标）：在 `at` 前插入 `count` 列，平移每层的列区间。 */
+  remapAfterColsInserted(at: number, count: number): void {
+    if (count <= 0) return
+    this.remapLayers((range) => {
+      const cols = remapSpanAfterInsert({ start: range.startCol, end: range.endCol }, at, count)
+      return { ...range, startCol: cols.start, endCol: cols.end }
+    })
+  }
+
+  /** 列结构变更（raw 坐标）：删除 `removedSorted` 列；无幸存列的层被丢弃。 */
+  remapAfterColsDeleted(removedSorted: readonly number[]): void {
+    if (removedSorted.length === 0) return
+    this.remapLayers((range) => {
+      const cols = remapSpanAfterDelete({ start: range.startCol, end: range.endCol }, removedSorted)
+      if (!cols) return null
+      return { ...range, startCol: cols.start, endCol: cols.end }
+    })
+  }
+
+  /** 行 reorder（raw 坐标）：用 `oldIndex → newIndex` map 映射每层行区间后重规整。 */
+  remapByRowIndexMap(indexMap: ReadonlyMap<number, number>): void {
+    this.remapLayers((range) => {
+      const rows = remapSpanByIndexMap({ start: range.startRow, end: range.endRow }, indexMap)
+      if (!rows) return null
+      return { ...range, startRow: rows.start, endRow: rows.end }
+    })
+  }
+
+  /** 列 reorder（raw 坐标）：用 `oldIndex → newIndex` map 映射每层列区间后重规整。 */
+  remapByColIndexMap(indexMap: ReadonlyMap<number, number>): void {
+    this.remapLayers((range) => {
+      const cols = remapSpanByIndexMap({ start: range.startCol, end: range.endCol }, indexMap)
+      if (!cols) return null
+      return { ...range, startCol: cols.start, endCol: cols.end }
+    })
+  }
+
+  /** 对每层 range 应用 `remap`；返回 null 的层被丢弃（保持原有 order 相对顺序）。 */
+  private remapLayers(remap: (range: CellRange) => CellRange | null): void {
+    const next: FormatLayer[] = []
+    for (const layer of this.layers) {
+      const range = remap(layer.range)
+      if (range) next.push({ ...layer, range })
+    }
+    this.layers = next
   }
 }
 

@@ -482,6 +482,8 @@ export class DefaultGridEngine implements GridEngine {
     const newIds = this.rawData.insertRows(beforeUnderlyingRow, count)
     this.rawRowsAxis.insertRange(beforeUnderlyingRow, count, this.resolveDefaultRowHeight())
     this.rebuildViewAxis()
+    this.formatStore.remapAfterRowsInserted(beforeUnderlyingRow, count)
+    this.mergeStore.remapAfterRowsInserted(beforeUnderlyingRow, count)
     this.selection.remapAfterRowsInserted(beforeUnderlyingRow, count)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({ kind: 'insertRows', at: beforeUnderlyingRow, count, newIds, selectionBefore, selectionAfter })
@@ -500,6 +502,9 @@ export class DefaultGridEngine implements GridEngine {
     const snapshots = this.rawData.deleteRows(underlyingRowIds)
     this.rawRowsAxis.deleteRange(underlyingRowIds)
     this.rebuildViewAxis()
+    const removedRowsSorted = [...underlyingRowIds].sort((a, b) => a - b)
+    this.formatStore.remapAfterRowsDeleted(removedRowsSorted)
+    this.mergeStore.remapAfterRowsDeleted(removedRowsSorted)
     this.selection.remapAfterRowsDeleted(underlyingRowIds)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({ kind: 'deleteRows', snapshots, deletedHeights, selectionBefore, selectionAfter })
@@ -558,6 +563,8 @@ export class DefaultGridEngine implements GridEngine {
     this.rawData.moveRows(normalized.rowIds, normalized.beforeRowId)
     this.rebuildRawRowsAxisFromHeights(reorderByIndexMap(sizesBefore, normalized.indexMap))
     this.remapHiddenRowsByIndexMap(normalized.indexMap)
+    this.formatStore.remapByRowIndexMap(normalized.indexMap)
+    this.mergeStore.remapByRowIndexMap(normalized.indexMap)
     this.rebuildViewAxis()
     this.restoreSelectionByRowIndexMap(selectionBefore, normalized.indexMap)
     const selectionAfter = this.selection.getSelection()
@@ -596,6 +603,8 @@ export class DefaultGridEngine implements GridEngine {
     this.rawColsAxis.insertRange(at, newFields.length, defaultWidth)
     this.syncFrozenAfterColInsert(at, newFields.length)
     this.rebuildViewColsAxis()
+    this.formatStore.remapAfterColsInserted(at, newFields.length)
+    this.mergeStore.remapAfterColsInserted(at, newFields.length)
     this.selection.remapAfterColsInserted(at, newFields.length)
     const selectionAfter = this.selection.getSelection()
     const frozenAfter = this.frozen.getFrozenConfig()
@@ -642,6 +651,8 @@ export class DefaultGridEngine implements GridEngine {
     this.syncFrozenAfterColDelete(removedIndices, schemaBefore.length)
     for (const id of fieldIds) this.hiddenColIds.delete(id)
     this.rebuildViewColsAxis()
+    this.formatStore.remapAfterColsDeleted(removedIndices)
+    this.mergeStore.remapAfterColsDeleted(removedIndices)
     this.selection.remapAfterColsDeleted(removedIndices)
     const selectionAfter = this.selection.getSelection()
     const frozenAfter = this.frozen.getFrozenConfig()
@@ -728,8 +739,14 @@ export class DefaultGridEngine implements GridEngine {
     this.finishActiveEdit()
     const selectionBefore = this.selection.getSelection()
     const visibleFieldIdsBefore = this.data.getSchema().fields.map((field) => field.id)
+    // Trap 1：moveCols 走 fieldId 路径，normalizeMoveCols 不产出数值 index map。
+    // 在 moveFields 前后各取 raw 字段序，按 fieldId 配对出 oldRawIndex → newRawIndex。
+    const rawFieldIdsBefore = this.rawData.getSchema().fields.map((field) => field.id)
     const widthById = this.captureRawColWidths()
     this.rawData.moveFields(normalized.fieldIds, normalized.beforeFieldId)
+    const colIndexMap = this.buildColIndexMap(rawFieldIdsBefore)
+    this.formatStore.remapByColIndexMap(colIndexMap)
+    this.mergeStore.remapByColIndexMap(colIndexMap)
     this.rebuildRawColsAxisFromWidths(widthById)
     this.rebuildViewColsAxis()
     this.restoreSelectionByVisibleFieldIds(selectionBefore, visibleFieldIdsBefore)
@@ -1722,6 +1739,24 @@ export class DefaultGridEngine implements GridEngine {
       if (indices[i]! !== indices[i - 1]! + 1) return false
     }
     return true
+  }
+
+  /**
+   * 由「移动前 raw 字段序」与当前（移动后）raw 字段序按 fieldId 配对，
+   * 推导 `oldRawIndex → newRawIndex` map（Trap 1）。必须在 `moveFields` 之后调用。
+   */
+  private buildColIndexMap(rawFieldIdsBefore: readonly string[]): ReadonlyMap<number, number> {
+    const newIndexById = new Map<string, number>()
+    const fieldsAfter = this.rawData.getSchema().fields
+    for (let i = 0; i < fieldsAfter.length; i += 1) {
+      newIndexById.set(fieldsAfter[i]!.id, i)
+    }
+    const indexMap = new Map<number, number>()
+    for (let oldIndex = 0; oldIndex < rawFieldIdsBefore.length; oldIndex += 1) {
+      const newIndex = newIndexById.get(rawFieldIdsBefore[oldIndex]!)
+      if (newIndex !== undefined) indexMap.set(oldIndex, newIndex)
+    }
+    return indexMap
   }
 
   private rebuildRawColsAxisFromWidths(widthById: ReadonlyMap<string, number>): void {
