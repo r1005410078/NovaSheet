@@ -21,17 +21,20 @@ export class RangeStyleStore {
 
   /**
    * Applies border patches for every cell in `range` using the given preset.
-   * `preset === 'clear'` routes to `clearBorders`. The store expands per-cell;
+   * `preset === 'clear'` routes to `clearBorders` and requires no `border`.
+   * All other presets require a `border` style and expand per-cell;
    * callers must not pass 1M-row ranges.
    */
-  applyBorders(range: CellRange, preset: BorderPreset, border: BorderStyle): void {
+  applyBorders(range: CellRange, preset: 'clear'): void
+  applyBorders(range: CellRange, preset: Exclude<BorderPreset, 'clear'>, border: BorderStyle): void
+  applyBorders(range: CellRange, preset: BorderPreset, border?: BorderStyle): void {
     if (preset === 'clear') {
       this.clearBorders(range)
       return
     }
     for (let row = range.startRow; row <= range.endRow; row++) {
       for (let col = range.startCol; col <= range.endCol; col++) {
-        const patch = borderPatchForCell(range, row, col, preset, border)
+        const patch = borderPatchForCell(range, row, col, preset, border!)
         // Only push a layer when the patch actually sets at least one edge.
         if (Object.keys(patch).length > 0) {
           const cellRange: CellRange = { startRow: row, endRow: row, startCol: col, endCol: col }
