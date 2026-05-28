@@ -6,6 +6,7 @@
  */
 
 import type { DataSource } from '../data/DataSource'
+import type { ResolvedCellFormat } from '../format/CellFormat'
 import type { CellEditSession } from '../interaction/CellEditModel'
 import type { GridSelection } from '../interaction/SelectionModel'
 import type { Axis } from '../layout/ChunkedAxis'
@@ -44,4 +45,9 @@ export interface RenderFrame {
   collapsedRowGaps: readonly RenderFrameCollapsedGap[]
   /** Phase 4.6 — 当前可见区域内的折叠列间隙列表（含像素坐标）。 */
   collapsedColGaps: readonly RenderFrameCollapsedColGap[]
+  /**
+   * Phase 5-A — 当前可见区域内已解析的单元格格式（填充色 / 边框），坐标为 **view 空间**。
+   * 引擎构帧时已把 raw store 翻译为 view 坐标，painter 无需再翻译。可选，缺省按 `?? []` 读取。
+   */
+  cellFormats?: readonly ResolvedCellFormat[]
 }

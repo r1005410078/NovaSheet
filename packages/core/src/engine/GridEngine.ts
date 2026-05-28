@@ -8,6 +8,7 @@ import type { DataSource } from '../data/DataSource'
 import type { Field } from '../data/Schema'
 import type { RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
+import type { BorderPreset, BorderStyle, CellFormat } from '../format/CellFormat'
 import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
 import type { FillDirection } from '../fill/FillTarget'
@@ -156,4 +157,19 @@ export interface GridEngine {
 
   /** Phase 4.7 — 按 fieldId 移动列组；`beforeFieldId=null` 表示移动到末尾。 */
   moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean
+
+  /**
+   * Phase 5-A — 为 view `range` 设置填充色；`color=null` 清除填充。
+   * 仅在格式实际变化时入 undo 栈并返回 true。
+   */
+  setFillColor(range: CellRange, color: string | null): boolean
+
+  /**
+   * Phase 5-A — 为 view `range` 设置基础边框；`preset='clear'` 需 `border=null`。
+   * 非 solid 线型在 5-A 返回 false；仅在格式实际变化时入栈并返回 true。
+   */
+  setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean
+
+  /** Phase 5-A — 解析单个单元格格式（raw 坐标）；无格式返回 undefined。 */
+  getCellFormat(rowIndex: number, colIndex: number): CellFormat | undefined
 }

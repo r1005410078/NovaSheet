@@ -8,6 +8,14 @@ import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../cli
 import type { PasteSkippedCell } from '../clipboard/types'
 import { computeFillWrites } from '../fill/FillSeries'
 import { unionRange, type FillDirection } from '../fill/FillTarget'
+import { RangeStyleStore } from '../format/RangeStyleStore'
+import type {
+  BorderPreset,
+  BorderStyle,
+  CellFormat,
+  FormatLayer,
+  ResolvedCellFormat,
+} from '../format/CellFormat'
 import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../interaction/CellEdit'
 import { CellEditModel } from '../interaction/CellEditModel'
 import { parseSelectionNavigationKey } from '../interaction/SelectionNavigation'
@@ -68,6 +76,11 @@ export class DefaultGridEngine implements GridEngine {
   private selection = new SelectionModel()
   private cellEdit = new CellEditModel()
   private undoStack = new UndoStack()
+  /**
+   * Phase 5-A — 稀疏格式存储，按 **raw** 坐标键控（Task 7 的结构变更按 raw 重映）。
+   * mutation 入口先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
+   */
+  private readonly formatStore = new RangeStyleStore()
 
   constructor(options: GridEngineOptions) {
     this.rawData = options.data
@@ -282,6 +295,12 @@ export class DefaultGridEngine implements GridEngine {
         ...g,
         xPx: this.colsAxis.indexToPosition(g.atViewCol + 1) - vpSnap.scrollX,
       }))
+    const cellFormats = this.resolveVisibleCellFormats(
+      firstVisible,
+      lastVisible,
+      firstVisibleCol,
+      lastVisibleCol,
+    )
     return {
       data: this.data,
       theme: this.theme,
@@ -292,7 +311,41 @@ export class DefaultGridEngine implements GridEngine {
       cellEdit: this.cellEdit.getSession() ?? undefined,
       collapsedRowGaps,
       collapsedColGaps,
+      cellFormats,
     }
+  }
+
+  /**
+   * 把 main 可见 view range 内每个 `(viewRow, viewCol)` 翻译为 raw 坐标查 `formatStore`，
+   * 命中则以 **view 坐标** 收集到 `cellFormats`。无 hide/sort/filter 时为恒等映射。
+   * 仅解析 main 区（见 plan Task 3）；store 为空时直接短路返回空数组。
+   */
+  private resolveVisibleCellFormats(
+    firstRow: number,
+    lastRow: number,
+    firstCol: number,
+    lastCol: number,
+  ): readonly ResolvedCellFormat[] {
+    if (this.formatStore.getLayerCount() === 0) return []
+    if (firstRow > lastRow || firstCol > lastCol) return []
+    const result: ResolvedCellFormat[] = []
+    // 预解析每个可见 view 列 → raw col，避免内层循环重复扫描 schema。
+    const rawCols: number[] = []
+    for (let viewCol = firstCol; viewCol <= lastCol; viewCol += 1) {
+      rawCols.push(this.getRawColumnIndexForViewIndex(viewCol))
+    }
+    for (let viewRow = firstRow; viewRow <= lastRow; viewRow += 1) {
+      const rawRow = resolveUnderlyingRow(this.data, viewRow)
+      for (let i = 0; i < rawCols.length; i += 1) {
+        const rawCol = rawCols[i]!
+        if (rawCol < 0) continue
+        const format = this.formatStore.resolveCell(rawRow, rawCol)
+        if (format !== undefined) {
+          result.push({ rowIndex: viewRow, colIndex: firstCol + i, format })
+        }
+      }
+    }
+    return result
   }
 
   getSelection(): GridSelection {
@@ -733,6 +786,116 @@ export class DefaultGridEngine implements GridEngine {
     return { source, fill, result, writes: resultWrites }
   }
 
+  /**
+   * Phase 5-A — 给 view `range` 设置填充色；`color === null` 走 clearFill。
+   * 写入前把 view range 翻译为 raw range；快照前后一致则不入栈。返回是否产生变化。
+   */
+  setFillColor(range: CellRange, color: string | null): boolean {
+    this.finishActiveEdit()
+    const rawRange = this.viewRangeToRawRange(range)
+    if (!rawRange) return false
+    const selectionBefore = this.selection.getSelection()
+    const before = this.formatStore.snapshot()
+    if (color === null) {
+      this.formatStore.clearFill(rawRange)
+    } else {
+      this.formatStore.apply(rawRange, { fillColor: color })
+    }
+    return this.commitFormatChange(before, selectionBefore)
+  }
+
+  /**
+   * Phase 5-A — 给 view `range` 设置基础边框；`preset === 'clear'` 需 `border === null` 并清除。
+   * 仅支持 `lineStyle === 'solid'`，其余样式返回 false。写入前把 view range 翻译为 raw range。
+   */
+  setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
+    this.finishActiveEdit()
+    if (preset === 'clear') {
+      if (border !== null) return false
+    } else {
+      if (border === null) return false
+      if (border.lineStyle !== 'solid') return false
+    }
+    const rawRange = this.viewRangeToRawRange(range)
+    if (!rawRange) return false
+    const selectionBefore = this.selection.getSelection()
+    const before = this.formatStore.snapshot()
+    if (preset === 'clear') {
+      this.formatStore.applyBorders(rawRange, 'clear')
+    } else {
+      this.formatStore.applyBorders(rawRange, preset, border!)
+    }
+    return this.commitFormatChange(before, selectionBefore)
+  }
+
+  /** Phase 5-A — 解析单个单元格的格式。坐标为 **raw** 空间（与 store 键控一致）。 */
+  getCellFormat(rowIndex: number, colIndex: number): CellFormat | undefined {
+    return this.formatStore.resolveCell(rowIndex, colIndex)
+  }
+
+  /**
+   * 把 view `CellRange` 翻译为 raw `CellRange`。无 hide/sort/filter 时为恒等映射。
+   * 行经 `resolveUnderlyingRow`、列经 `fieldId → raw col index` 映射；映射结果在 raw 空间
+   * 非连续（排序/筛选打乱行序）时返回 null（5-A 不展开大范围，见 plan Coordinate Space Invariant）。
+   */
+  private viewRangeToRawRange(range: CellRange): CellRange | null {
+    const rawRows = this.viewRowsToRawContiguous(range.startRow, range.endRow)
+    if (!rawRows) return null
+    const rawCols = this.viewColsToRawContiguous(range.startCol, range.endCol)
+    if (!rawCols) return null
+    return {
+      startRow: rawRows.start,
+      endRow: rawRows.end,
+      startCol: rawCols.start,
+      endCol: rawCols.end,
+    }
+  }
+
+  private viewRowsToRawContiguous(
+    startRow: number,
+    endRow: number,
+  ): { start: number; end: number } | null {
+    const first = resolveUnderlyingRow(this.data, startRow)
+    let prev = first
+    for (let viewRow = startRow + 1; viewRow <= endRow; viewRow += 1) {
+      const raw = resolveUnderlyingRow(this.data, viewRow)
+      if (raw !== prev + 1) return null
+      prev = raw
+    }
+    return { start: first, end: prev }
+  }
+
+  private viewColsToRawContiguous(
+    startCol: number,
+    endCol: number,
+  ): { start: number; end: number } | null {
+    const first = this.getRawColumnIndexForViewIndex(startCol)
+    if (first < 0) return null
+    let prev = first
+    for (let viewCol = startCol + 1; viewCol <= endCol; viewCol += 1) {
+      const raw = this.getRawColumnIndexForViewIndex(viewCol)
+      if (raw !== prev + 1) return null
+      prev = raw
+    }
+    return { start: first, end: prev }
+  }
+
+  /** 快照前后一致时回滚（无副作用），否则入栈一条 format 命令。返回是否产生变化。 */
+  private commitFormatChange(
+    before: readonly FormatLayer[],
+    selectionBefore: GridSelection,
+  ): boolean {
+    const after = this.formatStore.snapshot()
+    if (sameFormatLayers(before, after)) {
+      // No effective change (e.g. clearing an already-empty range): drop the appended layer.
+      this.formatStore.restore(before)
+      return false
+    }
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'format', before, after, selectionBefore, selectionAfter })
+    return true
+  }
+
   private applyUndo(cmd: UndoCommand): void {
     switch (cmd.kind) {
       case 'editCell':
@@ -851,6 +1014,10 @@ export class DefaultGridEngine implements GridEngine {
       case 'moveCols':
         this.applyMoveColsCommand(cmd.fieldIds, cmd.inverseBeforeFieldId, cmd.selectionBefore)
         return
+      case 'format':
+        this.formatStore.restore(cmd.before)
+        this.selection.setSelection(cmd.selectionBefore)
+        return
     }
   }
 
@@ -949,6 +1116,10 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'moveCols':
         this.applyMoveColsCommand(cmd.fieldIds, cmd.beforeFieldId, cmd.selectionAfter)
+        return
+      case 'format':
+        this.formatStore.restore(cmd.after)
+        this.selection.setSelection(cmd.selectionAfter)
         return
     }
   }
@@ -1706,4 +1877,13 @@ function normalizeCellRange(a: CellAddress, b: CellAddress): CellRange {
     startCol: Math.min(a.colIndex, b.colIndex),
     endCol: Math.max(a.colIndex, b.colIndex),
   }
+}
+
+/** 比较两个 format 层快照是否引用同一组层（按 order 标识，append-only 故 order 唯一）。 */
+function sameFormatLayers(a: readonly FormatLayer[], b: readonly FormatLayer[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
 }

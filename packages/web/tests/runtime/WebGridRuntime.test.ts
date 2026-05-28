@@ -113,6 +113,9 @@ function makeEngine(): GridEngine {
     getFrozenConfig: mock(() => ({ topRows: 0, leftCols: 0, rightCols: 0 })),
     moveCols: mock(() => false),
     moveRows: mock(() => false),
+    setFillColor: mock(() => false),
+    setBorders: mock(() => false),
+    getCellFormat: mock(() => undefined),
   }
 }
 
