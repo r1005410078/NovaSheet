@@ -1,6 +1,7 @@
 import type { CellValue, Field } from '../data/Schema'
 import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { FormatLayer } from '../format/CellFormat'
+import type { MergeRegion } from '../merge/MergeStore'
 import type { CellRange, GridSelection } from '../interaction/SelectionModel'
 import type { FrozenConfig } from '../layout/FrozenRegions'
 
@@ -145,6 +146,20 @@ export type UndoCommand =
       readonly kind: 'format'
       readonly before: readonly FormatLayer[]
       readonly after: readonly FormatLayer[]
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }
+  | {
+      readonly kind: 'merge'
+      readonly before: readonly MergeRegion[]
+      readonly after: readonly MergeRegion[]
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }
+  | {
+      readonly kind: 'unmerge'
+      readonly before: readonly MergeRegion[]
+      readonly after: readonly MergeRegion[]
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
     }

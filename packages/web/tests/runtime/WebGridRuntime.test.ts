@@ -116,6 +116,9 @@ function makeEngine(): GridEngine {
     setFillColor: mock(() => false),
     setBorders: mock(() => false),
     getCellFormat: mock(() => undefined),
+    mergeCells: mock(() => false),
+    unmergeCells: mock(() => false),
+    getMergeRegion: mock(() => null),
   }
 }
 

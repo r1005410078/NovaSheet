@@ -7,6 +7,7 @@
 
 import type { DataSource } from '../data/DataSource'
 import type { ResolvedCellFormat } from '../format/CellFormat'
+import type { MergeRegion } from '../merge/MergeStore'
 import type { CellEditSession } from '../interaction/CellEditModel'
 import type { GridSelection } from '../interaction/SelectionModel'
 import type { Axis } from '../layout/ChunkedAxis'
@@ -50,4 +51,9 @@ export interface RenderFrame {
    * 引擎构帧时已把 raw store 翻译为 view 坐标，painter 无需再翻译。可选，缺省按 `?? []` 读取。
    */
   cellFormats?: readonly ResolvedCellFormat[]
+  /**
+   * Phase 5-A — 当前可见区域内相交的合并区域，坐标为 **view 空间**。
+   * 引擎构帧时已把 raw store 翻译为 view 坐标，painter 无需再翻译。可选，缺省按 `?? []` 读取。
+   */
+  mergeRegions?: readonly MergeRegion[]
 }

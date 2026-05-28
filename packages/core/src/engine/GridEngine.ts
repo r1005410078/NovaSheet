@@ -9,6 +9,7 @@ import type { Field } from '../data/Schema'
 import type { RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import type { BorderPreset, BorderStyle, CellFormat } from '../format/CellFormat'
+import type { MergeRegion } from '../merge/MergeStore'
 import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
 import type { FillDirection } from '../fill/FillTarget'
@@ -174,4 +175,20 @@ export interface GridEngine {
 
   /** Phase 5-A — 解析单个单元格格式（raw 坐标）；无格式返回 undefined。 */
   getCellFormat(rowIndex: number, colIndex: number): CellFormat | undefined
+
+  /**
+   * Phase 5-A — 合并 view `range`；单格 / 重叠现存合并 / 排序筛选下非连续映射时返回 false。
+   * 成功时选中整个合并 view 范围并入 undo 栈。
+   * `range` 必须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
+   */
+  mergeCells(range: CellRange): boolean
+
+  /**
+   * Phase 5-A — 取消 view `range` 触及的所有合并区域；移除任何区域则入栈并返回 true。
+   * 排序筛选下非连续映射或无区域触及时返回 false。
+   */
+  unmergeCells(range: CellRange): boolean
+
+  /** Phase 5-A — 返回覆盖单元格的合并区域（**raw 坐标**，与 `getCellFormat` 一致）；无则返回 null。 */
+  getMergeRegion(rowIndex: number, colIndex: number): MergeRegion | null
 }

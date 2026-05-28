@@ -16,6 +16,8 @@ import type {
   FormatLayer,
   ResolvedCellFormat,
 } from '../format/CellFormat'
+import { MergeStore } from '../merge/MergeStore'
+import type { MergeRegion } from '../merge/MergeStore'
 import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../interaction/CellEdit'
 import { CellEditModel } from '../interaction/CellEditModel'
 import { parseSelectionNavigationKey } from '../interaction/SelectionNavigation'
@@ -81,6 +83,11 @@ export class DefaultGridEngine implements GridEngine {
    * mutation 入口先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
    */
   private readonly formatStore = new RangeStyleStore()
+  /**
+   * Phase 5-A — 合并区域存储，与 formatStore 同按 **raw** 坐标键控。
+   * mergeCells/unmergeCells 先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
+   */
+  private readonly mergeStore = new MergeStore()
 
   constructor(options: GridEngineOptions) {
     this.rawData = options.data
@@ -301,6 +308,12 @@ export class DefaultGridEngine implements GridEngine {
       firstVisibleCol,
       lastVisibleCol,
     )
+    const mergeRegions = this.resolveVisibleMergeRegions(
+      firstVisible,
+      lastVisible,
+      firstVisibleCol,
+      lastVisibleCol,
+    )
     return {
       data: this.data,
       theme: this.theme,
@@ -312,6 +325,7 @@ export class DefaultGridEngine implements GridEngine {
       collapsedRowGaps,
       collapsedColGaps,
       cellFormats,
+      mergeRegions,
     }
   }
 
@@ -346,6 +360,54 @@ export class DefaultGridEngine implements GridEngine {
       }
     }
     return result
+  }
+
+  /**
+   * 把与 main 可见 view range 相交的合并区域从 raw 坐标翻译回 **view 坐标** 后收集。
+   * 复用 firstRow/lastRow/firstCol/lastCol（view 空间）：先把 view 边界翻译为 raw 边界再查 store，
+   * 命中的区域各角再翻回 view。任一角隐藏或行序非连续（排序/筛选）则跳过该区域（painter 不画半残合并）。
+   * 无 hide/sort/filter 时为恒等映射。store 为空时短路返回空数组。
+   */
+  private resolveVisibleMergeRegions(
+    firstRow: number,
+    lastRow: number,
+    firstCol: number,
+    lastCol: number,
+  ): readonly MergeRegion[] {
+    if (firstRow > lastRow || firstCol > lastCol) return []
+    const visibleRawRange = this.viewRangeToRawRange({
+      startRow: firstRow,
+      endRow: lastRow,
+      startCol: firstCol,
+      endCol: lastCol,
+    })
+    if (!visibleRawRange) return []
+    const rawRegions = this.mergeStore.getRegionsInRange(visibleRawRange)
+    if (rawRegions.length === 0) return []
+    const result: MergeRegion[] = []
+    for (const region of rawRegions) {
+      const viewRegion = this.mergeRegionToView(region)
+      if (viewRegion) result.push(viewRegion)
+    }
+    return result
+  }
+
+  /** 把单个合并区域从 raw 坐标翻译为 view 坐标；隐藏行列或行序非连续时返回 null。 */
+  private mergeRegionToView(region: MergeRegion): MergeRegion | null {
+    const startRow = findViewRow(this.data, region.range.startRow)
+    const endRow = findViewRow(this.data, region.range.endRow)
+    if (startRow === -1 || endRow === -1) return null
+    // 行段在 view 空间必须仍连续，长度才不变（排序/隐藏会破坏，跳过）。
+    if (endRow - startRow !== region.range.endRow - region.range.startRow) return null
+    const startCol = this.getViewColumnIndexForRawIndex(region.range.startCol)
+    const endCol = this.getViewColumnIndexForRawIndex(region.range.endCol)
+    if (startCol === -1 || endCol === -1) return null
+    if (endCol - startCol !== region.range.endCol - region.range.startCol) return null
+    return {
+      id: region.id,
+      range: { startRow, endRow, startCol, endCol },
+      anchor: { rowIndex: startRow, colIndex: startCol },
+    }
   }
 
   getSelection(): GridSelection {
@@ -836,6 +898,52 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   /**
+   * Phase 5-A — 合并 view `range`。
+   * 把 view range 翻译为 raw range（排序/筛选打乱行序时 null → 返回 false）；
+   * 单格或与现存合并重叠由 `MergeStore.merge` 拒绝（返回 false）。
+   * 成功时选中整个合并 view 范围、入栈一条 merge 命令并返回 true。
+   * `range` 须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
+   */
+  mergeCells(range: CellRange): boolean {
+    this.finishActiveEdit()
+    const rawRange = this.viewRangeToRawRange(range)
+    if (!rawRange) return false
+    const selectionBefore = this.selection.getSelection()
+    const before = this.mergeStore.snapshot()
+    const region = this.mergeStore.merge(rawRange)
+    if (!region) return false
+    this.selection.setSelectedRange(range)
+    const after = this.mergeStore.snapshot()
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'merge', before, after, selectionBefore, selectionAfter })
+    return true
+  }
+
+  /**
+   * Phase 5-A — 取消 view `range` 触及的所有合并区域。
+   * 把 view range 翻译为 raw range（非连续映射时 null → 返回 false）；
+   * 移除任何区域则入栈一条 unmerge 命令并返回 true，否则返回 false。
+   */
+  unmergeCells(range: CellRange): boolean {
+    this.finishActiveEdit()
+    const rawRange = this.viewRangeToRawRange(range)
+    if (!rawRange) return false
+    const selectionBefore = this.selection.getSelection()
+    const before = this.mergeStore.snapshot()
+    const removed = this.mergeStore.unmerge(rawRange)
+    if (removed.length === 0) return false
+    const after = this.mergeStore.snapshot()
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({ kind: 'unmerge', before, after, selectionBefore, selectionAfter })
+    return true
+  }
+
+  /** Phase 5-A — 返回覆盖单元格的合并区域。坐标为 **raw** 空间（与 `getCellFormat` 一致）。 */
+  getMergeRegion(rowIndex: number, colIndex: number): MergeRegion | null {
+    return this.mergeStore.getRegionAt(rowIndex, colIndex)
+  }
+
+  /**
    * 把 view `CellRange` 翻译为 raw `CellRange`。无 hide/sort/filter 时为恒等映射。
    * 行经 `resolveUnderlyingRow`、列经 `fieldId → raw col index` 映射；映射结果在 raw 空间
    * 非连续（排序/筛选打乱行序）时返回 null（5-A 不展开大范围，见 plan Coordinate Space Invariant）。
@@ -1019,6 +1127,11 @@ export class DefaultGridEngine implements GridEngine {
         this.formatStore.restore(cmd.before)
         this.selection.setSelection(cmd.selectionBefore)
         return
+      case 'merge':
+      case 'unmerge':
+        this.mergeStore.restore(cmd.before)
+        this.selection.setSelection(cmd.selectionBefore)
+        return
     }
   }
 
@@ -1120,6 +1233,11 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'format':
         this.formatStore.restore(cmd.after)
+        this.selection.setSelection(cmd.selectionAfter)
+        return
+      case 'merge':
+      case 'unmerge':
+        this.mergeStore.restore(cmd.after)
         this.selection.setSelection(cmd.selectionAfter)
         return
     }
@@ -1705,6 +1823,18 @@ export class DefaultGridEngine implements GridEngine {
       visibleCol += 1
     }
     return -1
+  }
+
+  /** raw col index → view col index；该列隐藏或越界时返回 -1。`getRawColumnIndexForViewIndex` 的逆。 */
+  private getViewColumnIndexForRawIndex(rawColIndex: number): number {
+    const fields = this.rawData.getSchema().fields
+    if (rawColIndex < 0 || rawColIndex >= fields.length) return -1
+    if (this.hiddenColIds.has(fields[rawColIndex]!.id)) return -1
+    let visibleCol = 0
+    for (let rawCol = 0; rawCol < rawColIndex; rawCol += 1) {
+      if (!this.hiddenColIds.has(fields[rawCol]!.id)) visibleCol += 1
+    }
+    return visibleCol
   }
 
   private setFieldWidth(fieldId: string, width: number): void {
