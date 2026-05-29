@@ -9,5 +9,5 @@ export type ClipboardAction = 'cut' | 'copy' | 'paste'
 export interface PasteSkippedCell {
   readonly rowIndex: number
   readonly fieldId: string
-  readonly reason: 'type' | 'readonly'
+  readonly reason: 'type' | 'readonly' | 'merge'
 }

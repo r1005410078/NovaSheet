@@ -1,4 +1,7 @@
 import type {
+  BorderPreset,
+  BorderStyle,
+  CellRange,
   ContextMenuItem,
   DataSource,
   FilterLayer,
@@ -123,6 +126,14 @@ export interface GridController {
   getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[]
   /** Phase 4.6 — 执行列头右键菜单动作。 */
   invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void
+  /** Phase 5-A — 为 view `range` 设置填充色；`color=null` 清除；仅在变化时刷新并返回 true。 */
+  setFillColor(range: CellRange, color: string | null): boolean
+  /** Phase 5-A — 为 view `range` 设置基础边框；`preset='clear'` 需 `border=null`；变化时刷新并返回 true。 */
+  setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean
+  /** Phase 5-A — 合并 view `range`；成功刷新并返回 true。 */
+  mergeCells(range: CellRange): boolean
+  /** Phase 5-A — 取消 view `range` 触及的合并区域；移除任意区域则刷新并返回 true。 */
+  unmergeCells(range: CellRange): boolean
   getSortLayer(): SortLayer
   getFilterLayer(): FilterLayer
   getViewPipeline(): ViewPipeline

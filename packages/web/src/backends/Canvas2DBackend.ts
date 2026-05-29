@@ -17,6 +17,8 @@ import {
   FrameScheduler,
   SortLayer,
   ViewPipeline,
+  type BorderPreset,
+  type BorderStyle,
   type CellRange,
   type ContextMenuItem,
   type ContextMenuAction,
@@ -462,6 +464,22 @@ export class Canvas2DBackend implements GridController {
 
   invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void {
     this.runtime.invokeColumnHeaderContextMenuAction(id, ctx)
+  }
+
+  setFillColor(range: CellRange, color: string | null): boolean {
+    return this.runtime.setFillColor(range, color)
+  }
+
+  setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
+    return this.runtime.setBorders(range, preset, border)
+  }
+
+  mergeCells(range: CellRange): boolean {
+    return this.runtime.mergeCells(range)
+  }
+
+  unmergeCells(range: CellRange): boolean {
+    return this.runtime.unmergeCells(range)
   }
 
   getSortLayer(): SortLayer {

@@ -112,7 +112,11 @@ export type { CellRect } from './interaction/CellLayout'
 // 剪贴板层（Phase 4.1）
 export { serializeRowsToTsv, parseTsvToCells } from './clipboard/TsvFormat'
 export type { ClipboardAction, PasteSkippedCell } from './clipboard/types'
-export { computePasteTarget, applyPaste } from './clipboard/ApplyPaste'
+export {
+  computePasteTarget,
+  applyPaste,
+  pasteTargetConflictsWithMerges,
+} from './clipboard/ApplyPaste'
 export type { ApplyPasteSource, GridDimensions, PasteTargetRect } from './clipboard/ApplyPaste'
 
 // 填充柄层（Phase 4.3）

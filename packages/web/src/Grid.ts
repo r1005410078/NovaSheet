@@ -1,4 +1,6 @@
 import type {
+  BorderPreset,
+  BorderStyle,
   CellRange,
   ContextMenuItem,
   ContextMenuAction,
@@ -351,6 +353,26 @@ export class Grid {
   /** Phase 4.6 — 执行列头右键菜单动作。 */
   invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void {
     this.delegate.invokeColumnHeaderContextMenuAction(id, ctx)
+  }
+
+  /** Phase 5-A — 为 view `range` 设置填充色；`color=null` 清除；变化时返回 true 并重绘。 */
+  setFillColor(range: CellRange, color: string | null): boolean {
+    return this.delegate.setFillColor(range, color)
+  }
+
+  /** Phase 5-A — 为 view `range` 设置基础边框；`preset='clear'` 需 `border=null`；变化时返回 true 并重绘。 */
+  setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
+    return this.delegate.setBorders(range, preset, border)
+  }
+
+  /** Phase 5-A — 合并 view `range`；成功返回 true 并重绘。 */
+  mergeCells(range: CellRange): boolean {
+    return this.delegate.mergeCells(range)
+  }
+
+  /** Phase 5-A — 取消 view `range` 触及的合并区域；移除任意区域返回 true 并重绘。 */
+  unmergeCells(range: CellRange): boolean {
+    return this.delegate.unmergeCells(range)
   }
 
   getSortLayer(): SortLayer {

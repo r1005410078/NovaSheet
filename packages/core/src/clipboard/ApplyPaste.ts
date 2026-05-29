@@ -1,6 +1,7 @@
 import type { MutableDataSource } from '../data/MutableDataSource'
 import type { CellAddress, CellRange } from '../interaction/SelectionModel'
 import type { CellValue, Schema } from '../data/Schema'
+import type { MergeRegion } from '../merge/MergeStore'
 import type { PasteSkippedCell } from './types'
 
 export interface PasteWriteRecord {
@@ -70,6 +71,26 @@ export function computePasteTarget(
   endRow = Math.min(endRow, dims.rowCount - 1)
   endCol = Math.min(endCol, dims.colCount - 1)
   return { startRow, endRow, startCol, endCol, tile: { rows: tileRows, cols: tileCols } }
+}
+
+/**
+ * Phase 5-A — 判断粘贴目标矩形是否与任一合并区域相交。
+ *
+ * 纯矩形相交测试，**坐标空间无关**：调用方须把 `target` 与 `merges` 传入**同一空间**
+ * （引擎侧先把 view target 翻译为 raw 再与 raw 合并区域比较）。任意重叠即冲突——
+ * 1×1 粘贴落入 2×2 合并区域内部也算冲突，因为它会破坏合并结构。
+ */
+export function pasteTargetConflictsWithMerges(
+  target: PasteTargetRect,
+  merges: readonly MergeRegion[],
+): boolean {
+  return merges.some(
+    (region) =>
+      target.startRow <= region.range.endRow &&
+      target.endRow >= region.range.startRow &&
+      target.startCol <= region.range.endCol &&
+      target.endCol >= region.range.startCol,
+  )
 }
 
 const SKIP = Symbol('skip')

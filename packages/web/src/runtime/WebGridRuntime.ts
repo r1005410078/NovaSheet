@@ -50,6 +50,8 @@ import {
   parseTsvToCells,
   serializeRowsToTsv,
   type ApplyPasteSource,
+  type BorderPreset,
+  type BorderStyle,
   type CellAddress,
   type CellRange,
   type ContextMenuAction,
@@ -566,6 +568,38 @@ export class WebGridRuntime {
   moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
     if (this.destroyed) return false
     const changed = this.engine.moveCols(fieldIds, beforeFieldId)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** Phase 5-A — 为 view `range` 设置填充色；变化时刷新视图。 */
+  setFillColor(range: CellRange, color: string | null): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.setFillColor(range, color)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** Phase 5-A — 为 view `range` 设置基础边框；变化时刷新视图。 */
+  setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.setBorders(range, preset, border)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** Phase 5-A — 合并 view `range`；成功时刷新视图。 */
+  mergeCells(range: CellRange): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.mergeCells(range)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** Phase 5-A — 取消 view `range` 触及的合并区域；移除任意区域则刷新视图。 */
+  unmergeCells(range: CellRange): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.unmergeCells(range)
     if (changed) this.afterEngineMutation()
     return changed
   }

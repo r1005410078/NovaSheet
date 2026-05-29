@@ -3,7 +3,7 @@ import type { DataSource, DataSourceEvent, DataSourceListener } from '../data/Da
 import { isMutableDataSource } from '../data/MutableDataSource'
 import type { MutableDataSource, RemovedFieldSnapshot } from '../data/MutableDataSource'
 import { HideRowsLayer } from '../view/HideRowsLayer'
-import { applyPaste } from '../clipboard/ApplyPaste'
+import { applyPaste, pasteTargetConflictsWithMerges } from '../clipboard/ApplyPaste'
 import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
 import { computeFillWrites } from '../fill/FillSeries'
@@ -863,6 +863,30 @@ export class DefaultGridEngine implements GridEngine {
     onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
   ): void {
     if (!isMutableDataSource(this.data)) return
+
+    // 合并守卫：target 是 view 矩形、mergeStore 存 raw 区域，须在同一空间比较。
+    // 先把 view target 翻译为 raw（viewRangeToRawRange）；非连续映射（排序/筛选打乱）
+    // 时保守视为冲突，避免在 raw 空间漏判。冲突则跳过整次粘贴：不写值、不入栈。
+    const rawTarget = this.viewRangeToRawRange({
+      startRow: target.startRow,
+      endRow: target.endRow,
+      startCol: target.startCol,
+      endCol: target.endCol,
+    })
+    const conflictsWithMerges =
+      rawTarget === null ||
+      pasteTargetConflictsWithMerges(
+        { ...rawTarget, tile: target.tile },
+        this.mergeStore.snapshot(),
+      )
+    if (conflictsWithMerges) {
+      const topLeftFieldId = fieldIdsAtCols[target.startCol]
+      if (topLeftFieldId !== undefined) {
+        onSkipped?.([{ rowIndex: target.startRow, fieldId: topLeftFieldId, reason: 'merge' }])
+      }
+      return
+    }
+
     const before: CellWrite[] = []
     const after: CellWrite[] = []
     applyPaste(
