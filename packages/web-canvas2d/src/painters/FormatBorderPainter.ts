@@ -30,6 +30,7 @@ export interface FormatBorderPaintArgs {
 
 /** 语义线宽到像素的映射。 */
 const WIDTH_MAP: Record<string, number> = { thin: 1, medium: 2, thick: 3 }
+const MAX_BORDER_OUTSET = 1
 
 interface EdgeRect {
   color: string
@@ -67,10 +68,10 @@ export class FormatBorderPainter {
       const cellW = colsAxis.getSize(colIndex)
       const cellH = rowsAxis.getSize(rowIndex)
 
-      const rectLeft = rect.x
-      const rectRight = rect.x + rect.width
-      const rectTop = rect.y
-      const rectBottom = rect.y + rect.height
+      const rectLeft = rect.x - MAX_BORDER_OUTSET
+      const rectRight = rect.x + rect.width + MAX_BORDER_OUTSET
+      const rectTop = rect.y - MAX_BORDER_OUTSET
+      const rectBottom = rect.y + rect.height + MAX_BORDER_OUTSET
 
       // 合并区域内部边过滤：被覆盖格只保留与区域外框重合的边，丢弃相邻覆盖格之间的内部边。
       const region = merges?.regionAt(rowIndex, colIndex)
@@ -96,13 +97,13 @@ export class FormatBorderPainter {
           const x1 = Math.max(side.xA, rectLeft)
           const x2 = Math.min(side.xB, rectRight)
           if (x2 <= x1) continue
-          const y = side.rawCoord === cellY ? side.rawCoord : side.rawCoord - widthPx
+          const y = edgeRectStart(side.rawCoord, widthPx)
           pushClippedRect(rects, edge.color, x1, y, x2 - x1, widthPx, rectLeft, rectTop, rectRight, rectBottom)
         } else {
           const y1 = Math.max(side.yA, rectTop)
           const y2 = Math.min(side.yB, rectBottom)
           if (y2 <= y1) continue
-          const x = side.rawCoord === cellX ? side.rawCoord : side.rawCoord - widthPx
+          const x = edgeRectStart(side.rawCoord, widthPx)
           pushClippedRect(rects, edge.color, x, y1, widthPx, y2 - y1, rectLeft, rectTop, rectRight, rectBottom)
         }
       }
@@ -112,7 +113,12 @@ export class FormatBorderPainter {
 
     ctx.save()
     ctx.beginPath()
-    ctx.rect(rect.x, rect.y, rect.width, rect.height)
+    ctx.rect(
+      rect.x - MAX_BORDER_OUTSET,
+      rect.y - MAX_BORDER_OUTSET,
+      rect.width + MAX_BORDER_OUTSET * 2,
+      rect.height + MAX_BORDER_OUTSET * 2,
+    )
     ctx.clip()
 
     let currentColor: string | undefined
@@ -126,6 +132,10 @@ export class FormatBorderPainter {
 
     ctx.restore()
   }
+}
+
+function edgeRectStart(rawCoord: number, widthPx: number): number {
+  return rawCoord - Math.floor(widthPx / 2)
 }
 
 function pushClippedRect(

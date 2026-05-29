@@ -177,9 +177,9 @@ describe('Canvas2DRenderer — 合并单元格绘制', () => {
     const internalVerticalX = colsAxis.indexToPosition(1) // 80：A1|B1 内部竖边
     const hasInternalVertical = verticalRects.some((r) => Math.abs(r.x - internalVerticalX) < 0.6)
     expect(hasInternalVertical).toBe(false)
-    // 合并区域外框右边（thin 边框占在 col1 右沿内侧，x = 159）仍应绘制，证明只过滤了内部竖边。
+    // 合并区域外框右边（thin 边框锚定在 col1 右沿格线像素）仍应绘制，证明只过滤了内部竖边。
     const outerRightX = colsAxis.indexToPosition(1) + colsAxis.getSize(1) // 160
-    const hasOuterRight = verticalRects.some((r) => Math.abs(r.x + r.width - outerRightX) < 0.6)
+    const hasOuterRight = verticalRects.some((r) => Math.abs(r.x - outerRightX) < 0.6)
     expect(hasOuterRight).toBe(true)
   })
 
@@ -297,10 +297,10 @@ describe('Canvas2DRenderer — 合并单元格绘制', () => {
     const mergedFill = fillRects.find((o) => o.args[2] === mergedWidth && o.args[3] === mergedHeight)
     expect(mergedFill).toBeDefined()
 
-    // 外框右边（thin 边框占在 col1 右沿内侧）的竖直自定义边框仍被绘制。
+    // 外框右边（thin 边框锚定在 col1 右沿格线像素）的竖直自定义边框仍被绘制。
     const verticalRects = collectFillRectsByFill(ops, '#d93025').filter((r) => r.height > r.width)
     const outerRightX = colsAxis.indexToPosition(1) + colsAxis.getSize(1) // 160
-    const hasOuterRight = verticalRects.some((r) => Math.abs(r.x + r.width - outerRightX) < 0.6)
+    const hasOuterRight = verticalRects.some((r) => Math.abs(r.x - outerRightX) < 0.6)
     expect(hasOuterRight).toBe(true)
   })
 
