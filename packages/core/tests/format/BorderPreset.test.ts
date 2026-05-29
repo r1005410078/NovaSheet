@@ -19,6 +19,24 @@ describe('borderPatchForCell', () => {
     expect(borderPatchForCell(range, 3, 4, 'inner', red)).toEqual({})
   })
 
+  it('applies inner horizontal and vertical borders independently', () => {
+    expect(borderPatchForCell(range, 1, 2, 'innerHorizontal', red)).toEqual({ bottom: red })
+    expect(borderPatchForCell(range, 3, 2, 'innerHorizontal', red)).toEqual({})
+    expect(borderPatchForCell(range, 1, 2, 'innerVertical', red)).toEqual({ right: red })
+    expect(borderPatchForCell(range, 1, 4, 'innerVertical', red)).toEqual({})
+  })
+
+  it('applies single-side borders only to the selected range perimeter', () => {
+    expect(borderPatchForCell(range, 1, 3, 'top', red)).toEqual({ top: red })
+    expect(borderPatchForCell(range, 2, 3, 'top', red)).toEqual({})
+    expect(borderPatchForCell(range, 3, 3, 'bottom', red)).toEqual({ bottom: red })
+    expect(borderPatchForCell(range, 2, 3, 'bottom', red)).toEqual({})
+    expect(borderPatchForCell(range, 2, 2, 'left', red)).toEqual({ left: red })
+    expect(borderPatchForCell(range, 2, 3, 'left', red)).toEqual({})
+    expect(borderPatchForCell(range, 2, 4, 'right', red)).toEqual({ right: red })
+    expect(borderPatchForCell(range, 2, 3, 'right', red)).toEqual({})
+  })
+
   it('applies all borders to every edge', () => {
     expect(borderPatchForCell(range, 2, 3, 'all', red)).toEqual({
       top: red,

@@ -1,7 +1,10 @@
 // @ts-nocheck
 import { Grid } from '@novasheet/web'
 import { InMemoryDataSource } from '@novasheet/core'
-import type { CellRange } from '@novasheet/core'
+import type { BorderPreset, BorderStyle, CellRange } from '@novasheet/core'
+
+const RED_BORDER: BorderStyle = { color: '#cc0000', width: 'medium', lineStyle: 'solid' }
+const THIN_BORDER: BorderStyle = { color: '#666666', width: 'thin', lineStyle: 'solid' }
 
 const schema = {
   fields: [
@@ -32,13 +35,22 @@ document.getElementById('fill-yellow')!.addEventListener('click', () => {
   withSelection((range) => grid.setFillColor(range, '#fff2cc'))
 })
 
-document.getElementById('border-red-outer')!.addEventListener('click', () => {
-  withSelection((range) => grid.setBorders(range, 'outer', { color: '#cc0000', width: 'medium', lineStyle: 'solid' }))
-})
+function bindBorderButton(id: string, preset: BorderPreset, border: BorderStyle | null): void {
+  document.getElementById(id)!.addEventListener('click', () => {
+    withSelection((range) => grid.setBorders(range, preset, border))
+  })
+}
 
-document.getElementById('border-all-thin')!.addEventListener('click', () => {
-  withSelection((range) => grid.setBorders(range, 'all', { color: '#666666', width: 'thin', lineStyle: 'solid' }))
-})
+bindBorderButton('border-outer', 'outer', RED_BORDER)
+bindBorderButton('border-all', 'all', THIN_BORDER)
+bindBorderButton('border-inner', 'inner', THIN_BORDER)
+bindBorderButton('border-inner-horizontal', 'innerHorizontal', THIN_BORDER)
+bindBorderButton('border-inner-vertical', 'innerVertical', THIN_BORDER)
+bindBorderButton('border-top', 'top', RED_BORDER)
+bindBorderButton('border-bottom', 'bottom', RED_BORDER)
+bindBorderButton('border-left', 'left', RED_BORDER)
+bindBorderButton('border-right', 'right', RED_BORDER)
+bindBorderButton('border-clear', 'clear', null)
 
 document.getElementById('merge')!.addEventListener('click', () => {
   withSelection((range) => grid.mergeCells(range))

@@ -28,9 +28,17 @@ export function borderPatchForCell(
     }
   }
 
-  // 'inner': draw the right/bottom edge only when not on the range boundary
-  return {
-    ...(!isRight ? { right: border } : {}),
-    ...(!isBottom ? { bottom: border } : {}),
+  if (preset === 'inner') {
+    return {
+      ...(!isRight ? { right: border } : {}),
+      ...(!isBottom ? { bottom: border } : {}),
+    }
   }
+
+  if (preset === 'innerHorizontal') return !isBottom ? { bottom: border } : {}
+  if (preset === 'innerVertical') return !isRight ? { right: border } : {}
+  if (preset === 'top') return isTop ? { top: border } : {}
+  if (preset === 'bottom') return isBottom ? { bottom: border } : {}
+  if (preset === 'left') return isLeft ? { left: border } : {}
+  return isRight ? { right: border } : {}
 }

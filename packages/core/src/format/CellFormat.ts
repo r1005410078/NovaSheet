@@ -2,7 +2,17 @@ import type { CellRange } from '../interaction/SelectionModel'
 
 export type BorderWidth = 'thin' | 'medium' | 'thick'
 export type BorderLineStyle = 'solid' | 'dashed' | 'dotted' | 'double'
-export type BorderPreset = 'all' | 'outer' | 'inner' | 'clear'
+export type BorderPreset =
+  | 'all'
+  | 'outer'
+  | 'inner'
+  | 'innerHorizontal'
+  | 'innerVertical'
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'clear'
 
 export interface BorderStyle {
   readonly color: string
