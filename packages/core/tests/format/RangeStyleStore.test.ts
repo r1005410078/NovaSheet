@@ -2,6 +2,19 @@ import { describe, expect, it } from 'bun:test'
 import { RangeStyleStore } from '../../src/format/RangeStyleStore'
 
 describe('RangeStyleStore', () => {
+  it('merges later border patches per edge instead of replacing prior edges', () => {
+    const store = new RangeStyleStore()
+    const range = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
+    const red = { color: '#d93025', width: 'thin', lineStyle: 'solid' } as const
+
+    store.applyBorders(range, 'top', red)
+    store.applyBorders(range, 'bottom', red)
+
+    const borders = store.resolveCell(0, 0)?.borders
+    expect(borders?.top).toEqual(red)
+    expect(borders?.bottom).toEqual(red)
+  })
+
   it('resolves later fill layers over earlier layers without expanding the full range', () => {
     const store = new RangeStyleStore()
     store.apply({ startRow: 0, endRow: 999_999, startCol: 0, endCol: 499 }, { fillColor: '#fff2cc' })

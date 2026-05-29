@@ -96,7 +96,7 @@ export class RangeStyleStore {
           fillActive = true
         }
         if (layer.patch.borders !== undefined) {
-          borders = layer.patch.borders
+          borders = { ...borders, ...layer.patch.borders }
           hasBorders = true
         }
       }
