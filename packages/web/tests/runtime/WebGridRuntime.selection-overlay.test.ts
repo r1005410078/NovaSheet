@@ -191,7 +191,7 @@ describe('WebGridRuntime selection overlay', () => {
     ;(runtime as unknown as { paintSync(): void }).paintSync()
 
     expect(selectionOverlay.sync).toHaveBeenLastCalledWith({
-      rangeRects: [{ x: 0, y: 30, width: 80, height: 30 }],
+      rangeRects: [{ x: 0, y: 30, width: 160, height: 60 }],
       activeRect: { x: 0, y: 30, width: 160, height: 60 },
     })
   })

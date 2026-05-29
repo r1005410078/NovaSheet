@@ -2216,10 +2216,11 @@ export class WebGridRuntime {
           active.colIndex >= merge.range.startCol &&
           active.colIndex <= merge.range.endCol,
       )?.range
+    const visualRange = activeRange ?? range
     const activeRect = active
       ? computeRangeOverlayRects(
           frame,
-          activeRange ?? {
+          visualRange ?? {
             startRow: active.rowIndex,
             endRow: active.rowIndex,
             startCol: active.colIndex,
@@ -2228,7 +2229,7 @@ export class WebGridRuntime {
         ).at(-1) ?? null
       : null
     this.selectionOverlay.sync({
-      rangeRects: computeRangeOverlayRects(frame, range),
+      rangeRects: computeRangeOverlayRects(frame, visualRange),
       activeRect,
     })
   }

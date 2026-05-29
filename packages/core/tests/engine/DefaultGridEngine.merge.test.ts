@@ -149,6 +149,21 @@ describe('DefaultGridEngine merge APIs', () => {
     expect(engine.getMergeRegion(0, 0)).toBeNull()
   })
 
+  it('selecting any cell inside a merge selects the whole merge range', () => {
+    const engine = makeEngine()
+    const range = { startRow: 0, endRow: 1, startCol: 0, endCol: 1 }
+    engine.mergeCells(range)
+
+    engine.selectCell({ rowIndex: 1, colIndex: 1 })
+
+    expect(engine.getSelection()).toEqual({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: 1 },
+      selectedRange: range,
+    })
+  })
+
   // ---------------------------------------------------------------------------
   // mergeRegionToView interior-row contiguity tests
   //

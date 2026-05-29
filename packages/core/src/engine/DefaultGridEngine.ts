@@ -195,6 +195,13 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   selectCell(cell: CellAddress, options?: SelectCellOptions): void {
+    if (!options?.extend) {
+      const region = this.mergeStore.getRegionAt(cell.rowIndex, cell.colIndex)
+      if (region) {
+        this.selection.setSelectedRange(region.range)
+        return
+      }
+    }
     this.selection.selectCell(cell, options)
   }
 
