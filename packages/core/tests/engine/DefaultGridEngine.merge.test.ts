@@ -164,6 +164,18 @@ describe('DefaultGridEngine merge APIs', () => {
     })
   })
 
+  it('editing any cell inside a merge writes to the merge anchor', () => {
+    const engine = makeEngine()
+    engine.mergeCells({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
+
+    expect(engine.beginCellEdit({ rowIndex: 1, colIndex: 1 })).toBe(true)
+    engine.updateCellEditDraft('Merged')
+
+    expect(engine.commitCellEdit()).toBe(true)
+    expect(engine.getData().getCell(0, 'a')).toBe('Merged')
+    expect(engine.getData().getCell(1, 'b')).toBe('B2')
+  })
+
   // ---------------------------------------------------------------------------
   // mergeRegionToView interior-row contiguity tests
   //

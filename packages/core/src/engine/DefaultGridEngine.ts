@@ -211,12 +211,14 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   beginCellEdit(cell: CellAddress): boolean {
-    const field = this.fieldAt(cell.colIndex)
+    const region = this.mergeStore.getRegionAt(cell.rowIndex, cell.colIndex)
+    const editCell = region?.anchor ?? cell
+    const field = this.fieldAt(editCell.colIndex)
     if (!field || !isEditableFieldType(field.type)) return false
     if (!isMutableDataSource(this.data)) return false
 
-    const value = this.data.getCell(cell.rowIndex, field.id)
-    this.cellEdit.begin(cell, field.id, field.type, formatCellForEdit(value, field.type))
+    const value = this.data.getCell(editCell.rowIndex, field.id)
+    this.cellEdit.begin(editCell, field.id, field.type, formatCellForEdit(value, field.type))
     return true
   }
 
