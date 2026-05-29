@@ -79,6 +79,21 @@ function collectSegmentsByStroke(ops: readonly RecordedOp[], color: string): Seg
   return segs
 }
 
+function collectFillRectsByFill(
+  ops: readonly RecordedOp[],
+  color: string,
+): Array<{ x: number; y: number; width: number; height: number }> {
+  const rects: Array<{ x: number; y: number; width: number; height: number }> = []
+  let current = ''
+  for (const o of ops) {
+    if (o.op === 'set:fillStyle') current = String(o.value)
+    else if (o.op === 'fillRect' && current === color) {
+      rects.push({ x: o.args[0], y: o.args[1], width: o.args[2], height: o.args[3] })
+    }
+  }
+  return rects
+}
+
 describe('Canvas2DRenderer — 合并单元格绘制', () => {
   it('合并区域只在 anchor 绘制一次文本，跳过被覆盖的非 anchor 单元格', () => {
     const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
@@ -156,17 +171,15 @@ describe('Canvas2DRenderer — 合并单元格绘制', () => {
       mergeRegions: [A1B2],
     })
 
-    // 只看自定义红色边框（strokeStyle === '#d93025'）的竖直线段，排除默认灰色格线与水平边。
-    const verticalSegs = collectSegmentsByStroke(ops, '#d93025').filter(
-      (s) => Math.abs(s.x1 - s.x2) < 0.01,
-    )
+    // 只看自定义红色边框矩形，排除默认灰色格线与水平边。
+    const verticalRects = collectFillRectsByFill(ops, '#d93025').filter((r) => r.height > r.width)
     // denseGridTheme.rowHeaderWidth === 0，故 main region origin.x === 0。
     const internalVerticalX = colsAxis.indexToPosition(1) // 80：A1|B1 内部竖边
-    const hasInternalVertical = verticalSegs.some((s) => Math.abs(s.x1 - internalVerticalX) < 0.6)
+    const hasInternalVertical = verticalRects.some((r) => Math.abs(r.x - internalVerticalX) < 0.6)
     expect(hasInternalVertical).toBe(false)
-    // 合并区域外框右边（col1 右沿，x ≈ 160）仍应被描边，证明只过滤了内部竖边。
+    // 合并区域外框右边（thin 边框占在 col1 右沿内侧，x = 159）仍应绘制，证明只过滤了内部竖边。
     const outerRightX = colsAxis.indexToPosition(1) + colsAxis.getSize(1) // 160
-    const hasOuterRight = verticalSegs.some((s) => Math.abs(s.x1 - outerRightX) < 0.6)
+    const hasOuterRight = verticalRects.some((r) => Math.abs(r.x + r.width - outerRightX) < 0.6)
     expect(hasOuterRight).toBe(true)
   })
 
@@ -284,12 +297,10 @@ describe('Canvas2DRenderer — 合并单元格绘制', () => {
     const mergedFill = fillRects.find((o) => o.args[2] === mergedWidth && o.args[3] === mergedHeight)
     expect(mergedFill).toBeDefined()
 
-    // 外框右边（x ≈ 160）的竖直自定义边框仍被描边。
-    const verticalSegs = collectSegmentsByStroke(ops, '#d93025').filter(
-      (s) => Math.abs(s.x1 - s.x2) < 0.01,
-    )
+    // 外框右边（thin 边框占在 col1 右沿内侧）的竖直自定义边框仍被绘制。
+    const verticalRects = collectFillRectsByFill(ops, '#d93025').filter((r) => r.height > r.width)
     const outerRightX = colsAxis.indexToPosition(1) + colsAxis.getSize(1) // 160
-    const hasOuterRight = verticalSegs.some((s) => Math.abs(s.x1 - outerRightX) < 0.6)
+    const hasOuterRight = verticalRects.some((r) => Math.abs(r.x + r.width - outerRightX) < 0.6)
     expect(hasOuterRight).toBe(true)
   })
 

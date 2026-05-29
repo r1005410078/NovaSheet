@@ -9,7 +9,6 @@
  */
 
 import type { ResolvedCellFormat } from '@novasheet/core'
-import { snapLineInside } from '../paint/line-snap'
 import type { MergeLookup } from '../paint/merge-lookup'
 
 /** FormatBorderPainter.paint() 所需参数（axes duck-typed，便于单测注入最简 stub） */
@@ -32,18 +31,20 @@ export interface FormatBorderPaintArgs {
 /** 语义线宽到像素的映射。 */
 const WIDTH_MAP: Record<string, number> = { thin: 1, medium: 2, thick: 3 }
 
-interface EdgeCmd {
-  x1: number
-  y1: number
-  x2: number
-  y2: number
+interface EdgeRect {
+  color: string
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 /**
  * 自定义边框绘制器。
  *
- * 按 `color+width` 分组批量绘制，减少 ctx 状态切换次数。
- * 每条边坐标经 snapLineInside 对齐到 0.5px 亚像素，保证 1px 清晰锐利。
+ * 将每条边绘制为填充矩形，而不是使用 ctx.stroke()。
+ * Canvas stroke 会沿中心线两侧扩展；在粗边框、右/底边和区域 clip 交界处容易被裁半。
+ * edge-rect 模型让边框占用区域明确，后续 dashed/dotted/double 也可以在矩形边段上扩展。
  */
 export class FormatBorderPainter {
   paint(ctx: CanvasRenderingContext2D, args: FormatBorderPaintArgs): void {
@@ -53,8 +54,7 @@ export class FormatBorderPainter {
     const [rowFirst, rowLast] = args.rowRange
     const [colFirst, colLast] = args.colRange
 
-    // 分组：key = `${color}|${widthPx}`
-    const groups = new Map<string, { color: string; widthPx: number; edges: EdgeCmd[] }>()
+    const rects: EdgeRect[] = []
 
     for (const { rowIndex, colIndex, format } of cellFormats) {
       const { borders } = format
@@ -91,50 +91,59 @@ export class FormatBorderPainter {
         const { edge } = side
         if (!edge || edge.lineStyle !== 'solid') continue
         const widthPx = WIDTH_MAP[edge.width] ?? 1
-        const key = `${edge.color}|${widthPx}`
-
-        let group = groups.get(key)
-        if (!group) {
-          group = { color: edge.color, widthPx, edges: [] }
-          groups.set(key, group)
-        }
 
         if (side.isH) {
-          const snappedY = snapLineInside(side.rawCoord, rectTop, rectBottom)
-          if (snappedY === undefined) continue
           const x1 = Math.max(side.xA, rectLeft)
           const x2 = Math.min(side.xB, rectRight)
           if (x2 <= x1) continue
-          group.edges.push({ x1, y1: snappedY, x2, y2: snappedY })
+          const y = side.rawCoord === cellY ? side.rawCoord : side.rawCoord - widthPx
+          pushClippedRect(rects, edge.color, x1, y, x2 - x1, widthPx, rectLeft, rectTop, rectRight, rectBottom)
         } else {
-          const snappedX = snapLineInside(side.rawCoord, rectLeft, rectRight)
-          if (snappedX === undefined) continue
           const y1 = Math.max(side.yA, rectTop)
           const y2 = Math.min(side.yB, rectBottom)
           if (y2 <= y1) continue
-          group.edges.push({ x1: snappedX, y1, x2: snappedX, y2 })
+          const x = side.rawCoord === cellX ? side.rawCoord : side.rawCoord - widthPx
+          pushClippedRect(rects, edge.color, x, y1, widthPx, y2 - y1, rectLeft, rectTop, rectRight, rectBottom)
         }
       }
     }
 
-    if (groups.size === 0) return
+    if (rects.length === 0) return
 
     ctx.save()
     ctx.beginPath()
     ctx.rect(rect.x, rect.y, rect.width, rect.height)
     ctx.clip()
 
-    for (const { color, widthPx, edges } of groups.values()) {
-      ctx.strokeStyle = color
-      ctx.lineWidth = widthPx
-      ctx.beginPath()
-      for (const { x1, y1, x2, y2 } of edges) {
-        ctx.moveTo(x1, y1)
-        ctx.lineTo(x2, y2)
+    let currentColor: string | undefined
+    for (const edgeRect of rects) {
+      if (edgeRect.color !== currentColor) {
+        ctx.fillStyle = edgeRect.color
+        currentColor = edgeRect.color
       }
-      ctx.stroke()
+      ctx.fillRect(edgeRect.x, edgeRect.y, edgeRect.width, edgeRect.height)
     }
 
     ctx.restore()
   }
+}
+
+function pushClippedRect(
+  rects: EdgeRect[],
+  color: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  clipLeft: number,
+  clipTop: number,
+  clipRight: number,
+  clipBottom: number,
+): void {
+  const x1 = Math.max(x, clipLeft)
+  const y1 = Math.max(y, clipTop)
+  const x2 = Math.min(x + width, clipRight)
+  const y2 = Math.min(y + height, clipBottom)
+  if (x2 <= x1 || y2 <= y1) return
+  rects.push({ color, x: x1, y: y1, width: x2 - x1, height: y2 - y1 })
 }
