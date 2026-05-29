@@ -113,6 +113,8 @@ interface Canvas2DPaintFrameContext {
   colsAxis: Axis
   isEmpty: boolean
   excelChrome: boolean
+  /** 每帧唯一实例，content 与 grid layer 共用，避免重复构造。 */
+  merges: MergeLookup
 }
 
 /**
@@ -255,8 +257,11 @@ export class Canvas2DRenderer {
   }
 
   /**
-   * 同步绘制一帧（测试 / `invalidate()` 兜底）。
+   * 同步绘制一帧（测试 / `invalidate()` 兜底，例如 `setTheme` 触发的重绘）。
    * 从构造期 `viewport` 合成 frame；生产路径由 `WebGridRuntime` 传 `engine.getFrame()`。
+   *
+   * `cellFormats` / `mergeRegions` 等可选 frame 字段不在此处同步：`syncFromFrame` 只保存
+   * 滚动/轴/主题等会随外部调用变化的可变输入；格式与合并的权威来源是 `render(engine.getFrame())`。
    */
   paint(): void {
     this.render({
@@ -297,6 +302,7 @@ export class Canvas2DRenderer {
       colsAxis,
       isEmpty: data.getRowCount() === 0,
       excelChrome: snapshot.rowHeaderWidth > 0,
+      merges: new MergeLookup(frame.mergeRegions ?? []),
     }
 
     for (const layer of CANVAS2D_PAINT_LAYERS) this.paintLayer(layer, ctx)
@@ -359,8 +365,8 @@ export class Canvas2DRenderer {
       return
     }
 
-    // 合并查找表：anchor 绘制合并矩形、跳过被覆盖的非 anchor 单元格，填充与文本共用一份。
-    const merges = new MergeLookup(ctx.frame.mergeRegions ?? [])
+    // 合并查找表由 paintFrame 统一构造（ctx.merges），content 与 grid layer 共用同一实例。
+    const { merges } = ctx
 
     // 格式填充背景：先于文本绘制，确保文字不被遮挡；content layer 最靠后的阶段
     const cellFormats = ctx.frame.cellFormats ?? []
@@ -407,7 +413,6 @@ export class Canvas2DRenderer {
       // 自定义边框：在默认格线之上绘制，确保用户颜色/宽度覆盖默认格线。
       const cellFormats = ctx.frame.cellFormats ?? []
       if (cellFormats.length > 0) {
-        const merges = new MergeLookup(ctx.frame.mergeRegions ?? [])
         for (const region of paintOrder) {
           this.formatBorderPainter.paint(this.ctx, {
             rowsAxis,
@@ -418,7 +423,7 @@ export class Canvas2DRenderer {
             scrollOffsetX: region.scrollOffsetX,
             scrollOffsetY: region.scrollOffsetY,
             cellFormats,
-            merges,
+            merges: ctx.merges,
           })
         }
       }
