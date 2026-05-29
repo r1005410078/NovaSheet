@@ -407,7 +407,7 @@ export class Canvas2DRenderer {
     const { contentRect, regions, paintOrder, rowsAxis, colsAxis, snapshot, theme } = ctx
 
     if (!ctx.isEmpty) {
-      for (const region of paintOrder) this.paintGridLinesRegion(region, rowsAxis, colsAxis)
+      for (const region of paintOrder) this.paintGridLinesRegion(region, rowsAxis, colsAxis, ctx.merges)
       this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
 
       // 自定义边框：在默认格线之上绘制，确保用户颜色/宽度覆盖默认格线。
@@ -684,7 +684,12 @@ export class Canvas2DRenderer {
     }
   }
 
-  private paintGridLinesRegion(region: RenderRegion, rowsAxis: Axis, colsAxis: Axis): void {
+  private paintGridLinesRegion(
+    region: RenderRegion,
+    rowsAxis: Axis,
+    colsAxis: Axis,
+    merges: MergeLookup,
+  ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
 
@@ -696,6 +701,7 @@ export class Canvas2DRenderer {
       rect,
       scrollOffsetX,
       scrollOffsetY,
+      merges,
     })
   }
 

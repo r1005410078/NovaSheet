@@ -170,6 +170,47 @@ describe('Canvas2DRenderer — 合并单元格绘制', () => {
     expect(hasOuterRight).toBe(true)
   })
 
+  it('合并区域内不绘制默认网格线', () => {
+    const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      mergeRegions: [A1B2],
+    })
+
+    const defaultGridSegs = collectSegmentsByStroke(ops, denseGridTheme.colors.gridLine)
+    const verticalSegs = defaultGridSegs.filter((s) => Math.abs(s.x1 - s.x2) < 0.01)
+    const horizontalSegs = defaultGridSegs.filter((s) => Math.abs(s.y1 - s.y2) < 0.01)
+    const mergeTop = denseGridTheme.metrics.headerHeight
+    const mergeBottom = mergeTop + rowsAxis.getSize(0) + rowsAxis.getSize(1)
+    const mergeLeft = colsAxis.indexToPosition(0)
+    const mergeRight = mergeLeft + colsAxis.getSize(0) + colsAxis.getSize(1)
+    const overlaps = (a1: number, a2: number, b1: number, b2: number) =>
+      Math.max(a1, b1) < Math.min(a2, b2)
+
+    const internalVerticalX = colsAxis.indexToPosition(1)
+    const hasInternalVertical = verticalSegs.some(
+      (s) => Math.abs(s.x1 - internalVerticalX) < 0.6 && overlaps(s.y1, s.y2, mergeTop, mergeBottom),
+    )
+    expect(hasInternalVertical).toBe(false)
+
+    const internalHorizontalY = rowsAxis.indexToPosition(1) + denseGridTheme.metrics.headerHeight
+    const hasInternalHorizontal = horizontalSegs.some(
+      (s) => Math.abs(s.y1 - internalHorizontalY) < 0.6 && overlaps(s.x1, s.x2, mergeLeft, mergeRight),
+    )
+    expect(hasInternalHorizontal).toBe(false)
+
+    const outerRightX = colsAxis.indexToPosition(1) + colsAxis.getSize(1)
+    const hasOuterRight = verticalSegs.some((s) => Math.abs(s.x1 - outerRightX) < 0.6)
+    expect(hasOuterRight).toBe(true)
+  })
+
   it('anchor 滚出可见范围但区域仍相交时，仍绘制一次 anchor 内容', () => {
     const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
 

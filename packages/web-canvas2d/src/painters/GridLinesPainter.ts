@@ -14,6 +14,7 @@
 
 import type { Axis, QuadrantRect, Theme } from '@novasheet/core'
 import { snapLineInside } from '../paint/line-snap'
+import type { MergeLookup } from '../paint/merge-lookup'
 
 /** 网格线绘制所需参数 */
 export interface GridLinesPaintParams {
@@ -31,6 +32,32 @@ export interface GridLinesPaintParams {
   scrollOffsetX?: number
   /** Vertical scroll offset to subtract from content Y positions; frozen regions use their own baseline */
   scrollOffsetY?: number
+  /**
+   * 合并查找表（Phase 5-A）。可选；提供时跳过合并区域内部的行/列边界线，
+   * 仅保留合并区域外框边界，使合并单元格内部不再出现默认网格线。
+   */
+  merges?: MergeLookup
+}
+
+/** 返回 [from, to] 在去除 skips 覆盖区间后的互补线段（skips 为空时即整段）。 */
+function complementSegments(
+  from: number,
+  to: number,
+  skips: ReadonlyArray<readonly [number, number]>,
+): Array<[number, number]> {
+  if (skips.length === 0) return [[from, to]]
+  const norm = skips
+    .map(([s, e]) => [Math.max(from, Math.min(s, to)), Math.max(from, Math.min(e, to))] as [number, number])
+    .filter(([s, e]) => e > s)
+    .sort((p, q) => p[0] - q[0])
+  const out: Array<[number, number]> = []
+  let cursor = from
+  for (const [s, e] of norm) {
+    if (s > cursor) out.push([cursor, s])
+    cursor = Math.max(cursor, e)
+  }
+  if (cursor < to) out.push([cursor, to])
+  return out
 }
 
 /**
@@ -50,6 +77,7 @@ export class GridLinesPainter {
     const { rowsAxis, colsAxis, rowRange, colRange, rect } = params
     const scrollOffsetX = params.scrollOffsetX ?? 0
     const scrollOffsetY = params.scrollOffsetY ?? 0
+    const merges = params.merges
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
 
     ctx.strokeStyle = this.theme.colors.gridLine
@@ -65,8 +93,25 @@ export class GridLinesPainter {
       const yRaw = rect.y + yBase - scrollOffsetY
       const y = snapLineInside(yRaw, rect.y, rect.y + rect.height)
       if (y === undefined) continue
-      ctx.moveTo(rect.x, y)
-      ctx.lineTo(rect.x + rect.width, y)
+      const skips: Array<readonly [number, number]> = []
+      if (merges) {
+        for (const merge of merges.regions) {
+          const { range } = merge
+          if (r < range.startRow || r >= range.endRow) continue
+          if (range.endCol < colRange[0] || range.startCol > colRange[1]) continue
+          const startX = rect.x + colsAxis.indexToPosition(range.startCol) - scrollOffsetX
+          const endX =
+            rect.x +
+            colsAxis.indexToPosition(range.endCol) +
+            colsAxis.getSize(range.endCol) -
+            scrollOffsetX
+          skips.push([startX, endX])
+        }
+      }
+      for (const [x1, x2] of complementSegments(rect.x, rect.x + rect.width, skips)) {
+        ctx.moveTo(x1, y)
+        ctx.lineTo(x2, y)
+      }
     }
 
     // 垂直线：每列右边（同样用 getSize 取末列的实际宽度）。
@@ -75,8 +120,25 @@ export class GridLinesPainter {
       const xRaw = rect.x + xBase - scrollOffsetX
       const x = snapLineInside(xRaw, rect.x, rect.x + rect.width)
       if (x === undefined) continue
-      ctx.moveTo(x, rect.y)
-      ctx.lineTo(x, rect.y + rect.height)
+      const skips: Array<readonly [number, number]> = []
+      if (merges) {
+        for (const merge of merges.regions) {
+          const { range } = merge
+          if (c < range.startCol || c >= range.endCol) continue
+          if (range.endRow < rowRange[0] || range.startRow > rowRange[1]) continue
+          const startY = rect.y + rowsAxis.indexToPosition(range.startRow) - scrollOffsetY
+          const endY =
+            rect.y +
+            rowsAxis.indexToPosition(range.endRow) +
+            rowsAxis.getSize(range.endRow) -
+            scrollOffsetY
+          skips.push([startY, endY])
+        }
+      }
+      for (const [y1, y2] of complementSegments(rect.y, rect.y + rect.height, skips)) {
+        ctx.moveTo(x, y1)
+        ctx.lineTo(x, y2)
+      }
     }
 
     ctx.stroke()
