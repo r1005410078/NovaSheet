@@ -57,12 +57,18 @@ export class FormatFillPainter {
     for (const { rowIndex, colIndex, format } of cellFormats) {
       const { fillColor } = format
       if (!fillColor) continue
-      if (rowIndex < rowFirst || rowIndex > rowLast) continue
-      if (colIndex < colFirst || colIndex > colLast) continue
 
       // 合并区域：非 anchor 被覆盖格忽略填充；anchor 扩展为整块合并矩形。
       const region = merges?.regionAt(rowIndex, colIndex)
-      if (region && !merges!.isAnchor(region, rowIndex, colIndex)) continue
+      const isMergeAnchor = region !== undefined && merges!.isAnchor(region, rowIndex, colIndex)
+
+      // 单格按可见范围过滤（防跨 region 重复填充）；但合并 anchor 的矩形可跨入可见区——
+      // anchor 本身可能滚出 rowRange/colRange，不能据此丢弃，越界部分由 clip 兜底。
+      if (!isMergeAnchor) {
+        if (rowIndex < rowFirst || rowIndex > rowLast) continue
+        if (colIndex < colFirst || colIndex > colLast) continue
+      }
+      if (region && !isMergeAnchor) continue
 
       const x = rect.x + colsAxis.indexToPosition(colIndex) - scrollOffsetX
       const y = rect.y + rowsAxis.indexToPosition(rowIndex) - scrollOffsetY

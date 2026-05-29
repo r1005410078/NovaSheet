@@ -273,4 +273,34 @@ describe('DefaultGridEngine merge APIs', () => {
     expect(region?.range.startRow).toBe(2)
     expect(region?.range.endRow).toBe(4)
   })
+
+  it('补发滚出可见范围的合并 anchor 格式，保证滚动后合并填充仍渲染', () => {
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({
+        schema: {
+          fields: [
+            { id: 'a', name: 'A', type: 'text', width: 100 },
+            { id: 'b', name: 'B', type: 'text', width: 100 },
+          ],
+        },
+        rows: Array.from({ length: 8 }, (_, i) => ({ a: `A${i}`, b: `B${i}` })),
+      }),
+    })
+    engine.mergeCells({ startRow: 0, endRow: 5, startCol: 0, endCol: 1 })
+    engine.setFillColor({ startRow: 0, endRow: 5, startCol: 0, endCol: 1 }, '#fff2cc')
+
+    // rowHeight=28：下滚两行（56px）把 anchor row0 滚出可见扫描范围，合并区域 rows0-5 仍与视口相交。
+    engine.setViewportSize(400, 200)
+    engine.setScroll(0, 56)
+
+    const frame = engine.getFrame()
+    const [firstVisible] = frame.rowsAxis.getVisibleRange(
+      frame.viewport.scrollY,
+      frame.viewport.scrollY + frame.viewport.contentRect.height,
+    )
+    expect(firstVisible).toBeGreaterThan(0) // anchor row0 确实滚出可见扫描范围（非普通扫描命中）
+
+    const anchorFmt = frame.cellFormats?.find((f) => f.rowIndex === 0 && f.colIndex === 0)
+    expect(anchorFmt?.format.fillColor).toBe('#fff2cc')
+  })
 })

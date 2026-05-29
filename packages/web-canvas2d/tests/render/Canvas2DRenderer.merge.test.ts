@@ -201,6 +201,57 @@ describe('Canvas2DRenderer — 合并单元格绘制', () => {
     expect(texts).not.toContain('B2')
   })
 
+  it('anchor 滚出可见范围但区域相交时，仍绘制合并填充与外框边框', () => {
+    const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
+
+    // 可见范围从 row1 起（anchor row0 滚出顶部），区域 A1:B2 仍与可见区相交。
+    const snapshot = viewport.snapshot()
+    const main = snapshot.regions.find((r) => r.id === 'main')!
+    const shifted = {
+      ...snapshot,
+      regions: snapshot.regions.map((r) =>
+        r.id === 'main' ? { ...main, rowRange: [1, 1] as [number, number] } : r,
+      ),
+    }
+
+    const red = { color: '#d93025', width: 'thin', lineStyle: 'solid' } as const
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: shifted,
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      // 填充按 anchor 整块绘制：anchor (row0,col0) 滚出可见行范围时仍由 engine 以 view 坐标补发其填充。
+      // 边框按逐格绘制（model A）：可见覆盖格 B2 (row1,col1) 携带可见外框右/下边。
+      cellFormats: [
+        { rowIndex: 0, colIndex: 0, format: { fillColor: '#fff2cc' } },
+        { rowIndex: 1, colIndex: 1, format: { borders: { right: red, bottom: red } } },
+      ],
+      mergeRegions: [A1B2],
+    })
+
+    // 合并矩形填充仍发出（宽 160、高两行）。
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: '#fff2cc' })
+    const mergedWidth = colsAxis.getSize(0) + colsAxis.getSize(1)
+    const mergedHeight = rowsAxis.getSize(0) + rowsAxis.getSize(1)
+    const fillRects = ops.filter(
+      (o): o is Extract<RecordedOp, { op: 'fillRect' }> => o.op === 'fillRect',
+    )
+    const mergedFill = fillRects.find((o) => o.args[2] === mergedWidth && o.args[3] === mergedHeight)
+    expect(mergedFill).toBeDefined()
+
+    // 外框右边（x ≈ 160）的竖直自定义边框仍被描边。
+    const verticalSegs = collectSegmentsByStroke(ops, '#d93025').filter(
+      (s) => Math.abs(s.x1 - s.x2) < 0.01,
+    )
+    const outerRightX = colsAxis.indexToPosition(1) + colsAxis.getSize(1) // 160
+    const hasOuterRight = verticalSegs.some((s) => Math.abs(s.x1 - outerRightX) < 0.6)
+    expect(hasOuterRight).toBe(true)
+  })
+
   it('无 mergeRegions 时与原行为一致（A1/B1/A2/B2 各绘制一次）', () => {
     const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
 

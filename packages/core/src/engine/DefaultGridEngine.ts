@@ -302,13 +302,15 @@ export class DefaultGridEngine implements GridEngine {
         ...g,
         xPx: this.colsAxis.indexToPosition(g.atViewCol + 1) - vpSnap.scrollX,
       }))
-    const cellFormats = this.resolveVisibleCellFormats(
+    const mergeRegions = this.resolveVisibleMergeRegions(
       firstVisible,
       lastVisible,
       firstVisibleCol,
       lastVisibleCol,
     )
-    const mergeRegions = this.resolveVisibleMergeRegions(
+    const cellFormats = this.appendOffscreenMergeAnchorFormats(
+      this.resolveVisibleCellFormats(firstVisible, lastVisible, firstVisibleCol, lastVisibleCol),
+      mergeRegions,
       firstVisible,
       lastVisible,
       firstVisibleCol,
@@ -360,6 +362,37 @@ export class DefaultGridEngine implements GridEngine {
       }
     }
     return result
+  }
+
+  /**
+   * 合并区域的填充按整块矩形在 anchor 处绘制一次；当 anchor 滚出可见扫描范围、但区域仍与视口相交时，
+   * `resolveVisibleCellFormats` 不会扫描到 anchor，导致合并填充整帧消失。这里为这类 anchor 补发其格式
+   * （以 view 坐标），与文本侧 `paintMergeAnchors` 的 anchor 处理对齐。边框为逐格绘制（model A），可见覆盖格
+   * 已携带可见外框边，无需补发。
+   */
+  private appendOffscreenMergeAnchorFormats(
+    base: readonly ResolvedCellFormat[],
+    mergeRegions: readonly MergeRegion[],
+    firstRow: number,
+    lastRow: number,
+    firstCol: number,
+    lastCol: number,
+  ): readonly ResolvedCellFormat[] {
+    if (mergeRegions.length === 0 || this.formatStore.getLayerCount() === 0) return base
+    let augmented: ResolvedCellFormat[] | undefined
+    for (const region of mergeRegions) {
+      const { rowIndex: aRow, colIndex: aCol } = region.anchor
+      const insideScan = aRow >= firstRow && aRow <= lastRow && aCol >= firstCol && aCol <= lastCol
+      if (insideScan) continue
+      const rawRow = resolveUnderlyingRow(this.data, aRow)
+      const rawCol = this.getRawColumnIndexForViewIndex(aCol)
+      if (rawCol < 0) continue
+      const format = this.formatStore.resolveCell(rawRow, rawCol)
+      if (format === undefined) continue
+      if (!augmented) augmented = [...base]
+      augmented.push({ rowIndex: aRow, colIndex: aCol, format })
+    }
+    return augmented ?? base
   }
 
   /**
