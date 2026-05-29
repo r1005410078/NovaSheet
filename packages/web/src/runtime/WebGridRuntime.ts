@@ -523,6 +523,11 @@ export class WebGridRuntime {
     this.afterEngineMutation()
   }
 
+  /** Phase 5-A — 返回当前选区，供外部工具栏按任意选区操作。 */
+  getSelection(): GridSelection {
+    return this.engine.getSelection()
+  }
+
   /** Phase 4.6 — 在 schema field index 前插入 count 个列字段，刷新视图并返回新字段。 */
   insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
     if (this.destroyed) return []

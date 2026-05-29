@@ -450,6 +450,10 @@ export class Canvas2DBackend implements GridController {
     this.runtime.setColumnWidths(fieldIds, widthPx)
   }
 
+  getSelection(): GridSelection {
+    return this.runtime.getSelection()
+  }
+
   getHiddenCols(): readonly string[] {
     return this.runtime.getHiddenCols()
   }

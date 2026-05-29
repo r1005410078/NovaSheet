@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
 import { InMemoryDataSource } from '@novasheet/core'
+import type { CellRange } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
@@ -9,21 +10,34 @@ const meta: Meta = {
   title: '表格/合并与格式化',
   parameters: { layout: 'centered' },
   ...docsMeta(
-    'Phase 5-A：手动填充色、自定义边框（outer/all 预设）、合并/取消合并单元格、Undo/Redo。演示范围固定为 A1:B3（第 0–2 行，第 0–1 列）。',
+    'Phase 5-A：手动填充色、自定义边框（outer/all 预设）、合并/取消合并单元格、Undo/Redo。按钮作用于当前任意选区。',
   ),
 }
 export default meta
 type Story = StoryObj
 
-// 演示范围：第 0–2 行，第 0–1 列（A1:B3）
-const DEMO_RANGE = { startRow: 0, endRow: 2, startCol: 0, endCol: 1 }
-const DEMO_LABEL = 'A1:B3'
+function colLabel(index: number): string {
+  let n = index + 1
+  let label = ''
+  while (n > 0) {
+    const rem = (n - 1) % 26
+    label = String.fromCharCode(65 + rem) + label
+    n = Math.floor((n - 1) / 26)
+  }
+  return label
+}
+
+function rangeLabel(range: CellRange): string {
+  const start = `${colLabel(range.startCol)}${range.startRow + 1}`
+  const end = `${colLabel(range.endCol)}${range.endRow + 1}`
+  return start === end ? start : `${start}:${end}`
+}
 
 export const Basic: Story = {
   name: '合并与格式化',
   ...docsStory(
     basicSrc,
-    '工具栏按钮操作固定演示范围 A1:B3；每次操作前调用 setSelection 以高亮范围，状态行显示最近操作。',
+    '工具栏按钮操作当前选区；状态行显示最近操作与作用范围。',
   ),
   render: () => {
     const schema = basicTextSchema()
@@ -62,7 +76,7 @@ export const Basic: Story = {
 
     const statusEl = document.createElement('span')
     Object.assign(statusEl.style, { fontFamily: 'monospace', fontSize: '12px', color: '#555' })
-    statusEl.textContent = `演示范围: ${DEMO_LABEL} — 点击按钮操作`
+    statusEl.textContent = '选择任意范围后点击按钮操作'
 
     for (const btn of [fillYellowBtn, borderRedBtn, borderAllBtn, mergeBtn, unmergeBtn, undoBtn, redoBtn]) {
       toolbar.appendChild(btn)
@@ -85,44 +99,42 @@ export const Basic: Story = {
       redoBtn.disabled = !grid.canRedo()
     }
 
-    const DEMO_SELECTION = {
-      activeCell: { rowIndex: DEMO_RANGE.startRow, colIndex: DEMO_RANGE.startCol },
-      anchorCell: { rowIndex: DEMO_RANGE.startRow, colIndex: DEMO_RANGE.startCol },
-      extentCell: { rowIndex: DEMO_RANGE.endRow, colIndex: DEMO_RANGE.endCol },
-      selectedRange: DEMO_RANGE,
-    }
-
-    function applyAndStatus(action: () => boolean, label: string): void {
-      grid.setSelection(DEMO_SELECTION)
-      const ok = action()
-      statusEl.textContent = ok ? `已${label} ${DEMO_LABEL}` : `${label} 失败 (${DEMO_LABEL})`
+    function applyAndStatus(action: (range: CellRange) => boolean, label: string): void {
+      const range = grid.getSelection().selectedRange
+      if (!range) {
+        statusEl.textContent = `${label} 失败 (无选区)`
+        return
+      }
+      const ok = action(range)
+      const labelText = rangeLabel(range)
+      statusEl.textContent = ok ? `已${label} ${labelText}` : `${label} 失败 (${labelText})`
       syncButtons()
     }
 
     fillYellowBtn.addEventListener('click', () => {
-      applyAndStatus(() => grid.setFillColor(DEMO_RANGE, '#fff2cc'), '填充黄色')
+      applyAndStatus((range) => grid.setFillColor(range, '#fff2cc'), '填充黄色')
     })
 
     borderRedBtn.addEventListener('click', () => {
       applyAndStatus(
-        () => grid.setBorders(DEMO_RANGE, 'outer', { color: '#cc0000', width: 'medium', lineStyle: 'solid' }),
+        (range) => grid.setBorders(range, 'outer', { color: '#cc0000', width: 'medium', lineStyle: 'solid' }),
         '设置红色外框',
       )
     })
 
     borderAllBtn.addEventListener('click', () => {
       applyAndStatus(
-        () => grid.setBorders(DEMO_RANGE, 'all', { color: '#666666', width: 'thin', lineStyle: 'solid' }),
+        (range) => grid.setBorders(range, 'all', { color: '#666666', width: 'thin', lineStyle: 'solid' }),
         '设置全部细边框',
       )
     })
 
     mergeBtn.addEventListener('click', () => {
-      applyAndStatus(() => grid.mergeCells(DEMO_RANGE), '合并选区')
+      applyAndStatus((range) => grid.mergeCells(range), '合并选区')
     })
 
     unmergeBtn.addEventListener('click', () => {
-      applyAndStatus(() => grid.unmergeCells(DEMO_RANGE), '取消合并')
+      applyAndStatus((range) => grid.unmergeCells(range), '取消合并')
     })
 
     undoBtn.addEventListener('click', () => {

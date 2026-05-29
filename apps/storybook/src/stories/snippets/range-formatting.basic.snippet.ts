@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { Grid } from '@novasheet/web'
 import { InMemoryDataSource } from '@novasheet/core'
+import type { CellRange } from '@novasheet/core'
 
 const schema = {
   fields: [
@@ -22,38 +23,29 @@ const data = new InMemoryDataSource({
 const container = document.getElementById('grid-container')!
 const grid = new Grid(container, { data })
 
-// 演示范围：第 0–2 行，第 0–1 列（A1:B3）
-const DEMO_RANGE = { startRow: 0, endRow: 2, startCol: 0, endCol: 1 }
-const DEMO_SELECTION = {
-  activeCell: { rowIndex: 0, colIndex: 0 },
-  anchorCell: { rowIndex: 0, colIndex: 0 },
-  extentCell: { rowIndex: 2, colIndex: 1 },
-  selectedRange: DEMO_RANGE,
+function withSelection(action: (range: CellRange) => boolean): boolean {
+  const range = grid.getSelection().selectedRange
+  return range ? action(range) : false
 }
 
 document.getElementById('fill-yellow')!.addEventListener('click', () => {
-  grid.setSelection(DEMO_SELECTION)
-  grid.setFillColor(DEMO_RANGE, '#fff2cc')
+  withSelection((range) => grid.setFillColor(range, '#fff2cc'))
 })
 
 document.getElementById('border-red-outer')!.addEventListener('click', () => {
-  grid.setSelection(DEMO_SELECTION)
-  grid.setBorders(DEMO_RANGE, 'outer', { color: '#cc0000', width: 'medium', lineStyle: 'solid' })
+  withSelection((range) => grid.setBorders(range, 'outer', { color: '#cc0000', width: 'medium', lineStyle: 'solid' }))
 })
 
 document.getElementById('border-all-thin')!.addEventListener('click', () => {
-  grid.setSelection(DEMO_SELECTION)
-  grid.setBorders(DEMO_RANGE, 'all', { color: '#666666', width: 'thin', lineStyle: 'solid' })
+  withSelection((range) => grid.setBorders(range, 'all', { color: '#666666', width: 'thin', lineStyle: 'solid' }))
 })
 
 document.getElementById('merge')!.addEventListener('click', () => {
-  grid.setSelection(DEMO_SELECTION)
-  grid.mergeCells(DEMO_RANGE)
+  withSelection((range) => grid.mergeCells(range))
 })
 
 document.getElementById('unmerge')!.addEventListener('click', () => {
-  grid.setSelection(DEMO_SELECTION)
-  grid.unmergeCells(DEMO_RANGE)
+  withSelection((range) => grid.unmergeCells(range))
 })
 
 document.getElementById('undo-btn')!.addEventListener('click', () => grid.undo())

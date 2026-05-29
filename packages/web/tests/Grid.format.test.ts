@@ -3,6 +3,32 @@ import { Grid } from '../src/Grid'
 import { InMemoryDataSource } from '@novasheet/core'
 
 describe('Grid Phase 5-A APIs', () => {
+  it('exposes the current selection for range formatting controls', () => {
+    const container = document.createElement('div')
+    const grid = new Grid(container, {
+      data: new InMemoryDataSource({
+        schema: {
+          fields: [
+            { id: 'a', name: 'A', type: 'text', width: 100 },
+            { id: 'b', name: 'B', type: 'text', width: 100 },
+          ],
+        },
+        rows: [{ a: 'A1', b: 'B1' }, { a: 'A2', b: 'B2' }],
+      }),
+    })
+
+    grid.setSelection({
+      activeCell: { rowIndex: 1, colIndex: 1 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: 1 },
+      selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+    })
+
+    expect(grid.getSelection().selectedRange).toEqual({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
+
+    grid.destroy()
+  })
+
   it('forwards fill, border, merge, and unmerge to the controller', () => {
     const container = document.createElement('div')
     const grid = new Grid(container, {

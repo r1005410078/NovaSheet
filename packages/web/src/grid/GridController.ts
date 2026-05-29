@@ -104,6 +104,8 @@ export interface GridController {
   setRowHeights(rowIds: readonly number[], h: number): void
   /** Phase 4.5 — 程序化设置选区。 */
   setSelection(selection: GridSelection): void
+  /** Phase 5-A — 返回当前选区，供外部工具栏按任意选区操作。 */
+  getSelection(): GridSelection
   /** Phase 4.5 — 返回行头右键菜单项列表（含条件项）。 */
   getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[]
   /** Phase 4.5 — 执行行头右键菜单动作。 */

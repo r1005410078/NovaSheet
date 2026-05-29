@@ -291,6 +291,11 @@ export class Grid {
     this.delegate.setSelection(selection)
   }
 
+  /** Phase 5-A — 返回当前选区，供外部工具栏按任意选区操作。 */
+  getSelection(): GridSelection {
+    return this.delegate.getSelection()
+  }
+
   /** Phase 4.5 — 返回行头右键菜单项列表（含条件 unhide 项）。 */
   getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
     return this.delegate.getRowHeaderContextMenuItems(ctx)
