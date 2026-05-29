@@ -68,10 +68,12 @@ export class FormatBorderPainter {
       const cellW = colsAxis.getSize(colIndex)
       const cellH = rowsAxis.getSize(rowIndex)
 
-      const rectLeft = rect.x - MAX_BORDER_OUTSET
-      const rectRight = rect.x + rect.width + MAX_BORDER_OUTSET
-      const rectTop = rect.y - MAX_BORDER_OUTSET
-      const rectBottom = rect.y + rect.height + MAX_BORDER_OUTSET
+      const clipLeft = rect.x - MAX_BORDER_OUTSET
+      const clipRight = rect.x + rect.width + MAX_BORDER_OUTSET
+      const clipTop = rect.y - MAX_BORDER_OUTSET
+      const clipBottom = rect.y + rect.height + MAX_BORDER_OUTSET
+      const canvasLeft = 0
+      const canvasTop = 0
 
       // 合并区域内部边过滤：被覆盖格只保留与区域外框重合的边，丢弃相邻覆盖格之间的内部边。
       const region = merges?.regionAt(rowIndex, colIndex)
@@ -94,17 +96,17 @@ export class FormatBorderPainter {
         const widthPx = WIDTH_MAP[edge.width] ?? 1
 
         if (side.isH) {
-          const x1 = Math.max(side.xA, rectLeft)
-          const x2 = Math.min(side.xB, rectRight)
+          const x1 = Math.max(side.xA, clipLeft)
+          const x2 = Math.min(side.xB, clipRight)
           if (x2 <= x1) continue
-          const y = edgeRectStart(side.rawCoord, widthPx)
-          pushClippedRect(rects, edge.color, x1, y, x2 - x1, widthPx, rectLeft, rectTop, rectRight, rectBottom)
+          const y = edgeRectStart(side.rawCoord, widthPx, canvasTop)
+          pushClippedRect(rects, edge.color, x1, y, x2 - x1, widthPx, clipLeft, clipTop, clipRight, clipBottom)
         } else {
-          const y1 = Math.max(side.yA, rectTop)
-          const y2 = Math.min(side.yB, rectBottom)
+          const y1 = Math.max(side.yA, clipTop)
+          const y2 = Math.min(side.yB, clipBottom)
           if (y2 <= y1) continue
-          const x = edgeRectStart(side.rawCoord, widthPx)
-          pushClippedRect(rects, edge.color, x, y1, widthPx, y2 - y1, rectLeft, rectTop, rectRight, rectBottom)
+          const x = edgeRectStart(side.rawCoord, widthPx, canvasLeft)
+          pushClippedRect(rects, edge.color, x, y1, widthPx, y2 - y1, clipLeft, clipTop, clipRight, clipBottom)
         }
       }
     }
@@ -134,8 +136,8 @@ export class FormatBorderPainter {
   }
 }
 
-function edgeRectStart(rawCoord: number, widthPx: number): number {
-  return rawCoord - Math.floor(widthPx / 2)
+function edgeRectStart(rawCoord: number, widthPx: number, visibleStart: number): number {
+  return Math.max(rawCoord - Math.floor(widthPx / 2), visibleStart)
 }
 
 function pushClippedRect(

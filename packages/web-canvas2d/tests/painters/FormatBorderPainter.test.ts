@@ -88,4 +88,32 @@ describe('FormatBorderPainter', () => {
 
     expect(ops).toContainEqual({ op: 'fillRect', args: [120, 24, 1, 24] })
   })
+
+  it('keeps medium left border visible at the viewport left edge', () => {
+    const { ctx, ops } = createRecordingContext()
+    const painter = new FormatBorderPainter()
+
+    painter.paint(ctx, {
+      rowsAxis: { indexToPosition: (i: number) => i * 24, getSize: () => 24 },
+      colsAxis: { indexToPosition: (i: number) => i * 80, getSize: () => 80 },
+      rect: { x: 0, y: 24, width: 160, height: 48 },
+      rowRange: [0, 1],
+      colRange: [0, 1],
+      scrollOffsetX: 0,
+      scrollOffsetY: 0,
+      cellFormats: [
+        {
+          rowIndex: 0,
+          colIndex: 0,
+          format: {
+            borders: {
+              left: { color: '#d93025', width: 'medium', lineStyle: 'solid' },
+            },
+          },
+        },
+      ],
+    })
+
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 24, 2, 24] })
+  })
 })
