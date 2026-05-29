@@ -74,4 +74,18 @@ describe('DefaultGridEngine format APIs', () => {
     // No undo entry should have been added
     expect(engine.undo()).toBeUndefined()
   })
+
+  it('setFillColor with null over a borders-only range returns false (kind-aware no-op)', () => {
+    const engine = makeEngine()
+    const border: BorderStyle = { color: '#d93025', width: 'thin', lineStyle: 'solid' }
+    const range = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
+    expect(engine.setBorders(range, 'outer', border)).toBe(true)
+
+    // Clearing fill where only borders exist contributes nothing and must not push an undo entry.
+    expect(engine.setFillColor(range, null)).toBe(false)
+    expect(engine.getCellFormat(0, 0)?.borders?.top?.color).toBe('#d93025')
+    // The only undo entry is the borders one; a second undo finds nothing.
+    expect(engine.undo()?.kind).toBe('format')
+    expect(engine.undo()).toBeUndefined()
+  })
 })

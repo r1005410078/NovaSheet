@@ -61,4 +61,32 @@ describe('RangeStyleStore', () => {
     store.clearBorders({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
     expect(store.getLayerCount()).toBe(0)
   })
+
+  it('clearFill over a borders-only range does NOT push a layer (kind-aware no-op)', () => {
+    const store = new RangeStyleStore()
+    store.apply({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, {
+      borders: { top: { color: '#000', width: 'thin', lineStyle: 'solid' } },
+    })
+    expect(store.getLayerCount()).toBe(1)
+    store.clearFill({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+    expect(store.getLayerCount()).toBe(1)
+  })
+
+  it('clearBorders over a fill-only range does NOT push a layer (kind-aware no-op)', () => {
+    const store = new RangeStyleStore()
+    store.apply({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, { fillColor: '#fff2cc' })
+    expect(store.getLayerCount()).toBe(1)
+    store.clearBorders({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+    expect(store.getLayerCount()).toBe(1)
+  })
+
+  it('clearFill over a prior clearFill marker still pushes (marker counts as fill kind)', () => {
+    const store = new RangeStyleStore()
+    store.apply({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, { fillColor: '#fff2cc' })
+    store.clearFill({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+    expect(store.getLayerCount()).toBe(2)
+    // A second clearFill that only intersects the prior clearFill marker still contributes a fill kind.
+    store.clearFill({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+    expect(store.getLayerCount()).toBe(3)
+  })
 })

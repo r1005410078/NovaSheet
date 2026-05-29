@@ -17,22 +17,34 @@ export class RangeStyleStore {
   }
 
   clearFill(range: CellRange): void {
-    // Only push a clear layer when at least one existing layer intersects the target range;
-    // otherwise there is nothing to clear and the store stays unchanged (no-op, no undo entry).
-    if (!this.anyLayerIntersects(range)) return
+    // Kind-aware no-op guard: only push when an intersecting layer actually contributes a fill
+    // (a fillColor patch or a prior clearFill marker). Clearing fill over borders-only cells would
+    // change nothing yet still grow the snapshot, producing a spurious format undo entry.
+    if (!this.anyLayerContributesFill(range)) return
     this.layers.push({ range, patch: {}, clearFill: true, order: this.nextOrder++ })
   }
 
   clearBorders(range: CellRange): void {
-    // Same guard as clearFill: skip push when no existing layer can contribute borders here.
-    if (!this.anyLayerIntersects(range)) return
+    // Symmetric to clearFill: only push when an intersecting layer contributes borders
+    // (a borders patch or a prior clearBorders marker).
+    if (!this.anyLayerContributesBorders(range)) return
     this.layers.push({ range, patch: {}, clearBorders: true, order: this.nextOrder++ })
   }
 
-  /** Returns true when at least one existing layer's range overlaps `target`. O(layers). */
-  private anyLayerIntersects(target: CellRange): boolean {
+  /** True when some intersecting layer would set or clear a fillColor for `target`. O(layers). */
+  private anyLayerContributesFill(target: CellRange): boolean {
     for (const layer of this.layers) {
-      if (rangesIntersect(layer.range, target)) return true
+      if (!rangesIntersect(layer.range, target)) continue
+      if (layer.clearFill || layer.patch.fillColor !== undefined) return true
+    }
+    return false
+  }
+
+  /** True when some intersecting layer would set or clear borders for `target`. O(layers). */
+  private anyLayerContributesBorders(target: CellRange): boolean {
+    for (const layer of this.layers) {
+      if (!rangesIntersect(layer.range, target)) continue
+      if (layer.clearBorders || layer.patch.borders !== undefined) return true
     }
     return false
   }
