@@ -16,7 +16,9 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 ## Current state (read first on a fresh session)
 
-**Last shipped:** **Phase 4.7 column drag reorder** — implemented on `feat/phase-4-7-column-reorder`. Current shipped interaction stack now also includes Google Sheets-style selected-column drag reorder: click column header to select, drag from the selected header, show a DOM target band + drop line, and commit schema reorder on pointerup.
+**Last shipped:** **Phase 5-A merge + basic range styling** — implemented on `feat/phase-5-a-merge-range-styling`. Adds platform-independent sparse `RangeStyleStore` (fill color + `all/outer/inner/clear` solid borders with color + thin/medium/thick width) and `MergeStore` (merge/unmerge, overlap rejection, raw-coord keyed); engine `setFillColor`/`setBorders`/`mergeCells`/`unmergeCells` + `getCellFormat`/`getMergeRegion` (RAW coords) with undo/redo; `RenderFrame.cellFormats?`/`mergeRegions?` (optional, emitted in VIEW coords via raw→view translation); Canvas `FormatFillPainter` + `FormatBorderPainter` stages and merge-aware text/anchor rendering (single canvas, no new DOM); structural remap of both stores on insert/delete/move with undo/redo store-snapshot alignment (Task 7b); clipboard paste-over-merge guard (`onPasteSkipped` reason `'merge'`); public `Grid` API + Storybook `表格/合并与格式化`. Prior shipped stack (Phase 4.7 column drag reorder, etc.) unchanged.
+
+**Phase 5-A coordinate invariant (important):** `RangeStyleStore`/`MergeStore` key cells by **raw** underlying row index + raw col index; `getFrame()` translates the visible region raw→view so painters consume VIEW coords only. Formatting/merge mutations translate the incoming view selection to a contiguous raw range via `viewRangeToRawRange`; when a sort/filter scatters the mapping (non-contiguous) the mutation conservatively returns `false` (no-op) — consistent with the spec's "5-A 保守禁用冲突 mutation" posture.
 
 - `@novasheet/core` — platform-independent (data, schema, theme, layout, `DefaultGridEngine`, `RenderFrame`). No DOM.
 - `@novasheet/web` — browser host/runtime (`DomGridHost`, `NativeScroller`, `ScrollMapper`, `WebGridRuntime`) plus public `Grid` facade and Canvas2D backend assembly.
@@ -24,13 +26,15 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses the public `Grid` facade from `@novasheet/web`.
 
-**Next milestone:** **Phase 5 merge / formatting** unless the user redirects. Phase 4.7 column drag reorder is documented in `docs/superpowers/specs/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md` + the implementation plan at `docs/superpowers/plans/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md`.
+**Next milestone:** **Phase 5-B advanced borders** (single-edge UI, dashed/dotted/double), then 5-C number/date/currency formatting and 5-D conditional formatting — unless the user redirects. Phase 5-A is documented in `docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md` + the implementation plan at `docs/superpowers/plans/2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md` (the plan also contains Task 7b, the structural-undo store-alignment fix added mid-execution).
 
 **Per-Grid scheduler convention** (invariant #5): each `Grid` owns `new FrameScheduler()` shared by `Canvas2DRenderer` and `NativeScroller` via `WebGridRuntime`; the `frameScheduler` singleton from `util/raf` is NOT used cross-Grid.
 
 **Dependency direction:** `@novasheet/core` is platform-independent. `@novasheet/web-canvas2d` depends on core for render contracts; `@novasheet/web` depends on core + web-canvas2d to expose the browser `Grid` facade and Canvas2D backend. `apps/storybook` depends on `@novasheet/web` + `@novasheet/core`.
 
 **Phase 4 status:** 4.0 context menu, 4.1 clipboard, 4.2 undo/redo, 4.3 fill handle, 4.4 sort/filter, 4.5 row structural + row header menu, 4.6 column structural + column header menu extension, and 4.7 column drag reorder are shipped.
+
+**Phase 5 status:** 5-A (merge + fill + basic solid borders) shipped. 5-B (advanced borders), 5-C (number/date/currency format), 5-D (conditional formatting) not started.
 
 **Locked architectural decisions** (do NOT revisit casually, see spec ADR §A):
 

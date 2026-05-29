@@ -10,7 +10,7 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 
 ## 当前状态
 
-最近交付：**Phase 4.7 列拖拽重排**。下一里程碑：**Phase 5 合并 / Range 格式化**。
+最近交付：**Phase 5-A 合并 + 基础 Range 格式化**。下一里程碑：**Phase 5-B 高级边框**。
 
 | 维度                     | 数值                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
@@ -44,7 +44,8 @@ NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canv
 | Phase 4.5 行结构 + 行头菜单       | 行 insert / delete / hide · 行头右键菜单 · HideRowsLayer · 三角 unhide handle · 行高弹层                      | ✅        | [spec](docs/superpowers/specs/2026-05-23-novasheet-phase-4-5-row-structural.md)                       |
 | Phase 4.6 列结构 + 列头菜单扩展   | 列 insert / delete / hide · 列头菜单新增结构项 · 列头 unhide 入口                                             | ✅        | [spec](docs/superpowers/specs/2026-05-24-novasheet-phase-4-6-column-structural.md)                       |
 | Phase 4.7 列拖拽重排              | Google Sheets 式先选列再拖动 · DOM 目标列带 + 落点线 · 多列重排 · undo/redo                                 | ✅        | [spec](docs/superpowers/specs/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md) · [plan](docs/superpowers/plans/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md) |
-| Phase 5 合并 / Range 格式化       | 5-A 合并单元格 + 填充色 + 基础边框颜色/粗细；5-B 高级边框；5-C 数字 · 日期 · 百分比 · 货币格式化；5-D 条件格式 | 计划中    | [spec](docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md)                 |
+| Phase 5-A 合并 + 基础 Range 格式化 | 单元格合并 / 取消合并 · 填充色 · 基础边框（all/outer/inner/clear · 颜色 · thin/medium/thick · solid）· 结构变更坐标同步 · undo/redo · 内部复制粘贴合并保护 · 公开 API · Storybook | ✅        | [spec](docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md) · [plan](docs/superpowers/plans/2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md) |
+| Phase 5-B/C/D 进阶格式化          | 5-B 高级边框（单边 · dashed/dotted/double）；5-C 数字 · 日期 · 百分比 · 货币格式化；5-D 条件格式 | 计划中    | [spec](docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md)                 |
 | Phase 6 字段类型 + Schema         | 字段编辑器 · Schema 校验 · 单元格校验 · lookup / rollup · 分组 / 聚合                                         | 计划中    | —                                                                                                      |
 | Phase 7 公式 / 导入导出           | 公式引擎 · 跨 sheet · 命名区域 · 透视表 · 图表 · xlsx / csv                                                   | 计划中    | —                                                                                                      |
 | Phase 8 服务端 / 多视图           | 服务端分页 DataSource · OPFS · 协同 · Grid / Kanban / Calendar / Gallery                                      | 计划中    | —                                                                                                      |
