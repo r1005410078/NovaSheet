@@ -163,6 +163,39 @@ describe('WebGridRuntime selection overlay', () => {
     })
   })
 
+  it('expands active selection overlay to the containing merge region', () => {
+    const selectionOverlay = makeSelectionOverlay()
+    const frame = makeFrame({
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 0, colIndex: 0 },
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      },
+      mergeRegions: [
+        {
+          id: 'merge-1',
+          range: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+          anchor: { rowIndex: 0, colIndex: 0 },
+        },
+      ],
+      columnWidth: 80,
+    })
+    const runtime = new WebGridRuntime({
+      engine: makeEngine(frame),
+      host: makeHost(),
+      renderer: makeRenderer(),
+      selectionOverlay,
+    })
+
+    ;(runtime as unknown as { paintSync(): void }).paintSync()
+
+    expect(selectionOverlay.sync).toHaveBeenLastCalledWith({
+      rangeRects: [{ x: 0, y: 30, width: 80, height: 30 }],
+      activeRect: { x: 0, y: 30, width: 160, height: 60 },
+    })
+  })
+
   it('clears selection overlay while cell editing', () => {
     const selectionOverlay = makeSelectionOverlay()
     const engine = makeEngine(
@@ -215,11 +248,15 @@ function makeSelectionOverlay(): SelectionOverlay {
 function makeFrame(options: {
   selection: GridSelection
   columnWidth: number
+  mergeRegions?: ReturnType<GridEngine['getFrame']>['mergeRegions']
 }): ReturnType<GridEngine['getFrame']> {
   const data = {
-    getRowCount: () => 1,
+    getRowCount: () => 2,
     getSchema: () => ({
-      fields: [{ id: 'a', name: 'A', type: 'text', width: options.columnWidth }],
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: options.columnWidth },
+        { id: 'b', name: 'B', type: 'text', width: options.columnWidth },
+      ],
     }),
     getRows: () => [],
     getCell: () => null,
@@ -229,13 +266,13 @@ function makeFrame(options: {
     data,
     theme: denseGridTheme,
     rowsAxis: {
-      getCount: () => 1,
+      getCount: () => 2,
       indexToPosition: (i: number) => i * 30,
       positionToIndex: (pos: number) => Math.floor(pos / 30),
       getSize: () => 30,
     } as never,
     colsAxis: {
-      getCount: () => 1,
+      getCount: () => 2,
       indexToPosition: (i: number) => i * options.columnWidth,
       positionToIndex: (pos: number) => Math.floor(pos / options.columnWidth),
       getSize: () => options.columnWidth,
@@ -247,9 +284,9 @@ function makeFrame(options: {
           id: 'main',
           rowBand: 'middle',
           colBand: 'center',
-          rowRange: [0, 0],
-          colRange: [0, 0],
-          rect: { x: 0, y: 30, width: options.columnWidth, height: 270 },
+          rowRange: [0, 1],
+          colRange: [0, 1],
+          rect: { x: 0, y: 30, width: options.columnWidth * 2, height: 270 },
           scrollOffsetX: 0,
           scrollOffsetY: 0,
           zIndex: 0,
@@ -259,6 +296,7 @@ function makeFrame(options: {
     collapsedRowGaps: [],
     collapsedColGaps: [],
     selection: options.selection,
+    mergeRegions: options.mergeRegions,
   }
 }
 

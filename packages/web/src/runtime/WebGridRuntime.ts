@@ -2207,13 +2207,25 @@ export class WebGridRuntime {
       return
     }
     const active = selection.activeCell
+    const activeRange =
+      active &&
+      (frame.mergeRegions ?? []).find(
+        (merge) =>
+          active.rowIndex >= merge.range.startRow &&
+          active.rowIndex <= merge.range.endRow &&
+          active.colIndex >= merge.range.startCol &&
+          active.colIndex <= merge.range.endCol,
+      )?.range
     const activeRect = active
-      ? computeRangeOverlayRects(frame, {
-          startRow: active.rowIndex,
-          endRow: active.rowIndex,
-          startCol: active.colIndex,
-          endCol: active.colIndex,
-        }).at(-1) ?? null
+      ? computeRangeOverlayRects(
+          frame,
+          activeRange ?? {
+            startRow: active.rowIndex,
+            endRow: active.rowIndex,
+            startCol: active.colIndex,
+            endCol: active.colIndex,
+          },
+        ).at(-1) ?? null
       : null
     this.selectionOverlay.sync({
       rangeRects: computeRangeOverlayRects(frame, range),
