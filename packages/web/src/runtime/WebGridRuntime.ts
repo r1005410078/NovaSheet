@@ -2381,8 +2381,9 @@ export class WebGridRuntime {
 
   /** 根据当前 engine edit session 定位并展示 DOM cell editor。 */
   private showCellEditor(options: { selectAll?: boolean }): boolean {
-    const session = this.engine.getFrame().cellEdit
-    const rect = session ? computeCellRect(this.engine.getFrame(), session.cell) : null
+    const frame = this.engine.getFrame()
+    const session = frame.cellEdit
+    const rect = session ? this.computeCellEditorRect(frame, session.cell) : null
     if (!session || !rect || !this.cellEditor) {
       this.engine.cancelCellEdit()
       return false
@@ -2447,17 +2448,30 @@ export class WebGridRuntime {
   /** 根据当前单元格 rect 同步编辑器位置；不可见时取消编辑。 */
   private syncCellEditorPosition(): void {
     if (!this.cellEditor?.isOpen()) return
-    const session = this.engine.getFrame().cellEdit
+    const frame = this.engine.getFrame()
+    const session = frame.cellEdit
     if (!session) {
       this.cellEditor.close()
       return
     }
-    const rect = computeCellRect(this.engine.getFrame(), session.cell)
+    const rect = this.computeCellEditorRect(frame, session.cell)
     if (!rect) {
       this.cancelCellEdit()
       return
     }
     this.cellEditor.syncRect(rect)
+  }
+
+  private computeCellEditorRect(frame: ReturnType<GridEngine['getFrame']>, cell: CellAddress) {
+    const mergeRange = (frame.mergeRegions ?? []).find(
+      (merge) =>
+        cell.rowIndex >= merge.range.startRow &&
+        cell.rowIndex <= merge.range.endRow &&
+        cell.colIndex >= merge.range.startCol &&
+        cell.colIndex <= merge.range.endCol,
+    )?.range
+    if (mergeRange) return computeRangeOverlayRects(frame, mergeRange).at(-1) ?? null
+    return computeCellRect(frame, cell)
   }
 
   /** 返回导航后需要滚动到可见区域的选区目标。 */

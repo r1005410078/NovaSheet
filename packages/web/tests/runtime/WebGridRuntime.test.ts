@@ -613,6 +613,80 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
     expect(engine.navigateSelection).not.toHaveBeenCalled()
   })
 
+  it('合并单元格进入编辑时，编辑器覆盖完整合并区域', () => {
+    const engine = makeEngine()
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: 1 },
+      selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+    }))
+    engine.beginCellEdit = mock(() => true)
+    engine.getFrame = mock(() => ({
+      data: {
+        getSchema: () => ({
+          fields: [
+            { id: 'name', name: 'Name', type: 'text', width: 100 },
+            { id: 'role', name: 'Role', type: 'text', width: 100 },
+          ],
+        }),
+      } as never,
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: { indexToPosition: (i: number) => i * 28, getSize: () => 28 } as never,
+      colsAxis: { indexToPosition: (i: number) => i * 100, getSize: () => 100 } as never,
+      viewport: {
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            colBand: 'center',
+            rowRange: [0, 1],
+            colRange: [0, 1],
+            rect: { x: 0, y: 32, width: 200, height: 200 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+      cellEdit: {
+        cell: { rowIndex: 0, colIndex: 0 },
+        fieldId: 'name',
+        fieldType: 'text' as const,
+        draft: 'Alice',
+      },
+      mergeRegions: [
+        {
+          id: 'merge-1',
+          range: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+          anchor: { rowIndex: 0, colIndex: 0 },
+        },
+      ],
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+    }))
+
+    const editor = {
+      open: mock(() => {}),
+      close: mock(() => {}),
+      isOpen: mock(() => false),
+      syncRect: mock(() => {}),
+      applyTheme: mock(() => {}),
+    }
+    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setCellEditor(editor as never)
+
+    expect(runtime.handleHostKeyDown({ key: 'x', shiftKey: false, ctrlKey: false, metaKey: false, altKey: false })).toBe(
+      true,
+    )
+
+    expect(editor.open).toHaveBeenCalledWith(
+      { x: 0, y: 32, width: 200, height: 56 },
+      'Alice',
+      { selectAll: false, multiline: false },
+    )
+  })
+
   it('Enter 恢复为下移导航', () => {
     const engine = makeEngine()
     engine.navigateSelection = mock(() => true)
