@@ -116,6 +116,7 @@ function makeEngine(): GridEngine {
     moveRows: mock(() => false),
     setFillColor: mock(() => false),
     setBorders: mock(() => false),
+    setTextWrap: mock(() => false),
     getCellFormat: mock(() => undefined),
     mergeCells: mock(() => false),
     unmergeCells: mock(() => false),

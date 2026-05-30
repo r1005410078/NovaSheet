@@ -15,6 +15,7 @@ import type {
   CellFormat,
   FormatLayer,
   ResolvedCellFormat,
+  TextWrapMode,
 } from '../format/CellFormat'
 import { MergeStore } from '../merge/MergeStore'
 import type { MergeRegion } from '../merge/MergeStore'
@@ -1136,6 +1137,20 @@ export class DefaultGridEngine implements GridEngine {
     } else {
       this.formatStore.apply(rawRange, { fillColor: color })
     }
+    return this.commitFormatChange(before, selectionBefore)
+  }
+
+  /**
+   * 设置 view `range` 的文本显示模式（overflow/wrap/clip）。view→raw 翻译，
+   * 非连续映射返回 false；快照前后一致也返回 false（沿用 format undo 命令）。
+   */
+  setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
+    this.finishActiveEdit()
+    const rawRange = this.viewRangeToRawRange(range)
+    if (!rawRange) return false
+    const selectionBefore = this.selection.getSelection()
+    const before = this.formatStore.snapshot()
+    this.formatStore.apply(rawRange, { textWrap: mode })
     return this.commitFormatChange(before, selectionBefore)
   }
 

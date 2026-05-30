@@ -88,4 +88,21 @@ describe('DefaultGridEngine format APIs', () => {
     expect(engine.undo()?.kind).toBe('format')
     expect(engine.undo()).toBeUndefined()
   })
+
+  it('setTextWrap 写入、随帧输出、undo/redo 还原', () => {
+    const engine = makeEngine()
+    const range = { startRow: 0, endRow: 1, startCol: 0, endCol: 0 }
+
+    expect(engine.setTextWrap(range, 'wrap')).toBe(true)
+    expect(engine.getCellFormat(0, 0)?.textWrap).toBe('wrap')
+    expect(
+      engine.getFrame().cellFormats?.find((f) => f.rowIndex === 0 && f.colIndex === 0)?.format
+        .textWrap,
+    ).toBe('wrap')
+
+    expect(engine.undo()?.kind).toBe('format')
+    expect(engine.getCellFormat(0, 0)?.textWrap).toBeUndefined()
+    expect(engine.redo()?.kind).toBe('format')
+    expect(engine.getCellFormat(0, 0)?.textWrap).toBe('wrap')
+  })
 })

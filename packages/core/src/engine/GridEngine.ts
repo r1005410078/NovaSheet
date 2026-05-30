@@ -8,7 +8,7 @@ import type { DataSource } from '../data/DataSource'
 import type { Field } from '../data/Schema'
 import type { RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
-import type { BorderPreset, BorderStyle, CellFormat } from '../format/CellFormat'
+import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../format/CellFormat'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
@@ -178,6 +178,9 @@ export interface GridEngine {
    * `range` 必须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
    */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean
+
+  /** 设置 view `range` 的文本显示模式（overflow/wrap/clip）；非连续映射返回 false。 */
+  setTextWrap(range: CellRange, mode: TextWrapMode): boolean
 
   /** Phase 5-A — 解析单个单元格格式（raw 坐标）；无格式返回 undefined。 */
   getCellFormat(rowIndex: number, colIndex: number): CellFormat | undefined
