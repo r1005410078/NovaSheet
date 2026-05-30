@@ -10,7 +10,8 @@ const meta: Meta = {
   title: '表格/合并与格式化',
   parameters: { layout: 'centered' },
   ...docsMeta(
-    'Phase 5-A：手动填充色、自定义边框（all/outer/inner/单边预设）、合并/取消合并单元格、Undo/Redo。按钮作用于当前任意选区。',
+    'Phase 5-A：手动填充色、自定义边框（all/outer/inner/单边预设）、合并/取消合并单元格、' +
+      '文本显示三态（溢出/换行/裁断）、Undo/Redo。按钮作用于当前任意选区。',
   ),
 }
 export default meta
@@ -77,6 +78,9 @@ export const Basic: Story = {
     const borderClearBtn = makeBtn('清除边框')
     const mergeBtn = makeBtn('合并选区')
     const unmergeBtn = makeBtn('取消合并')
+    const wrapOverflowBtn = makeBtn('溢出')
+    const wrapWrapBtn = makeBtn('换行')
+    const wrapClipBtn = makeBtn('裁断')
     const undoBtn = makeBtn('Undo')
     const redoBtn = makeBtn('Redo')
     undoBtn.disabled = true
@@ -100,6 +104,9 @@ export const Basic: Story = {
       borderClearBtn,
       mergeBtn,
       unmergeBtn,
+      wrapOverflowBtn,
+      wrapWrapBtn,
+      wrapClipBtn,
       undoBtn,
       redoBtn,
     ]) {
@@ -167,6 +174,16 @@ export const Basic: Story = {
 
     unmergeBtn.addEventListener('click', () => {
       applyAndStatus((range) => grid.unmergeCells(range), '取消合并')
+    })
+
+    wrapOverflowBtn.addEventListener('click', () => {
+      applyAndStatus((range) => grid.setTextWrap(range, 'overflow'), '设为溢出')
+    })
+    wrapWrapBtn.addEventListener('click', () => {
+      applyAndStatus((range) => grid.setTextWrap(range, 'wrap'), '设为换行')
+    })
+    wrapClipBtn.addEventListener('click', () => {
+      applyAndStatus((range) => grid.setTextWrap(range, 'clip'), '设为裁断')
     })
 
     undoBtn.addEventListener('click', () => {
