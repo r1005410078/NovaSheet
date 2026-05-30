@@ -60,10 +60,9 @@ describe('CellPainter — 单元格', () => {
     }
   })
 
-  it('长文本按可用宽度截断加省略号', () => {
+  it('长文本默认（overflow）按可用宽度硬裁断、无省略号', () => {
     const { ctx, ops } = createRecordingContext()
-    // RecordingContext.measureText returns length * 7 px
-    // Field width 50, padX*2 = 16, available width = 34 → ~4 chars + …
+    // measureText = len*7；宽 50、padX*2=16 → 可用 34 → 4 字符（28<=34<35）
     new CellPainter(denseGridTheme).paint(ctx, {
       value: 'abcdefghijklmnop',
       rect: { x: 0, y: 0, width: 50, height: 28 },
@@ -71,8 +70,8 @@ describe('CellPainter — 单元格', () => {
     })
     const fillTextOp = ops.find((o) => o.op === 'fillText')
     if (fillTextOp?.op === 'fillText') {
-      expect(fillTextOp.args[0]).toMatch(/…$/)
-      expect(fillTextOp.args[0].length).toBeLessThan('abcdefghijklmnop'.length)
+      expect((fillTextOp.args[0] as string).includes('…')).toBe(false)
+      expect((fillTextOp.args[0] as string).length).toBeLessThan('abcdefghijklmnop'.length)
     }
   })
 
@@ -150,9 +149,9 @@ describe('CellPainter — 单元格', () => {
       expect(lines.join('')).toContain('qux')
     })
 
-    it('wrap=true 但 measurer 缺席时退化为单行截断', () => {
+    it('wrap=true 但 measurer 缺席时退化为单行硬裁断（无省略号）', () => {
       const { ctx, ops } = createRecordingContext()
-      // 不传 measurer：wrap 字段被忽略，走原来的单行 paintText
+      // 不传 measurer：wrap 无法软折，退化为单行 paintLines（硬裁断）
       new CellPainter(denseGridTheme).paint(ctx, {
         value: 'hello world foo bar baz qux',
         rect: { x: 0, y: 0, width: 50, height: 28 },
@@ -162,8 +161,7 @@ describe('CellPainter — 单元格', () => {
       expect(fillTexts.length).toBe(1) // 单行
       const txt = fillTexts[0]
       if (txt?.op === 'fillText') {
-        expect(typeof txt.args[0]).toBe('string')
-        expect(txt.args[0].endsWith('…')).toBe(true)
+        expect((txt.args[0] as string).includes('…')).toBe(false)
       }
     })
 
@@ -240,6 +238,45 @@ describe('CellPainter — 单元格', () => {
       expect(ys.length).toBe(3)
       expect(ys[1]).toBeGreaterThan(ys[0] as number) // 逐行向下堆叠
       expect(ys[2]).toBeGreaterThan(ys[1] as number)
+    })
+  })
+
+  describe('textWrap 三态', () => {
+    const long = 'abcdefghijklmnopqrstuvwxyz'
+
+    it('clip：硬裁断、无省略号', () => {
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme).paint(ctx, {
+        value: long,
+        rect: { x: 0, y: 0, width: 100, height: 28 },
+        field: makeField({ type: 'text' }),
+        textWrap: 'clip',
+      })
+      const txt = ops.find((o) => o.op === 'fillText')
+      expect(txt?.op === 'fillText' && txt.args[0]).toBe('abcdefghijkl') // 84/7=12 字符
+      expect(txt?.op === 'fillText' && (txt.args[0] as string).includes('…')).toBe(false)
+    })
+
+    it('overflow（默认）：同样无省略号（溢出留给 renderer）', () => {
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme).paint(ctx, {
+        value: long,
+        rect: { x: 0, y: 0, width: 100, height: 28 },
+        field: makeField({ type: 'text' }),
+      })
+      const txt = ops.find((o) => o.op === 'fillText')
+      expect(txt?.op === 'fillText' && (txt.args[0] as string).includes('…')).toBe(false)
+    })
+
+    it('textWrap=wrap 即使 field.wrap 未设也走折行', () => {
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme, { measurer: fixedWidthMeasurer }).paint(ctx, {
+        value: long,
+        rect: { x: 0, y: 0, width: 100, height: 100 },
+        field: makeField({ type: 'text' }), // 无 field.wrap
+        textWrap: 'wrap',
+      })
+      expect(ops.filter((o) => o.op === 'fillText').length).toBeGreaterThan(1)
     })
   })
 })

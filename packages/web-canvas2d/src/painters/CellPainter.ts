@@ -17,7 +17,14 @@
  * 实测 600 个 cell × save/clip/restore < 3 ms，可接受。
  */
 
-import type { CellValue, Field, QuadrantRect, TextMeasurer, Theme } from '@novasheet/core'
+import type {
+  CellValue,
+  Field,
+  QuadrantRect,
+  TextMeasurer,
+  TextWrapMode,
+  Theme,
+} from '@novasheet/core'
 import { wrapText } from '@novasheet/core'
 
 /** 行高倍数（默认 1.4 倍 fontSize）。可在 theme 里加 token 让它可配。 */
@@ -31,6 +38,8 @@ export interface CellPaintParams {
   rect: QuadrantRect
   /** 字段定义（决定类型与对齐） */
   field: Field
+  /** 文本显示模式；缺省回退 `field.wrap?'wrap':'overflow'`（由 RangeStyleStore 解析后传入）。 */
+  textWrap?: TextWrapMode
 }
 
 /** CellPainter 构造选项 */
@@ -94,18 +103,15 @@ export class CellPainter {
     ctx.textBaseline = 'middle'
     ctx.textAlign = this.theme.cell.textAlignByType[field.type]
 
-    // 先 dispatch 专用路径；其他走 fallback 字符串化。
-    // wrap 模式只对 text-likely 路径生效（number 仍单行右对齐）；measurer 缺席时退化单行。
-    const wantWrap = field.wrap === true && field.type !== 'number' && this.measurer
+    // 解析文本显示模式：显式 textWrap 优先，否则回退列级 field.wrap（true→wrap），都无则 overflow。
+    const mode: TextWrapMode = params.textWrap ?? (field.wrap === true ? 'wrap' : 'overflow')
     if (field.type === 'number' && typeof value === 'number') {
       this.paintNumber(ctx, value, rect)
-    } else if (wantWrap) {
-      const str = this.toDisplayString(value)
-      this.paintWrapped(ctx, str, rect)
+    } else if (mode === 'wrap' && field.type !== 'number' && this.measurer) {
+      this.paintWrapped(ctx, this.toDisplayString(value), rect)
     } else if (field.type === 'text' && typeof value === 'string') {
-      // 硬换行（Alt+Enter 写入的 `\n`）即使非 wrap 也按行绘制；否则单行截断。
-      if (value.includes('\n')) this.paintHardBreaks(ctx, value, rect)
-      else this.paintText(ctx, value, rect)
+      // overflow / clip：按 \n 多行、每行硬裁断无省略号（overflow 的溢出由 renderer 扩展 clip 实现）。
+      this.paintLines(ctx, value, rect)
     } else {
       this.paintFallback(ctx, value, rect, field)
     }
@@ -156,36 +162,30 @@ export class CellPainter {
     }
   }
 
-  /** 绘制文本类型单元格（左对齐，超长截断加省略号） */
-  private paintText(ctx: CanvasRenderingContext2D, text: string, rect: QuadrantRect): void {
+  /**
+   * overflow / clip 的文本绘制：按 `\n` 切行，每行**硬裁断、无省略号**（对齐 Excel/Sheets）。
+   * 单行时垂直居中；多行时自顶向下堆叠（与 paintWrapped 一致），放不下的行裁掉。
+   * overflow 的横向溢出由 renderer 传入扩展 clip 实现——本方法只负责整串绘制与按行裁断。
+   */
+  private paintLines(ctx: CanvasRenderingContext2D, text: string, rect: QuadrantRect): void {
     const padX = this.theme.metrics.cellPaddingX
     const availableWidth = rect.width - padX * 2
-    const display = this.truncate(ctx, text, availableWidth)
-    if (!display) return
+    if (availableWidth <= 0) return
     const x = rect.x + padX
-    const y = rect.y + rect.height / 2
-    ctx.fillText(display, x, y)
-  }
-
-  /**
-   * 硬换行绘制：按 `\n` 切行、自顶向下逐行画，每行单独按宽截断（不软折，无需 measurer）。
-   * 与 `paintWrapped` 的垂直布局一致（`textBaseline='middle'`，firstY = y + padY + lineHeight/2）；
-   * 可用高度放不下的行直接裁掉。
-   */
-  private paintHardBreaks(ctx: CanvasRenderingContext2D, text: string, rect: QuadrantRect): void {
-    const padX = this.theme.metrics.cellPaddingX
+    const lines = text.split('\n')
+    if (lines.length === 1) {
+      const display = this.hardCut(ctx, lines[0]!, availableWidth)
+      if (display) ctx.fillText(display, x, rect.y + rect.height / 2)
+      return
+    }
     const padY = this.theme.metrics.cellPaddingY
     const lineHeight = this.theme.metrics.fontSize * LINE_HEIGHT_MULTIPLIER
-    const availableWidth = rect.width - padX * 2
     const availableHeight = rect.height - padY * 2
-    if (availableWidth <= 0 || availableHeight <= 0) return
+    if (availableHeight <= 0) return
     const maxLines = Math.max(1, Math.floor((availableHeight + lineHeight * 0.01) / lineHeight))
-    const lines = text.split('\n')
-    const count = Math.min(lines.length, maxLines)
-    const x = rect.x + padX
     const firstY = rect.y + padY + lineHeight / 2
-    for (let i = 0; i < count; i++) {
-      const display = this.truncate(ctx, lines[i]!, availableWidth)
+    for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+      const display = this.hardCut(ctx, lines[i]!, availableWidth)
       if (display) ctx.fillText(display, x, firstY + i * lineHeight)
     }
   }
@@ -220,8 +220,31 @@ export class CellPainter {
     if (value instanceof Date) str = value.toISOString()
     else if (Array.isArray(value)) str = value.join(', ')
     else str = String(value)
-    if (str.includes('\n')) this.paintHardBreaks(ctx, str, rect)
-    else this.paintText(ctx, str, rect)
+    this.paintLines(ctx, str, rect)
+  }
+
+  /**
+   * 找出 `text` 能放进 `maxWidth` 的最长前缀（**硬裁断、无省略号**），整串放得下返回原文。
+   * 二分把 measureText 压到 O(log n)；缓存 key 含 `hc|` 前缀以与省略号截断区分。
+   */
+  private hardCut(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+    if (maxWidth <= 0) return ''
+    const cacheKey = `hc|${ctx.font}|${maxWidth}|${text}`
+    const cached = this.truncationCache.get(cacheKey)
+    if (cached !== undefined) return cached
+    let result = text
+    if (ctx.measureText(text).width > maxWidth) {
+      let lo = 0
+      let hi = text.length
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >>> 1
+        if (ctx.measureText(text.slice(0, mid)).width <= maxWidth) lo = mid
+        else hi = mid - 1
+      }
+      result = text.slice(0, lo)
+    }
+    this.truncationCache.set(cacheKey, result)
+    return result
   }
 
   /**
