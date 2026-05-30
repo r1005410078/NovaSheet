@@ -61,7 +61,9 @@ import type {
   RenderRegion,
   CellAddress,
   CellRange,
+  ResolvedCellFormat,
   TextMeasurer,
+  TextWrapMode,
   Theme,
 } from '@novasheet/core'
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
@@ -389,8 +391,17 @@ export class Canvas2DRenderer {
     // 字体一帧设置一次，painter 内部不再变更——避免重复设置 ctx.font 的开销
     this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
     this.preloadVisibleRows(ctx)
+    const textWrapLookup = buildTextWrapLookup(cellFormats)
     for (const region of paintOrder)
-      this.paintCellContentRegion(region, data, rowsAxis, colsAxis, merges, ctx.frame.cellEdit?.cell)
+      this.paintCellContentRegion(
+        region,
+        data,
+        rowsAxis,
+        colsAxis,
+        merges,
+        textWrapLookup,
+        ctx.frame.cellEdit?.cell,
+      )
     this.paintHeaders(
       paintOrder,
       data,
@@ -604,6 +615,7 @@ export class Canvas2DRenderer {
     rowsAxis: Axis,
     colsAxis: Axis,
     merges: MergeLookup,
+    textWrapLookup: Map<string, TextWrapMode>,
     editingCell?: CellAddress,
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
@@ -633,11 +645,12 @@ export class Canvas2DRenderer {
           value,
           rect: { x: cellX, y: cellY, width: colWidth, height: rowHeight },
           field,
+          textWrap: textWrapLookup.get(`${r}:${c}`),
         })
       }
     }
 
-    this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, editingCell)
+    this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, textWrapLookup, editingCell)
 
     this.ctx.restore()
   }
@@ -655,6 +668,7 @@ export class Canvas2DRenderer {
     rowsAxis: Axis,
     colsAxis: Axis,
     merges: MergeLookup,
+    textWrapLookup: Map<string, TextWrapMode>,
     editingCell?: CellAddress,
   ): void {
     if (merges.isEmpty) return
@@ -680,6 +694,7 @@ export class Canvas2DRenderer {
         value,
         rect: { x: cellX, y: cellY, width, height },
         field,
+        textWrap: textWrapLookup.get(`${ar}:${ac}`),
       })
     }
   }
@@ -795,4 +810,17 @@ function ctxClipRect(
   ctx.beginPath()
   ctx.rect(rect.x, rect.y, rect.width, rect.height)
   ctx.clip()
+}
+
+/** 把可见 cellFormats（VIEW 坐标）中设了 textWrap 的格收成 `"row:col" → mode` 查表。 */
+function buildTextWrapLookup(
+  cellFormats: readonly ResolvedCellFormat[],
+): Map<string, TextWrapMode> {
+  const lookup = new Map<string, TextWrapMode>()
+  for (const cf of cellFormats) {
+    if (cf.format.textWrap !== undefined) {
+      lookup.set(`${cf.rowIndex}:${cf.colIndex}`, cf.format.textWrap)
+    }
+  }
+  return lookup
 }
