@@ -1,6 +1,7 @@
 import type {
   BorderPreset,
   BorderStyle,
+  TextWrapMode,
   CellRange,
   ContextMenuItem,
   DataSource,
@@ -132,6 +133,8 @@ export interface GridController {
   setFillColor(range: CellRange, color: string | null): boolean
   /** Phase 5-A — 为 view `range` 设置基础边框；`preset='clear'` 需 `border=null`；变化时刷新并返回 true。 */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean
+  /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时刷新并返回 true。 */
+  setTextWrap(range: CellRange, mode: TextWrapMode): boolean
   /** Phase 5-A — 合并 view `range`；成功刷新并返回 true。 */
   mergeCells(range: CellRange): boolean
   /** Phase 5-A — 取消 view `range` 触及的合并区域；移除任意区域则刷新并返回 true。 */

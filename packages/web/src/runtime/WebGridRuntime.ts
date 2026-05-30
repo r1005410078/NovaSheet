@@ -52,6 +52,7 @@ import {
   type ApplyPasteSource,
   type BorderPreset,
   type BorderStyle,
+  type TextWrapMode,
   type CellAddress,
   type CellRange,
   type ContextMenuAction,
@@ -608,6 +609,14 @@ export class WebGridRuntime {
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
     if (this.destroyed) return false
     const changed = this.engine.setBorders(range, preset, border)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时刷新视图。 */
+  setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.setTextWrap(range, mode)
     if (changed) this.afterEngineMutation()
     return changed
   }

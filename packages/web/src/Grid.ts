@@ -1,6 +1,7 @@
 import type {
   BorderPreset,
   BorderStyle,
+  TextWrapMode,
   CellRange,
   ContextMenuItem,
   ContextMenuAction,
@@ -368,6 +369,11 @@ export class Grid {
   /** Phase 5-A — 为 view `range` 设置基础边框；`preset='clear'` 需 `border=null`；变化时返回 true 并重绘。 */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
     return this.delegate.setBorders(range, preset, border)
+  }
+
+  /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时返回 true 并重绘。 */
+  setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
+    return this.delegate.setTextWrap(range, mode)
   }
 
   /** Phase 5-A — 合并 view `range`；成功返回 true 并重绘。 */

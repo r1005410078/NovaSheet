@@ -53,6 +53,7 @@ describe('Grid Phase 5-A APIs', () => {
     ).toBe(true)
     expect(grid.mergeCells({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })).toBe(true)
     expect(grid.unmergeCells({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })).toBe(true)
+    expect(grid.setTextWrap({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, 'wrap')).toBe(true)
 
     grid.destroy()
   })

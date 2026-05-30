@@ -19,6 +19,7 @@ import {
   ViewPipeline,
   type BorderPreset,
   type BorderStyle,
+  type TextWrapMode,
   type CellRange,
   type ContextMenuItem,
   type ContextMenuAction,
@@ -476,6 +477,10 @@ export class Canvas2DBackend implements GridController {
 
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
     return this.runtime.setBorders(range, preset, border)
+  }
+
+  setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
+    return this.runtime.setTextWrap(range, mode)
   }
 
   mergeCells(range: CellRange): boolean {
