@@ -280,6 +280,7 @@ function makeEngine(
       direction,
       writes: [],
     })),
+    getFillMergeSnap: mock(() => ({ rowSpan: 1, colSpan: 1 })),
   } as unknown as GridEngine
 }
 

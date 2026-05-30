@@ -37,6 +37,12 @@ export type UndoCommand =
       readonly result: CellRange
       readonly before: ReadonlyArray<CellWrite>
       readonly after: ReadonlyArray<CellWrite>
+      // Phase 5-A fill 携带格式/合并：仅当 raw 映射连续（propagation 执行）时填充，
+      // 非连续散裂时缺省（undo/redo 不恢复 store）。
+      readonly formatBefore?: readonly FormatLayer[]
+      readonly formatAfter?: readonly FormatLayer[]
+      readonly mergeBefore?: readonly MergeRegion[]
+      readonly mergeAfter?: readonly MergeRegion[]
     }
   | {
       readonly kind: 'resizeRow'

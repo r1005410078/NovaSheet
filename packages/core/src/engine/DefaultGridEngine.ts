@@ -7,7 +7,7 @@ import { applyPaste, pasteTargetConflictsWithMerges } from '../clipboard/ApplyPa
 import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
 import { computeFillWrites } from '../fill/FillSeries'
-import { unionRange, type FillDirection } from '../fill/FillTarget'
+import { unionRange, type FillDirection, type FillMergeSnap } from '../fill/FillTarget'
 import { RangeStyleStore } from '../format/RangeStyleStore'
 import type {
   BorderPreset,
@@ -980,10 +980,144 @@ export class DefaultGridEngine implements GridEngine {
     }))
     for (const w of viewWrites) this.data.updateCell(w.rowIndex, w.fieldId, w.value)
 
+    // Phase 5-A fill：把源选区的填充色/边框/合并按填充轴平铺到目标区。
+    // 非连续 raw 映射（排序/筛选散裂）时保守跳过，仅保留值填充。
+    const styles = this.propagateFillStyles(source, fill, direction)
+
     const result = unionRange(source, fill)
-    this.undoStack.push({ kind: 'fill', source, fill, result, before, after })
+    this.undoStack.push({ kind: 'fill', source, fill, result, before, after, ...styles })
     this.selection.setSelectedRange(result)
     return { source, fill, result, writes: resultWrites }
+  }
+
+  /**
+   * Phase 5-A — 返回 view `source` 的合并块吸附尺寸。source 含合并时返回其 raw 跨度，
+   * 否则（无合并或映射非连续）返回 `{ rowSpan: 1, colSpan: 1 }`，让填充柄不吸附。
+   */
+  getFillMergeSnap(source: CellRange): FillMergeSnap {
+    const rawSource = this.viewRangeToRawRange(source)
+    if (!rawSource || this.mergeStore.getRegionsInRange(rawSource).length === 0) {
+      return { rowSpan: 1, colSpan: 1 }
+    }
+    return {
+      rowSpan: rawSource.endRow - rawSource.startRow + 1,
+      colSpan: rawSource.endCol - rawSource.startCol + 1,
+    }
+  }
+
+  /**
+   * 把源选区的格式（填充色/边框）与合并区按填充轴平铺到 fill 目标区，并返回供 undo/redo
+   * 恢复的 store 快照。源或目标的 view→raw 映射非连续时返回空对象（不改动任何 store）。
+   */
+  private propagateFillStyles(
+    source: CellRange,
+    fill: CellRange,
+    direction: FillDirection,
+  ): {
+    formatBefore?: readonly FormatLayer[]
+    formatAfter?: readonly FormatLayer[]
+    mergeBefore?: readonly MergeRegion[]
+    mergeAfter?: readonly MergeRegion[]
+  } {
+    const rawSource = this.viewRangeToRawRange(source)
+    const rawFill = this.viewRangeToRawRange(fill)
+    if (!rawSource || !rawFill) return {}
+
+    const formatBefore = this.formatStore.snapshot()
+    const mergeBefore = this.mergeStore.snapshot()
+    this.tileFillFormat(rawSource, rawFill, direction)
+    this.tileFillMerge(rawSource, rawFill, direction)
+    return {
+      formatBefore,
+      formatAfter: this.formatStore.snapshot(),
+      mergeBefore,
+      mergeAfter: this.mergeStore.snapshot(),
+    }
+  }
+
+  /**
+   * 格式平铺：清空目标区后，按填充轴的 `positiveModulo` 取对应源格的已解析格式重写，
+   * 使目标格精确等于源（源无格式则清除目标陈旧格式）。坐标均为 raw。
+   */
+  private tileFillFormat(rawSource: CellRange, rawFill: CellRange, direction: FillDirection): void {
+    const sourceHasFormat = this.formatStore.resolveVisible(rawSource).length > 0
+    const targetHasFormat = this.formatStore.resolveVisible(rawFill).length > 0
+    if (!sourceHasFormat && !targetHasFormat) return
+
+    this.formatStore.clearFill(rawFill)
+    this.formatStore.clearBorders(rawFill)
+    if (!sourceHasFormat) return
+
+    const sRows = rawSource.endRow - rawSource.startRow + 1
+    const sCols = rawSource.endCol - rawSource.startCol + 1
+    const vertical = direction === 'down' || direction === 'up'
+    for (let row = rawFill.startRow; row <= rawFill.endRow; row += 1) {
+      for (let col = rawFill.startCol; col <= rawFill.endCol; col += 1) {
+        const srcRow = vertical
+          ? rawSource.startRow + positiveModulo(row - rawSource.startRow, sRows)
+          : row
+        const srcCol = vertical
+          ? col
+          : rawSource.startCol + positiveModulo(col - rawSource.startCol, sCols)
+        const fmt = this.formatStore.resolveCell(srcRow, srcCol)
+        if (!fmt) continue
+        const target: CellRange = { startRow: row, endRow: row, startCol: col, endCol: col }
+        if (fmt.fillColor !== undefined) this.formatStore.apply(target, { fillColor: fmt.fillColor })
+        if (fmt.borders !== undefined) this.formatStore.apply(target, { borders: fmt.borders })
+      }
+    }
+  }
+
+  /**
+   * 合并平铺：源合并块沿填充轴按整块步长复制；放不下整块的尾部 tile 跳过，与既有合并相交
+   * 由 `MergeStore.merge` 拒绝（返回 null）后跳过。坐标均为 raw。
+   */
+  private tileFillMerge(rawSource: CellRange, rawFill: CellRange, direction: FillDirection): void {
+    const regions = this.mergeStore.getRegionsInRange(rawSource)
+    // 填充覆盖目标区时一律取消其已有合并（与 Google 表格一致）：单格源拖过合并会恢复成普通格；
+    // 合并源还会接着按块平铺（先清除也避免源块平铺与旧合并相交被拒绝）。
+    this.mergeStore.unmerge(rawFill)
+    if (regions.length === 0) return
+    const sRows = rawSource.endRow - rawSource.startRow + 1
+    const sCols = rawSource.endCol - rawSource.startCol + 1
+    const vertical = direction === 'down' || direction === 'up'
+    const blockSize = vertical ? sRows : sCols
+    const span = vertical
+      ? rawFill.endRow - rawFill.startRow + 1
+      : rawFill.endCol - rawFill.startCol + 1
+    const maxTiles = Math.ceil(span / blockSize) + 1
+
+    for (const region of regions) {
+      for (let k = 1; k <= maxTiles; k += 1) {
+        const candidate = this.shiftRangeForFill(region.range, direction, k * blockSize)
+        if (!this.rangeWithin(candidate, rawFill)) continue
+        this.mergeStore.merge(candidate)
+      }
+    }
+  }
+
+  /** 沿填充方向把 `range` 整体平移 `delta` 格（down/right 为正向，up/left 为反向）。 */
+  private shiftRangeForFill(range: CellRange, direction: FillDirection, delta: number): CellRange {
+    switch (direction) {
+      case 'down':
+        return { ...range, startRow: range.startRow + delta, endRow: range.endRow + delta }
+      case 'up':
+        return { ...range, startRow: range.startRow - delta, endRow: range.endRow - delta }
+      case 'right':
+        return { ...range, startCol: range.startCol + delta, endCol: range.endCol + delta }
+      case 'left':
+        return { ...range, startCol: range.startCol - delta, endCol: range.endCol - delta }
+    }
+  }
+
+  /** `inner` 是否完全落在 `outer` 矩形内。 */
+  private rangeWithin(inner: CellRange, outer: CellRange): boolean {
+    return (
+      inner.startRow >= outer.startRow &&
+      inner.endRow <= outer.endRow &&
+      inner.startCol >= outer.startCol &&
+      inner.endCol <= outer.endCol
+    )
   }
 
   /**
@@ -1159,6 +1293,8 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'fill':
         for (const w of cmd.before) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
+        if (cmd.formatBefore) this.formatStore.restore(cmd.formatBefore)
+        if (cmd.mergeBefore) this.mergeStore.restore(cmd.mergeBefore)
         this.restoreSelectionForWrites(cmd.before, cmd.source)
         return
       case 'resizeRow':
@@ -1301,6 +1437,8 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'fill':
         for (const w of cmd.after) this.applyEditCellWrite(w.rowIndex, w.fieldId, w.value)
+        if (cmd.formatAfter) this.formatStore.restore(cmd.formatAfter)
+        if (cmd.mergeAfter) this.mergeStore.restore(cmd.mergeAfter)
         this.restoreSelectionForWrites(cmd.after, cmd.result)
         return
       case 'resizeRow':
@@ -2130,6 +2268,11 @@ class VisibleColumnsDataSource implements DataSource {
 
 function isSingleCellRange(range: CellRange): boolean {
   return range.startRow === range.endRow && range.startCol === range.endCol
+}
+
+/** 始终返回非负余数，使 fill tiling 在源轴上正确循环（与 FillSeries 的值序列一致）。 */
+function positiveModulo(value: number, divisor: number): number {
+  return ((value % divisor) + divisor) % divisor
 }
 
 function areContiguousRows(rows: readonly number[]): boolean {

@@ -97,6 +97,7 @@ function makeEngine(): GridEngine {
     commitColumnResize: mock(() => {}),
     commitPaste: mock(() => {}),
     commitFill: mock(() => null),
+    getFillMergeSnap: mock(() => ({ rowSpan: 1, colSpan: 1 })),
     unhideRows: mock(() => {}),
     getHiddenRows: mock(() => [] as readonly number[]),
     insertRows: mock(() => [] as readonly number[]),

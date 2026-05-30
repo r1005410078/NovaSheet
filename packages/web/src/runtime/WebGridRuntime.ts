@@ -178,6 +178,16 @@ function uniqueRows(rows: readonly number[]): readonly number[] {
   return [...new Set(rows)]
 }
 
+/** 单元格地址是否落在矩形 range 内（含边界）。 */
+function cellInRange(cell: CellAddress, range: CellRange): boolean {
+  return (
+    cell.rowIndex >= range.startRow &&
+    cell.rowIndex <= range.endRow &&
+    cell.colIndex >= range.startCol &&
+    cell.colIndex <= range.endCol
+  )
+}
+
 /**
  * Web 端表格编排器（spec §6 `WebGridRuntime`）。
  *
@@ -1347,13 +1357,26 @@ export class WebGridRuntime {
     if (this.destroyed || !this.fillDrag || this.fillDrag.pointerId !== pointerId) return
     const pointer = this.fillPointerFromClient(clientX, clientY)
     this.fillDrag.lastPointer = pointer
-    const hit = hitTestCell(this.engine.getFrame(), pointer)
+    const frame = this.engine.getFrame()
+    const hit = hitTestCell(frame, pointer)
     if (!hit) return
     const data = this.engine.getData()
-    this.fillDrag.target = computeFillTarget(this.fillDrag.source, hit, {
-      rowCount: data.getRowCount(),
-      colCount: data.getSchema().fields.length,
-    })
+    const snap = this.engine.getFillMergeSnap(this.fillDrag.source)
+    // 源含合并时，若光标落在已有合并区上，把填充区吸附到该合并边界（避免截断目标合并）。
+    const onMergeSource = snap.rowSpan > 1 || snap.colSpan > 1
+    const targetMerge = onMergeSource
+      ? frame.mergeRegions?.find((region) => cellInRange(hit, region.range))?.range
+      : undefined
+    this.fillDrag.target = computeFillTarget(
+      this.fillDrag.source,
+      hit,
+      {
+        rowCount: data.getRowCount(),
+        colCount: data.getSchema().fields.length,
+      },
+      snap,
+      targetMerge,
+    )
     if (this.fillDrag.target) {
       this.fillLayer?.showPreview(
         computeRangeOverlayRects(this.engine.getFrame(), this.fillDrag.target.fill),

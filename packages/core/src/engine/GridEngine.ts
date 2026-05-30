@@ -12,7 +12,7 @@ import type { BorderPreset, BorderStyle, CellFormat } from '../format/CellFormat
 import type { MergeRegion } from '../merge/MergeStore'
 import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
-import type { FillDirection } from '../fill/FillTarget'
+import type { FillDirection, FillMergeSnap } from '../fill/FillTarget'
 import type {
   CellAddress,
   CellRange,
@@ -110,6 +110,12 @@ export interface GridEngine {
 
   /** Phase 4.3 — 提交一次填充柄写入为 1 步 undo;无写入时返回 null。 */
   commitFill(source: CellRange, fill: CellRange, direction: FillDirection): FillCommitResult | null
+
+  /**
+   * Phase 5-A — 返回 view `source` 选区的合并块吸附尺寸（供 `computeFillTarget` 吸附整块）。
+   * source 含合并时返回其行/列跨度，否则返回 `{ rowSpan: 1, colSpan: 1 }`（不吸附）。
+   */
+  getFillMergeSnap(source: CellRange): FillMergeSnap
 
   /** Phase 4.5 — 将指定底层行 ID 列表从隐藏集移除并触发 invalidate。 */
   unhideRows(underlyingRowIds: readonly number[]): void
