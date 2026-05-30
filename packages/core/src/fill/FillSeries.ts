@@ -193,6 +193,7 @@ function cloneCellValue(value: CellValue): CellValue {
   return value instanceof Date ? new Date(value.getTime()) : value
 }
 
-function positiveModulo(value: number, divisor: number): number {
+/** 始终返回非负余数，使 fill 平铺/取样在源轴上正确循环。 */
+export function positiveModulo(value: number, divisor: number): number {
   return ((value % divisor) + divisor) % divisor
 }

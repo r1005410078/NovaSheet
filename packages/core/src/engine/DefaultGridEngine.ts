@@ -6,7 +6,7 @@ import { HideRowsLayer } from '../view/HideRowsLayer'
 import { applyPaste, pasteTargetConflictsWithMerges } from '../clipboard/ApplyPaste'
 import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
-import { computeFillWrites } from '../fill/FillSeries'
+import { computeFillWrites, positiveModulo } from '../fill/FillSeries'
 import { unionRange, type FillDirection, type FillMergeSnap } from '../fill/FillTarget'
 import { RangeStyleStore } from '../format/RangeStyleStore'
 import type {
@@ -2268,11 +2268,6 @@ class VisibleColumnsDataSource implements DataSource {
 
 function isSingleCellRange(range: CellRange): boolean {
   return range.startRow === range.endRow && range.startCol === range.endCol
-}
-
-/** 始终返回非负余数，使 fill tiling 在源轴上正确循环（与 FillSeries 的值序列一致）。 */
-function positiveModulo(value: number, divisor: number): number {
-  return ((value % divisor) + divisor) % divisor
 }
 
 function areContiguousRows(rows: readonly number[]): boolean {
