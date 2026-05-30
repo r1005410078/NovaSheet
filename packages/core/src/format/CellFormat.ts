@@ -27,9 +27,13 @@ export interface CellBorders {
   readonly left?: BorderStyle
 }
 
+/** 文本显示三态（对齐 Google/Excel）：溢出到邻空格 / 软折 / 硬裁断。缺省视为 `overflow`。 */
+export type TextWrapMode = 'overflow' | 'wrap' | 'clip'
+
 export interface CellFormat {
   readonly fillColor?: string
   readonly borders?: CellBorders
+  readonly textWrap?: TextWrapMode
 }
 
 export interface ResolvedCellFormat {

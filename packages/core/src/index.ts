@@ -165,6 +165,7 @@ export type {
   CellFormat,
   FormatLayer,
   ResolvedCellFormat,
+  TextWrapMode,
 } from './format/CellFormat'
 export { MergeStore } from './merge/MergeStore'
 export type { MergeRegion } from './merge/MergeStore'

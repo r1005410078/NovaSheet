@@ -81,6 +81,7 @@ export class RangeStyleStore {
     let fillActive = false   // true once a fillColor has been set (not cleared)
     let borders: CellFormat['borders']
     let hasBorders = false
+    let textWrap: CellFormat['textWrap']
 
     for (const layer of this.layers) {
       if (!inRange(rowIndex, colIndex, layer.range)) continue
@@ -99,13 +100,16 @@ export class RangeStyleStore {
           borders = { ...borders, ...layer.patch.borders }
           hasBorders = true
         }
+        if (layer.patch.textWrap !== undefined) textWrap = layer.patch.textWrap
       }
     }
 
-    if (!fillActive && !hasBorders) return undefined
-    const result: { fillColor?: string; borders?: CellFormat['borders'] } = {}
-    if (fillActive) result.fillColor = fillColor
-    if (hasBorders) result.borders = borders
+    if (!fillActive && !hasBorders && textWrap === undefined) return undefined
+    const result: CellFormat = {
+      ...(fillActive ? { fillColor } : {}),
+      ...(hasBorders ? { borders } : {}),
+      ...(textWrap !== undefined ? { textWrap } : {}),
+    }
     return result
   }
 

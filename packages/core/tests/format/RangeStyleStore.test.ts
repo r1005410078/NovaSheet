@@ -1,6 +1,33 @@
 import { describe, expect, it } from 'bun:test'
 import { RangeStyleStore } from '../../src/format/RangeStyleStore'
 
+describe('RangeStyleStore — textWrap', () => {
+  it('apply textWrap 后 resolveCell 返回，写序覆盖', () => {
+    const store = new RangeStyleStore()
+    const range = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
+    store.apply(range, { textWrap: 'wrap' })
+    expect(store.resolveCell(0, 0)?.textWrap).toBe('wrap')
+    store.apply(range, { textWrap: 'clip' })
+    expect(store.resolveCell(0, 0)?.textWrap).toBe('clip')
+  })
+
+  it('textWrap 与 fillColor 独立累积，互不清除', () => {
+    const store = new RangeStyleStore()
+    const range = { startRow: 1, endRow: 1, startCol: 1, endCol: 1 }
+    store.apply(range, { fillColor: '#fff2cc' })
+    store.apply(range, { textWrap: 'wrap' })
+    const f = store.resolveCell(1, 1)
+    expect(f?.fillColor).toBe('#fff2cc')
+    expect(f?.textWrap).toBe('wrap')
+  })
+
+  it('未设 textWrap 的格 resolveCell 不含 textWrap', () => {
+    const store = new RangeStyleStore()
+    store.apply({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, { fillColor: '#fff' })
+    expect(store.resolveCell(0, 0)?.textWrap).toBeUndefined()
+  })
+})
+
 describe('RangeStyleStore', () => {
   it('merges later border patches per edge instead of replacing prior edges', () => {
     const store = new RangeStyleStore()
