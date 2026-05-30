@@ -681,10 +681,11 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
       true,
     )
 
+    // 文本格（含合并）一律多行编辑器以支持 Alt+Enter；合并格只是不参与 autofit。
     expect(editor.open).toHaveBeenCalledWith(
       { x: 0, y: 32, width: 200, height: 56 },
       'Alice',
-      { selectAll: false, multiline: false },
+      { selectAll: false, multiline: true },
     )
   })
 

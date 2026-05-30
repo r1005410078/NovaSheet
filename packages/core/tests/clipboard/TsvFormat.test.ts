@@ -80,3 +80,30 @@ describe('parseTsvToCells', () => {
     expect(out).toEqual([['x'], ['y']])
   })
 })
+
+describe('TSV 多行单元格转义（RFC-4180 引号）', () => {
+  it('含 \\n 的格序列化时加引号、内部 " 翻倍', () => {
+    const rows = [{ name: 'line1\nline2', qty: 1, done: false }]
+    const tsv = serializeRowsToTsv(rows, ['name', 'qty', 'done'])
+    expect(tsv).toBe('"line1\nline2"\t1\tfalse')
+    const withQuote = serializeRowsToTsv([{ name: 'a"b\nc' }], ['name'])
+    expect(withQuote).toBe('"a""b\nc"')
+  })
+
+  it('round-trip：含 \\n 的格不被拆成多行', () => {
+    const rows = [
+      { name: 'a\nb', qty: 1, done: false },
+      { name: 'plain', qty: 2, done: true },
+    ]
+    const tsv = serializeRowsToTsv(rows, ['name', 'qty', 'done'])
+    const parsed = parseTsvToCells(tsv, ['name', 'qty', 'done'], schema)
+    expect(parsed.length).toBe(2) // 两行，不因 cell 内 \n 散成 3 行
+    expect(parsed[0]![0]).toBe('a\nb')
+    expect(parsed[1]![0]).toBe('plain')
+  })
+
+  it('解析引号内的 \\t 不当作列分隔', () => {
+    const parsed = parseTsvToCells('"a\tb"\tplain', ['name', 'done'], schema)
+    expect(parsed[0]![0]).toBe('a\tb')
+  })
+})

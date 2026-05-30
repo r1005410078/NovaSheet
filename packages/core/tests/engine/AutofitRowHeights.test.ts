@@ -187,4 +187,45 @@ describe('autofitRowHeights', () => {
     expect(result.changedRows).toBe(0)
     expect(result.skippedRows).toBe(1)
   })
+
+  describe('硬换行（\\n）撑高，不依赖 wrap', () => {
+    it('非 wrap 列含 \\n 的行按行数撑高', () => {
+      const data = new InMemoryDataSource({
+        schema: NO_WRAP_SCHEMA,
+        rows: [{ name: 'one\ntwo\nthree', desc: 'x' }],
+      })
+      const heights: Record<number, number> = {}
+      const result = autofitRowHeights({
+        data,
+        theme: denseGridTheme,
+        measurer: fixedWidthMeasurer,
+        applyHeight: (r, h) => {
+          heights[r] = h
+        },
+      })
+      expect(result.changedRows).toBe(1)
+      // 3 行 × (12×1.4) + padY×2 = 50.4 + 8 ≈ 59，远大于默认 28
+      expect(heights[0]).toBeGreaterThan(denseGridTheme.metrics.rowHeight)
+      expect(heights[0]).toBeGreaterThan(50)
+    })
+
+    it('合并格（isCellMerged 命中）不参与撑高', () => {
+      const data = new InMemoryDataSource({
+        schema: NO_WRAP_SCHEMA,
+        rows: [{ name: 'a\nb\nc\nd', desc: 'x' }],
+      })
+      const heights: Record<number, number> = {}
+      const result = autofitRowHeights({
+        data,
+        theme: denseGridTheme,
+        measurer: fixedWidthMeasurer,
+        applyHeight: (r, h) => {
+          heights[r] = h
+        },
+        isCellMerged: (_row, colIndex) => colIndex === 0, // name 列视为合并
+      })
+      expect(result.changedRows).toBe(0) // 唯一多行格被合并排除 → 不撑高
+      expect(result.skippedRows).toBe(1)
+    })
+  })
 })

@@ -67,4 +67,37 @@ describe('DomCellEditor — Phase 3.5', () => {
     editor.destroy()
     document.body.removeChild(container)
   })
+
+  it('multiline 编辑时输入框随内容自增长（不低于单元格高）', () => {
+    const container = document.createElement('div')
+    Object.assign(container.style, { position: 'relative', width: '200px', height: '100px' })
+    document.body.appendChild(container)
+
+    const editor = new DomCellEditor(container, {
+      onDraftChange: mock(() => {}),
+      onCommitEnter: mock(() => {}),
+      onCommitBlur: mock(() => {}),
+      onCancel: mock(() => {}),
+    })
+    editor.attach()
+    editor.open({ x: 0, y: 0, width: 200, height: 28 }, 'a', { multiline: true })
+
+    const textarea = container.querySelector(
+      'textarea[data-novasheet-cell-editor]',
+    ) as HTMLTextAreaElement
+
+    // 模拟内容高度（happy-dom 不排版，stub scrollHeight）
+    Object.defineProperty(textarea, 'scrollHeight', { value: 84, configurable: true })
+    textarea.value = 'a\nb\nc'
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(parseFloat(textarea.style.height)).toBeGreaterThanOrEqual(84)
+
+    // 内容很矮时不低于单元格高
+    Object.defineProperty(textarea, 'scrollHeight', { value: 10, configurable: true })
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(parseFloat(textarea.style.height)).toBe(28)
+
+    editor.destroy()
+    document.body.removeChild(container)
+  })
 })

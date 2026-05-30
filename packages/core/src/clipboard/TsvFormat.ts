@@ -61,13 +61,66 @@ export function serializeRowsToTsv(rows: readonly Row[], fieldIds: readonly stri
   return rows
     .map((row) =>
       fieldIds
-        .map((fieldId) => {
-          const val = row[fieldId]
-          return serializeValue(val)
-        })
+        .map((fieldId) => escapeTsvField(serializeValue(row[fieldId])))
         .join('\t'),
     )
     .join('\n')
+}
+
+/**
+ * RFC-4180 风格转义：含 `\n` / `\t` / `"` 的字段用双引号包裹、内部 `"` 翻倍。
+ * 与 Excel / Google 表格的多行单元格剪贴板格式一致，避免 cell 内换行被当作行分隔。
+ */
+function escapeTsvField(s: string): string {
+  if (s.includes('\n') || s.includes('\t') || s.includes('"')) {
+    return `"${s.replace(/"/g, '""')}"`
+  }
+  return s
+}
+
+/**
+ * 按 RFC-4180 引号规则把 TSV 文本切成「行 × 字段」二维字符串数组：
+ * 引号内的 `\t` / `\n` 不作分隔，`""` 还原为字面 `"`。
+ */
+function tokenizeTsv(text: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = []
+  let field = ''
+  let inQuotes = false
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i]!
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          field += '"'
+          i += 1
+        } else {
+          inQuotes = false
+        }
+      } else {
+        field += ch
+      }
+      continue
+    }
+    if (ch === '"') inQuotes = true
+    else if (ch === '\t') {
+      row.push(field)
+      field = ''
+    } else if (ch === '\n') {
+      row.push(field)
+      rows.push(row)
+      row = []
+      field = ''
+    } else field += ch
+  }
+  row.push(field)
+  rows.push(row)
+  // 末尾换行产生的空行（单个空字段）丢弃，与旧 trimEnd 行为一致。
+  if (rows.length > 0) {
+    const last = rows[rows.length - 1]!
+    if (last.length === 1 && last[0] === '') rows.pop()
+  }
+  return rows
 }
 
 /**
@@ -119,16 +172,16 @@ export function parseTsvToCells(
   fieldIds: readonly string[],
   schema: Schema,
 ): readonly (readonly ParsedCellValue[])[] {
-  // 规范化：\r\n → \n；trim 末尾换行
-  const normalized = text.replace(/\r\n/g, '\n').trimEnd()
+  // 规范化行尾；引号外的 \n 才是行分隔（引号内的换行属 cell 内容，由 tokenizeTsv 处理）
+  const normalized = text.replace(/\r\n/g, '\n')
 
   // 空输入
   if (normalized === '') {
     return []
   }
 
-  // 按行分隔
-  const lines = normalized.split('\n')
+  // 按 RFC-4180 引号规则切分为行 × 字段
+  const lines = tokenizeTsv(normalized)
 
   // 从 schema 构建 fieldId → type 映射
   const typeMap = new Map<string, string | undefined>()
@@ -138,10 +191,7 @@ export function parseTsvToCells(
 
   // 解析每一行
   const result: ParsedCellValue[][] = []
-  for (const line of lines) {
-    // 按列分隔
-    const cells = line.split('\t')
-
+  for (const cells of lines) {
     // 按 fieldIds 顺序解析并强制类型
     const row: ParsedCellValue[] = []
     for (let colIdx = 0; colIdx < fieldIds.length; colIdx++) {

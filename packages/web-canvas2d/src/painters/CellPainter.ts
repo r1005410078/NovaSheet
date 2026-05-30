@@ -103,7 +103,9 @@ export class CellPainter {
       const str = this.toDisplayString(value)
       this.paintWrapped(ctx, str, rect)
     } else if (field.type === 'text' && typeof value === 'string') {
-      this.paintText(ctx, value, rect)
+      // 硬换行（Alt+Enter 写入的 `\n`）即使非 wrap 也按行绘制；否则单行截断。
+      if (value.includes('\n')) this.paintHardBreaks(ctx, value, rect)
+      else this.paintText(ctx, value, rect)
     } else {
       this.paintFallback(ctx, value, rect, field)
     }
@@ -165,6 +167,29 @@ export class CellPainter {
     ctx.fillText(display, x, y)
   }
 
+  /**
+   * 硬换行绘制：按 `\n` 切行、自顶向下逐行画，每行单独按宽截断（不软折，无需 measurer）。
+   * 与 `paintWrapped` 的垂直布局一致（`textBaseline='middle'`，firstY = y + padY + lineHeight/2）；
+   * 可用高度放不下的行直接裁掉。
+   */
+  private paintHardBreaks(ctx: CanvasRenderingContext2D, text: string, rect: QuadrantRect): void {
+    const padX = this.theme.metrics.cellPaddingX
+    const padY = this.theme.metrics.cellPaddingY
+    const lineHeight = this.theme.metrics.fontSize * LINE_HEIGHT_MULTIPLIER
+    const availableWidth = rect.width - padX * 2
+    const availableHeight = rect.height - padY * 2
+    if (availableWidth <= 0 || availableHeight <= 0) return
+    const maxLines = Math.max(1, Math.floor((availableHeight + lineHeight * 0.01) / lineHeight))
+    const lines = text.split('\n')
+    const count = Math.min(lines.length, maxLines)
+    const x = rect.x + padX
+    const firstY = rect.y + padY + lineHeight / 2
+    for (let i = 0; i < count; i++) {
+      const display = this.truncate(ctx, lines[i]!, availableWidth)
+      if (display) ctx.fillText(display, x, firstY + i * lineHeight)
+    }
+  }
+
   /** 绘制数字类型单元格（右对齐，千分位格式化） */
   private paintNumber(ctx: CanvasRenderingContext2D, value: number, rect: QuadrantRect): void {
     // 固定用 'en-US' 千分位——与浏览器 locale 解耦，避免不同用户跑出不同结果（影响测试和回归）。
@@ -195,7 +220,8 @@ export class CellPainter {
     if (value instanceof Date) str = value.toISOString()
     else if (Array.isArray(value)) str = value.join(', ')
     else str = String(value)
-    this.paintText(ctx, str, rect)
+    if (str.includes('\n')) this.paintHardBreaks(ctx, str, rect)
+    else this.paintText(ctx, str, rect)
   }
 
   /**

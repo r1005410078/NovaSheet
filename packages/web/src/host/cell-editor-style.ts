@@ -24,9 +24,11 @@ const CELL_EDITOR_CSS = `
 }
 textarea[data-novasheet-cell-editor] {
   resize: none;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-y: auto;
+  /* 与 Google 表格一致：编辑框不软折——默认 1 行，长单行横向溢出，纵向仅随 Alt+Enter 硬换行增长。
+     纵向高度由 DomCellEditor.autoGrow 按 scrollHeight 管理（overflow-y 隐藏，避免出现滚动条）。 */
+  white-space: pre;
+  overflow-x: hidden;
+  overflow-y: hidden;
   line-height: 1.4;
 }
 `.trim()

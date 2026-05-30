@@ -1234,6 +1234,7 @@ export class WebGridRuntime {
   autofitRows(options: AutofitRowsRuntimeOptions = {}): AutofitRowsResult {
     if (!this.measurer) return { changedRows: 0, skippedRows: 0 }
     const frame = this.engine.getFrame()
+    const mergeRegions = frame.mergeRegions
     const result = autofitRowHeights({
       data: frame.data,
       theme: frame.theme,
@@ -1242,6 +1243,14 @@ export class WebGridRuntime {
       rows: options.rows,
       minHeight: options.minHeight,
       maxHeight: options.maxHeight,
+      // 合并格不参与撑高（与 Google 表格一致）；mergeRegions 为 VIEW 坐标，与 autofit 行号同空间。
+      isCellMerged:
+        mergeRegions && mergeRegions.length > 0
+          ? (row, col) =>
+              mergeRegions.some((region) =>
+                cellInRange({ rowIndex: row, colIndex: col }, region.range),
+              )
+          : undefined,
     })
     if (result.changedRows > 0) this.afterEngineMutation()
     return result
@@ -2509,7 +2518,9 @@ export class WebGridRuntime {
     }
 
     const field = this.engine.getData().getSchema?.().fields[session.cell.colIndex]
-    const multiline = field?.wrap === true && field.type !== 'number'
+    // 任意非 number 格都用多行编辑器：支持 Alt+Enter 硬换行（与 Google 表格一致），
+    // 提交时按内容 autofit 行高。number 仍单行。
+    const multiline = field ? field.type !== 'number' : true
 
     this.editingMultilineOriginalRowHeight = multiline
       ? this.engine.getRowsAxis().getSize(session.cell.rowIndex)

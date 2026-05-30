@@ -50,6 +50,11 @@ export interface AutofitRowsParams {
   maxHeight?: number
   /** 单行行高（CSS px）。缺省 `theme.metrics.fontSize × 1.4`。 */
   lineHeight?: number
+  /**
+   * 判定 `(rowIndex, colIndex)` 是否落在合并区内。命中的格不参与撑高
+   * （与 Google 表格一致：合并格不 autofit，行高手动）。缺省视为均未合并。
+   */
+  isCellMerged?: (rowIndex: number, colIndex: number) => boolean
 }
 
 /** autofit 结果：被实际改变高度的行数 + 任何错误对。 */
@@ -90,14 +95,11 @@ export function autofitRowHeights(params: AutofitRowsParams): AutofitRowsResult 
   const padX = theme.metrics.cellPaddingX
   const font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
 
-  // 预筛选 wrap 字段——一次列出，避免每行都遍历整个 schema
-  const wrapFields = schema.fields.filter(
-    (f) => f.wrap === true && f.type !== 'number' && !f.hidden,
-  )
-
-  if (wrapFields.length === 0) {
-    return { changedRows: 0, skippedRows: rows.length }
-  }
+  // 参与撑高的列：非 number、非隐藏。wrap 列走 wrapText（软折，已含 \n）；
+  // 非 wrap 列只在含硬换行 \n 时按行数计高。number 永远单行右对齐，跳过。
+  const fitFields = schema.fields
+    .map((field, colIndex) => ({ field, colIndex }))
+    .filter(({ field }) => field.type !== 'number' && !field.hidden)
 
   let changedRows = 0
   let skippedRows = 0
@@ -108,20 +110,29 @@ export function autofitRowHeights(params: AutofitRowsParams): AutofitRowsResult 
       continue
     }
     let tallest = minHeight
-    let anyValue = false
-    for (const field of wrapFields) {
+    let eligible = false // 是否有 wrap 格或含 \n 的格——决定该行是否被 autofit
+    for (const { field, colIndex } of fitFields) {
+      if (params.isCellMerged?.(rowIndex, colIndex)) continue // 合并格不参与
       const raw = data.getCell(rowIndex, field.id)
       if (raw === null || raw === undefined) continue
-      anyValue = true
       const text = toDisplayString(raw)
       if (text.length === 0) continue
-      const maxWidth = field.width - padX * 2
-      if (maxWidth <= 0) continue
-      const wrapped = wrapText(text, { font, maxWidth, lineHeight }, measurer)
-      const cellHeight = wrapped.height + padY * 2
-      if (cellHeight > tallest) tallest = cellHeight
+
+      if (field.wrap === true) {
+        const maxWidth = field.width - padX * 2
+        if (maxWidth <= 0) continue
+        eligible = true
+        const wrapped = wrapText(text, { font, maxWidth, lineHeight }, measurer)
+        const cellHeight = wrapped.height + padY * 2
+        if (cellHeight > tallest) tallest = cellHeight
+      } else if (text.includes('\n')) {
+        eligible = true
+        const lines = text.split('\n').length
+        const cellHeight = lines * lineHeight + padY * 2
+        if (cellHeight > tallest) tallest = cellHeight
+      }
     }
-    if (!anyValue) {
+    if (!eligible) {
       skippedRows++
       continue
     }

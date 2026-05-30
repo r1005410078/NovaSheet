@@ -216,4 +216,30 @@ describe('CellPainter — 单元格', () => {
       }
     })
   })
+
+  describe('硬换行（Alt+Enter \\n，不依赖 wrap）', () => {
+    it('非 wrap 文本格按 \\n 逐行绘制', () => {
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme).paint(ctx, {
+        value: 'ab\ncd',
+        rect: { x: 0, y: 0, width: 100, height: 56 },
+        field: makeField({ type: 'text' }),
+      })
+      const texts = ops.filter((o) => o.op === 'fillText').map((o) => o.args[0])
+      expect(texts).toEqual(['ab', 'cd'])
+    })
+
+    it('无 measurer 也能硬换行（按行截断，不软折）', () => {
+      const { ctx, ops } = createRecordingContext()
+      new CellPainter(denseGridTheme).paint(ctx, {
+        value: 'line1\nline2\nline3',
+        rect: { x: 0, y: 0, width: 100, height: 100 },
+        field: makeField({ type: 'text' }),
+      })
+      const ys = ops.filter((o) => o.op === 'fillText').map((o) => o.args[2])
+      expect(ys.length).toBe(3)
+      expect(ys[1]).toBeGreaterThan(ys[0] as number) // 逐行向下堆叠
+      expect(ys[2]).toBeGreaterThan(ys[1] as number)
+    })
+  })
 })

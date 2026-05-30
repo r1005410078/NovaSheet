@@ -1,9 +1,10 @@
 /**
  * Phase 3.5 — DOM 单元格编辑器（覆盖在 active cell 上）。
  *
- * 内部维护两个元素：`<input>` 给普通字段；`<textarea>` 给 `field.wrap === true`
- * 字段。`open({ multiline })` 决定本次会话使用哪一个，另一个保持隐藏。
- * 多行模式下：Enter 提交（沿用 Sheets 约定），Alt+Enter 插入软换行。
+ * 内部维护两个元素：`<input>` 给 number 等单行字段；`<textarea>` 给任意非 number 字段
+ * （`open({ multiline })` 决定本次会话用哪一个，另一个隐藏）。
+ * 多行模式（对齐 Google 表格）：Enter 提交，Alt+Enter 插入硬换行 `\n`；编辑框不软折——
+ * 默认 1 行、长单行横向溢出、纵向仅随 `\n` 由 `autoGrow` 增长，网格行高在提交时才 autofit。
  */
 
 import type { CellRect, Theme } from '@novasheet/core'
@@ -19,6 +20,9 @@ export interface DomCellEditorCallbacks {
 
 type EditorEl = HTMLInputElement | HTMLTextAreaElement
 
+/** 横向自增长时在最长行末尾留的缓冲，使光标/文字接近边缘前就加宽、不贴边。 */
+const WIDTH_GROW_BUFFER_PX = 8
+
 export interface OpenCellEditorOptions {
   selectAll?: boolean
   multiline?: boolean
@@ -32,6 +36,8 @@ export class DomCellEditor {
   private active: EditorEl | null = null
   private attached = false
   private destroyed = false
+  /** 当前单元格矩形；自增长时作为 textarea 的最小高度。 */
+  private cellRect: CellRect | null = null
 
   constructor(container: HTMLElement, callbacks: DomCellEditorCallbacks) {
     this.container = container
@@ -55,7 +61,8 @@ export class DomCellEditor {
 
     this.textarea = document.createElement('textarea')
     this.textarea.dataset.multiline = ''
-    this.textarea.wrap = 'soft'
+    this.textarea.rows = 1 // 默认 1 行（覆盖 textarea 原生 rows=2，否则 scrollHeight 起步即 2 行）
+    this.textarea.wrap = 'off' // 不软折：长单行横向加宽，纵向仅随 \n 增长（对齐 Google 表格）
     this.textarea.setAttribute('data-novasheet-cell-editor', '')
     this.textarea.spellcheck = false
     this.textarea.style.display = 'none'
@@ -86,6 +93,7 @@ export class DomCellEditor {
     this.syncRect(rect)
     el.value = draft
     el.style.display = 'block'
+    this.autoGrow()
     el.focus()
     if (options.selectAll !== false) {
       el.select()
@@ -97,12 +105,33 @@ export class DomCellEditor {
 
   syncRect(rect: CellRect): void {
     if (!this.active) return
+    this.cellRect = rect
     Object.assign(this.active.style, {
       left: `${rect.x}px`,
       top: `${rect.y}px`,
       width: `${rect.width}px`,
       height: `${rect.height}px`,
     })
+    // textarea 在滚动重定位后恢复随内容自增长的高度；单行 input 维持单元格高。
+    this.autoGrow()
+  }
+
+  /**
+   * 让 textarea 随内容增长（盖住相邻单元格，不改网格）：
+   * - 高度按 `\n` 行数向下增长（下限为单元格高）；
+   * - 宽度按最长行向右增长（下限为单元格宽，留一点缓冲使文字不贴边，无横向滚动条）。
+   * `border-box` 下补回边框，避免残留滚动条。先把尺寸缩回单元格再测，让 scroll* 反映真实内容。
+   */
+  private autoGrow(): void {
+    const el = this.active
+    if (!(el instanceof HTMLTextAreaElement) || !this.cellRect) return
+    el.style.height = `${this.cellRect.height}px`
+    const borderY = el.offsetHeight - el.clientHeight
+    el.style.height = `${Math.max(this.cellRect.height, el.scrollHeight + borderY)}px`
+    el.style.width = `${this.cellRect.width}px`
+    const borderX = el.offsetWidth - el.clientWidth
+    const contentWidth = el.scrollWidth + borderX + WIDTH_GROW_BUFFER_PX
+    el.style.width = `${Math.max(this.cellRect.width, contentWidth)}px`
   }
 
   close(): void {
@@ -134,6 +163,7 @@ export class DomCellEditor {
   private onInput = (event: Event): void => {
     const el = event.currentTarget as EditorEl
     this.callbacks.onDraftChange(el.value)
+    this.autoGrow()
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
@@ -168,5 +198,6 @@ export class DomCellEditor {
     el.value = `${value.slice(0, start)}\n${value.slice(end)}`
     el.setSelectionRange(start + 1, start + 1)
     this.callbacks.onDraftChange(el.value)
+    this.autoGrow()
   }
 }
