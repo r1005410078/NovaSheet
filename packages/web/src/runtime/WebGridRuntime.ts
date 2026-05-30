@@ -173,6 +173,15 @@ const DRAG_AUTO_SCROLL_EDGE_PX = 32
 const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
 const COLUMN_REORDER_DRAG_THRESHOLD_PX = 6
 
+/** 可驱动边缘自动滚动的拖拽种类。 */
+type AutoScrollDragKind =
+  | 'selection'
+  | 'column-reorder'
+  | 'row-reorder'
+  | 'column-header'
+  | 'row-header'
+  | 'fill'
+
 /** 去重行号并保持首次出现顺序。 */
 function uniqueRows(rows: readonly number[]): readonly number[] {
   return [...new Set(rows)]
@@ -1355,8 +1364,15 @@ export class WebGridRuntime {
   /** 更新 fill handle 拖拽目标与预览 overlay。 */
   handleFillPointerMove(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed || !this.fillDrag || this.fillDrag.pointerId !== pointerId) return
-    const pointer = this.fillPointerFromClient(clientX, clientY)
+    this.applyFillPointerMove(this.fillPointerFromClient(clientX, clientY))
+  }
+
+  /** 用已转换的 host pointer 重算填充目标；供指针移动与边缘自动滚动 tick 复用。 */
+  private applyFillPointerMove(pointer: WebPointerEvent): void {
+    if (!this.fillDrag) return
     this.fillDrag.lastPointer = pointer
+    this.lastDragPointer = pointer
+    this.updateDragAutoScroll(pointer) // 填充柄拖到边缘时双向自动滚动
     const frame = this.engine.getFrame()
     const hit = hitTestCell(frame, pointer)
     if (!hit) return
@@ -1395,6 +1411,7 @@ export class WebGridRuntime {
     this.rowReorderDrag = null
     this.columnHeaderSelectDrag = null
     this.rowHeaderSelectDrag = null
+    this.stopDragAutoScroll()
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.rowReorderOverlay?.hide()
@@ -1560,15 +1577,16 @@ export class WebGridRuntime {
     }
     if (this.columnHeaderSelectDrag) {
       this.columnHeaderSelectDrag = null
+      this.stopDragAutoScroll()
       return
     }
     if (this.rowHeaderSelectDrag) {
       this.rowHeaderSelectDrag = null
+      this.stopDragAutoScroll()
       return
     }
     this.draggingSelection = false
-    this.lastDragPointer = null
-    this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
+    this.stopDragAutoScroll()
     this.syncFillHandle()
   }
 
@@ -1715,6 +1733,8 @@ export class WebGridRuntime {
   private updateColumnHeaderSelectDrag(event: WebPointerEvent): boolean {
     const drag = this.columnHeaderSelectDrag
     if (!drag) return false
+    this.lastDragPointer = event
+    this.updateDragAutoScroll(event) // 拖到左/右边缘时横向自动滚动
     const hit = this.hitTestColumnHeader(event)
     if (!hit) return true
     this.selectWholeColumnRange(drag.anchorCol, hit.colIndex)
@@ -1777,6 +1797,8 @@ export class WebGridRuntime {
   private updateRowHeaderSelectDrag(event: WebPointerEvent): boolean {
     const drag = this.rowHeaderSelectDrag
     if (!drag) return false
+    this.lastDragPointer = event
+    this.updateDragAutoScroll(event) // 拖到上/下边缘时纵向自动滚动
     const hit = this.hitTestRowHeader(event)
     if (!hit) return true
     this.selectWholeRowRange(drag.anchorRow, hit.rowIndex)
@@ -1802,6 +1824,10 @@ export class WebGridRuntime {
       }
       drag.active = true
     }
+
+    // active 拖拽：记录 pointer 并按边缘热区驱动纵向自动滚动。
+    this.lastDragPointer = event
+    this.updateDragAutoScroll(event)
 
     const target = this.computeRowReorderTarget(event, drag)
     if (!target) {
@@ -1840,6 +1866,10 @@ export class WebGridRuntime {
       drag.active = true
     }
 
+    // active 拖拽：记录 pointer 并按边缘热区驱动横向自动滚动。
+    this.lastDragPointer = event
+    this.updateDragAutoScroll(event)
+
     const target = this.computeColumnReorderTarget(event, drag)
     if (!target) {
       drag.targetBeforeFieldId = undefined
@@ -1861,6 +1891,7 @@ export class WebGridRuntime {
   private commitColumnReorderDrag(): void {
     const drag = this.columnReorderDrag
     this.columnReorderDrag = null
+    this.stopDragAutoScroll()
     this.columnReorderOverlay?.hide()
     this.host.setCursor(null)
     if (!drag?.active) return
@@ -1872,6 +1903,7 @@ export class WebGridRuntime {
 
   private cancelColumnReorderDrag(): void {
     this.columnReorderDrag = null
+    this.stopDragAutoScroll()
     this.columnReorderOverlay?.hide()
     this.host.setCursor(null)
   }
@@ -1879,6 +1911,7 @@ export class WebGridRuntime {
   private commitRowReorderDrag(): void {
     const drag = this.rowReorderDrag
     this.rowReorderDrag = null
+    this.stopDragAutoScroll()
     this.rowReorderOverlay?.hide()
     this.host.setCursor(null)
     if (!drag?.active) return
@@ -1890,8 +1923,15 @@ export class WebGridRuntime {
 
   private cancelRowReorderDrag(): void {
     this.rowReorderDrag = null
+    this.stopDragAutoScroll()
     this.rowReorderOverlay?.hide()
     this.host.setCursor(null)
+  }
+
+  /** 取消正在排队的拖拽自动滚动并清掉 pointer 记录。 */
+  private stopDragAutoScroll(): void {
+    this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
+    this.lastDragPointer = null
   }
 
   private updateHeaderCursor(event: WebPointerEvent): void {
@@ -2262,9 +2302,25 @@ export class WebGridRuntime {
     })
   }
 
-  /** 根据 pointer 位置启动或取消选区拖拽的边缘自动滚动。 */
+  /** 当前驱动边缘自动滚动的拖拽种类；填充柄 / reorder / 表头拖选优先于普通选区。 */
+  private activeAutoScrollDrag(): AutoScrollDragKind | null {
+    if (this.fillDrag) return 'fill'
+    if (this.columnReorderDrag?.active) return 'column-reorder'
+    if (this.rowReorderDrag?.active) return 'row-reorder'
+    if (this.columnHeaderSelectDrag) return 'column-header'
+    if (this.rowHeaderSelectDrag) return 'row-header'
+    if (this.draggingSelection) return 'selection'
+    return null
+  }
+
+  /** 根据 pointer 位置启动或取消当前拖拽的边缘自动滚动。 */
   private updateDragAutoScroll(pointer: WebPointerEvent): void {
-    const step = this.computeDragAutoScrollStep(pointer)
+    const kind = this.activeAutoScrollDrag()
+    if (!kind) {
+      this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
+      return
+    }
+    const step = this.computeDragAutoScrollStep(pointer, kind)
     if (step.x === 0 && step.y === 0) {
       this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
       return
@@ -2272,10 +2328,12 @@ export class WebGridRuntime {
     this.scheduler.schedule(DRAG_AUTO_SCROLL_KEY, () => this.tickDragAutoScroll())
   }
 
-  /** 执行一帧选区拖拽自动滚动，并继续调度下一帧。 */
+  /** 执行一帧拖拽自动滚动，按拖拽种类重算落点，并继续调度下一帧。 */
   private tickDragAutoScroll(): void {
-    if (this.destroyed || !this.draggingSelection || !this.lastDragPointer) return
-    const step = this.computeDragAutoScrollStep(this.lastDragPointer)
+    if (this.destroyed || !this.lastDragPointer) return
+    const kind = this.activeAutoScrollDrag()
+    if (!kind) return
+    const step = this.computeDragAutoScrollStep(this.lastDragPointer, kind)
     if (step.x === 0 && step.y === 0) return
 
     const { scrollTop, scrollLeft } = this.host.getScrollPosition()
@@ -2286,18 +2344,51 @@ export class WebGridRuntime {
 
     this.host.scrollTo(nextTop, nextLeft)
     this.handleHostScroll(nextTop, nextLeft)
-    const hit = hitTestCell(this.engine.getFrame(), this.lastDragPointer)
-    if (hit) this.engine.selectCell(hit, { extend: true })
-
-    this.updateDragAutoScroll(this.lastDragPointer)
+    this.reevaluateDragAfterAutoScroll(kind, this.lastDragPointer)
   }
 
-  /** 计算 pointer 靠近 viewport 边缘时每帧应滚动的距离。 */
-  private computeDragAutoScrollStep(pointer: WebPointerEvent): { x: number; y: number } {
+  /** 滚动一帧后按拖拽种类重算落点；各 update handler 会自行续调度自动滚动。 */
+  private reevaluateDragAfterAutoScroll(kind: AutoScrollDragKind, pointer: WebPointerEvent): void {
+    switch (kind) {
+      case 'selection': {
+        const hit = hitTestCell(this.engine.getFrame(), pointer)
+        if (hit) this.engine.selectCell(hit, { extend: true })
+        this.updateDragAutoScroll(pointer)
+        return
+      }
+      case 'column-reorder':
+        this.updateColumnReorderDrag(pointer)
+        return
+      case 'row-reorder':
+        this.updateRowReorderDrag(pointer)
+        return
+      case 'column-header':
+        this.updateColumnHeaderSelectDrag(pointer)
+        return
+      case 'row-header':
+        this.updateRowHeaderSelectDrag(pointer)
+        return
+      case 'fill':
+        if (this.fillDrag?.lastPointer) this.applyFillPointerMove(this.fillDrag.lastPointer)
+        return
+    }
+  }
+
+  /**
+   * 计算 pointer 靠近 viewport 边缘时每帧应滚动的距离。
+   * 横向类（列 reorder / 列表头拖选）只横向、纵向类（行 reorder / 行表头拖选）只纵向、
+   * 选区与填充柄双向。
+   */
+  private computeDragAutoScrollStep(
+    pointer: WebPointerEvent,
+    kind: AutoScrollDragKind,
+  ): { x: number; y: number } {
     const { width, height } = this.host.getContainerSize()
+    const horizontal = kind !== 'row-reorder' && kind !== 'row-header'
+    const vertical = kind !== 'column-reorder' && kind !== 'column-header'
     return {
-      x: edgeVelocity(pointer.x, width),
-      y: edgeVelocity(pointer.y, height),
+      x: horizontal ? edgeVelocity(pointer.x, width) : 0,
+      y: vertical ? edgeVelocity(pointer.y, height) : 0,
     }
   }
 

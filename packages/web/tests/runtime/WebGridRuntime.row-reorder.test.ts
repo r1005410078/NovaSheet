@@ -174,3 +174,53 @@ describe('WebGridRuntime row reorder drag', () => {
     expect(overlay.show).not.toHaveBeenCalled()
   })
 })
+
+describe('WebGridRuntime row reorder drag auto-scroll', () => {
+  function tallEngine(): DefaultGridEngine {
+    const schema: Schema = { fields: [{ id: 'name', name: 'Name', type: 'text', width: 100 }] }
+    const rows: Row[] = Array.from({ length: 60 }, (_, i) => ({ name: `R${i}` }))
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({ schema, rows }),
+      theme: denseGridTheme,
+      excelHeaders: true,
+    })
+    engine.setViewportSize(300, 200) // 行总高远大于视口 200，留出纵向滚动空间
+    return engine
+  }
+
+  it('行拖到下边缘热区时纵向滚动 scrollHost', () => {
+    const engine = tallEngine()
+    selectRows(engine, 1, 1)
+    let scrollTop = 0
+    const host = {
+      ...makeHost(),
+      scrollTo: mock((top: number, _left: number) => {
+        scrollTop = top
+      }),
+      getScrollPosition: () => ({ scrollTop, scrollLeft: 0 }),
+      getContainerSize: () => ({ width: 300, height: 200 }),
+    } satisfies WebHost
+    const runtime = new WebGridRuntime({
+      engine,
+      host,
+      renderer: makeRenderer(),
+      rowReorderOverlay: makeOverlay(),
+    })
+
+    const rafs: Array<FrameRequestCallback> = []
+    const originalRaf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafs.push(cb)
+      return rafs.length
+    }) as typeof requestAnimationFrame
+
+    runtime.handleHostPointerDown({ x: 20, y: 60, shiftKey: false, button: 0 })
+    runtime.handleHostPointerMove({ x: 20, y: 192, shiftKey: false }) // 越阈值并进入下边缘热区
+    rafs[rafs.length - 1]!(performance.now())
+
+    expect(host.scrollTo).toHaveBeenCalled()
+    expect(scrollTop).toBeGreaterThan(0)
+
+    globalThis.requestAnimationFrame = originalRaf
+  })
+})
