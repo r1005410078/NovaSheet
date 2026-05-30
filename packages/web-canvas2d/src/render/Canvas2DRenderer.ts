@@ -62,6 +62,7 @@ import type {
   CellAddress,
   CellRange,
   ResolvedCellFormat,
+  Schema,
   TextMeasurer,
   TextWrapMode,
   Theme,
@@ -641,11 +642,24 @@ export class Canvas2DRenderer {
         const cellX = rect.x + xLeft - scrollOffsetX
         const colWidth = colsAxis.getSize(c)
         const value = data.getCell(r, field.id)
+        const mode = textWrapLookup.get(`${r}:${c}`) ?? (field.wrap === true ? 'wrap' : 'overflow')
+        // overflow：单行文本超出本格且右邻格为空时，把绘制矩形向右扩到第一个非空格/可见列边界，
+        // 让文字溢出显示（与 Excel/Sheets 一致）。number 不溢出。
+        let paintWidth = colWidth
+        if (
+          mode === 'overflow' &&
+          field.type === 'text' &&
+          typeof value === 'string' &&
+          value.length > 0 &&
+          !value.includes('\n')
+        ) {
+          paintWidth += this.overflowExtra(r, c, value, colWidth, colRange, schema, data, merges, colsAxis)
+        }
         this.cellPainter.paint(this.ctx, {
           value,
-          rect: { x: cellX, y: cellY, width: colWidth, height: rowHeight },
+          rect: { x: cellX, y: cellY, width: paintWidth, height: rowHeight },
           field,
-          textWrap: textWrapLookup.get(`${r}:${c}`),
+          textWrap: mode,
         })
       }
     }
@@ -653,6 +667,34 @@ export class Canvas2DRenderer {
     this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, textWrapLookup, editingCell)
 
     this.ctx.restore()
+  }
+
+  /**
+   * overflow 模式下，文本超出本格可用宽度时，沿右侧扫描连续空格（非空/合并/列边界即停），
+   * 返回可溢出的额外宽度（px）。`ctx.measureText` 已用一帧统一字体，量度准确。
+   */
+  private overflowExtra(
+    r: number,
+    c: number,
+    text: string,
+    colWidth: number,
+    colRange: readonly [number, number],
+    schema: Schema,
+    data: DataSource,
+    merges: MergeLookup,
+    colsAxis: Axis,
+  ): number {
+    const padX = this.theme.metrics.cellPaddingX
+    if (this.ctx.measureText(text).width <= colWidth - padX * 2) return 0
+    let extra = 0
+    for (let nc = c + 1; nc <= colRange[1]; nc++) {
+      const nf = schema.fields[nc]
+      if (!nf || merges.regionAt(r, nc)) break
+      const nv = data.getCell(r, nf.id)
+      if (nv !== null && nv !== undefined && String(nv).length > 0) break
+      extra += colsAxis.getSize(nc)
+    }
+    return extra
   }
 
   /**

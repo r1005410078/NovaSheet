@@ -84,3 +84,53 @@ describe('Canvas2DRenderer — textWrap 透传', () => {
     expect(texts.some((t) => t.includes('…'))).toBe(false) // 全程无省略号
   })
 })
+
+function overflowSetup(valValue: string | null) {
+  const { ctx, ops } = createRecordingContext()
+  const data = new InMemoryDataSource({
+    schema: SCHEMA,
+    rows: [{ name: 'A very long text that overflows', val: valValue }],
+  })
+  const rowsAxis = new ChunkedAxis({ count: 1, defaultSize: 28 })
+  const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
+  const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+  const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+  viewport.setSize(400, 200)
+  viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+  viewport.setScroll(0, 0)
+  const renderer = new Canvas2DRenderer({
+    ctx,
+    data,
+    viewport,
+    rowsAxis,
+    colsAxis,
+    theme: denseGridTheme,
+    measurer,
+  })
+  renderer.render({
+    data,
+    theme: denseGridTheme,
+    rowsAxis,
+    colsAxis,
+    viewport: viewport.snapshot(),
+    collapsedRowGaps: [],
+    collapsedColGaps: [],
+  })
+  return ops
+    .filter((o) => o.op === 'fillText')
+    .map((o) => (o.op === 'fillText' ? (o.args[0] as string) : ''))
+}
+
+describe('Canvas2DRenderer — overflow 溢出到右侧空格', () => {
+  it('右邻格为空时溢出（显示更多字符）', () => {
+    const texts = overflowSetup(null) // val 空
+    const name = texts.find((t) => t.startsWith('A very'))!
+    expect(name.length).toBeGreaterThan(13) // 溢入 2 格，远超单格 ~12 字符
+  })
+
+  it('右邻格有内容时裁断到本格', () => {
+    const texts = overflowSetup('X') // val 占用
+    const name = texts.find((t) => t.startsWith('A very'))!
+    expect(name.length).toBeLessThanOrEqual(13) // 仅本格 84px → ~12 字符
+  })
+})
