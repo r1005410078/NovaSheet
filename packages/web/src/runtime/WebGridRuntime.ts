@@ -1244,6 +1244,14 @@ export class WebGridRuntime {
     if (!this.measurer) return { changedRows: 0, skippedRows: 0 }
     const frame = this.engine.getFrame()
     const mergeRegions = frame.mergeRegions
+    // 解析每格的软折状态：textWrap==='wrap' 或（未设且列 field.wrap）。cellFormats 为 VIEW 坐标。
+    const textWrapLookup = new Map<string, TextWrapMode>()
+    for (const cf of frame.cellFormats ?? []) {
+      if (cf.format.textWrap !== undefined) {
+        textWrapLookup.set(`${cf.rowIndex}:${cf.colIndex}`, cf.format.textWrap)
+      }
+    }
+    const fields = frame.data.getSchema().fields
     const result = autofitRowHeights({
       data: frame.data,
       theme: frame.theme,
@@ -1260,6 +1268,11 @@ export class WebGridRuntime {
                 cellInRange({ rowIndex: row, colIndex: col }, region.range),
               )
           : undefined,
+      isWrapCell: (row, col) => {
+        const mode = textWrapLookup.get(`${row}:${col}`)
+        if (mode !== undefined) return mode === 'wrap'
+        return fields[col]?.wrap === true
+      },
     })
     if (result.changedRows > 0) this.afterEngineMutation()
     return result

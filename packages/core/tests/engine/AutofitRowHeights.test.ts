@@ -228,4 +228,44 @@ describe('autofitRowHeights', () => {
       expect(result.skippedRows).toBe(1)
     })
   })
+
+  describe('isWrapCell 取代 field.wrap 决定软折撑高', () => {
+    const longText = 'aaaaaaaaaaaaaaaaaaaaaaaa' // 24 字符，宽 100 列必折行
+
+    it('非 wrap 列但 isWrapCell=true → 软折撑高', () => {
+      const data = new InMemoryDataSource({
+        schema: NO_WRAP_SCHEMA,
+        rows: [{ name: longText, desc: 'x' }],
+      })
+      const heights: Record<number, number> = {}
+      autofitRowHeights({
+        data,
+        theme: denseGridTheme,
+        measurer: fixedWidthMeasurer,
+        applyHeight: (r, h) => {
+          heights[r] = h
+        },
+        isWrapCell: (_row, colIndex) => colIndex === 0,
+      })
+      expect(heights[0]).toBeGreaterThan(denseGridTheme.metrics.rowHeight)
+    })
+
+    it('field.wrap 列但 isWrapCell=false（如 textWrap=overflow）→ 不软折撑高', () => {
+      const data = new InMemoryDataSource({
+        schema: WRAP_SCHEMA, // desc 列 wrap=true
+        rows: [{ name: 'a', desc: longText, amount: 1 }],
+      })
+      const heights: Record<number, number> = {}
+      const result = autofitRowHeights({
+        data,
+        theme: denseGridTheme,
+        measurer: fixedWidthMeasurer,
+        applyHeight: (r, h) => {
+          heights[r] = h
+        },
+        isWrapCell: () => false, // 全部按 overflow，无软折
+      })
+      expect(result.changedRows).toBe(0)
+    })
+  })
 })

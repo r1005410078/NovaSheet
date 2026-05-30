@@ -55,6 +55,11 @@ export interface AutofitRowsParams {
    * （与 Google 表格一致：合并格不 autofit，行高手动）。缺省视为均未合并。
    */
   isCellMerged?: (rowIndex: number, colIndex: number) => boolean
+  /**
+   * 判定 `(rowIndex, colIndex)` 是否处于软折（wrap）显示模式。由 CellFormat.textWrap 解析
+   * （wrap 或未设且 field.wrap）。缺省回退到列级 `field.wrap === true`。
+   */
+  isWrapCell?: (rowIndex: number, colIndex: number) => boolean
 }
 
 /** autofit 结果：被实际改变高度的行数 + 任何错误对。 */
@@ -118,7 +123,10 @@ export function autofitRowHeights(params: AutofitRowsParams): AutofitRowsResult 
       const text = toDisplayString(raw)
       if (text.length === 0) continue
 
-      if (field.wrap === true) {
+      const isWrap = params.isWrapCell
+        ? params.isWrapCell(rowIndex, colIndex)
+        : field.wrap === true
+      if (isWrap) {
         const maxWidth = field.width - padX * 2
         if (maxWidth <= 0) continue
         eligible = true
