@@ -15,7 +15,6 @@ import type {
   BorderStyle,
   CellFormat,
   FormatLayer,
-  ResolvedCellFormat,
   TextWrapMode,
 } from '../format/CellFormat'
 import { MergeStore } from '../merge/MergeStore'
@@ -40,6 +39,7 @@ import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { findViewRow, resolveUnderlyingRow } from '../view/coordinates'
 import { CoordinateSpace } from '../view/CoordinateSpace'
+import { VisibleFormatResolver } from './VisibleFormatResolver'
 import type {
   FillCommitResult,
   GridEngine,
@@ -97,6 +97,12 @@ export class DefaultGridEngine implements GridEngine {
    * mergeCells/unmergeCells 先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
    */
   private readonly mergeStore = new MergeStore()
+  /** 可见 format/merge → VIEW 帧字段的只读解析器（从 getFrame 抽出，R1）。 */
+  private readonly frameFormat = new VisibleFormatResolver(
+    this.formatStore,
+    this.mergeStore,
+    this.coords,
+  )
 
   constructor(options: GridEngineOptions) {
     this.rawData = options.data
@@ -320,19 +326,18 @@ export class DefaultGridEngine implements GridEngine {
         ...g,
         xPx: this.colsAxis.indexToPosition(g.atViewCol + 1) - vpSnap.scrollX,
       }))
-    const mergeRegions = this.resolveVisibleMergeRegions(
+    const mergeRegions = this.frameFormat.mergeRegions(
       firstVisible,
       lastVisible,
       firstVisibleCol,
       lastVisibleCol,
     )
-    const cellFormats = this.appendOffscreenMergeAnchorFormats(
-      this.resolveVisibleCellFormats(firstVisible, lastVisible, firstVisibleCol, lastVisibleCol),
-      mergeRegions,
+    const cellFormats = this.frameFormat.cellFormats(
       firstVisible,
       lastVisible,
       firstVisibleCol,
       lastVisibleCol,
+      mergeRegions,
     )
     return {
       data: this.data,
@@ -346,124 +351,6 @@ export class DefaultGridEngine implements GridEngine {
       collapsedColGaps,
       cellFormats,
       mergeRegions,
-    }
-  }
-
-  /**
-   * 把 main 可见 view range 内每个 `(viewRow, viewCol)` 翻译为 raw 坐标查 `formatStore`，
-   * 命中则以 **view 坐标** 收集到 `cellFormats`。无 hide/sort/filter 时为恒等映射。
-   * 仅解析 main 区（见 plan Task 3）；store 为空时直接短路返回空数组。
-   */
-  private resolveVisibleCellFormats(
-    firstRow: number,
-    lastRow: number,
-    firstCol: number,
-    lastCol: number,
-  ): readonly ResolvedCellFormat[] {
-    if (this.formatStore.getLayerCount() === 0) return []
-    if (firstRow > lastRow || firstCol > lastCol) return []
-    const result: ResolvedCellFormat[] = []
-    // 预解析每个可见 view 列 → raw col，避免内层循环重复扫描 schema。
-    const rawCols: number[] = []
-    for (let viewCol = firstCol; viewCol <= lastCol; viewCol += 1) {
-      rawCols.push(this.getRawColumnIndexForViewIndex(viewCol))
-    }
-    for (let viewRow = firstRow; viewRow <= lastRow; viewRow += 1) {
-      const rawRow = resolveUnderlyingRow(this.data, viewRow)
-      for (let i = 0; i < rawCols.length; i += 1) {
-        const rawCol = rawCols[i]!
-        if (rawCol < 0) continue
-        const format = this.formatStore.resolveCell(rawRow, rawCol)
-        if (format !== undefined) {
-          result.push({ rowIndex: viewRow, colIndex: firstCol + i, format })
-        }
-      }
-    }
-    return result
-  }
-
-  /**
-   * 合并区域的填充按整块矩形在 anchor 处绘制一次；当 anchor 滚出可见扫描范围、但区域仍与视口相交时，
-   * `resolveVisibleCellFormats` 不会扫描到 anchor，导致合并填充整帧消失。这里为这类 anchor 补发其格式
-   * （以 view 坐标），与文本侧 `paintMergeAnchors` 的 anchor 处理对齐。边框为逐格绘制（model A），可见覆盖格
-   * 已携带可见外框边，无需补发。
-   */
-  private appendOffscreenMergeAnchorFormats(
-    base: readonly ResolvedCellFormat[],
-    mergeRegions: readonly MergeRegion[],
-    firstRow: number,
-    lastRow: number,
-    firstCol: number,
-    lastCol: number,
-  ): readonly ResolvedCellFormat[] {
-    if (mergeRegions.length === 0 || this.formatStore.getLayerCount() === 0) return base
-    let augmented: ResolvedCellFormat[] | undefined
-    for (const region of mergeRegions) {
-      const { rowIndex: aRow, colIndex: aCol } = region.anchor
-      const insideScan = aRow >= firstRow && aRow <= lastRow && aCol >= firstCol && aCol <= lastCol
-      if (insideScan) continue
-      const rawRow = resolveUnderlyingRow(this.data, aRow)
-      const rawCol = this.getRawColumnIndexForViewIndex(aCol)
-      if (rawCol < 0) continue
-      const format = this.formatStore.resolveCell(rawRow, rawCol)
-      if (format === undefined) continue
-      if (!augmented) augmented = [...base]
-      augmented.push({ rowIndex: aRow, colIndex: aCol, format })
-    }
-    return augmented ?? base
-  }
-
-  /**
-   * 把与 main 可见 view range 相交的合并区域从 raw 坐标翻译回 **view 坐标** 后收集。
-   * 复用 firstRow/lastRow/firstCol/lastCol（view 空间）：先把 view 边界翻译为 raw 边界再查 store，
-   * 命中的区域各角再翻回 view。任一角隐藏或行序非连续（排序/筛选）则跳过该区域（painter 不画半残合并）。
-   * 无 hide/sort/filter 时为恒等映射。store 为空时短路返回空数组。
-   */
-  private resolveVisibleMergeRegions(
-    firstRow: number,
-    lastRow: number,
-    firstCol: number,
-    lastCol: number,
-  ): readonly MergeRegion[] {
-    if (firstRow > lastRow || firstCol > lastCol) return []
-    const visibleRawRange = this.viewRangeToRawRange({
-      startRow: firstRow,
-      endRow: lastRow,
-      startCol: firstCol,
-      endCol: lastCol,
-    })
-    if (!visibleRawRange) return []
-    const rawRegions = this.mergeStore.getRegionsInRange(visibleRawRange)
-    if (rawRegions.length === 0) return []
-    const result: MergeRegion[] = []
-    for (const region of rawRegions) {
-      const viewRegion = this.mergeRegionToView(region)
-      if (viewRegion) result.push(viewRegion)
-    }
-    return result
-  }
-
-  /** 把单个合并区域从 raw 坐标翻译为 view 坐标；隐藏行列或行序非连续时返回 null。 */
-  private mergeRegionToView(region: MergeRegion): MergeRegion | null {
-    // 逐行检查 raw→view 映射，确保合并区域的每一行在 view 空间中严格连续。
-    // 仅比对端点跨度无法发现内部行被排序打散的情况（端点跨度可能恰好吻合）。
-    const startRow = findViewRow(this.data, region.range.startRow)
-    if (startRow === -1) return null
-    let prevViewRow = startRow
-    for (let raw = region.range.startRow + 1; raw <= region.range.endRow; raw += 1) {
-      const viewRow = findViewRow(this.data, raw)
-      if (viewRow === -1 || viewRow !== prevViewRow + 1) return null
-      prevViewRow = viewRow
-    }
-    const endRow = prevViewRow
-    const startCol = this.getViewColumnIndexForRawIndex(region.range.startCol)
-    const endCol = this.getViewColumnIndexForRawIndex(region.range.endCol)
-    if (startCol === -1 || endCol === -1) return null
-    if (endCol - startCol !== region.range.endCol - region.range.startCol) return null
-    return {
-      id: region.id,
-      range: { startRow, endRow, startCol, endCol },
-      anchor: { rowIndex: startRow, colIndex: startCol },
     }
   }
 
@@ -2118,11 +2005,6 @@ export class DefaultGridEngine implements GridEngine {
 
   private getRawColumnIndexForViewIndex(viewColIndex: number): number {
     return this.coords.viewColToRaw(viewColIndex)
-  }
-
-  /** raw col index → view col index；该列隐藏或越界时返回 -1。`getRawColumnIndexForViewIndex` 的逆。 */
-  private getViewColumnIndexForRawIndex(rawColIndex: number): number {
-    return this.coords.rawColToView(rawColIndex)
   }
 
   private setFieldWidth(fieldId: string, width: number): void {
