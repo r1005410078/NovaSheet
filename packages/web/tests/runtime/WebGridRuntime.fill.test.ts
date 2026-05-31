@@ -11,6 +11,7 @@ import type { WebHost } from '../../src/host/WebHost'
 import type { WebRenderer } from '../../src/render/WebRenderer'
 import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
 import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
+import { makeMockGridEngine } from '../helpers/mock-grid-engine'
 
 describe('WebGridRuntime fill handle', () => {
   it('syncs fill handle after render when selection exists', () => {
@@ -189,7 +190,18 @@ function makeEngine(
     selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
   },
 ): GridEngine {
-  const data = {
+  const data = makeData()
+  return makeMockGridEngine({
+    selection,
+    data,
+    rowHeight: 30,
+    colWidth: 100,
+    theme: { ...denseGridTheme, metrics: { ...denseGridTheme.metrics, headerHeight: 30, rowHeight: 30 } },
+  })
+}
+
+function makeData(): DataSource {
+  return {
     getRowCount: () => 10,
     getSchema: () => ({
       fields: [
@@ -200,88 +212,7 @@ function makeEngine(
     getRows: () => [],
     getCell: () => null,
     subscribe: () => () => {},
-  } as unknown as DataSource
-  const frame = {
-    data,
-    theme: { metrics: { headerHeight: 30 } } as Theme,
-    rowsAxis: {
-      getCount: () => 10,
-      indexToPosition: (i: number) => i * 30,
-      positionToIndex: (pos: number) => Math.floor(pos / 30),
-      getSize: () => 30,
-    } as never,
-    colsAxis: {
-      getCount: () => 2,
-      indexToPosition: (i: number) => i * 100,
-      positionToIndex: (pos: number) => Math.floor(pos / 100),
-      getSize: () => 100,
-    } as never,
-    viewport: {
-      contentRect: { width: 400, height: 300 },
-      regions: [
-        {
-          id: 'main',
-          rowBand: 'middle',
-          colBand: 'center',
-          rowRange: [0, 9],
-          colRange: [0, 1],
-          rect: { x: 0, y: 30, width: 200, height: 270 },
-          scrollOffsetX: 0,
-          scrollOffsetY: 0,
-          zIndex: 0,
-        },
-      ],
-    },
-    selection,
-  } as {
-    rowsAxis: never
-    colsAxis: never
   }
-  return {
-    setData: mock(() => {}),
-    setViewData: mock(() => {}),
-    setTheme: mock(() => {}),
-    setFrozen: mock(() => {}),
-    setViewportSize: mock(() => {}),
-    setHeaderHeight: mock(() => {}),
-    setScroll: mock(() => {}),
-    setRowHeight: mock(() => {}),
-    setColumnWidth: mock(() => {}),
-    selectCell: mock(() => {}),
-    navigateSelection: mock(() => false),
-    beginCellEdit: mock(() => false),
-    updateCellEditDraft: mock(() => {}),
-    cancelCellEdit: mock(() => {}),
-    commitCellEdit: mock(() => true),
-    isCellEditing: mock(() => false),
-    clearRange: mock(() => {}),
-    clearSelection: mock(() => {}),
-    getSelection: mock(() => selection),
-    getFrame: mock(() => frame),
-    getRowsTotalSize: () => 300,
-    getColsTotalSize: () => 200,
-    getColumnIndex: () => 0,
-    getTheme: () => ({ metrics: { headerHeight: 30 } }) as Theme,
-    getRowsAxis: () => frame.rowsAxis,
-    getColsAxis: () => frame.colsAxis,
-    getViewport: mock(() => ({}) as never),
-    getData: mock(() => data),
-    undo: mock(() => undefined),
-    redo: mock(() => undefined),
-    canUndo: mock(() => false),
-    canRedo: mock(() => false),
-    commitRowResize: mock(() => {}),
-    commitColumnResize: mock(() => {}),
-    commitPaste: mock(() => {}),
-    commitFill: mock((source, fill, direction) => ({
-      source,
-      fill,
-      result: { startRow: 0, endRow: 4, startCol: 0, endCol: 1 },
-      direction,
-      writes: [],
-    })),
-    getFillMergeSnap: mock(() => ({ rowSpan: 1, colSpan: 1 })),
-  } as unknown as GridEngine
 }
 
 function makeHost(offset: { left: number; top: number } = { left: 0, top: 0 }): WebHost {

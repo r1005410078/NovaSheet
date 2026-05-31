@@ -85,7 +85,7 @@
 ### R7 🟡 测试盲区
 
 - **happy-dom 测不出排版**：`scrollHeight/scrollWidth/offset* = 0`，编辑器自增长、overflow 宽度等**视觉/布局逻辑只能 stub 验证骨架**，真实效果无自动化兜底 → 建议补**少量真实浏览器/视觉回归**（Storybook + 截图 diff）覆盖这类。
-- **mock engine 用 `as unknown as GridEngine`**：接口漂移时测试不报警（本轮多次手动补 `setTextWrap`/`getFillMergeSnap` 才发现）→ 建议给 mock engine 一个**类型完整的工厂**，新增接口方法编译即红。
+- ~~**mock engine 用 `as unknown as GridEngine`**~~：✅ web 测试已新增 `makeMockGridEngine`（`satisfies GridEngine`），并清掉 `packages/web/tests` 内的 `as unknown as GridEngine`；新增接口方法会在 typecheck 阶段编译红。
 
 ### R8 🟢 无界缓存
 
@@ -98,7 +98,7 @@
 1. ~~**R3 共享几何工具**~~ —— ✅ 已完成（`geometry/range.ts`: `cellInRange` / `rangesIntersect` / `unionRange` / `clamp` / `clampRange` / `normalizeRange`）。
 2. ~~**R2 CoordinateSpace + branded type**~~ —— ✅ 已完成（翻译收口走 `coords` + 内部 `RawRange` brand）。
 3. ~~**R1 runtime 拖拽切片**~~ —— ✅ 已完成（ColumnHeaderDrag / RowHeaderDrag / SelectionDrag / FillHandleDrag / ResizeDrag + 单点派发）；engine 已切 `VisibleFormatResolver` / `FillStylePropagator`，余下 engine 切片按功能开发增量进行。
-4. **R7 测试盲区** —— 类型化 mock 工厂 + 视觉回归（与功能开发并行补）。
+4. **R7 测试盲区** —— ✅ 类型化 mock 工厂已落地；视觉回归仍与功能开发并行补。
 5. **R5 stage 顺序 / R4 undo 增量 / R6 模型整合 / R8 LRU** —— 规模或体验需要时再做。
 
 > 原则：R1–R3 是**地基收口**。R2 + R1 runtime 拖拽侧已收口；后续进 5-C 前，优先只补会直接服务数字格式/display pipeline 的小抽象，避免重开大范围重构。

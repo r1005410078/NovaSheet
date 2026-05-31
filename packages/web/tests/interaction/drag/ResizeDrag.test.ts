@@ -1,19 +1,19 @@
 import { describe, expect, it, mock } from 'bun:test'
-import type { GridEngine, Theme } from '@novasheet/core'
 import { ResizeDrag } from '../../../src/interaction/drag/ResizeDrag'
 import type { DomHandleLayer } from '../../../src/interaction/DomHandleLayer'
 import type { ResizeHandleRect } from '@novasheet/core'
+import { makeMockGridEngine } from '../../helpers/mock-grid-engine'
 
 describe('ResizeDrag', () => {
   it('previews column resize and commits on matching pointerup', () => {
-    const engine = makeEngine()
+    const engine = makeMockGridEngine({ colWidth: 100 })
     const handleLayer = makeHandleLayer()
     const afterEngineMutation = mock(() => {})
     const drag = new ResizeDrag({ engine, handleLayer, afterEngineMutation })
     const handle: ResizeHandleRect = {
       kind: 'column',
       id: 'name',
-      fieldId: 'name',
+      fieldId: 'field-0',
       colIndex: 0,
       x: 92,
       y: 0,
@@ -34,24 +34,6 @@ describe('ResizeDrag', () => {
     expect(afterEngineMutation).toHaveBeenCalled()
   })
 })
-
-function makeEngine(): GridEngine {
-  return {
-    getColumnIndex: mock(() => 0),
-    getColsAxis: () =>
-      ({
-        getSize: () => 100,
-      }) as never,
-    getRowsAxis: () =>
-      ({
-        getCount: () => 10,
-        getSize: () => 30,
-      }) as never,
-    getTheme: () => ({ metrics: { headerHeight: 30 } }) as Theme,
-    commitColumnResize: mock(() => {}),
-    commitRowResize: mock(() => {}),
-  } as unknown as GridEngine
-}
 
 function makeHandleLayer(): DomHandleLayer {
   return {

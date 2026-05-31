@@ -13,6 +13,7 @@ import type { SelectionOverlay, SelectionOverlayState } from '../../src/overlay/
 import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
 import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { makeMockGridEngine } from '../helpers/mock-grid-engine'
 
 function makeFillLayer(): DomFillHandleLayer {
   return {
@@ -379,61 +380,15 @@ function makeFrame(options: {
 }
 
 function makeEngine(frame: ReturnType<GridEngine['getFrame']>): GridEngine {
-  return {
-    setData: mock(() => {}),
-    setViewData: mock(() => {}),
-    setTheme: mock(() => {}),
-    setFrozen: mock(() => {}),
-    setViewportSize: mock(() => {}),
-    setHeaderHeight: mock(() => {}),
-    setScroll: mock(() => {}),
-    setRowHeight: mock(() => {}),
-    getRowHeight: mock(() => 30),
-    setColumnWidth: mock(() => {}),
-    selectCell: mock(() => {}),
-    navigateSelection: mock(() => false),
-    beginCellEdit: mock(() => false),
-    updateCellEditDraft: mock(() => {}),
-    cancelCellEdit: mock(() => {}),
-    commitCellEdit: mock(() => false),
-    isCellEditing: mock(() => false),
-    clearRange: mock(() => {}),
-    clearSelection: mock(() => {}),
-    getSelection: mock(() => frame.selection),
-    getFrame: mock(() => frame),
-    getRowsTotalSize: () => 30,
-    getColsTotalSize: () => 80,
-    getColumnIndex: () => 0,
-    getTheme: () => denseGridTheme,
-    getRowsAxis: () => frame.rowsAxis,
-    getColsAxis: () => frame.colsAxis,
-    getViewport: mock(() => frame.viewport),
-    getData: mock(() => frame.data),
-    undo: mock(() => undefined),
-    redo: mock(() => undefined),
-    canUndo: mock(() => false),
-    canRedo: mock(() => false),
-    commitRowResize: mock(() => {}),
-    commitColumnResize: mock(() => {}),
-    commitPaste: mock(() => {}),
-    commitFill: mock(() => null),
-    unhideRows: mock(() => {}),
-    getHiddenRows: mock(() => [] as readonly number[]),
-    insertRows: mock(() => [] as readonly number[]),
-    deleteRows: mock(() => {}),
-    hideRows: mock(() => {}),
-    setRowHeights: mock(() => {}),
-    setSelection: mock(() => {}),
-    insertCols: mock(() => [] as never),
-    deleteCols: mock(() => [] as never),
-    hideCols: mock(() => {}),
-    unhideCols: mock(() => {}),
-    setColumnWidths: mock(() => {}),
-    getHiddenCols: mock(() => [] as readonly string[]),
-    getFrozenConfig: mock(() => ({ topRows: 0, leftCols: 0, rightCols: 0 })),
-    moveCols: mock(() => false),
-    moveRows: mock(() => false),
-  } as unknown as GridEngine
+  return makeMockGridEngine({
+    frame,
+    overrides: {
+      getRowsTotalSize: () => 30,
+      getColsTotalSize: () => 80,
+      getColumnIndex: () => 0,
+      getTheme: () => denseGridTheme,
+    },
+  })
 }
 
 function makeHost(): WebHost {
