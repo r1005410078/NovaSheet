@@ -1155,8 +1155,8 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   /**
-   * Phase 5-A — 给 view `range` 设置基础边框；`preset === 'clear'` 需 `border === null` 并清除。
-   * 仅支持 `lineStyle === 'solid'`，其余样式返回 false。`range` 须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
+   * 给 view `range` 设置边框；`preset === 'clear'` 需 `border === null` 并清除。
+   * Phase 5-B 起支持全部 `lineStyle`（solid/dashed/dotted/double）。`range` 须已归一化。
    * 写入前把 view range 翻译为 raw range；快照前后一致则不入栈并返回 false。
    */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
@@ -1165,7 +1165,6 @@ export class DefaultGridEngine implements GridEngine {
       if (border !== null) return false
     } else {
       if (border === null) return false
-      if (border.lineStyle !== 'solid') return false
     }
     const rawRange = this.viewRangeToRawRange(range)
     if (!rawRange) return false

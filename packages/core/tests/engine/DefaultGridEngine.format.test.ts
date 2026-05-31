@@ -45,14 +45,18 @@ describe('DefaultGridEngine format APIs', () => {
     expect(engine.getCellFormat(0, 0)?.borders).toBeUndefined()
   })
 
-  it('setBorders with non-solid lineStyle returns false and writes nothing', () => {
+  it('Phase 5-B：setBorders 接受 dashed/dotted/double，写入并可 undo/redo', () => {
     const engine = makeEngine()
     const dashedBorder: BorderStyle = { color: '#000', width: 'thin', lineStyle: 'dashed' }
     const range = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
 
-    expect(engine.setBorders(range, 'outer', dashedBorder)).toBe(false)
+    expect(engine.setBorders(range, 'outer', dashedBorder)).toBe(true)
+    expect(engine.getCellFormat(0, 0)?.borders?.top?.lineStyle).toBe('dashed')
+
+    expect(engine.undo()?.kind).toBe('format')
     expect(engine.getCellFormat(0, 0)).toBeUndefined()
-    expect(engine.undo()).toBeUndefined()
+    expect(engine.redo()?.kind).toBe('format')
+    expect(engine.getCellFormat(0, 0)?.borders?.top?.lineStyle).toBe('dashed')
   })
 
   it('setBorders with preset=clear and non-null border returns false', () => {
