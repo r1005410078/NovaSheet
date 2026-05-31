@@ -5,6 +5,7 @@ import { MergeStore } from '../../src/merge/MergeStore'
 import { CoordinateSpace } from '../../src/view/CoordinateSpace'
 import type { DataSource } from '../../src/data/DataSource'
 import type { Schema } from '../../src/data/Schema'
+import { asRawRange } from '../../src/view/coordinates'
 
 const schema: Schema = {
   fields: [
@@ -39,7 +40,7 @@ function setup() {
 describe('VisibleFormatResolver', () => {
   it('cellFormats 收集可见区命中的格式（view 坐标）', () => {
     const { formatStore, resolver } = setup()
-    formatStore.apply({ startRow: 1, endRow: 1, startCol: 0, endCol: 0 }, { fillColor: '#fff2cc' })
+    formatStore.apply(asRawRange({ startRow: 1, endRow: 1, startCol: 0, endCol: 0 }), { fillColor: '#fff2cc' })
     const out = resolver.cellFormats(0, 3, 0, 1, [])
     expect(out).toEqual([{ rowIndex: 1, colIndex: 0, format: { fillColor: '#fff2cc' } }])
   })
@@ -52,7 +53,7 @@ describe('VisibleFormatResolver', () => {
 
   it('mergeRegions 返回与可见区相交的合并（view 坐标）', () => {
     const { mergeStore, resolver } = setup()
-    mergeStore.merge({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
+    mergeStore.merge(asRawRange({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 }))
     const out = resolver.mergeRegions(0, 3, 0, 1)
     expect(out.length).toBe(1)
     expect(out[0]!.range).toEqual({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
@@ -60,8 +61,8 @@ describe('VisibleFormatResolver', () => {
 
   it('anchor 滚出扫描范围但区域相交时补发 anchor 格式', () => {
     const { formatStore, mergeStore, resolver } = setup()
-    formatStore.apply({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }, { fillColor: '#d9ead3' })
-    mergeStore.merge({ startRow: 0, endRow: 2, startCol: 0, endCol: 0 })
+    formatStore.apply(asRawRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }), { fillColor: '#d9ead3' })
+    mergeStore.merge(asRawRange({ startRow: 0, endRow: 2, startCol: 0, endCol: 0 }))
     const merges = resolver.mergeRegions(1, 2, 0, 0) // 可见区 rows1-2，anchor 在 row0（扫描范围外）
     const out = resolver.cellFormats(1, 2, 0, 0, merges)
     // anchor(0,0) 的填充被补发

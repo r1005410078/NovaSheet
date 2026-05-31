@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { borderPatchForCell } from '../../src/format/BorderPreset'
 import { RangeStyleStore } from '../../src/format/RangeStyleStore'
 import type { BorderStyle } from '../../src/format/CellFormat'
+import { asRawRange } from '../../src/view/coordinates'
 
 const red: BorderStyle = { color: '#d93025', width: 'thin', lineStyle: 'solid' }
 const range = { startRow: 1, endRow: 3, startCol: 2, endCol: 4 }
@@ -50,7 +51,7 @@ describe('borderPatchForCell', () => {
 describe('RangeStyleStore border methods', () => {
   it('applyBorders outer then resolveCell shows perimeter on corner, nothing on interior', () => {
     const store = new RangeStyleStore()
-    const smallRange = { startRow: 0, endRow: 1, startCol: 0, endCol: 1 }
+    const smallRange = asRawRange({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
 
     store.applyBorders(smallRange, 'outer', red)
 
@@ -62,7 +63,7 @@ describe('RangeStyleStore border methods', () => {
     expect(cornerFmt?.borders?.bottom).toBeUndefined()
 
     // interior cell (1x1 range has none interior): use a larger range
-    const bigger = { startRow: 0, endRow: 2, startCol: 0, endCol: 2 }
+    const bigger = asRawRange({ startRow: 0, endRow: 2, startCol: 0, endCol: 2 })
     const store2 = new RangeStyleStore()
     store2.applyBorders(bigger, 'outer', red)
     const interior = store2.resolveCell(1, 1)
@@ -71,7 +72,7 @@ describe('RangeStyleStore border methods', () => {
 
   it('clearBorders makes borders undefined after applyBorders', () => {
     const store = new RangeStyleStore()
-    const smallRange = { startRow: 0, endRow: 1, startCol: 0, endCol: 1 }
+    const smallRange = asRawRange({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })
 
     store.applyBorders(smallRange, 'outer', red)
     expect(store.resolveCell(0, 0)?.borders).toBeDefined()

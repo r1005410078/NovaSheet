@@ -38,6 +38,7 @@ import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { CoordinateSpace } from '../view/CoordinateSpace'
+import type { RawRange } from '../view/coordinates'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
 import { FillStylePropagator } from './FillStylePropagator'
 import type {
@@ -1041,11 +1042,11 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   /**
-   * 把 view `CellRange` 翻译为 raw `CellRange`。无 hide/sort/filter 时为恒等映射。
-   * 行经 `resolveUnderlyingRow`、列经 `fieldId → raw col index` 映射；映射结果在 raw 空间
+   * 把 view `CellRange` 翻译为 raw `RawRange`。无 hide/sort/filter 时为恒等映射。
+   * 行经 `viewRowToRaw`、列经 `fieldId → raw col index` 映射；映射结果在 raw 空间
    * 非连续（排序/筛选打乱行序）时返回 null（5-A 不展开大范围，见 plan Coordinate Space Invariant）。
    */
-  private viewRangeToRawRange(range: CellRange): CellRange | null {
+  private viewRangeToRawRange(range: CellRange): RawRange | null {
     return this.coords.viewRangeToRaw(range)
   }
 

@@ -1,4 +1,5 @@
 import type { CellRange } from '../interaction/SelectionModel'
+import type { RawRange } from '../view/coordinates'
 import { isCellInRange, rangesIntersect } from '../geometry/range'
 import {
   remapSpanAfterDelete,
@@ -30,7 +31,7 @@ export class MergeStore {
    * 创建合并区域；anchor 取 `range` 左上角。
    * 单格范围或与现存区域重叠时返回 null（不修改 store）。
    */
-  merge(range: CellRange): MergeRegion | null {
+  merge(range: RawRange): MergeRegion | null {
     if (isSingleCell(range)) return null
     for (const region of this.regions) {
       if (rangesIntersect(region.range, range)) return null
@@ -46,7 +47,7 @@ export class MergeStore {
   }
 
   /** 移除所有与 `range` 相交的区域并返回被移除的区域（可能为空）。 */
-  unmerge(range: CellRange): readonly MergeRegion[] {
+  unmerge(range: RawRange): readonly MergeRegion[] {
     const removed: MergeRegion[] = []
     const kept: MergeRegion[] = []
     for (const region of this.regions) {
@@ -66,7 +67,7 @@ export class MergeStore {
   }
 
   /** 返回所有与 `range` 相交的区域。 */
-  getRegionsInRange(range: CellRange): readonly MergeRegion[] {
+  getRegionsInRange(range: RawRange): readonly MergeRegion[] {
     return this.regions.filter((region) => rangesIntersect(region.range, range))
   }
 

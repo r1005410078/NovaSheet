@@ -1,4 +1,5 @@
 import type { CellRange } from '../interaction/SelectionModel'
+import type { RawRange } from '../view/coordinates'
 import type { BorderPreset, BorderStyle, CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
 import { borderPatchForCell } from './BorderPreset'
 import { isCellInRange, rangesIntersect } from '../geometry/range'
@@ -13,11 +14,11 @@ export class RangeStyleStore {
   private layers: FormatLayer[] = []
   private nextOrder = 0
 
-  apply(range: CellRange, patch: CellFormat): void {
+  apply(range: RawRange, patch: CellFormat): void {
     this.layers.push({ range, patch, order: this.nextOrder++ })
   }
 
-  clearFill(range: CellRange): void {
+  clearFill(range: RawRange): void {
     // Kind-aware no-op guard: only push when an intersecting layer actually contributes a fill
     // (a fillColor patch or a prior clearFill marker). Clearing fill over borders-only cells would
     // change nothing yet still grow the snapshot, producing a spurious format undo entry.
@@ -25,7 +26,7 @@ export class RangeStyleStore {
     this.layers.push({ range, patch: {}, clearFill: true, order: this.nextOrder++ })
   }
 
-  clearBorders(range: CellRange): void {
+  clearBorders(range: RawRange): void {
     // Symmetric to clearFill: only push when an intersecting layer contributes borders
     // (a borders patch or a prior clearBorders marker).
     if (!this.anyLayerContributesBorders(range)) return
@@ -56,9 +57,9 @@ export class RangeStyleStore {
    * All other presets require a `border` style and expand per-cell;
    * callers must not pass 1M-row ranges.
    */
-  applyBorders(range: CellRange, preset: 'clear'): void
-  applyBorders(range: CellRange, preset: Exclude<BorderPreset, 'clear'>, border: BorderStyle): void
-  applyBorders(range: CellRange, preset: BorderPreset, border?: BorderStyle): void {
+  applyBorders(range: RawRange, preset: 'clear'): void
+  applyBorders(range: RawRange, preset: Exclude<BorderPreset, 'clear'>, border: BorderStyle): void
+  applyBorders(range: RawRange, preset: BorderPreset, border?: BorderStyle): void {
     if (preset === 'clear') {
       this.clearBorders(range)
       return
@@ -114,7 +115,7 @@ export class RangeStyleStore {
     return result
   }
 
-  resolveVisible(range: CellRange): readonly ResolvedCellFormat[] {
+  resolveVisible(range: RawRange): readonly ResolvedCellFormat[] {
     const result: ResolvedCellFormat[] = []
     for (let row = range.startRow; row <= range.endRow; row++) {
       for (let col = range.startCol; col <= range.endCol; col++) {

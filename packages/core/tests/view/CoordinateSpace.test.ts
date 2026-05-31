@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { CoordinateSpace, type CoordinateContext } from '../../src/view/CoordinateSpace'
+import { asRawRange } from '../../src/view/coordinates'
 import type { DataSource } from '../../src/data/DataSource'
 import type { Schema } from '../../src/data/Schema'
 
@@ -40,12 +41,9 @@ describe('CoordinateSpace', () => {
     expect(s.rawRowToView(2)).toBe(2)
     expect(s.viewColToRaw(1)).toBe(1)
     expect(s.rawColToView(1)).toBe(1)
-    expect(s.viewRangeToRaw({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })).toEqual({
-      startRow: 0,
-      endRow: 1,
-      startCol: 0,
-      endCol: 1,
-    })
+    expect(s.viewRangeToRaw({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 })).toEqual(
+      asRawRange({ startRow: 0, endRow: 1, startCol: 0, endCol: 1 }),
+    )
   })
 
   it('隐藏列：viewCol↔rawCol 跳过隐藏列', () => {
@@ -62,12 +60,9 @@ describe('CoordinateSpace', () => {
 
   it('连续子段仍可映射', () => {
     const s = makeSpace([2, 0, 1]) // view 行 1,2 → raw 0,1（连续）
-    expect(s.viewRangeToRaw({ startRow: 1, endRow: 2, startCol: 0, endCol: 0 })).toEqual({
-      startRow: 0,
-      endRow: 1,
-      startCol: 0,
-      endCol: 0,
-    })
+    expect(s.viewRangeToRaw({ startRow: 1, endRow: 2, startCol: 0, endCol: 0 })).toEqual(
+      asRawRange({ startRow: 0, endRow: 1, startCol: 0, endCol: 0 }),
+    )
   })
 
   it('fieldIdToRaw：fieldId → raw 列序；未知 id 返回 -1', () => {

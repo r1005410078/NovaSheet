@@ -1,7 +1,7 @@
 import type { CellRange } from '../interaction/SelectionModel'
 import type { DataSource } from '../data/DataSource'
 import type { Schema } from '../data/Schema'
-import { findViewRow, resolveUnderlyingRow } from './coordinates'
+import { asRawRange, findViewRow, resolveUnderlyingRow, type RawRange } from './coordinates'
 
 /**
  * CoordinateSpace 读取所需的引擎活状态（live，每次调用读最新）：
@@ -71,12 +71,12 @@ export class CoordinateSpace {
    * view `CellRange` → raw `CellRange`；当 raw 映射不连续（排序/筛选打乱）时返回 `null`。
    * `range` 须已归一化（`startRow ≤ endRow`，`startCol ≤ endCol`）。
    */
-  viewRangeToRaw(range: CellRange): CellRange | null {
+  viewRangeToRaw(range: CellRange): RawRange | null {
     const rows = this.viewRowsContiguous(range.startRow, range.endRow)
     if (!rows) return null
     const cols = this.viewColsContiguous(range.startCol, range.endCol)
     if (!cols) return null
-    return { startRow: rows.start, endRow: rows.end, startCol: cols.start, endCol: cols.end }
+    return asRawRange({ startRow: rows.start, endRow: rows.end, startCol: cols.start, endCol: cols.end })
   }
 
   private viewRowsContiguous(startRow: number, endRow: number): { start: number; end: number } | null {
