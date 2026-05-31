@@ -38,6 +38,11 @@ export class CoordinateSpace {
     return findViewRow(this.ctx.getViewData(), rawRow)
   }
 
+  /** fieldId → raw 列序（底层 schema 顺序）；未知 id 返回 -1。 */
+  fieldIdToRaw(fieldId: string): number {
+    return this.ctx.getRawSchema().fields.findIndex((field) => field.id === fieldId)
+  }
+
   /** view 列 → raw 列；越界返回 -1。 */
   viewColToRaw(viewCol: number): number {
     const fields = this.ctx.getRawSchema().fields

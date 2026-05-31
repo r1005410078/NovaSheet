@@ -69,4 +69,11 @@ describe('CoordinateSpace', () => {
       endCol: 0,
     })
   })
+
+  it('fieldIdToRaw：fieldId → raw 列序；未知 id 返回 -1', () => {
+    const s = makeSpace([0, 1, 2])
+    expect(s.fieldIdToRaw('a')).toBe(0)
+    expect(s.fieldIdToRaw('c')).toBe(2)
+    expect(s.fieldIdToRaw('zzz')).toBe(-1)
+  })
 })
