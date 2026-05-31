@@ -1979,7 +1979,11 @@ export class WebGridRuntime {
   /** 同步 resize handle layer 主题。 */
   private syncResizeHandleTheme(): void {
     const theme = this.engine.getTheme()
-    this.handleLayer?.applyTheme(theme.colors, theme.metrics)
+    const frame = this.engine.getFrame()
+    this.handleLayer?.applyTheme(theme.colors, {
+      headerHeight: theme.metrics.headerHeight,
+      rowHeaderWidth: frame.viewport.rowHeaderWidth ?? theme.metrics.rowHeaderWidth,
+    })
   }
 
   /** 同步 cell editor 主题。 */

@@ -1202,6 +1202,50 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
 
     expect(engine.commitColumnResize).not.toHaveBeenCalled()
   })
+
+  it('attach 时 resize handle 主题使用 viewport rowHeaderWidth', () => {
+    const applyTheme = mock(() => {})
+    const engine = makeEngine()
+    engine.getTheme = mock(
+      () =>
+        ({
+          metrics: { headerHeight: 32, rowHeaderWidth: 0 },
+          colors: { headerText: '#656d76', gridLineStrong: '#d0d7de', selectionBorder: '#0969da' },
+        }) as Theme,
+    )
+    engine.getFrame = mock(() => ({
+      data: {} as DataSource,
+      theme: { metrics: { headerHeight: 32 } } as Theme,
+      rowsAxis: { getCount: () => 10 } as never,
+      colsAxis: {} as never,
+      viewport: {
+        contentRect: { width: 400, height: 300 },
+        rowHeaderWidth: 44,
+        regions: [],
+      } as never,
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+    }))
+
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      handleLayer: {
+        applyTheme,
+        sync: mock(() => {}),
+        showIndicator: mock(() => {}),
+        hideIndicator: mock(() => {}),
+      } as never,
+    })
+
+    runtime.attach()
+
+    expect(applyTheme).toHaveBeenCalledWith(expect.anything(), {
+      headerHeight: 32,
+      rowHeaderWidth: 44,
+    })
+  })
 })
 
 describe('WebGridRuntime clipboard — Phase 4.1', () => {
