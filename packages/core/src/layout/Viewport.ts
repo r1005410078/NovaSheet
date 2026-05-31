@@ -49,7 +49,7 @@
  */
 
 import type { ChunkedAxis } from './ChunkedAxis'
-import type { FrozenRegions, Quadrants, RenderRegion } from './FrozenRegions'
+import type { FrozenRegions, RenderRegion } from './FrozenRegions'
 
 /**
  * 视口快照：单帧内 Renderer 读取的唯一不可变数据源。
@@ -67,8 +67,6 @@ import type { FrozenRegions, Quadrants, RenderRegion } from './FrozenRegions'
 export interface ViewportSnapshot {
   /** 可绘制区域数组；支持 left/center/right 冻结列 */
   regions: RenderRegion[]
-  /** legacy 4 象限访问形状；新代码优先使用 regions */
-  quadrants: Quadrants
   /** canvas 当前 CSS 尺寸 */
   contentRect: { width: number; height: number }
   /** 表头高度（px） */
@@ -123,7 +121,7 @@ export class Viewport {
    * ```ts
    * const rowsAxis = new ChunkedAxis({ count: 1_000, defaultSize: 28 })
    * const colsAxis = new ChunkedAxis({ count: 20, defaultSize: 120 })
-   * const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+   * const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
    * const viewport = new Viewport(rowsAxis, colsAxis, frozen)
    * ```
    */
@@ -211,10 +209,8 @@ export class Viewport {
       rowHeaderWidth: this.rowHeaderWidth,
     }
     const regions = this.frozen.getRegions(rect)
-    const quadrants = this.frozen.getQuadrants(rect)
     return {
       regions,
-      quadrants,
       contentRect: { width: this.width, height: this.height },
       headerHeight: this.headerHeight,
       rowHeaderWidth: this.rowHeaderWidth,

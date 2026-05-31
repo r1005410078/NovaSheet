@@ -39,7 +39,7 @@ function setup() {
     defaultSize: denseGridTheme.metrics.rowHeight,
   })
   const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 80 })
-  const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+  const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
   const viewport = new Viewport(rowsAxis, colsAxis, frozen)
   viewport.setSize(400, 200)
   viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)

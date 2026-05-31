@@ -97,24 +97,16 @@ describe('FrozenRegions — M3 冻结区域', () => {
     })
   })
 
-  it('兼容旧 left-only quadrants 访问路径', () => {
+  it('不再暴露旧 quadrants 访问路径', () => {
     const rowsAxis = new ChunkedAxis({ count: 20, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 8, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 2, 1)
-
-    const quadrants = frozen.getQuadrants({
-      width: 400,
-      height: 200,
-      scrollX: 100,
-      scrollY: 84,
-      headerHeight: 32,
-      rowHeaderWidth: 0,
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {
+      topRows: 2,
+      leftCols: 1,
+      rightCols: 0,
     })
 
-    expect(quadrants.topLeft?.id).toBe('topLeft')
-    expect(quadrants.topRight?.id).toBe('topCenter')
-    expect(quadrants.bottomLeft?.id).toBe('middleLeft')
-    expect(quadrants.main.id).toBe('main')
+    expect('getQuadrants' in frozen).toBe(false)
   })
 
   it('左冻结列存在时横向滚动立即推动中间区域', () => {
@@ -146,7 +138,7 @@ describe('FrozenRegions — M3 冻结区域', () => {
   it('rowHeaderWidth 为内容区整体右移并收窄中间列', () => {
     const rowsAxis = new ChunkedAxis({ count: 20, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 8, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
     const main = frozen
       .getRegions({
         width: 400,
@@ -161,12 +153,12 @@ describe('FrozenRegions — M3 冻结区域', () => {
     expect(main.rect).toEqual({ x: 44, y: 32, width: 356, height: 168 })
   })
 
-  it('无冻结配置时保持单 main 区域兼容旧路径', () => {
+  it('无冻结配置时只返回单 main 区域', () => {
     const rowsAxis = new ChunkedAxis({ count: 20, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 8, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
 
-    const quadrants = frozen.getQuadrants({
+    const regions = frozen.getRegions({
       width: 400,
       height: 200,
       scrollX: 100,
@@ -175,10 +167,8 @@ describe('FrozenRegions — M3 冻结区域', () => {
       rowHeaderWidth: 0,
     })
 
-    expect(quadrants.topLeft).toBeUndefined()
-    expect(quadrants.topRight).toBeUndefined()
-    expect(quadrants.bottomLeft).toBeUndefined()
-    expect(quadrants.main).toMatchObject({
+    expect(regions).toHaveLength(1)
+    expect(regions[0]).toMatchObject({
       id: 'main',
       rowBand: 'middle',
       colBand: 'center',

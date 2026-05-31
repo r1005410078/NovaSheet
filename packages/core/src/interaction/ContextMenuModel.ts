@@ -34,7 +34,7 @@ export type ContextMenuAction =
   | 'resize-row-height'
 
 export interface CellMenuContext {
-  readonly targetKind?: 'cell'
+  readonly targetKind: 'cell'
   readonly cell: CellAddress
   readonly selectedRange: CellRange | null
   readonly hasSelection: boolean

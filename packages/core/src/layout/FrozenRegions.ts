@@ -43,11 +43,6 @@
  * // main -> middleLeft/middleRight -> topCenter -> topLeft/topRight
  * ```
  *
- * 兼容说明：
- * - 旧 API `new FrozenRegions(rowsAxis, colsAxis, frozenRows, frozenCols)` 仍可用。
- * - 旧 `getQuadrants()` 仍返回 `main/topLeft/topRight/bottomLeft`，其中：
- *   `topRight` 映射为新的 `topCenter`，`bottomLeft` 映射为新的 `middleLeft`。
- * - 新代码应优先使用 `getRegions()`。
  */
 
 import type { ChunkedAxis } from './ChunkedAxis'
@@ -111,21 +106,6 @@ export interface RenderRegion {
   zIndex: number
 }
 
-/** 向后兼容的 4 象限别名。新代码请使用 RenderRegion。 */
-export type Quadrant = RenderRegion
-
-/**
- * 向后兼容的 4 象限访问形状。
- *
- * 右冻结列不会出现在该 legacy 结构里；需要右冻结列时使用 `regions`。
- */
-export interface Quadrants {
-  main: RenderRegion
-  topLeft?: RenderRegion
-  topRight?: RenderRegion
-  bottomLeft?: RenderRegion
-}
-
 /**
  * getRegions 所需的视口尺寸与滚动信息。
  *
@@ -146,28 +126,15 @@ export interface ViewportRect {
   rowHeaderWidth: number
 }
 
-type LegacyOrConfig = number | Partial<FrozenConfig>
-
 export class FrozenRegions {
   private config: FrozenConfig
 
   constructor(
     private rowsAxis: ChunkedAxis,
     private colsAxis: ChunkedAxis,
-    frozen: LegacyOrConfig = 0,
-    legacyFrozenCols = 0,
+    frozen: Partial<FrozenConfig> = {},
   ) {
-    this.config = this.normalizeConfig(frozen, legacyFrozenCols)
-  }
-
-  /** 兼容旧字段：冻结顶部行数。 */
-  get frozenRows(): number {
-    return this.config.topRows
-  }
-
-  /** 兼容旧字段：冻结左侧列数。 */
-  get frozenCols(): number {
-    return this.config.leftCols
+    this.config = this.normalizeConfig(frozen)
   }
 
   getFrozenConfig(): FrozenConfig {
@@ -180,13 +147,10 @@ export class FrozenRegions {
    * @example
    * ```ts
    * frozen.setFrozen({ topRows: 1, leftCols: 1, rightCols: 1 })
-   *
-   * // 兼容旧调用：
-   * frozen.setFrozen(1, 1) // 等于 { topRows: 1, leftCols: 1, rightCols: 0 }
    * ```
    */
-  setFrozen(frozen: LegacyOrConfig, legacyFrozenCols = 0): void {
-    this.config = this.normalizeConfig(frozen, legacyFrozenCols)
+  setFrozen(frozen: Partial<FrozenConfig>): void {
+    this.config = this.normalizeConfig(frozen)
   }
 
   /**
@@ -319,26 +283,7 @@ export class FrozenRegions {
     return regions
   }
 
-  /** Legacy API：新代码请使用 getRegions()。 */
-  getQuadrants(vp: ViewportRect): Quadrants {
-    const regions = this.getRegions(vp)
-    const main = regions.find((r) => r.id === 'main')!
-    return {
-      main,
-      topLeft: regions.find((r) => r.id === 'topLeft'),
-      topRight: regions.find((r) => r.id === 'topCenter'),
-      bottomLeft: regions.find((r) => r.id === 'middleLeft'),
-    }
-  }
-
-  private normalizeConfig(frozen: LegacyOrConfig, legacyFrozenCols: number): FrozenConfig {
-    if (typeof frozen === 'number') {
-      return {
-        topRows: this.normalizeCount(frozen),
-        leftCols: this.normalizeCount(legacyFrozenCols),
-        rightCols: 0,
-      }
-    }
+  private normalizeConfig(frozen: Partial<FrozenConfig>): FrozenConfig {
     return {
       topRows: this.normalizeCount(frozen.topRows ?? 0),
       leftCols: this.normalizeCount(frozen.leftCols ?? 0),

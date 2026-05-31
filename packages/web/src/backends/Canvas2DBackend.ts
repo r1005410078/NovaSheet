@@ -294,11 +294,8 @@ export class Canvas2DBackend implements GridController {
     this.runtime.setColumnWidth(fieldId, width)
   }
 
-  setFrozen(config: Partial<FrozenConfig>): void
-  setFrozen(rows: number, cols: number): void
-  setFrozen(configOrRows: Partial<FrozenConfig> | number, cols = 0): void {
-    if (typeof configOrRows === 'number') this.runtime.setFrozen(configOrRows, cols)
-    else this.runtime.setFrozen(configOrRows)
+  setFrozen(config: Partial<FrozenConfig>): void {
+    this.runtime.setFrozen(config)
   }
 
   refresh(): void {
@@ -315,10 +312,6 @@ export class Canvas2DBackend implements GridController {
 
   autofitRows(options: AutofitRowsOptions = {}): AutofitRowsResult {
     return this.runtime.autofitRows(options)
-  }
-
-  setClipboardReady(ready: boolean): void {
-    this.runtime.setClipboardReady(ready)
   }
 
   openContextMenuAt(rowIndex: number, fieldId: string): void {

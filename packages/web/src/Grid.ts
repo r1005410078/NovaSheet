@@ -161,11 +161,8 @@ export class Grid {
     this.delegate.setColumnWidth(fieldId, width)
   }
 
-  setFrozen(config: Partial<FrozenConfig>): void
-  setFrozen(rows: number, cols: number): void
-  setFrozen(configOrRows: Partial<FrozenConfig> | number, cols = 0): void {
-    if (typeof configOrRows === 'number') this.delegate.setFrozen(configOrRows, cols)
-    else this.delegate.setFrozen(configOrRows)
+  setFrozen(config: Partial<FrozenConfig>): void {
+    this.delegate.setFrozen(config)
   }
 
   refresh(): void {
@@ -195,10 +192,6 @@ export class Grid {
    */
   autofitRows(options?: AutofitRowsOptions): AutofitRowsResult {
     return this.delegate.autofitRows(options)
-  }
-
-  setClipboardReady(ready: boolean): void {
-    this.delegate.setClipboardReady(ready)
   }
 
   openContextMenuAt(rowIndex: number, fieldId: string): void {

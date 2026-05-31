@@ -29,12 +29,8 @@ import type { Theme } from '../theme/Theme'
 export interface GridEngineOptions {
   data: DataSource
   theme?: Theme
-  /** 推荐的新冻结配置：支持顶部、左侧、右侧冻结。 */
+  /** 冻结配置：支持顶部、左侧、右侧冻结。 */
   frozen?: Partial<FrozenConfig>
-  /** 兼容旧 API：等价于 `frozen.topRows`。新代码优先使用 `frozen`。 */
-  frozenRows?: number
-  /** 兼容旧 API：等价于 `frozen.leftCols`。新代码优先使用 `frozen`。 */
-  frozenCols?: number
   defaultRowHeight?: number
   /** Excel 风格：列头显示 A/B/…、左侧显示 1-based 行号。 */
   excelHeaders?: boolean
@@ -57,7 +53,6 @@ export interface GridEngine {
   setViewData(data: DataSource, options?: SetViewDataOptions): void
   setTheme(theme: Theme): void
   setFrozen(config: Partial<FrozenConfig>): void
-  setFrozen(rows: number, cols: number): void
   setViewportSize(width: number, height: number): void
   setHeaderHeight(headerHeight: number): void
   setScroll(logicalX: number, logicalY: number): void

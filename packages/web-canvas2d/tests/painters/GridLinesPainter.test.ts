@@ -15,6 +15,8 @@ describe('GridLinesPainter — 网格线', () => {
       rowRange: [0, 2],
       colRange: [0, 1],
       rect: { x: 0, y: 32, width: 200, height: 100 },
+      scrollOffsetX: 0,
+      scrollOffsetY: 0,
     })
     const strokeCount = ops.filter((o) => o.op === 'stroke').length
     expect(strokeCount).toBe(1)
@@ -35,6 +37,8 @@ describe('GridLinesPainter — 网格线', () => {
       rowRange: [0, -1],
       colRange: [0, -1],
       rect: { x: 0, y: 0, width: 200, height: 100 },
+      scrollOffsetX: 0,
+      scrollOffsetY: 0,
     })
     expect(ops.filter((o) => o.op === 'stroke')).toHaveLength(0)
   })
@@ -50,6 +54,8 @@ describe('GridLinesPainter — 网格线', () => {
       rowRange: [0, 2],
       colRange: [0, 1],
       rect: { x: 0, y: 0, width: 200, height: 100 },
+      scrollOffsetX: 0,
+      scrollOffsetY: 0,
     })
     // The last row's bottom line should be at y = 3*28 = 84 (with +0.5 alignment)
     const lineYs = ops
@@ -85,7 +91,7 @@ describe('GridLinesPainter — 网格线', () => {
     expect(lineYs).toContain(0.5)
   })
 
-  it('默认无 scrollOffset 时不偏移（向后兼容）', () => {
+  it('scrollOffset 为 0 时不偏移', () => {
     const { ctx, ops } = createRecordingContext()
     const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
@@ -95,7 +101,8 @@ describe('GridLinesPainter — 网格线', () => {
       rowRange: [0, 2],
       colRange: [0, 1],
       rect: { x: 0, y: 0, width: 200, height: 100 },
-      // scrollOffsetX / scrollOffsetY omitted — defaults to 0
+      scrollOffsetX: 0,
+      scrollOffsetY: 0,
     })
     const lineYs = ops
       .filter((o) => o.op === 'moveTo')

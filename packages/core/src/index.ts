@@ -35,9 +35,7 @@ export type { Axis, MutableAxis } from './layout/ChunkedAxis'
 export type {
   ColBand,
   FrozenConfig,
-  Quadrant,
   QuadrantRect,
-  Quadrants,
   RenderRegion,
   RenderRegionId,
   RowBand,
@@ -154,7 +152,7 @@ export type {
 } from './view/ViewLayer'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
-export { FrameScheduler, frameScheduler } from './util/raf'
+export { FrameScheduler } from './util/raf'
 
 // 度量层（M3 autofit）
 export { tokenize, wrapText } from './measure/TextMeasurer'

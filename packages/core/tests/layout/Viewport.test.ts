@@ -7,7 +7,7 @@ describe('Viewport — regions 快照', () => {
   function setup() {
     const rowsAxis = new ChunkedAxis({ count: 100, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 5, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
     const vp = new Viewport(rowsAxis, colsAxis, frozen)
     vp.setSize(400, 280) // viewport 400x280
     vp.setScroll(0, 0)
@@ -44,7 +44,7 @@ describe('Viewport — regions 快照', () => {
   it('count=0 时返回空范围', () => {
     const rowsAxis = new ChunkedAxis({ count: 0, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 0, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
     const vp = new Viewport(rowsAxis, colsAxis, frozen)
     vp.setSize(400, 280)
     vp.setHeaderHeight(32)

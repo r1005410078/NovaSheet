@@ -29,9 +29,9 @@ export interface GridLinesPaintParams {
   /** 当前绘制区域矩形（canvas 坐标系） */
   rect: QuadrantRect
   /** Horizontal scroll offset to subtract from content X positions; frozen regions use their own baseline */
-  scrollOffsetX?: number
+  scrollOffsetX: number
   /** Vertical scroll offset to subtract from content Y positions; frozen regions use their own baseline */
-  scrollOffsetY?: number
+  scrollOffsetY: number
   /**
    * 合并查找表（Phase 5-A）。可选；提供时跳过合并区域内部的行/列边界线，
    * 仅保留合并区域外框边界，使合并单元格内部不再出现默认网格线。
@@ -75,8 +75,7 @@ export class GridLinesPainter {
   /** 绘制可见行列的底边与右边网格线（像素对齐 + 0.5 偏移，消除模糊） */
   paint(ctx: CanvasRenderingContext2D, params: GridLinesPaintParams): void {
     const { rowsAxis, colsAxis, rowRange, colRange, rect } = params
-    const scrollOffsetX = params.scrollOffsetX ?? 0
-    const scrollOffsetY = params.scrollOffsetY ?? 0
+    const { scrollOffsetX, scrollOffsetY } = params
     const merges = params.merges
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
 

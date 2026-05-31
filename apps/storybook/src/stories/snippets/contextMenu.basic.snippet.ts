@@ -16,5 +16,3 @@ const grid = new Grid(container, {
     console.log('action', action, 'cell', ctx.cell, 'range', ctx.selectedRange)
   },
 })
-
-// Phase 4.1 引擎实现后挂上：grid.setClipboardReady(true) 让 Paste 变可用

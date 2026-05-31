@@ -1549,6 +1549,7 @@ describe('WebGridRuntime menu default dispatch — Phase 4.1', () => {
     runtime.setOnContextMenuAction(consumer as never)
     // 模拟 menu 走过一次 open，存了 lastContextMenuContext
     ;(runtime as unknown as { lastContextMenuContext: unknown }).lastContextMenuContext = {
+      targetKind: 'cell',
       cell: { rowIndex: 0, colIndex: 0 },
       selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
       hasSelection: true,

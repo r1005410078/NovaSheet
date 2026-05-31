@@ -58,7 +58,6 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
         scrollX: 0,
         scrollY: 0,
         version: 0,
-        quadrants: {} as never,
         regions: [
           {
             id: 'main',
@@ -77,7 +76,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
       collapsedColGaps: [],
       selection,
     } satisfies RenderFrame)
-  const setFrozen = mock((_configOrRows: Partial<FrozenConfig> | number, _cols?: number) => {}) as GridEngine['setFrozen']
+  const setFrozen = mock((_config: Partial<FrozenConfig>) => {}) as GridEngine['setFrozen']
 
   const engine = {
     setData: mock((_data: DataSource) => {}),

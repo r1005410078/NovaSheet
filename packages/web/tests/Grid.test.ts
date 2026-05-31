@@ -50,11 +50,6 @@ function canvas2dDelegate(grid: Grid) {
           getFrame: () => {
             viewport: {
               regions: Array<{ id: string; scrollOffsetX: number }>
-              quadrants: {
-                topLeft?: unknown
-                topRight?: unknown
-                bottomLeft?: unknown
-              }
             }
           }
           getViewport: () => {
@@ -254,12 +249,14 @@ describe('Grid — 浏览器门面', () => {
     const grid = new Grid(el, { data: makeData() })
     const spy = runtimeRefreshSpy(grid)
 
-    grid.setFrozen(1, 1)
+    grid.setFrozen({ topRows: 1, leftCols: 1 })
 
-    const quadrants = canvas2dDelegate(grid).engine.getFrame().viewport.quadrants
-    expect(quadrants.topLeft).toBeDefined()
-    expect(quadrants.topRight).toBeDefined()
-    expect(quadrants.bottomLeft).toBeDefined()
+    const regionIds = canvas2dDelegate(grid)
+      .engine.getFrame()
+      .viewport.regions.map((region) => region.id)
+    expect(regionIds).toContain('topLeft')
+    expect(regionIds).toContain('topCenter')
+    expect(regionIds).toContain('middleLeft')
     expect(spy).toHaveBeenCalled()
 
     grid.destroy()
@@ -523,14 +520,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     const pasteBtn = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
     expect(pasteBtn.getAttribute('aria-disabled')).toBeNull()
 
-    // setClipboardReady 保留 API（4.0 兼容）但不再影响 enabled 状态
-    grid.setClipboardReady(false)
-    grid.closeContextMenu()
-    scrollHost.dispatchEvent(
-      new MouseEvent('contextmenu', { clientX: 30, clientY: 80, bubbles: true, cancelable: true }),
-    )
-    const pasteBtn2 = document.body.querySelector('[data-ns-action="paste"]') as HTMLButtonElement
-    expect(pasteBtn2.getAttribute('aria-disabled')).toBeNull()
+    expect('setClipboardReady' in grid).toBe(false)
 
     grid.destroy()
     document.body.removeChild(container)

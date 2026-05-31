@@ -65,7 +65,6 @@ export interface GridController {
   setRowHeight(rowIndex: number, height: number): void
   setColumnWidth(fieldId: string, width: number): void
   setFrozen(config: Partial<FrozenConfig>): void
-  setFrozen(rows: number, cols: number): void
   refresh(): void
   scrollToRow(rowIndex: number, align?: 'start' | 'center' | 'end'): void
   scrollToCell(rowIndex: number, fieldId: string): void
@@ -74,7 +73,6 @@ export interface GridController {
    * 手动触发；后续若改了列宽 / 数据 / 主题需要再次调用。
    */
   autofitRows(options?: AutofitRowsOptions): AutofitRowsResult
-  setClipboardReady(ready: boolean): void
   openContextMenuAt(rowIndex: number, fieldId: string): void
   closeContextMenu(): void
   /** Phase 4.1 — 程序化触发 copy / cut / paste；走与 menu / 快捷键相同的引擎。 */

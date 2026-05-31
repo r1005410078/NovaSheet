@@ -185,10 +185,8 @@ export class DefaultGridEngine implements GridEngine {
     }
   }
 
-  setFrozen(config: Partial<FrozenConfig>): void
-  setFrozen(rows: number, cols: number): void
-  setFrozen(configOrRows: Partial<FrozenConfig> | number, cols = 0): void {
-    this.frozen.setFrozen(configOrRows, cols)
+  setFrozen(config: Partial<FrozenConfig>): void {
+    this.frozen.setFrozen(config)
   }
 
   setViewportSize(width: number, height: number): void {
@@ -1939,17 +1937,11 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private resolveFrozenConfig(options: GridEngineOptions): FrozenConfig {
-    if (options.frozen) {
-      return {
-        topRows: options.frozen.topRows ?? 0,
-        leftCols: options.frozen.leftCols ?? 0,
-        rightCols: options.frozen.rightCols ?? 0,
-      }
-    }
+    const frozen = options.frozen ?? {}
     return {
-      topRows: options.frozenRows ?? 0,
-      leftCols: options.frozenCols ?? 0,
-      rightCols: 0,
+      topRows: frozen.topRows ?? 0,
+      leftCols: frozen.leftCols ?? 0,
+      rightCols: frozen.rightCols ?? 0,
     }
   }
 

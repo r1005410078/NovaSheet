@@ -263,8 +263,6 @@ export class WebGridRuntime {
   private pendingColumnWidthFieldIds: string[] = []
   /** 外部接管 context menu action 的回调。 */
   private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
-  /** 外部声明剪贴板可用状态，用于 legacy paste 菜单 enabled 判断。 */
-  private clipboardReady = false
   /** 最近一次打开菜单时的上下文，用于菜单项点击分发。 */
   private lastContextMenuContext: ContextMenuContext | null = null
   /** 最近一次打开菜单时的屏幕坐标，用于 filter popover 锚点。 */
@@ -454,11 +452,6 @@ export class WebGridRuntime {
   /** 注册右键菜单 action 回调；设置后 consumer 可接管默认菜单行为。 */
   setOnContextMenuAction(cb: (action: ContextMenuAction, ctx: ContextMenuContext) => void): void {
     this.onContextMenuAction = cb
-  }
-
-  /** 设置外部剪贴板可用提示，用于右键菜单 paste 项状态。 */
-  setClipboardReady(ready: boolean): void {
-    this.clipboardReady = ready
   }
 
   /** 关闭右键菜单并清理最近菜单上下文。 */
@@ -1037,16 +1030,15 @@ export class WebGridRuntime {
     }
 
     const newSelection = this.engine.getSelection()
-    // Phase 4.1：Paste 项 enabled 与否取决于 DataSource 是否可写——外部剪贴板有没有内容
-    // runtime 同步不可知（异步 readText 才能确定）；consumer 显式 setClipboardReady(true)
-    // 也走这条 OR 路径，保留 4.0 兼容
+    // Phase 4.1：Paste 项 enabled 与否取决于 DataSource 是否可写。
+    // 外部剪贴板有没有内容需要异步 readText 才能确定，菜单同步阶段不读取。
     const dataMutable = isMutableDataSource(this.engine.getData())
     const ctx: ContextMenuContext = {
       targetKind: 'cell',
       cell: hit,
       selectedRange: newSelection.selectedRange,
       hasSelection: newSelection.activeCell !== null,
-      clipboardReady: dataMutable || this.clipboardReady,
+      clipboardReady: dataMutable,
     }
     this.lastContextMenuContext = ctx
     this.lastContextMenuPoint = {
@@ -1243,14 +1235,10 @@ export class WebGridRuntime {
     this.afterEngineMutation()
   }
 
-  /** 设置冻结行列配置并刷新视图。 */
   setFrozen(config: Partial<FrozenConfig>): void
-  /** 以行列数量设置冻结区域并刷新视图。 */
-  setFrozen(rows: number, cols: number): void
-  /** 应用冻结区域重载参数并执行 mutation 收尾。 */
-  setFrozen(configOrRows: Partial<FrozenConfig> | number, cols = 0): void {
-    if (typeof configOrRows === 'number') this.engine.setFrozen(configOrRows, cols)
-    else this.engine.setFrozen(configOrRows)
+  /** 设置冻结行列配置并刷新视图。 */
+  setFrozen(config: Partial<FrozenConfig>): void {
+    this.engine.setFrozen(config)
     this.afterEngineMutation()
   }
 

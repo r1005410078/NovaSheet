@@ -33,7 +33,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       defaultSize: denseGridTheme.metrics.rowHeight,
     })
     const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
     viewport.setSize(400, 200)
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
@@ -213,7 +213,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       defaultSize: denseGridTheme.metrics.rowHeight,
     })
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 1, 1)
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 1, leftCols: 1 })
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
     viewport.setSize(300, 144)
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
@@ -440,7 +440,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     const data = new InMemoryDataSource({ schema: SCHEMA, rows: [] })
     const rowsAxis = new ChunkedAxis({ count: 0, defaultSize: denseGridTheme.metrics.rowHeight })
     const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
     viewport.setSize(400, 200)
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
@@ -517,7 +517,7 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       defaultSize: denseGridTheme.metrics.rowHeight,
     })
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
-    const frozen = new FrozenRegions(rowsAxis, colsAxis, 0, 0)
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
     const viewport = new Viewport(rowsAxis, colsAxis, frozen)
     viewport.setSize(400, 200)
     viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
