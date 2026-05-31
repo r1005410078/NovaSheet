@@ -95,7 +95,7 @@
 
 ## 3. 建议的收口顺序（低风险→高杠杆）
 
-1. ~~**R3 共享几何工具**~~ —— ✅ 基础已完成（`geometry/range.ts`: `cellInRange` / `rangesIntersect` / `unionRange`；`clampRange` / `normalizeRange` 未补）。
+1. ~~**R3 共享几何工具**~~ —— ✅ 已完成（`geometry/range.ts`: `cellInRange` / `rangesIntersect` / `unionRange` / `clamp` / `clampRange` / `normalizeRange`）。
 2. ~~**R2 CoordinateSpace + branded type**~~ —— ✅ 已完成（翻译收口走 `coords` + 内部 `RawRange` brand）。
 3. ~~**R1 runtime 拖拽切片**~~ —— ✅ 已完成（ColumnHeaderDrag / RowHeaderDrag / SelectionDrag / FillHandleDrag / ResizeDrag + 单点派发）；engine 已切 `VisibleFormatResolver` / `FillStylePropagator`，余下 engine 切片按功能开发增量进行。
 4. **R7 测试盲区** —— 类型化 mock 工厂 + 视觉回归（与功能开发并行补）。

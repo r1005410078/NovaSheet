@@ -1,5 +1,5 @@
 import type { CellAddress, CellRange } from '../interaction/SelectionModel'
-import { unionRange } from '../geometry/range'
+import { clamp, unionRange } from '../geometry/range'
 
 /** 填充柄拖拽的主方向；一次拖拽只沿一个轴扩展。 */
 export type FillDirection = 'down' | 'up' | 'right' | 'left'
@@ -152,8 +152,4 @@ function fillRangeForDirection(
     }
   }
   return null
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
 }

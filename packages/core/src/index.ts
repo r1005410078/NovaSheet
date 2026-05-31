@@ -121,7 +121,15 @@ export type { ApplyPasteSource, GridDimensions, PasteTargetRect } from './clipbo
 
 // 填充柄层（Phase 4.3）
 export { computeFillTarget } from './fill/FillTarget'
-export { cellInRange, isCellInRange, rangesIntersect, unionRange } from './geometry/range'
+export {
+  cellInRange,
+  clamp,
+  clampRange,
+  isCellInRange,
+  normalizeRange,
+  rangesIntersect,
+  unionRange,
+} from './geometry/range'
 export type { FillDimensions, FillDirection, FillTarget } from './fill/FillTarget'
 export { computeFillWrites } from './fill/FillSeries'
 export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'

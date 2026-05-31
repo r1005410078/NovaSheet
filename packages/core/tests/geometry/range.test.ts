@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'bun:test'
-import { cellInRange, isCellInRange, rangesIntersect, unionRange } from '../../src/geometry/range'
+import {
+  cellInRange,
+  clamp,
+  clampRange,
+  isCellInRange,
+  normalizeRange,
+  rangesIntersect,
+  unionRange,
+} from '../../src/geometry/range'
 
 const r = { startRow: 1, endRow: 3, startCol: 1, endCol: 3 }
 
@@ -24,6 +32,35 @@ describe('geometry/range', () => {
       startRow: 0,
       endRow: 3,
       startCol: 1,
+      endCol: 6,
+    })
+  })
+
+  it('clamp 将数值限制在闭区间内', () => {
+    expect(clamp(-1, 0, 10)).toBe(0)
+    expect(clamp(5, 0, 10)).toBe(5)
+    expect(clamp(12, 0, 10)).toBe(10)
+  })
+
+  it('normalizeRange 归一化反向 range', () => {
+    expect(normalizeRange({ startRow: 5, endRow: 2, startCol: 4, endCol: 1 })).toEqual({
+      startRow: 2,
+      endRow: 5,
+      startCol: 1,
+      endCol: 4,
+    })
+  })
+
+  it('clampRange 将 range 端点夹到边界 range 内', () => {
+    expect(
+      clampRange(
+        { startRow: -2, endRow: 5, startCol: 8, endCol: 3 },
+        { startRow: 0, endRow: 3, startCol: 1, endCol: 6 },
+      ),
+    ).toEqual({
+      startRow: 0,
+      endRow: 3,
+      startCol: 3,
       endCol: 6,
     })
   })

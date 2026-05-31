@@ -35,6 +35,7 @@ import type {
 import {
   autofitRowHeights,
   cellInRange,
+  clamp,
   computeCellRect,
   computePasteTarget,
   unionRange,
@@ -2184,9 +2185,4 @@ function edgeVelocity(position: number, size: number): number {
 function scaleEdgeDistance(distance: number): number {
   const ratio = Math.min(1, Math.max(0, distance / DRAG_AUTO_SCROLL_EDGE_PX))
   return Math.max(1, Math.ceil(ratio * DRAG_AUTO_SCROLL_MAX_STEP_PX))
-}
-
-/** 将数值限制在闭区间 `[min, max]` 内。 */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
 }

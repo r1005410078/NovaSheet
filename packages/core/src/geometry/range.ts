@@ -42,3 +42,30 @@ export function unionRange(a: CellRange, b: CellRange): CellRange {
     endCol: Math.max(a.endCol, b.endCol),
   }
 }
+
+/** 将数值限制在闭区间 `[min, max]` 内。 */
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+/** 将任意方向的 range 归一化为 `start <= end`。 */
+export function normalizeRange(range: CellRange): CellRange {
+  return {
+    startRow: Math.min(range.startRow, range.endRow),
+    endRow: Math.max(range.startRow, range.endRow),
+    startCol: Math.min(range.startCol, range.endCol),
+    endCol: Math.max(range.startCol, range.endCol),
+  }
+}
+
+/** 将 range 的四个端点夹到 bounds 内；输入可为反向 range。 */
+export function clampRange(range: CellRange, bounds: CellRange): CellRange {
+  const normalized = normalizeRange(range)
+  const normalizedBounds = normalizeRange(bounds)
+  return {
+    startRow: clamp(normalized.startRow, normalizedBounds.startRow, normalizedBounds.endRow),
+    endRow: clamp(normalized.endRow, normalizedBounds.startRow, normalizedBounds.endRow),
+    startCol: clamp(normalized.startCol, normalizedBounds.startCol, normalizedBounds.endCol),
+    endCol: clamp(normalized.endCol, normalizedBounds.startCol, normalizedBounds.endCol),
+  }
+}
