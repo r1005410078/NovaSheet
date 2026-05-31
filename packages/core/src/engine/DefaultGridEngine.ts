@@ -39,6 +39,7 @@ import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { findViewRow, resolveUnderlyingRow } from '../view/coordinates'
+import { CoordinateSpace } from '../view/CoordinateSpace'
 import type {
   FillCommitResult,
   GridEngine,
@@ -74,6 +75,12 @@ export class DefaultGridEngine implements GridEngine {
   private rawColsAxis: ChunkedAxis
   private colsAxis: ChunkedAxis
   private hiddenColIds = new Set<string>()
+  /** 行/列/区 raw↔view 翻译唯一入口；getter 读引擎活状态（data/rawData/hiddenColIds）。 */
+  private readonly coords = new CoordinateSpace({
+    getViewData: () => this.data,
+    getRawSchema: () => this.rawData.getSchema(),
+    isColHidden: (id) => this.hiddenColIds.has(id),
+  })
   private newFieldCounter = 0
   private frozen: FrozenRegions
   private viewport: Viewport
@@ -1236,45 +1243,7 @@ export class DefaultGridEngine implements GridEngine {
    * 非连续（排序/筛选打乱行序）时返回 null（5-A 不展开大范围，见 plan Coordinate Space Invariant）。
    */
   private viewRangeToRawRange(range: CellRange): CellRange | null {
-    const rawRows = this.viewRowsToRawContiguous(range.startRow, range.endRow)
-    if (!rawRows) return null
-    const rawCols = this.viewColsToRawContiguous(range.startCol, range.endCol)
-    if (!rawCols) return null
-    return {
-      startRow: rawRows.start,
-      endRow: rawRows.end,
-      startCol: rawCols.start,
-      endCol: rawCols.end,
-    }
-  }
-
-  private viewRowsToRawContiguous(
-    startRow: number,
-    endRow: number,
-  ): { start: number; end: number } | null {
-    const first = resolveUnderlyingRow(this.data, startRow)
-    let prev = first
-    for (let viewRow = startRow + 1; viewRow <= endRow; viewRow += 1) {
-      const raw = resolveUnderlyingRow(this.data, viewRow)
-      if (raw !== prev + 1) return null
-      prev = raw
-    }
-    return { start: first, end: prev }
-  }
-
-  private viewColsToRawContiguous(
-    startCol: number,
-    endCol: number,
-  ): { start: number; end: number } | null {
-    const first = this.getRawColumnIndexForViewIndex(startCol)
-    if (first < 0) return null
-    let prev = first
-    for (let viewCol = startCol + 1; viewCol <= endCol; viewCol += 1) {
-      const raw = this.getRawColumnIndexForViewIndex(viewCol)
-      if (raw !== prev + 1) return null
-      prev = raw
-    }
-    return { start: first, end: prev }
+    return this.coords.viewRangeToRaw(range)
   }
 
   /** 快照前后一致时说明 store 未变动（无副作用），直接返回 false；否则入栈一条 format 命令并返回 true。 */
@@ -2148,26 +2117,12 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private getRawColumnIndexForViewIndex(viewColIndex: number): number {
-    const fields = this.rawData.getSchema().fields
-    let visibleCol = 0
-    for (let rawCol = 0; rawCol < fields.length; rawCol += 1) {
-      if (this.hiddenColIds.has(fields[rawCol]!.id)) continue
-      if (visibleCol === viewColIndex) return rawCol
-      visibleCol += 1
-    }
-    return -1
+    return this.coords.viewColToRaw(viewColIndex)
   }
 
   /** raw col index → view col index；该列隐藏或越界时返回 -1。`getRawColumnIndexForViewIndex` 的逆。 */
   private getViewColumnIndexForRawIndex(rawColIndex: number): number {
-    const fields = this.rawData.getSchema().fields
-    if (rawColIndex < 0 || rawColIndex >= fields.length) return -1
-    if (this.hiddenColIds.has(fields[rawColIndex]!.id)) return -1
-    let visibleCol = 0
-    for (let rawCol = 0; rawCol < rawColIndex; rawCol += 1) {
-      if (!this.hiddenColIds.has(fields[rawCol]!.id)) visibleCol += 1
-    }
-    return visibleCol
+    return this.coords.rawColToView(rawColIndex)
   }
 
   private setFieldWidth(fieldId: string, width: number): void {
