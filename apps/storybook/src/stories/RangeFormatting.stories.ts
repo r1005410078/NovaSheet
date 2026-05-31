@@ -10,14 +10,17 @@ const meta: Meta = {
   title: '表格/合并与格式化',
   parameters: { layout: 'centered' },
   ...docsMeta(
-    'Phase 5-A：手动填充色、自定义边框（all/outer/inner/单边预设）、合并/取消合并单元格、' +
-      '文本显示三态（溢出/换行/裁断）、Undo/Redo。按钮作用于当前任意选区。',
+    'Phase 5-A/5-B：手动填充色、自定义边框（all/outer/inner/单边预设 + 实线/虚线/点线/双线）、' +
+      '合并/取消合并单元格、文本显示三态（溢出/换行/裁断）、Undo/Redo。按钮作用于当前任意选区。',
   ),
 }
 export default meta
 type Story = StoryObj
 
 const RED_BORDER: BorderStyle = { color: '#cc0000', width: 'medium', lineStyle: 'solid' }
+const DASHED_BORDER: BorderStyle = { color: '#1a73e8', width: 'thin', lineStyle: 'dashed' }
+const DOTTED_BORDER: BorderStyle = { color: '#1a73e8', width: 'medium', lineStyle: 'dotted' }
+const DOUBLE_BORDER: BorderStyle = { color: '#188038', width: 'thin', lineStyle: 'double' }
 const THIN_BORDER: BorderStyle = { color: '#666666', width: 'thin', lineStyle: 'solid' }
 
 function colLabel(index: number): string {
@@ -75,6 +78,9 @@ export const Basic: Story = {
     const borderBottomBtn = makeBtn('下边框')
     const borderLeftBtn = makeBtn('左边框')
     const borderRightBtn = makeBtn('右边框')
+    const borderDashedBtn = makeBtn('外框虚线')
+    const borderDottedBtn = makeBtn('外框点线')
+    const borderDoubleBtn = makeBtn('外框双线')
     const borderClearBtn = makeBtn('清除边框')
     const mergeBtn = makeBtn('合并选区')
     const unmergeBtn = makeBtn('取消合并')
@@ -101,6 +107,9 @@ export const Basic: Story = {
       borderBottomBtn,
       borderLeftBtn,
       borderRightBtn,
+      borderDashedBtn,
+      borderDottedBtn,
+      borderDoubleBtn,
       borderClearBtn,
       mergeBtn,
       unmergeBtn,
@@ -166,6 +175,9 @@ export const Basic: Story = {
     applyBorder(borderBottomBtn, 'bottom', '设置下边框', RED_BORDER)
     applyBorder(borderLeftBtn, 'left', '设置左边框', RED_BORDER)
     applyBorder(borderRightBtn, 'right', '设置右边框', RED_BORDER)
+    applyBorder(borderDashedBtn, 'outer', '设置外框虚线', DASHED_BORDER)
+    applyBorder(borderDottedBtn, 'outer', '设置外框点线', DOTTED_BORDER)
+    applyBorder(borderDoubleBtn, 'outer', '设置外框双线', DOUBLE_BORDER)
     applyBorder(borderClearBtn, 'clear', '清除边框', null)
 
     mergeBtn.addEventListener('click', () => {
