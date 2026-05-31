@@ -840,7 +840,8 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     const menu = makeContextMenu()
     runtime.setContextMenuLayer(menu as never)
-    ;(runtime as unknown as { draggingSelection: boolean }).draggingSelection = true
+    runtime.handleHostPointerDown({ x: 50, y: 60, shiftKey: false, button: 0 })
+    runtime.handleHostPointerMove({ x: 120, y: 120, shiftKey: false, button: 0 })
     runtime.handleHostContextMenu({ x: 100, y: 100, shiftKey: false, clientX: 100, clientY: 100 })
     expect(menu.open).not.toHaveBeenCalled()
   })
@@ -879,7 +880,6 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     }))
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.handleHostPointerDown({ x: 50, y: 60, shiftKey: false, button: 2 })
-    expect((runtime as unknown as { draggingSelection: boolean }).draggingSelection).toBe(false)
     expect(engine.selectCell).not.toHaveBeenCalled()
   })
 

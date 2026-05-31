@@ -168,9 +168,10 @@ describe('WebGridRuntime row reorder drag', () => {
       host: makeHost(),
       renderer: makeRenderer(),
       rowReorderOverlay: overlay,
+      handleLayer: { showIndicator: mock(() => {}), hideIndicator: mock(() => {}), sync: mock(() => {}) } as never,
     })
-    ;(runtime as unknown as { resizeDrag: object }).resizeDrag = {
-      handle: {
+    runtime.handleResizePointerDown(
+      {
         kind: 'row',
         id: 'row-1',
         rowIndex: 1,
@@ -179,13 +180,10 @@ describe('WebGridRuntime row reorder drag', () => {
         width: 48,
         height: 8,
       } satisfies ResizeHandleRect,
-      pointerId: 1,
-      startClientX: 20,
-      startClientY: 60,
-      startSize: 28,
-      anchorStart: 60,
-      previewSize: 28,
-    }
+      1,
+      20,
+      60,
+    )
 
     runtime.handleHostPointerDown({ x: 20, y: 70, shiftKey: false, button: 0 })
     runtime.handleHostPointerMove({ x: 20, y: 150, shiftKey: false })

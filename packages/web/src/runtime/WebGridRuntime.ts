@@ -36,7 +36,6 @@ import {
   autofitRowHeights,
   cellInRange,
   computeCellRect,
-  computeFillTarget,
   computePasteTarget,
   unionRange,
   computeResizeHandles,
@@ -63,7 +62,6 @@ import {
   type ContextMenuItem,
   type FillDirection,
   type GridSelection,
-  type FillTarget,
   type PasteSkippedCell,
   type ResizeHandleRect,
   type Row,
@@ -83,7 +81,10 @@ import type { SelectionOverlay } from '../overlay/SelectionOverlay'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { Drag } from '../interaction/drag/Drag'
 import { ColumnHeaderDrag } from '../interaction/drag/ColumnHeaderDrag'
+import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
+import { ResizeDrag } from '../interaction/drag/ResizeDrag'
 import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
+import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
 import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
@@ -180,12 +181,7 @@ const DRAG_AUTO_SCROLL_EDGE_PX = 32
 const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
 
 /** 可驱动边缘自动滚动的拖拽种类。 */
-type AutoScrollDragKind = 'active-drag' | 'selection' | 'fill'
-
-/** 去重行号并保持首次出现顺序。 */
-function uniqueRows(rows: readonly number[]): readonly number[] {
-  return [...new Set(rows)]
-}
+type AutoScrollDragKind = 'active-drag'
 
 /**
  * 把选区**并入** active cell 所在的合并区（VIEW 坐标），供选区边框与填充柄共用锚定。
@@ -228,8 +224,6 @@ export class WebGridRuntime {
   private measurer?: TextMeasurer
   /** runtime 是否已经销毁；销毁后所有入口都应短路。 */
   private destroyed = false
-  /** 当前是否正在拖拽选择区域。 */
-  private draggingSelection = false
   /** 最近一次 selection drag 的 pointer，用于边缘自动滚动续帧。 */
   private lastDragPointer: WebPointerEvent | null = null
   /** DOM resize handle layer。 */
@@ -299,40 +293,18 @@ export class WebGridRuntime {
    * 非 multiline 编辑置 null。
    */
   private editingMultilineOriginalRowHeight: number | null = null
-  /** 当前 resize 拖拽状态；null 表示未拖拽。 */
-  private resizeDrag: {
-    /** 被拖拽的 resize handle。 */
-    handle: ResizeHandleRect
-    /** 捕获中的 pointer id。 */
-    pointerId: number
-    /** 拖拽起点 clientX。 */
-    startClientX: number
-    /** 拖拽起点 clientY。 */
-    startClientY: number
-    /** 拖拽开始时的行高/列宽。 */
-    startSize: number
-    /** 列：左缘 x；行：顶缘 y — 拖拽中固定，尺寸从该边向外扩 */
-    anchorStart: number
-    /** 拖拽预览尺寸；pointerup 时一次性 commit（spec §6.5.2） */
-    previewSize: number
-  } | null = null
-  /** 当前 fill handle 拖拽状态；null 表示未拖拽。 */
-  private fillDrag: {
-    /** 捕获中的 pointer id。 */
-    pointerId: number
-    /** 填充源区域。 */
-    source: CellRange
-    /** 根据当前 hover 单元格计算出的目标；可能为空。 */
-    target: FillTarget | null
-    /** 最近一次 fill drag pointer。 */
-    lastPointer: WebPointerEvent | null
-  } | null = null
   /** 当前活跃的 Drag（R1 DragController）；pointerdown 起拖时设置。 */
   private activeDrag: Drag | null = null
+  /** 行高/列宽 resize 拖拽。 */
+  private resizeDrag!: ResizeDrag
   /** 列表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
   private columnHeaderDrag!: ColumnHeaderDrag
   /** 行表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
   private rowHeaderDrag!: RowHeaderDrag
+  /** 填充柄拖拽。 */
+  private fillHandleDrag!: FillHandleDrag
+  /** 普通单元格拖选。 */
+  private selectionDrag!: SelectionDrag
   /** pointerdown 按序尝试起拖的 Drag 列表；加新拖拽 = 实现 Drag + 入此数组。 */
   private drags: readonly Drag[] = []
 
@@ -355,6 +327,11 @@ export class WebGridRuntime {
     this.rowReorderOverlay = opts.rowReorderOverlay
     this.selectionOverlay = opts.selectionOverlay
     this.scrollMapper = new ScrollMapper()
+    this.resizeDrag = new ResizeDrag({
+      engine: this.engine,
+      handleLayer: this.handleLayer,
+      afterEngineMutation: () => this.afterEngineMutation(),
+    })
     this.columnHeaderDrag = new ColumnHeaderDrag({
       engine: this.engine,
       host: this.host,
@@ -364,7 +341,7 @@ export class WebGridRuntime {
       closeContextMenu: () => this.closeContextMenu(),
       requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
       stopAutoScroll: () => this.stopDragAutoScroll(),
-      isBlocked: () => !!(this.resizeDrag || this.draggingSelection || this.fillDrag),
+      isBlocked: () => this.isDragBlocked(),
       hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
       isWholeColumnSelection: (range) => this.isWholeColumnSelection(range),
       selectWholeColumn: (col) => this.selectWholeColumn(col),
@@ -380,12 +357,37 @@ export class WebGridRuntime {
       closeContextMenu: () => this.closeContextMenu(),
       requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
       stopAutoScroll: () => this.stopDragAutoScroll(),
-      isBlocked: () => !!(this.resizeDrag || this.draggingSelection || this.fillDrag),
+      isBlocked: () => this.isDragBlocked(),
       hitTestRowHeader: (event) => this.hitTestRowHeader(event),
       isWholeRowSelection: (range) => this.isWholeRowSelection(range),
       selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
     })
-    this.drags = [this.columnHeaderDrag, this.rowHeaderDrag]
+    this.fillHandleDrag = new FillHandleDrag({
+      engine: this.engine,
+      host: this.host,
+      fillLayer: this.fillLayer,
+      afterEngineMutation: () => this.afterEngineMutation(),
+      autofitRows: (options) => this.autofitRows(options),
+      onFill: (event) => this.onFill?.(event),
+      closeContextMenu: () => this.closeContextMenu(),
+      commitCellEdit: (moveSelection) => this.commitCellEdit(moveSelection),
+      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
+      stopAutoScroll: () => this.stopDragAutoScroll(),
+      isBlocked: () => this.isDragBlocked(),
+    })
+    this.selectionDrag = new SelectionDrag({
+      engine: this.engine,
+      refresh: () => this.refresh(),
+      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
+      stopAutoScroll: () => this.stopDragAutoScroll(),
+      syncFillHandle: () => this.syncFillHandle(),
+      isBlocked: () => this.isDragBlocked(),
+    })
+    this.drags = [this.columnHeaderDrag, this.rowHeaderDrag, this.selectionDrag]
+  }
+
+  private isDragBlocked(): boolean {
+    return this.resizeDrag.active || !!this.activeDrag
   }
 
   /** 起拖期间记录 pointer 并按边缘热区驱动自动滚动（供 Drag 经 deps 调用）。 */
@@ -924,7 +926,7 @@ export class WebGridRuntime {
   handleHostContextMenu(event: WebPointerEvent): void {
     if (this.destroyed) return
     if (!this.contextMenuLayer) return
-    if (this.resizeDrag || this.draggingSelection) return
+    if (this.resizeDrag.active || this.activeDrag?.active) return
 
     if (this.engine.isCellEditing()) {
       this.commitCellEdit(false)
@@ -1355,141 +1357,43 @@ export class WebGridRuntime {
     clientY: number,
   ): void {
     if (this.destroyed) return
-    const startSize = this.readResizeSize(handle)
-    if (startSize === null) return
-
-    const edge =
-      handle.kind === 'column' ? handle.x + handle.width / 2 : handle.y + handle.height / 2
-    this.resizeDrag = {
-      handle,
-      pointerId,
-      startClientX: clientX,
-      startClientY: clientY,
-      startSize,
-      anchorStart: edge - startSize,
-      previewSize: startSize,
+    if (this.resizeDrag.start(handle, pointerId, clientX, clientY)) {
+      this.activeDrag = this.resizeDrag
     }
-    this.draggingSelection = false
-    this.showResizeIndicator(startSize)
   }
 
   /** 更新 resize 拖拽预览尺寸。 */
   handleResizePointerMove(pointerId: number, clientX: number, clientY: number): void {
-    if (this.destroyed || !this.resizeDrag || this.resizeDrag.pointerId !== pointerId) return
-    const nextSize = this.computeResizeSize(this.resizeDrag, clientX, clientY)
-    this.resizeDrag.previewSize = nextSize
-    this.showResizeIndicator(nextSize)
+    if (this.destroyed) return
+    this.resizeDrag.movePointer(pointerId, clientX, clientY)
   }
 
   /** 结束 resize 拖拽并一次性提交行高/列宽变更。 */
   handleResizePointerUp(pointerId: number): void {
-    if (!this.resizeDrag || this.resizeDrag.pointerId !== pointerId) return
-    const { handle, startSize, previewSize } = this.resizeDrag
-    this.resizeDrag = null
-    this.handleLayer?.hideIndicator()
-    if (previewSize === startSize) return
-    if (handle.kind === 'row' && handle.rowIndex !== undefined) {
-      this.engine.commitRowResize(handle.rowIndex, startSize, previewSize)
-    } else if (handle.kind === 'column' && handle.fieldId) {
-      const colIndex = this.engine.getColumnIndex(handle.fieldId)
-      if (colIndex < 0) return
-      this.engine.commitColumnResize(colIndex, startSize, previewSize)
-    }
-    this.afterEngineMutation()
+    if (!this.resizeDrag.commitPointer(pointerId)) return
+    this.activeDrag = null
   }
 
   /** 开始 fill handle 拖拽。 */
   handleFillPointerDown(pointerId: number, clientX: number, clientY: number): void {
-    if (this.destroyed || this.resizeDrag || this.draggingSelection) return
-    if (this.engine.isCellEditing()) this.commitCellEdit(false)
-    const source = this.engine.getSelection().selectedRange
-    if (!source) return
-    this.closeContextMenu()
-    this.draggingSelection = false
-    const pointer = this.fillPointerFromClient(clientX, clientY)
-    this.fillDrag = {
-      pointerId,
-      source,
-      target: null,
-      lastPointer: pointer,
+    if (this.destroyed) return
+    if (this.fillHandleDrag.tryStartFromClient(pointerId, clientX, clientY)) {
+      this.activeDrag = this.fillHandleDrag
     }
   }
 
   /** 更新 fill handle 拖拽目标与预览 overlay。 */
   handleFillPointerMove(pointerId: number, clientX: number, clientY: number): void {
-    if (this.destroyed || !this.fillDrag || this.fillDrag.pointerId !== pointerId) return
-    this.applyFillPointerMove(this.fillPointerFromClient(clientX, clientY))
-  }
-
-  /** 用已转换的 host pointer 重算填充目标；供指针移动与边缘自动滚动 tick 复用。 */
-  private applyFillPointerMove(pointer: WebPointerEvent): void {
-    if (!this.fillDrag) return
-    this.fillDrag.lastPointer = pointer
-    this.lastDragPointer = pointer
-    this.updateDragAutoScroll(pointer) // 填充柄拖到边缘时双向自动滚动
-    const frame = this.engine.getFrame()
-    const hit = hitTestCell(frame, pointer)
-    if (!hit) return
-    const data = this.engine.getData()
-    const snap = this.engine.getFillMergeSnap(this.fillDrag.source)
-    // 源含合并时，若光标落在已有合并区上，把填充区吸附到该合并边界（避免截断目标合并）。
-    const onMergeSource = snap.rowSpan > 1 || snap.colSpan > 1
-    const targetMerge = onMergeSource
-      ? frame.mergeRegions?.find((region) => cellInRange(hit, region.range))?.range
-      : undefined
-    this.fillDrag.target = computeFillTarget(
-      this.fillDrag.source,
-      hit,
-      {
-        rowCount: data.getRowCount(),
-        colCount: data.getSchema().fields.length,
-      },
-      snap,
-      targetMerge,
-    )
-    if (this.fillDrag.target) {
-      this.fillLayer?.showPreview(
-        computeRangeOverlayRects(this.engine.getFrame(), this.fillDrag.target.fill),
-      )
-    } else {
-      this.fillLayer?.hidePreview()
-    }
+    if (this.destroyed) return
+    this.fillHandleDrag.moveFromClient(pointerId, clientX, clientY)
   }
 
   /** 结束 fill handle 拖拽并提交填充结果。 */
   handleFillPointerUp(pointerId: number): void {
-    if (!this.fillDrag || this.fillDrag.pointerId !== pointerId) return
-    const target = this.fillDrag.target
-    this.fillDrag = null
+    if (!this.fillHandleDrag.commitPointer(pointerId)) return
     this.activeDrag = null
-    this.stopDragAutoScroll()
-    this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.rowReorderOverlay?.hide()
-    if (!target) return
-    const result = this.engine.commitFill(target.source, target.fill, target.direction)
-    if (!result) return
-    // 填充可能写入 wrap 文本；只对实际 touched rows 重算行高，避免拖一次就全表 autofit。
-    const autofit = this.autofitRows({ rows: uniqueRows(result.writes.map((w) => w.rowIndex)) })
-    if (autofit.changedRows === 0) this.afterEngineMutation()
-    this.onFill?.({
-      source: target.source,
-      fill: target.fill,
-      result: target.result,
-      direction: target.direction,
-    })
-  }
-
-  /** 将 client 坐标转换成 host 内部 pointer 坐标。 */
-  private fillPointerFromClient(clientX: number, clientY: number): WebPointerEvent {
-    const rect = this.host.getContainerBoundingRect()
-    return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
-      clientX,
-      clientY,
-      shiftKey: false,
-    }
   }
 
   /** 同步编辑器 draft 到 engine 的 cell edit session。 */
@@ -1538,8 +1442,7 @@ export class WebGridRuntime {
     if (this.destroyed) return
     this.destroyed = true
     this.cancelCellEdit()
-    this.resizeDrag = null
-    this.fillDrag = null
+    this.activeDrag?.cancel()
     this.activeDrag = null
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
@@ -1588,30 +1491,13 @@ export class WebGridRuntime {
         return
       }
     }
-    const hit = hitTestCell(this.engine.getFrame(), event)
-    if (!hit) return
-    if (event.shiftKey) this.engine.selectCell(hit, { extend: true })
-    else this.engine.selectCell(hit)
-    this.lastDragPointer = event
-    this.refresh()
   }
 
   /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
   handleHostPointerMove(event: WebPointerEvent): void {
     if (this.activeDrag?.move(event)) return
     if (this.destroyed) return
-    if (!this.lastDragPointer) {
-      this.updateHeaderCursor(event)
-      return
-    }
-    this.draggingSelection = true
-    this.lastDragPointer = event
-    const hit = hitTestCell(this.engine.getFrame(), event)
-    if (hit) {
-      this.engine.selectCell(hit, { extend: true })
-      this.refresh()
-    }
-    this.updateDragAutoScroll(event)
+    this.updateHeaderCursor(event)
   }
 
   /** 处理 host pointerup，结束选区拖拽并恢复 fill handle。 */
@@ -1621,14 +1507,11 @@ export class WebGridRuntime {
       this.activeDrag = null
       return
     }
-    this.draggingSelection = false
-    this.stopDragAutoScroll()
-    this.syncFillHandle()
   }
 
   /** 处理双击单元格，进入编辑模式。 */
   handleHostDoubleClick(event: WebPointerEvent): void {
-    if (this.destroyed || this.resizeDrag || this.draggingSelection) return
+    if (this.destroyed || this.resizeDrag.active || this.activeDrag?.active) return
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return
     this.engine.selectCell(hit)
@@ -1713,7 +1596,7 @@ export class WebGridRuntime {
   }
 
   private updateHeaderCursor(event: WebPointerEvent): void {
-    if (this.resizeDrag || this.draggingSelection || this.fillDrag) {
+    if (this.resizeDrag.active || this.activeDrag?.active) {
       this.host.setCursor(null)
       return
     }
@@ -1887,7 +1770,7 @@ export class WebGridRuntime {
 
   /** 根据当前 frame 同步 resize handle layer。 */
   private syncResizeHandles(): void {
-    if (!this.handleLayer || this.resizeDrag) return
+    if (!this.handleLayer || this.resizeDrag.active) return
     const frame = this.engine.getFrame()
     this.handleLayer.sync(computeResizeHandles(frame))
   }
@@ -1913,7 +1796,7 @@ export class WebGridRuntime {
   /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。 */
   private syncFillHandle(): void {
     if (!this.fillLayer) return
-    if (this.resizeDrag || this.draggingSelection || this.fillDrag || this.engine.isCellEditing()) {
+    if (this.resizeDrag.active || this.activeDrag?.active || this.engine.isCellEditing()) {
       this.fillLayer.sync(null)
       return
     }
@@ -1963,8 +1846,6 @@ export class WebGridRuntime {
   /** 当前驱动边缘自动滚动的拖拽种类；活跃拖拽 / 填充柄优先于普通选区。 */
   private activeAutoScrollDrag(): AutoScrollDragKind | null {
     if (this.activeDrag?.active) return 'active-drag'
-    if (this.fillDrag) return 'fill'
-    if (this.draggingSelection) return 'selection'
     return null
   }
 
@@ -2005,17 +1886,8 @@ export class WebGridRuntime {
   /** 滚动一帧后按拖拽种类重算落点；各 update handler 会自行续调度自动滚动。 */
   private reevaluateDragAfterAutoScroll(kind: AutoScrollDragKind, pointer: WebPointerEvent): void {
     switch (kind) {
-      case 'selection': {
-        const hit = hitTestCell(this.engine.getFrame(), pointer)
-        if (hit) this.engine.selectCell(hit, { extend: true })
-        this.updateDragAutoScroll(pointer)
-        return
-      }
       case 'active-drag':
         this.activeDrag?.reevaluate(pointer)
-        return
-      case 'fill':
-        if (this.fillDrag?.lastPointer) this.applyFillPointerMove(this.fillDrag.lastPointer)
         return
     }
   }
@@ -2138,14 +2010,14 @@ export class WebGridRuntime {
 
   /** 打开指定单元格编辑器，并按需全选原内容。 */
   private openCellEditor(cell: CellAddress, options: { selectAll?: boolean } = {}): boolean {
-    if (!this.cellEditor || this.resizeDrag) return false
+    if (!this.cellEditor || this.resizeDrag.active) return false
     if (!this.engine.beginCellEdit(cell)) return false
     return this.showCellEditor(options)
   }
 
   /** 用首个键入字符作为 draft 打开编辑器。 */
   private beginCellEditWithDraft(cell: CellAddress, draft: string): boolean {
-    if (!this.cellEditor || this.resizeDrag) return false
+    if (!this.cellEditor || this.resizeDrag.active) return false
     if (!this.engine.beginCellEdit(cell)) return false
     this.engine.updateCellEditDraft(draft)
     return this.showCellEditor({ selectAll: false })
@@ -2267,28 +2139,6 @@ export class WebGridRuntime {
       return this.engine.getRowsAxis().getSize(rowIndex)
     }
     return null
-  }
-
-  /** 根据拖拽状态和当前 client 坐标计算预览尺寸。 */
-  private computeResizeSize(
-    drag: NonNullable<WebGridRuntime['resizeDrag']>,
-    clientX: number,
-    clientY: number,
-  ): number {
-    const delta =
-      drag.handle.kind === 'column' ? clientX - drag.startClientX : clientY - drag.startClientY
-    return Math.max(MIN_RESIZE_SIZE, drag.startSize + delta)
-  }
-
-  /** 在 resize handle layer 上显示当前预览尺寸对应的指示线。 */
-  private showResizeIndicator(size: number): void {
-    if (!this.handleLayer || !this.resizeDrag) return
-    const { handle, anchorStart } = this.resizeDrag
-    if (handle.kind === 'column') {
-      this.handleLayer.showIndicator({ kind: 'column', x: anchorStart + size })
-      return
-    }
-    this.handleLayer.showIndicator({ kind: 'row', y: anchorStart + size })
   }
 
   /** 确保指定单元格完整可见，必要时滚动 host。 */
