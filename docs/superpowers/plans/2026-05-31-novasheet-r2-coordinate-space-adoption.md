@@ -1,7 +1,7 @@
 # R2 — CoordinateSpace 全面落地 + 内部 RawRange brand（实现计划）
 
 - **Date**: 2026-05-31
-- **Status**: plan → 执行
+- **Status**: ✅ 完成（T1 翻译收口、T2 内部 RawRange brand、T3 收尾均已落地，四门全绿）
 - **依据**: `docs/architecture-review-2026-05-31.md` R2（坐标系散点、无封装，本系统头号 bug 源）。
 - **前置**: R2-A 已立 `CoordinateSpace`（`packages/core/src/view/CoordinateSpace.ts`），但仅 2 处使用；R3 共享几何 `geometry/range.ts` 已落地。
 - **决策**: 内部 `RawRange` brand（sweet spot）——只给 **raw 空间**打 brand，public `CellRange` 仍是 view 语义不变；编译器挡住引擎内部 raw/view 混用（真正的 bug 源），public API / painters / 外部 Grid 调用零改动。
