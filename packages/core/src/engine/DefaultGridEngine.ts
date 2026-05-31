@@ -6,7 +6,7 @@ import { HideRowsLayer } from '../view/HideRowsLayer'
 import { applyPaste, pasteTargetConflictsWithMerges } from '../clipboard/ApplyPaste'
 import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
-import { computeFillWrites, positiveModulo } from '../fill/FillSeries'
+import { computeFillWrites } from '../fill/FillSeries'
 import type { FillDirection, FillMergeSnap } from '../fill/FillTarget'
 import { unionRange } from '../geometry/range'
 import { RangeStyleStore } from '../format/RangeStyleStore'
@@ -40,6 +40,7 @@ import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { findViewRow, resolveUnderlyingRow } from '../view/coordinates'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
+import { FillStylePropagator } from './FillStylePropagator'
 import type {
   FillCommitResult,
   GridEngine,
@@ -99,6 +100,12 @@ export class DefaultGridEngine implements GridEngine {
   private readonly mergeStore = new MergeStore()
   /** 可见 format/merge → VIEW 帧字段的只读解析器（从 getFrame 抽出，R1）。 */
   private readonly frameFormat = new VisibleFormatResolver(
+    this.formatStore,
+    this.mergeStore,
+    this.coords,
+  )
+  /** 填充柄「携带格式/合并」平铺逻辑（从 commitFill 抽出，R1）。 */
+  private readonly fillStyles = new FillStylePropagator(
     this.formatStore,
     this.mergeStore,
     this.coords,
@@ -484,7 +491,12 @@ export class DefaultGridEngine implements GridEngine {
     this.hideRowsLayer.addHidden(newlyHidden)
     this.rebuildViewAxis()
     const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'hideRows', underlyingRowIds: newlyHidden, selectionBefore, selectionAfter })
+    this.undoStack.push({
+      kind: 'hideRows',
+      underlyingRowIds: newlyHidden,
+      selectionBefore,
+      selectionAfter,
+    })
   }
 
   /**
@@ -498,7 +510,12 @@ export class DefaultGridEngine implements GridEngine {
     this.hideRowsLayer.removeHidden(newlyVisible)
     this.rebuildViewAxis()
     const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'unhideRows', underlyingRowIds: newlyVisible, selectionBefore, selectionAfter })
+    this.undoStack.push({
+      kind: 'unhideRows',
+      underlyingRowIds: newlyVisible,
+      selectionBefore,
+      selectionAfter,
+    })
   }
 
   /**
@@ -510,7 +527,14 @@ export class DefaultGridEngine implements GridEngine {
     for (const id of rowIds) this.rawRowsAxis.setSize(id, h)
     this.rebuildViewAxis()
     const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'resizeRowsMulti', rowIds, oldHeights, newHeight: h, selectionBefore, selectionAfter })
+    this.undoStack.push({
+      kind: 'resizeRowsMulti',
+      rowIds,
+      oldHeights,
+      newHeight: h,
+      selectionBefore,
+      selectionAfter,
+    })
   }
 
   /** 移动连续行组；当前仅支持 raw/view 行一一对应的连续 block。 */
@@ -658,7 +682,12 @@ export class DefaultGridEngine implements GridEngine {
     for (const id of newlyHidden) this.hiddenColIds.add(id)
     this.rebuildViewColsAxis()
     const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'hideCols', fieldIds: newlyHidden, selectionBefore, selectionAfter })
+    this.undoStack.push({
+      kind: 'hideCols',
+      fieldIds: newlyHidden,
+      selectionBefore,
+      selectionAfter,
+    })
   }
 
   /** 取消隐藏给定 fieldId 集合。 */
@@ -669,7 +698,12 @@ export class DefaultGridEngine implements GridEngine {
     for (const id of newlyVisible) this.hiddenColIds.delete(id)
     this.rebuildViewColsAxis()
     const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'unhideCols', fieldIds: newlyVisible, selectionBefore, selectionAfter })
+    this.undoStack.push({
+      kind: 'unhideCols',
+      fieldIds: newlyVisible,
+      selectionBefore,
+      selectionAfter,
+    })
   }
 
   /** 批量设置多列宽度为同一个值。 */
@@ -791,7 +825,12 @@ export class DefaultGridEngine implements GridEngine {
     const field = this.rawData.getSchema().fields[rawColIndex]
     if (field) field.width = newWidth
     this.rebuildViewColsAxis()
-    this.undoStack.push({ kind: 'resizeColumn', colIndex: rawColIndex, before: oldWidth, after: newWidth })
+    this.undoStack.push({
+      kind: 'resizeColumn',
+      colIndex: rawColIndex,
+      before: oldWidth,
+      after: newWidth,
+    })
   }
 
   commitPaste(
@@ -878,7 +917,7 @@ export class DefaultGridEngine implements GridEngine {
 
     // Phase 5-A fill：把源选区的填充色/边框/合并按填充轴平铺到目标区。
     // 非连续 raw 映射（排序/筛选散裂）时保守跳过，仅保留值填充。
-    const styles = this.propagateFillStyles(source, fill, direction)
+    const styles = this.fillStyles.propagateFillStyles(source, fill, direction)
 
     const result = unionRange(source, fill)
     this.undoStack.push({ kind: 'fill', source, fill, result, before, after, ...styles })
@@ -891,129 +930,7 @@ export class DefaultGridEngine implements GridEngine {
    * 否则（无合并或映射非连续）返回 `{ rowSpan: 1, colSpan: 1 }`，让填充柄不吸附。
    */
   getFillMergeSnap(source: CellRange): FillMergeSnap {
-    const rawSource = this.viewRangeToRawRange(source)
-    if (!rawSource || this.mergeStore.getRegionsInRange(rawSource).length === 0) {
-      return { rowSpan: 1, colSpan: 1 }
-    }
-    return {
-      rowSpan: rawSource.endRow - rawSource.startRow + 1,
-      colSpan: rawSource.endCol - rawSource.startCol + 1,
-    }
-  }
-
-  /**
-   * 把源选区的格式（填充色/边框）与合并区按填充轴平铺到 fill 目标区，并返回供 undo/redo
-   * 恢复的 store 快照。源或目标的 view→raw 映射非连续时返回空对象（不改动任何 store）。
-   */
-  private propagateFillStyles(
-    source: CellRange,
-    fill: CellRange,
-    direction: FillDirection,
-  ): {
-    formatBefore?: readonly FormatLayer[]
-    formatAfter?: readonly FormatLayer[]
-    mergeBefore?: readonly MergeRegion[]
-    mergeAfter?: readonly MergeRegion[]
-  } {
-    const rawSource = this.viewRangeToRawRange(source)
-    const rawFill = this.viewRangeToRawRange(fill)
-    if (!rawSource || !rawFill) return {}
-
-    const formatBefore = this.formatStore.snapshot()
-    const mergeBefore = this.mergeStore.snapshot()
-    this.tileFillFormat(rawSource, rawFill, direction)
-    this.tileFillMerge(rawSource, rawFill, direction)
-    return {
-      formatBefore,
-      formatAfter: this.formatStore.snapshot(),
-      mergeBefore,
-      mergeAfter: this.mergeStore.snapshot(),
-    }
-  }
-
-  /**
-   * 格式平铺：清空目标区后，按填充轴的 `positiveModulo` 取对应源格的已解析格式重写，
-   * 使目标格精确等于源（源无格式则清除目标陈旧格式）。坐标均为 raw。
-   */
-  private tileFillFormat(rawSource: CellRange, rawFill: CellRange, direction: FillDirection): void {
-    const sourceHasFormat = this.formatStore.resolveVisible(rawSource).length > 0
-    const targetHasFormat = this.formatStore.resolveVisible(rawFill).length > 0
-    if (!sourceHasFormat && !targetHasFormat) return
-
-    this.formatStore.clearFill(rawFill)
-    this.formatStore.clearBorders(rawFill)
-    if (!sourceHasFormat) return
-
-    const sRows = rawSource.endRow - rawSource.startRow + 1
-    const sCols = rawSource.endCol - rawSource.startCol + 1
-    const vertical = direction === 'down' || direction === 'up'
-    for (let row = rawFill.startRow; row <= rawFill.endRow; row += 1) {
-      for (let col = rawFill.startCol; col <= rawFill.endCol; col += 1) {
-        const srcRow = vertical
-          ? rawSource.startRow + positiveModulo(row - rawSource.startRow, sRows)
-          : row
-        const srcCol = vertical
-          ? col
-          : rawSource.startCol + positiveModulo(col - rawSource.startCol, sCols)
-        const fmt = this.formatStore.resolveCell(srcRow, srcCol)
-        if (!fmt) continue
-        const target: CellRange = { startRow: row, endRow: row, startCol: col, endCol: col }
-        if (fmt.fillColor !== undefined) this.formatStore.apply(target, { fillColor: fmt.fillColor })
-        if (fmt.borders !== undefined) this.formatStore.apply(target, { borders: fmt.borders })
-      }
-    }
-  }
-
-  /**
-   * 合并平铺：源合并块沿填充轴按整块步长复制；放不下整块的尾部 tile 跳过，与既有合并相交
-   * 由 `MergeStore.merge` 拒绝（返回 null）后跳过。坐标均为 raw。
-   */
-  private tileFillMerge(rawSource: CellRange, rawFill: CellRange, direction: FillDirection): void {
-    const regions = this.mergeStore.getRegionsInRange(rawSource)
-    // 填充覆盖目标区时一律取消其已有合并（与 Google 表格一致）：单格源拖过合并会恢复成普通格；
-    // 合并源还会接着按块平铺（先清除也避免源块平铺与旧合并相交被拒绝）。
-    this.mergeStore.unmerge(rawFill)
-    if (regions.length === 0) return
-    const sRows = rawSource.endRow - rawSource.startRow + 1
-    const sCols = rawSource.endCol - rawSource.startCol + 1
-    const vertical = direction === 'down' || direction === 'up'
-    const blockSize = vertical ? sRows : sCols
-    const span = vertical
-      ? rawFill.endRow - rawFill.startRow + 1
-      : rawFill.endCol - rawFill.startCol + 1
-    const maxTiles = Math.ceil(span / blockSize) + 1
-
-    for (const region of regions) {
-      for (let k = 1; k <= maxTiles; k += 1) {
-        const candidate = this.shiftRangeForFill(region.range, direction, k * blockSize)
-        if (!this.rangeWithin(candidate, rawFill)) continue
-        this.mergeStore.merge(candidate)
-      }
-    }
-  }
-
-  /** 沿填充方向把 `range` 整体平移 `delta` 格（down/right 为正向，up/left 为反向）。 */
-  private shiftRangeForFill(range: CellRange, direction: FillDirection, delta: number): CellRange {
-    switch (direction) {
-      case 'down':
-        return { ...range, startRow: range.startRow + delta, endRow: range.endRow + delta }
-      case 'up':
-        return { ...range, startRow: range.startRow - delta, endRow: range.endRow - delta }
-      case 'right':
-        return { ...range, startCol: range.startCol + delta, endCol: range.endCol + delta }
-      case 'left':
-        return { ...range, startCol: range.startCol - delta, endCol: range.endCol - delta }
-    }
-  }
-
-  /** `inner` 是否完全落在 `outer` 矩形内。 */
-  private rangeWithin(inner: CellRange, outer: CellRange): boolean {
-    return (
-      inner.startRow >= outer.startRow &&
-      inner.endRow <= outer.endRow &&
-      inner.startCol >= outer.startCol &&
-      inner.endCol <= outer.endCol
-    )
+    return this.fillStyles.getFillMergeSnap(source)
   }
 
   /**
@@ -1194,11 +1111,17 @@ export class DefaultGridEngine implements GridEngine {
         // unapply deleteRows = re-insert rows at their original positions and restore cells
         if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return
         // Re-insert in reverse snapshot order so earlier indices stay valid
-        const sorted = [...cmd.snapshots].sort((a, b) => a.originalUnderlyingRow - b.originalUnderlyingRow)
+        const sorted = [...cmd.snapshots].sort(
+          (a, b) => a.originalUnderlyingRow - b.originalUnderlyingRow,
+        )
         for (let i = sorted.length - 1; i >= 0; i -= 1) {
           const snap = sorted[i]!
           this.rawData.insertRows(snap.originalUnderlyingRow, 1)
-          this.rawRowsAxis.insertRange(snap.originalUnderlyingRow, 1, cmd.deletedHeights[i] ?? this.resolveDefaultRowHeight())
+          this.rawRowsAxis.insertRange(
+            snap.originalUnderlyingRow,
+            1,
+            cmd.deletedHeights[i] ?? this.resolveDefaultRowHeight(),
+          )
           // restore cells
           const fields = this.rawData.getSchema().fields
           for (const field of fields) {
@@ -1233,7 +1156,10 @@ export class DefaultGridEngine implements GridEngine {
       case 'resizeRowsMulti':
         // unapply = restore each row's old height
         for (let i = 0; i < cmd.rowIds.length; i += 1) {
-          this.rawRowsAxis.setSize(cmd.rowIds[i]!, cmd.oldHeights[i] ?? this.resolveDefaultRowHeight())
+          this.rawRowsAxis.setSize(
+            cmd.rowIds[i]!,
+            cmd.oldHeights[i] ?? this.resolveDefaultRowHeight(),
+          )
         }
         this.rebuildViewAxis()
         this.selection.setSelection(cmd.selectionBefore)
@@ -2075,7 +2001,8 @@ class VisibleColumnsDataSource implements DataSource {
     if (mutableUpstream) {
       this.updateCell = (rowIndex, fieldId, value) =>
         mutableUpstream.updateCell(rowIndex, fieldId, value)
-      this.updateCellByUnderlyingRow = mutableUpstream.updateCellByUnderlyingRow?.bind(mutableUpstream)
+      this.updateCellByUnderlyingRow =
+        mutableUpstream.updateCellByUnderlyingRow?.bind(mutableUpstream)
       this.insertRows = mutableUpstream.insertRows?.bind(mutableUpstream)
       this.deleteRows = mutableUpstream.deleteRows?.bind(mutableUpstream)
       this.moveRows = mutableUpstream.moveRows?.bind(mutableUpstream)
@@ -2156,7 +2083,11 @@ function moveIndexBlock(
   const moving = current.slice(start, end + 1)
   const remaining = current.filter((index) => index < start || index > end)
   const insertAt =
-    beforeRowId === null ? remaining.length : beforeRowId > end ? beforeRowId - moving.length : beforeRowId
+    beforeRowId === null
+      ? remaining.length
+      : beforeRowId > end
+        ? beforeRowId - moving.length
+        : beforeRowId
   const next = remaining.slice()
   next.splice(insertAt, 0, ...moving)
   return next
