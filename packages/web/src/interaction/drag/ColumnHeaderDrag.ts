@@ -212,7 +212,9 @@ export class ColumnHeaderDrag implements Drag {
   ): { beforeFieldId: string | null; preview: ColumnReorderPreview } | null {
     const frame = this.deps.engine.getFrame()
     const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    if (event.x < rowHeaderWidth) return null
+    // 指针落在行表头区/左边缘（event.x < rowHeaderWidth）时不早退：让 logicalX 经
+    // `logicalX < 0 → beforeIndex 0`（未滚动）或 positionToIndex（已滚动）映射为「插入到最左」，
+    // 与右侧 `logicalX >= totalSize → 追加到末尾` 对称——否则左拖/左边缘自动滚动永远无落点。
     const fields = frame.data.getSchema().fields
     if (fields.length === 0) return null
     const scrollX = frame.viewport.scrollX ?? 0

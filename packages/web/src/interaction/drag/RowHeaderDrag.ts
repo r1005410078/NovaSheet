@@ -207,7 +207,9 @@ export class RowHeaderDrag implements Drag {
   ): { beforeRowId: number | null; preview: RowReorderPreview } | null {
     const frame = this.deps.engine.getFrame()
     const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
-    if (event.y < headerHeight) return null
+    // 指针落在表头区/上边缘（event.y < headerHeight）时不早退：让 logicalY 经
+    // `logicalY < 0 → beforeIndex 0`（未滚动）或 positionToIndex（已滚动）映射为「插入到顶部」，
+    // 与底部 `logicalY >= totalSize → 追加到末尾` 对称——否则上拖/上边缘自动滚动永远无落点。
     const rowCount = frame.rowsAxis.getCount()
     if (rowCount === 0) return null
     const scrollY = frame.viewport.scrollY ?? 0
