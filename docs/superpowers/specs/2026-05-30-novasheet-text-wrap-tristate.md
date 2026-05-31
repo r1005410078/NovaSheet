@@ -1,7 +1,7 @@
 # NovaSheet — 文本换行三态（Overflow / Wrap / Clip）
 
 - **Date**: 2026-05-30
-- **Status**: Brainstorm（待评审 → 进 plan）
+- **Status**: 已实现（`feat/cell-multiline-text`，Task 1–7）
 - **Scope**: 把文本显示模式做成**单元格级 `CellFormat`** 的三态 `overflow | wrap | clip`，对齐 Google 表格 / Excel；默认 `overflow`。不含垂直对齐、不含全局开关。
 - **依赖**: Phase 5-A 的 `RangeStyleStore` / `CellFormat` / 帧 `cellFormats`；[多行文本基线](../../..) `feat/cell-multiline-text`（硬换行渲染 + autofit + 编辑框）
 
