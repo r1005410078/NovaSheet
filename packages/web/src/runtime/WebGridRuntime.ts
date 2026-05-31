@@ -327,12 +327,14 @@ export class WebGridRuntime {
     /** 最近一次 fill drag pointer。 */
     lastPointer: WebPointerEvent | null
   } | null = null
-  /** 当前活跃的 Drag（R1 DragController）；目前已迁移列表头手势。pointerdown 起拖时设置。 */
+  /** 当前活跃的 Drag（R1 DragController）；pointerdown 起拖时设置。 */
   private activeDrag: Drag | null = null
   /** 列表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
   private columnHeaderDrag!: ColumnHeaderDrag
   /** 行表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
   private rowHeaderDrag!: RowHeaderDrag
+  /** pointerdown 按序尝试起拖的 Drag 列表；加新拖拽 = 实现 Drag + 入此数组。 */
+  private drags: readonly Drag[] = []
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: WebGridRuntimeOptions) {
@@ -360,7 +362,6 @@ export class WebGridRuntime {
       refresh: () => this.refresh(),
       afterEngineMutation: () => this.afterEngineMutation(),
       closeContextMenu: () => this.closeContextMenu(),
-      commitCellEdit: (moveAfter) => this.commitCellEdit(moveAfter),
       requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
       stopAutoScroll: () => this.stopDragAutoScroll(),
       isBlocked: () => !!(this.resizeDrag || this.draggingSelection || this.fillDrag),
@@ -384,6 +385,7 @@ export class WebGridRuntime {
       isWholeRowSelection: (range) => this.isWholeRowSelection(range),
       selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
     })
+    this.drags = [this.columnHeaderDrag, this.rowHeaderDrag]
   }
 
   /** 起拖期间记录 pointer 并按边缘热区驱动自动滚动（供 Drag 经 deps 调用）。 */
@@ -1577,16 +1579,14 @@ export class WebGridRuntime {
     if (this.destroyed) return
     // 仅左键进入 drag-select；右键 / 中键留给 contextmenu / 其它路径
     if ((event.button ?? 0) !== 0) return
-    if (this.columnHeaderDrag.tryStart(event)) {
-      this.activeDrag = this.columnHeaderDrag
-      return
-    }
     if (this.engine.isCellEditing()) {
       this.commitCellEdit(false)
     }
-    if (this.rowHeaderDrag.tryStart(event)) {
-      this.activeDrag = this.rowHeaderDrag
-      return
+    for (const drag of this.drags) {
+      if (drag.tryStart(event)) {
+        this.activeDrag = drag
+        return
+      }
     }
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return

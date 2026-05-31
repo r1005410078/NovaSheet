@@ -13,7 +13,6 @@ export interface ColumnHeaderDragDeps {
   refresh(): void
   afterEngineMutation(): void
   closeContextMenu(): void
-  commitCellEdit(moveAfter: boolean): void
   /** 边缘自动滚动：起拖期间按 pointer 请求/停止（横向）。 */
   requestAutoScroll(pointer: WebPointerEvent): void
   stopAutoScroll(): void
@@ -63,7 +62,6 @@ export class ColumnHeaderDrag implements Drag {
     if (this.deps.isBlocked()) return false
     const hit = this.deps.hitTestColumnHeader(event)
     if (!hit) return false
-    if (this.deps.engine.isCellEditing()) this.deps.commitCellEdit(false)
 
     const selection = this.deps.engine.getSelection()
     const range = selection.selectedRange
