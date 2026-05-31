@@ -55,6 +55,7 @@ import {
   type TextWrapMode,
   type CellAddress,
   type CellRange,
+  type MergeRegion,
   type ContextMenuAction,
   type ContextMenuContext,
   type ContextMenuItem,
@@ -186,6 +187,27 @@ type AutoScrollDragKind =
 /** 去重行号并保持首次出现顺序。 */
 function uniqueRows(rows: readonly number[]): readonly number[] {
   return [...new Set(rows)]
+}
+
+/**
+ * 把选区**并入** active cell 所在的合并区（VIEW 坐标），供选区边框与填充柄共用锚定。
+ * 取并集而非直接替换：单格选中合并时并集=整个合并区（展开）；从合并源填充后 selectedRange
+ * 已是更大的 result，并集仍是 result（不塌回源合并区，否则边框/填充柄会缩回去）。无命中返回原 range。
+ */
+function mergeVisualRange(
+  mergeRegions: readonly MergeRegion[] | undefined,
+  range: CellRange,
+  activeCell: CellAddress | null | undefined,
+): CellRange {
+  if (!activeCell || !mergeRegions) return range
+  const merge = mergeRegions.find((m) => cellInRange(activeCell, m.range))?.range
+  if (!merge) return range
+  return {
+    startRow: Math.min(range.startRow, merge.startRow),
+    endRow: Math.max(range.endRow, merge.endRow),
+    startCol: Math.min(range.startCol, merge.startCol),
+    endCol: Math.max(range.endCol, merge.endCol),
+  }
 }
 
 /** 单元格地址是否落在矩形 range 内（含边界）。 */
@@ -2284,12 +2306,15 @@ export class WebGridRuntime {
       this.fillLayer.sync(null)
       return
     }
-    const range = this.engine.getSelection().selectedRange
+    const frame = this.engine.getFrame()
+    const range = frame.selection?.selectedRange
     if (!range) {
       this.fillLayer.sync(null)
       return
     }
-    this.fillLayer.sync(computeFillHandleRect(this.engine.getFrame(), range))
+    // 与选区边框一致：active cell 落在合并区内时锚定整个合并区，填充柄才在合并区右下角。
+    const visualRange = mergeVisualRange(frame.mergeRegions, range, frame.selection?.activeCell)
+    this.fillLayer.sync(computeFillHandleRect(frame, visualRange))
   }
 
   /** 根据 renderer 同一份 frame 同步 DOM body selection overlay。 */
@@ -2306,16 +2331,7 @@ export class WebGridRuntime {
       return
     }
     const active = selection.activeCell
-    const activeRange =
-      active &&
-      (frame.mergeRegions ?? []).find(
-        (merge) =>
-          active.rowIndex >= merge.range.startRow &&
-          active.rowIndex <= merge.range.endRow &&
-          active.colIndex >= merge.range.startCol &&
-          active.colIndex <= merge.range.endCol,
-      )?.range
-    const visualRange = activeRange ?? range
+    const visualRange = mergeVisualRange(frame.mergeRegions, range, active)
     const activeRect = active
       ? computeRangeOverlayRects(
           frame,

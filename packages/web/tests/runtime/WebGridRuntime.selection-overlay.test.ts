@@ -10,7 +10,18 @@ import { Grid } from '../../src/Grid'
 import type { WebHost } from '../../src/host/WebHost'
 import type { WebRenderer } from '../../src/render/WebRenderer'
 import type { SelectionOverlay, SelectionOverlayState } from '../../src/overlay/SelectionOverlay'
+import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
+import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+
+function makeFillLayer(): DomFillHandleLayer {
+  return {
+    sync: mock((_rect: OverlayRect | null) => {}),
+    showPreview: mock(() => {}),
+    hidePreview: mock(() => {}),
+    destroy: mock(() => {}),
+  } as unknown as DomFillHandleLayer
+}
 
 describe('WebGridRuntime selection overlay', () => {
   it('syncs DOM selection overlay after setSelection render flush', () => {
@@ -194,6 +205,73 @@ describe('WebGridRuntime selection overlay', () => {
       rangeRects: [{ x: 0, y: 30, width: 160, height: 60 }],
       activeRect: { x: 0, y: 30, width: 160, height: 60 },
     })
+  })
+
+  it('从合并源填充后，选区边框扩展到整个 result（不塌回源合并区）', () => {
+    const selectionOverlay = makeSelectionOverlay()
+    const frame = makeFrame({
+      selection: {
+        // 填充后：selectedRange 已是 result（源合并 ∪ 填充区），active cell 仍在源合并内
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 1, colIndex: 1 },
+        selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+      },
+      mergeRegions: [
+        {
+          id: 'merge-1',
+          range: { startRow: 0, endRow: 1, startCol: 0, endCol: 0 }, // 源合并：col0 两行
+          anchor: { rowIndex: 0, colIndex: 0 },
+        },
+      ],
+      columnWidth: 80,
+    })
+    const runtime = new WebGridRuntime({
+      engine: makeEngine(frame),
+      host: makeHost(),
+      renderer: makeRenderer(),
+      selectionOverlay,
+    })
+
+    ;(runtime as unknown as { paintSync(): void }).paintSync()
+
+    // result 是 rows0-1×cols0-1（width 160），不能塌回源合并 col0（width 80）
+    expect(selectionOverlay.sync).toHaveBeenLastCalledWith({
+      rangeRects: [{ x: 0, y: 30, width: 160, height: 60 }],
+      activeRect: { x: 0, y: 30, width: 160, height: 60 },
+    })
+  })
+
+  it('合并格的填充柄锚定到合并区右下角（不随内部 active cell 跳中间）', () => {
+    const fillLayer = makeFillLayer()
+    const frame = makeFrame({
+      selection: {
+        // active cell 在合并内部、selectedRange 是单格（Enter 导航后的状态）
+        activeCell: { rowIndex: 1, colIndex: 0 },
+        anchorCell: { rowIndex: 1, colIndex: 0 },
+        extentCell: { rowIndex: 1, colIndex: 0 },
+        selectedRange: { startRow: 1, endRow: 1, startCol: 0, endCol: 0 },
+      },
+      mergeRegions: [
+        {
+          id: 'merge-1',
+          range: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+          anchor: { rowIndex: 0, colIndex: 0 },
+        },
+      ],
+      columnWidth: 80,
+    })
+    const runtime = new WebGridRuntime({
+      engine: makeEngine(frame),
+      host: makeHost(),
+      renderer: makeRenderer(),
+      fillLayer,
+    })
+
+    ;(runtime as unknown as { paintSync(): void }).paintSync()
+
+    // 合并区 rows0-1×cols0-1：右下角 = (160, 90)，手柄 8px 居中偏移 4 → (156, 86)
+    expect(fillLayer.sync).toHaveBeenLastCalledWith({ x: 156, y: 86, width: 8, height: 8 })
   })
 
   it('clears selection overlay while cell editing', () => {
