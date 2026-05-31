@@ -35,13 +35,18 @@
 - runtime 按**拖拽种类**抽 `DragController`（每种 drag 一个小状态机，共用 `EdgeAutoScroll`），runtime 只做事件路由。
 - 不强求一次到位；每抽出一块配既有测试即可。
 
-### R2 🔴 坐标系（raw↔view）散点、无封装
+### R2 🟢 坐标系（raw↔view）散点、无封装 — 已落地（2026-05-31）
 
 **证据**：`resolveUnderlyingRow / viewRangeToRawRange / getRawColumnIndex / …` 共 **61 处**触点；frame 的 raw→view 翻译、填充/合并的 view→raw、autofit 的坐标各写各的。
 
 **风险**：本系统**头号 bug 源**。本轮 4 个疑难 bug 全在这条线上。约定（「非连续即 no-op」「合并 anchor 取 view」）靠人记，不靠类型/封装强制。
 
 **建议**：抽一个 **`CoordinateSpace` / `ViewProjection`** 对象，唯一持有 raw↔view 映射，暴露：`viewToRaw(range): RawRange|null`、`rawToView`、`resolveMergeAt(view)`、`isContiguous`。所有翻译走它；用 **branded type**（`RawRange` vs `ViewRange`）让编译器挡住混用。这能从根上消掉散点手写。
+
+**落地（R2 计划 `plans/2026-05-31-novasheet-r2-coordinate-space-adoption.md`）**：
+- R2-A `CoordinateSpace` 立对象（`view/CoordinateSpace.ts`）；R2 T1 引擎删除对 `resolveUnderlyingRow`/`findViewRow` 的直接 import 与 23 处直调，加 `fieldIdToRaw`，**所有 raw↔view 翻译唯一走 `this.coords`**。
+- R2 T2 内部 **`RawRange` brand**（`CellRange & {__space:'raw'}`，phantom、运行时零开销）：`coords.viewRangeToRaw` 出 `RawRange`；`RangeStyleStore`/`MergeStore` 的区入参收为 `RawRange`；引擎沿格式/合并/粘贴入口穿线——**把 view 选区误喂 raw store 现为编译错误**。
+- 采**内部 brand**（sweet spot）：public `Grid` API / `RenderFrame` / painters 仍收 view `CellRange`，零改动；brand 边界 = 引擎的 view→raw 翻译唯一点。`ViewRange` 双 brand 评估后判**边际递减**未做（外部消费者将被迫带 brand）。
 
 ### R3 🟠 缺共享几何/范围工具层
 
@@ -85,9 +90,9 @@
 
 ## 3. 建议的收口顺序（低风险→高杠杆）
 
-1. **R3 共享几何工具** —— 纯函数抽取，零风险，立刻消重复（半天）。
-2. **R2 CoordinateSpace + branded type** —— 收口头号 bug 源，杠杆最高（需配测试，1–2 天）。
-3. **R1 god object 切片** —— 趁 R2 收口顺势把 engine/runtime 按能力/拖拽拆子协调器（增量进行）。
+1. ~~**R3 共享几何工具**~~ —— ✅ 已完成（`geometry/range.ts`）。
+2. ~~**R2 CoordinateSpace + branded type**~~ —— ✅ 已完成（翻译收口走 `coords` + 内部 `RawRange` brand）。
+3. **R1 god object 切片** —— runtime 拖拽侧已抽 `DragController`（ColumnHeaderDrag/RowHeaderDrag + 单点派发）；engine 已切 VisibleFormatResolver/FillStylePropagator，余下判**边际递减**增量进行。
 4. **R7 测试盲区** —— 类型化 mock 工厂 + 视觉回归（与功能开发并行补）。
 5. **R5 stage 顺序 / R4 undo 增量 / R6 模型整合 / R8 LRU** —— 规模或体验需要时再做。
 

@@ -218,6 +218,38 @@ describe('WebGridRuntime column reorder drag', () => {
     expect(overlay.hide).toHaveBeenCalled()
   })
 
+  it('向左拖到行表头区（x < rowHeaderWidth）应落到最左，而非死区无操作', () => {
+    // 回归：与行表头同源的死区 bug——左侧 rowHeaderWidth 区曾 return null（无落点），
+    // 与右侧「追加到末尾」不对称，导致列向左拖（含左边缘自动滚动）永远不提交。
+    const schema: Schema = {
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: 100 },
+        { id: 'b', name: 'B', type: 'text', width: 100 },
+        { id: 'c', name: 'C', type: 'text', width: 100 },
+        { id: 'd', name: 'D', type: 'text', width: 100 },
+      ],
+    }
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({ schema, rows: [{ a: 'A1', b: 'B1', c: 'C1', d: 'D1' }] }),
+      theme: denseGridTheme,
+      excelHeaders: true, // rowHeaderWidth > 0，存在左侧死区
+    })
+    engine.setViewportSize(500, 240)
+    selectCols(engine, 2, 3) // c,d
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      columnReorderOverlay: makeOverlay(),
+    })
+
+    runtime.handleHostPointerDown({ x: 300, y: 10, shiftKey: false, button: 0 }) // col2 (c)
+    runtime.handleHostPointerMove({ x: 20, y: 10, shiftKey: false }) // 行表头区 x<rowHeaderWidth
+    runtime.handleHostPointerUp()
+
+    expect(engine.getData().getSchema().fields.map((field) => field.id)).toEqual(['c', 'd', 'a', 'b'])
+  })
+
   it('clicking an unselected header selects it and does not reorder on the same pointerdown', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)

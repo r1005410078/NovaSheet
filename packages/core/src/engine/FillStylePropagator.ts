@@ -3,6 +3,7 @@ import type { RangeStyleStore } from '../format/RangeStyleStore'
 import type { FormatLayer } from '../format/CellFormat'
 import type { MergeStore, MergeRegion } from '../merge/MergeStore'
 import type { CoordinateSpace } from '../view/CoordinateSpace'
+import { asRawRange, type RawRange } from '../view/coordinates'
 import type { FillDirection, FillMergeSnap } from '../fill/FillTarget'
 import { positiveModulo } from '../fill/FillSeries'
 
@@ -67,7 +68,7 @@ export class FillStylePropagator {
    * 格式平铺：清空目标区后，按填充轴的 `positiveModulo` 取对应源格的已解析格式重写，
    * 使目标格精确等于源（源无格式则清除目标陈旧格式）。坐标均为 raw。
    */
-  private tileFillFormat(rawSource: CellRange, rawFill: CellRange, direction: FillDirection): void {
+  private tileFillFormat(rawSource: RawRange, rawFill: RawRange, direction: FillDirection): void {
     const sourceHasFormat = this.formatStore.resolveVisible(rawSource).length > 0
     const targetHasFormat = this.formatStore.resolveVisible(rawFill).length > 0
     if (!sourceHasFormat && !targetHasFormat) return
@@ -89,7 +90,7 @@ export class FillStylePropagator {
           : rawSource.startCol + positiveModulo(col - rawSource.startCol, sCols)
         const fmt = this.formatStore.resolveCell(srcRow, srcCol)
         if (!fmt) continue
-        const target: CellRange = { startRow: row, endRow: row, startCol: col, endCol: col }
+        const target = asRawRange({ startRow: row, endRow: row, startCol: col, endCol: col })
         if (fmt.fillColor !== undefined) this.formatStore.apply(target, { fillColor: fmt.fillColor })
         if (fmt.borders !== undefined) this.formatStore.apply(target, { borders: fmt.borders })
       }
@@ -100,7 +101,7 @@ export class FillStylePropagator {
    * 合并平铺：源合并块沿填充轴按整块步长复制；放不下整块的尾部 tile 跳过，与既有合并相交
    * 由 `MergeStore.merge` 拒绝（返回 null）后跳过。坐标均为 raw。
    */
-  private tileFillMerge(rawSource: CellRange, rawFill: CellRange, direction: FillDirection): void {
+  private tileFillMerge(rawSource: RawRange, rawFill: RawRange, direction: FillDirection): void {
     const regions = this.mergeStore.getRegionsInRange(rawSource)
     // 填充覆盖目标区时一律取消其已有合并（与 Google 表格一致）：单格源拖过合并会恢复成普通格；
     // 合并源还会接着按块平铺（先清除也避免源块平铺与旧合并相交被拒绝）。
@@ -119,7 +120,7 @@ export class FillStylePropagator {
       for (let k = 1; k <= maxTiles; k += 1) {
         const candidate = shiftRangeForFill(region.range, direction, k * blockSize)
         if (!rangeWithin(candidate, rawFill)) continue
-        this.mergeStore.merge(candidate)
+        this.mergeStore.merge(asRawRange(candidate)) // region.range 处 raw 空间，平移后仍 raw
       }
     }
   }

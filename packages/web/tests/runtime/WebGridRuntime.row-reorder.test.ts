@@ -116,6 +116,25 @@ describe('WebGridRuntime row reorder drag', () => {
     expect(overlay.hide).toHaveBeenCalled()
   })
 
+  it('向上拖到表头区（y < headerHeight）应落到顶部，而非死区无操作', () => {
+    // 回归：顶部 header 区曾被 computeReorderTarget 直接 return null（无落点），
+    // 与底部「映射为追加到末尾」不对称——导致行向上拖（含上边缘自动滚动）永远不提交。
+    const engine = makeEngine()
+    selectRows(engine, 2, 3) // C,D；row2 起于 y≈88
+    const runtime = new WebGridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      rowReorderOverlay: makeOverlay(),
+    })
+
+    runtime.handleHostPointerDown({ x: 20, y: 100, shiftKey: false, button: 0 })
+    runtime.handleHostPointerMove({ x: 20, y: 20, shiftKey: false }) // 表头区 y<32
+    runtime.handleHostPointerUp()
+
+    expect(rowNames(engine)).toEqual(['C', 'D', 'A', 'B'])
+  })
+
   it('dragging from an unselected row header selects contiguous whole rows without reorder', () => {
     const engine = makeEngine()
     const overlay = makeOverlay()

@@ -37,8 +37,8 @@ import { denseGridTheme } from '../theme/denseGridTheme'
 import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
-import { findViewRow, resolveUnderlyingRow } from '../view/coordinates'
 import { CoordinateSpace } from '../view/CoordinateSpace'
+import type { RawRange } from '../view/coordinates'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
 import { FillStylePropagator } from './FillStylePropagator'
 import type {
@@ -261,7 +261,7 @@ export class DefaultGridEngine implements GridEngine {
     if (parsed === undefined) return false
 
     const before = this.data.getCell(session.cell.rowIndex, session.fieldId) ?? null
-    const underlyingRow = resolveUnderlyingRow(this.data, session.cell.rowIndex)
+    const underlyingRow = this.coords.viewRowToRaw(session.cell.rowIndex)
     this.data.updateCell(session.cell.rowIndex, session.fieldId, parsed)
     this.undoStack.push({
       kind: 'editCell',
@@ -288,7 +288,7 @@ export class DefaultGridEngine implements GridEngine {
         if (!field) continue
         const v = this.data.getCell(r, field.id)
         if (v === null || v === undefined) continue
-        before.push({ rowIndex: resolveUnderlyingRow(this.data, r), fieldId: field.id, value: v })
+        before.push({ rowIndex: this.coords.viewRowToRaw(r), fieldId: field.id, value: v })
         this.data.updateCell(r, field.id, null)
       }
     }
@@ -874,7 +874,7 @@ export class DefaultGridEngine implements GridEngine {
       this.data,
       onSkipped,
       (rec: PasteWriteRecord) => {
-        const underlyingRow = resolveUnderlyingRow(this.data, rec.rowIndex)
+        const underlyingRow = this.coords.viewRowToRaw(rec.rowIndex)
         before.push({ rowIndex: underlyingRow, fieldId: rec.fieldId, value: rec.before })
         after.push({ rowIndex: underlyingRow, fieldId: rec.fieldId, value: rec.after })
       },
@@ -902,14 +902,14 @@ export class DefaultGridEngine implements GridEngine {
       value: w.value,
     }))
     const after: CellWrite[] = viewWrites.map((w) => ({
-      rowIndex: resolveUnderlyingRow(this.data, w.rowIndex),
+      rowIndex: this.coords.viewRowToRaw(w.rowIndex),
       fieldId: w.fieldId,
       value: w.value,
     }))
     if (after.length === 0) return null
 
     const before: CellWrite[] = viewWrites.map((w) => ({
-      rowIndex: resolveUnderlyingRow(this.data, w.rowIndex),
+      rowIndex: this.coords.viewRowToRaw(w.rowIndex),
       fieldId: w.fieldId,
       value: this.data.getCell(w.rowIndex, w.fieldId) ?? null,
     }))
@@ -1042,11 +1042,11 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   /**
-   * 把 view `CellRange` 翻译为 raw `CellRange`。无 hide/sort/filter 时为恒等映射。
-   * 行经 `resolveUnderlyingRow`、列经 `fieldId → raw col index` 映射；映射结果在 raw 空间
+   * 把 view `CellRange` 翻译为 raw `RawRange`。无 hide/sort/filter 时为恒等映射。
+   * 行经 `viewRowToRaw`、列经 `fieldId → raw col index` 映射；映射结果在 raw 空间
    * 非连续（排序/筛选打乱行序）时返回 null（5-A 不展开大范围，见 plan Coordinate Space Invariant）。
    */
-  private viewRangeToRawRange(range: CellRange): CellRange | null {
+  private viewRangeToRawRange(range: CellRange): RawRange | null {
     return this.coords.viewRangeToRaw(range)
   }
 
@@ -1439,7 +1439,7 @@ export class DefaultGridEngine implements GridEngine {
   private restoreSelectionForWrites(writes: readonly CellWrite[], fallbackRange: CellRange): void {
     const visibleRows: number[] = []
     for (const write of writes) {
-      const viewRow = findViewRow(this.data, write.rowIndex)
+      const viewRow = this.coords.rawRowToView(write.rowIndex)
       if (viewRow !== -1) visibleRows.push(viewRow)
     }
     if (visibleRows.length === 0) return
@@ -1453,7 +1453,7 @@ export class DefaultGridEngine implements GridEngine {
 
   private applyEditCellWrite(rowIndex: number, fieldId: string, value: CellValue): void {
     if (!isMutableDataSource(this.data)) return
-    const viewRow = findViewRow(this.data, rowIndex)
+    const viewRow = this.coords.rawRowToView(rowIndex)
     if (viewRow === -1 && this.data.updateCellByUnderlyingRow) {
       this.data.updateCellByUnderlyingRow(rowIndex, fieldId, value)
     } else if (viewRow !== -1) {
@@ -1466,7 +1466,7 @@ export class DefaultGridEngine implements GridEngine {
   private restoreSelectionForEdit(rowIndex: number, fieldId: string): void {
     const colIndex = this.getColumnIndex(fieldId)
     if (colIndex < 0) return
-    const viewRow = findViewRow(this.data, rowIndex)
+    const viewRow = this.coords.rawRowToView(rowIndex)
     if (viewRow === -1) return
     this.selection.selectCell({ rowIndex: viewRow, colIndex })
   }
@@ -1544,7 +1544,7 @@ export class DefaultGridEngine implements GridEngine {
     oldResolveUnderlyingRow: (viewRow: number) => number,
   ): CellAddress | null {
     const underlyingRow = oldResolveUnderlyingRow(rowIndex)
-    const viewRow = findViewRow(this.data, underlyingRow)
+    const viewRow = this.coords.rawRowToView(underlyingRow)
     if (viewRow === -1) return null
     return { rowIndex: viewRow, colIndex }
   }
@@ -1556,7 +1556,7 @@ export class DefaultGridEngine implements GridEngine {
     const rows: number[] = []
     for (let rowIndex = range.startRow; rowIndex <= range.endRow; rowIndex += 1) {
       const underlyingRow = oldResolveUnderlyingRow(rowIndex)
-      const viewRow = findViewRow(this.data, underlyingRow)
+      const viewRow = this.coords.rawRowToView(underlyingRow)
       if (viewRow === -1) return null
       rows.push(viewRow)
     }
@@ -1926,7 +1926,7 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private getRawColumnIndex(fieldId: string): number {
-    return this.rawData.getSchema().fields.findIndex((field) => field.id === fieldId)
+    return this.coords.fieldIdToRaw(fieldId)
   }
 
   private getRawColumnIndexForViewIndex(viewColIndex: number): number {
