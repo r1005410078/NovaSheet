@@ -30,7 +30,7 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses the public `Grid` facade from `@novasheet/web`.
 
-**Next milestone:** **Phase 5-B advanced borders** (single-edge UI, dashed/dotted/double), then 5-C number/date/currency formatting and 5-D conditional formatting — unless the user redirects. Phase 5-A is documented in `docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md` + the implementation plan at `docs/superpowers/plans/2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md` (the plan also contains Task 7b, the structural-undo store-alignment fix added mid-execution).
+**Next milestone:** **Phase 5-C** number/date/currency formatting, then 5-D conditional formatting — unless the user redirects. (5-B advanced borders shipped: `setBorders` accepts all `lineStyle`; `FormatBorderPainter` renders dashed/dotted via stroke+`setLineDash` and double via two 1px rects; spec/plan `2026-05-31-novasheet-phase-5-b-advanced-borders`. Text-wrap tri-state + multi-line text also shipped — see Last shipped above the prior entry.) Phase 5-A is documented in `docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md` + the implementation plan at `docs/superpowers/plans/2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md` (the plan also contains Task 7b, the structural-undo store-alignment fix added mid-execution).
 
 **Per-Grid scheduler convention** (invariant #5): each `Grid` owns `new FrameScheduler()` shared by `Canvas2DRenderer` and `NativeScroller` via `WebGridRuntime`; the `frameScheduler` singleton from `util/raf` is NOT used cross-Grid.
 
@@ -38,7 +38,7 @@ M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses 
 
 **Phase 4 status:** 4.0 context menu, 4.1 clipboard, 4.2 undo/redo, 4.3 fill handle, 4.4 sort/filter, 4.5 row structural + row header menu, 4.6 column structural + column header menu extension, and 4.7 column drag reorder are shipped.
 
-**Phase 5 status:** 5-A (merge + fill + basic solid borders) shipped, plus fill-handle × merge/format integration (autofill carries fill color/borders/merge with Google-Sheets-aligned merge semantics). 5-B (advanced borders), 5-C (number/date/currency format), 5-D (conditional formatting) not started.
+**Phase 5 status:** 5-A (merge + fill + basic solid borders), fill-handle × merge/format integration, text-wrap tri-state + Alt+Enter multi-line text, and **5-B advanced borders (dashed/dotted/double)** shipped. 5-C (number/date/currency format), 5-D (conditional formatting) not started.
 
 **Locked architectural decisions** (do NOT revisit casually, see spec ADR §A):
 
