@@ -1,4 +1,5 @@
 import type { CellAddress, CellRange } from '../interaction/SelectionModel'
+import { unionRange } from '../geometry/range'
 
 /** 填充柄拖拽的主方向；一次拖拽只沿一个轴扩展。 */
 export type FillDirection = 'down' | 'up' | 'right' | 'left'
@@ -151,16 +152,6 @@ function fillRangeForDirection(
     }
   }
   return null
-}
-
-/** 返回两个 range 的归一化联合矩形，供 fill commit 后更新 selection。 */
-export function unionRange(a: CellRange, b: CellRange): CellRange {
-  return {
-    startRow: Math.min(a.startRow, b.startRow),
-    endRow: Math.max(a.endRow, b.endRow),
-    startCol: Math.min(a.startCol, b.startCol),
-    endCol: Math.max(a.endCol, b.endCol),
-  }
 }
 
 function clamp(value: number, min: number, max: number): number {

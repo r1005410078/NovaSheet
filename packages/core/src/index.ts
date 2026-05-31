@@ -120,7 +120,8 @@ export {
 export type { ApplyPasteSource, GridDimensions, PasteTargetRect } from './clipboard/ApplyPaste'
 
 // 填充柄层（Phase 4.3）
-export { computeFillTarget, unionRange } from './fill/FillTarget'
+export { computeFillTarget } from './fill/FillTarget'
+export { cellInRange, isCellInRange, rangesIntersect, unionRange } from './geometry/range'
 export type { FillDimensions, FillDirection, FillTarget } from './fill/FillTarget'
 export { computeFillWrites } from './fill/FillSeries'
 export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'

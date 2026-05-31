@@ -1,4 +1,5 @@
 import type { CellRange } from '../interaction/SelectionModel'
+import { isCellInRange, rangesIntersect } from '../geometry/range'
 import {
   remapSpanAfterDelete,
   remapSpanAfterInsert,
@@ -59,7 +60,7 @@ export class MergeStore {
   /** 返回覆盖 `(rowIndex, colIndex)` 的区域；无命中返回 null。 */
   getRegionAt(rowIndex: number, colIndex: number): MergeRegion | null {
     for (const region of this.regions) {
-      if (inRange(rowIndex, colIndex, region.range)) return region
+      if (isCellInRange(rowIndex, colIndex, region.range)) return region
     }
     return null
   }
@@ -165,19 +166,6 @@ function spanTouchedByDeletions(start: number, end: number, removedSorted: reado
 
 function isSingleCell(range: CellRange): boolean {
   return range.startRow === range.endRow && range.startCol === range.endCol
-}
-
-function inRange(row: number, col: number, range: CellRange): boolean {
-  return row >= range.startRow && row <= range.endRow && col >= range.startCol && col <= range.endCol
-}
-
-function rangesIntersect(a: CellRange, b: CellRange): boolean {
-  return (
-    a.startRow <= b.endRow &&
-    a.endRow >= b.startRow &&
-    a.startCol <= b.endCol &&
-    a.endCol >= b.startCol
-  )
 }
 
 /** 从 `merge-N` 解析序号 N；非法格式视为 0。 */

@@ -7,7 +7,8 @@ import { applyPaste, pasteTargetConflictsWithMerges } from '../clipboard/ApplyPa
 import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
 import { computeFillWrites, positiveModulo } from '../fill/FillSeries'
-import { unionRange, type FillDirection, type FillMergeSnap } from '../fill/FillTarget'
+import type { FillDirection, FillMergeSnap } from '../fill/FillTarget'
+import { unionRange } from '../geometry/range'
 import { RangeStyleStore } from '../format/RangeStyleStore'
 import type {
   BorderPreset,

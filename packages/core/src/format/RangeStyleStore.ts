@@ -1,6 +1,7 @@
 import type { CellRange } from '../interaction/SelectionModel'
 import type { BorderPreset, BorderStyle, CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
 import { borderPatchForCell } from './BorderPreset'
+import { isCellInRange, rangesIntersect } from '../geometry/range'
 import {
   remapSpanAfterDelete,
   remapSpanAfterInsert,
@@ -84,7 +85,7 @@ export class RangeStyleStore {
     let textWrap: CellFormat['textWrap']
 
     for (const layer of this.layers) {
-      if (!inRange(rowIndex, colIndex, layer.range)) continue
+      if (!isCellInRange(rowIndex, colIndex, layer.range)) continue
       if (layer.clearFill) {
         fillColor = undefined
         fillActive = false
@@ -204,13 +205,4 @@ export class RangeStyleStore {
     }
     this.layers = next
   }
-}
-
-function inRange(row: number, col: number, range: CellRange): boolean {
-  return row >= range.startRow && row <= range.endRow && col >= range.startCol && col <= range.endCol
-}
-
-function rangesIntersect(a: CellRange, b: CellRange): boolean {
-  return a.startRow <= b.endRow && a.endRow >= b.startRow &&
-    a.startCol <= b.endCol && a.endCol >= b.startCol
 }

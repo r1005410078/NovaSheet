@@ -34,9 +34,11 @@ import type {
 } from '@novasheet/core'
 import {
   autofitRowHeights,
+  cellInRange,
   computeCellRect,
   computeFillTarget,
   computePasteTarget,
+  unionRange,
   computeResizeHandles,
   computeScrollReveal,
   FrameScheduler,
@@ -201,23 +203,7 @@ function mergeVisualRange(
 ): CellRange {
   if (!activeCell || !mergeRegions) return range
   const merge = mergeRegions.find((m) => cellInRange(activeCell, m.range))?.range
-  if (!merge) return range
-  return {
-    startRow: Math.min(range.startRow, merge.startRow),
-    endRow: Math.max(range.endRow, merge.endRow),
-    startCol: Math.min(range.startCol, merge.startCol),
-    endCol: Math.max(range.endCol, merge.endCol),
-  }
-}
-
-/** 单元格地址是否落在矩形 range 内（含边界）。 */
-function cellInRange(cell: CellAddress, range: CellRange): boolean {
-  return (
-    cell.rowIndex >= range.startRow &&
-    cell.rowIndex <= range.endRow &&
-    cell.colIndex >= range.startCol &&
-    cell.colIndex <= range.endCol
-  )
+  return merge ? unionRange(range, merge) : range
 }
 
 /**
