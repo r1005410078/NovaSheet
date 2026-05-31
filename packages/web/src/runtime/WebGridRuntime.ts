@@ -78,11 +78,12 @@ import type { FilterPopover } from '../interaction/FilterPopover'
 import type { RowHeightPopover } from '../overlay/RowHeightPopover'
 import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import type { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
-import type { RowReorderOverlay, RowReorderPreview } from '../overlay/RowReorderOverlay'
+import type { RowReorderOverlay } from '../overlay/RowReorderOverlay'
 import type { SelectionOverlay } from '../overlay/SelectionOverlay'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { Drag } from '../interaction/drag/Drag'
 import { ColumnHeaderDrag } from '../interaction/drag/ColumnHeaderDrag'
+import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
 import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
@@ -177,15 +178,9 @@ const HOST_RESIZE_KEY = 'host:resize'
 const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
 const DRAG_AUTO_SCROLL_EDGE_PX = 32
 const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
-const COLUMN_REORDER_DRAG_THRESHOLD_PX = 6
 
 /** 可驱动边缘自动滚动的拖拽种类。 */
-type AutoScrollDragKind =
-  | 'active-drag'
-  | 'selection'
-  | 'row-reorder'
-  | 'row-header'
-  | 'fill'
+type AutoScrollDragKind = 'active-drag' | 'selection' | 'fill'
 
 /** 去重行号并保持首次出现顺序。 */
 function uniqueRows(rows: readonly number[]): readonly number[] {
@@ -336,21 +331,8 @@ export class WebGridRuntime {
   private activeDrag: Drag | null = null
   /** 列表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
   private columnHeaderDrag!: ColumnHeaderDrag
-  /** 当前行重排拖拽状态；pointerdown 命中已选行头后先 seed，超过阈值才 active。 */
-  private rowReorderDrag: {
-    startX: number
-    startY: number
-    rowIds: readonly number[]
-    selectedRange: CellRange
-    startBandY: number
-    totalHeight: number
-    active: boolean
-    targetBeforeRowId: number | null | undefined
-  } | null = null
-  /** 当前行头拖选状态；仅用于形成连续整行选区。 */
-  private rowHeaderSelectDrag: {
-    anchorRow: number
-  } | null = null
+  /** 行表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
+  private rowHeaderDrag!: RowHeaderDrag
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: WebGridRuntimeOptions) {
@@ -387,6 +369,20 @@ export class WebGridRuntime {
       selectWholeColumn: (col) => this.selectWholeColumn(col),
       selectWholeColumnRange: (anchor, extent) => this.selectWholeColumnRange(anchor, extent),
       getColsTotalSize: () => this.getColsTotalSizeForFrame(this.engine.getFrame()),
+    })
+    this.rowHeaderDrag = new RowHeaderDrag({
+      engine: this.engine,
+      host: this.host,
+      overlay: this.rowReorderOverlay,
+      refresh: () => this.refresh(),
+      afterEngineMutation: () => this.afterEngineMutation(),
+      closeContextMenu: () => this.closeContextMenu(),
+      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
+      stopAutoScroll: () => this.stopDragAutoScroll(),
+      isBlocked: () => !!(this.resizeDrag || this.draggingSelection || this.fillDrag),
+      hitTestRowHeader: (event) => this.hitTestRowHeader(event),
+      isWholeRowSelection: (range) => this.isWholeRowSelection(range),
+      selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
     })
   }
 
@@ -985,7 +981,12 @@ export class WebGridRuntime {
             activeCell: { rowIndex, colIndex: 0 },
             anchorCell: { rowIndex, colIndex: 0 },
             extentCell: { rowIndex, colIndex: colCount - 1 },
-            selectedRange: { startRow: rowIndex, endRow: rowIndex, startCol: 0, endCol: colCount - 1 },
+            selectedRange: {
+              startRow: rowIndex,
+              endRow: rowIndex,
+              startCol: 0,
+              endCol: colCount - 1,
+            },
           })
           this.afterEngineMutation()
           const ctx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: rowIndex }
@@ -1309,7 +1310,6 @@ export class WebGridRuntime {
     this.contextMenuLayer?.close()
     this.fillLayer?.hidePreview()
     this.activeDrag = null
-    this.rowHeaderSelectDrag = null
   }
 
   /** 滚动到指定行，并按给定对齐方式放入 viewport。 */
@@ -1460,8 +1460,6 @@ export class WebGridRuntime {
     const target = this.fillDrag.target
     this.fillDrag = null
     this.activeDrag = null
-    this.rowReorderDrag = null
-    this.rowHeaderSelectDrag = null
     this.stopDragAutoScroll()
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
@@ -1541,8 +1539,6 @@ export class WebGridRuntime {
     this.resizeDrag = null
     this.fillDrag = null
     this.activeDrag = null
-    this.rowReorderDrag = null
-    this.rowHeaderSelectDrag = null
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.rowReorderOverlay?.hide()
@@ -1588,7 +1584,10 @@ export class WebGridRuntime {
     if (this.engine.isCellEditing()) {
       this.commitCellEdit(false)
     }
-    if (this.tryHandleRowHeaderPointerDown(event)) return
+    if (this.rowHeaderDrag.tryStart(event)) {
+      this.activeDrag = this.rowHeaderDrag
+      return
+    }
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return
     if (event.shiftKey) this.engine.selectCell(hit, { extend: true })
@@ -1600,8 +1599,6 @@ export class WebGridRuntime {
   /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
   handleHostPointerMove(event: WebPointerEvent): void {
     if (this.activeDrag?.move(event)) return
-    if (this.updateRowReorderDrag(event)) return
-    if (this.updateRowHeaderSelectDrag(event)) return
     if (this.destroyed) return
     if (!this.lastDragPointer) {
       this.updateHeaderCursor(event)
@@ -1624,15 +1621,6 @@ export class WebGridRuntime {
       this.activeDrag = null
       return
     }
-    if (this.rowReorderDrag) {
-      this.commitRowReorderDrag()
-      return
-    }
-    if (this.rowHeaderSelectDrag) {
-      this.rowHeaderSelectDrag = null
-      this.stopDragAutoScroll()
-      return
-    }
     this.draggingSelection = false
     this.stopDragAutoScroll()
     this.syncFillHandle()
@@ -1653,10 +1641,6 @@ export class WebGridRuntime {
     if (event.key === 'Escape' && this.activeDrag) {
       this.activeDrag.cancel()
       this.activeDrag = null
-      return true
-    }
-    if (event.key === 'Escape' && this.rowReorderDrag) {
-      this.cancelRowReorderDrag()
       return true
     }
     if (this.filterPopover?.isOpen()) return false
@@ -1722,131 +1706,6 @@ export class WebGridRuntime {
     return true
   }
 
-  private tryHandleRowHeaderPointerDown(event: WebPointerEvent): boolean {
-    if (this.resizeDrag || this.draggingSelection || this.fillDrag) return false
-    const hit = this.hitTestRowHeader(event)
-    if (!hit) return false
-
-    const selection = this.engine.getSelection()
-    const range = selection.selectedRange
-    if (
-      !event.shiftKey &&
-      range &&
-      this.isWholeRowSelection(range) &&
-      hit.rowIndex >= range.startRow &&
-      hit.rowIndex <= range.endRow
-    ) {
-      const rowIds = Array.from(
-        { length: range.endRow - range.startRow + 1 },
-        (_, index) => range.startRow + index,
-      )
-      const startBandY = this.getRowViewportY(range.startRow)
-      const totalHeight = this.sumVisibleRowHeights(range.startRow, range.endRow)
-      this.rowReorderDrag = {
-        startX: event.x,
-        startY: event.y,
-        rowIds,
-        selectedRange: range,
-        startBandY,
-        totalHeight,
-        active: false,
-        targetBeforeRowId: null,
-      }
-      this.rowReorderOverlay?.show({
-        lineY: startBandY,
-        dragBandY: startBandY,
-        bandHeight: totalHeight,
-        width: this.host.getContainerSize().width,
-      })
-      this.host.setCursor('grabbing')
-      this.closeContextMenu()
-      return true
-    }
-
-    const anchorRow =
-      event.shiftKey && range && this.isWholeRowSelection(range)
-        ? selection.anchorCell?.rowIndex ?? hit.rowIndex
-        : hit.rowIndex
-
-    this.selectWholeRowRange(anchorRow, hit.rowIndex)
-    this.rowHeaderSelectDrag = { anchorRow }
-    this.refresh()
-    return true
-  }
-
-  private updateRowHeaderSelectDrag(event: WebPointerEvent): boolean {
-    const drag = this.rowHeaderSelectDrag
-    if (!drag) return false
-    this.lastDragPointer = event
-    this.updateDragAutoScroll(event) // 拖到上/下边缘时纵向自动滚动
-    const hit = this.hitTestRowHeader(event)
-    if (!hit) return true
-    this.selectWholeRowRange(drag.anchorRow, hit.rowIndex)
-    this.refresh()
-    return true
-  }
-
-  private updateRowReorderDrag(event: WebPointerEvent): boolean {
-    const drag = this.rowReorderDrag
-    if (!drag) return false
-    if (!drag.active) {
-      const dx = event.x - drag.startX
-      const dy = event.y - drag.startY
-      if (Math.hypot(dx, dy) < COLUMN_REORDER_DRAG_THRESHOLD_PX) {
-        this.rowReorderOverlay?.show({
-          lineY: drag.startBandY,
-          dragBandY: drag.startBandY + dy,
-          bandHeight: drag.totalHeight,
-          width: this.host.getContainerSize().width,
-        })
-        this.host.setCursor('grabbing')
-        return true
-      }
-      drag.active = true
-    }
-
-    // active 拖拽：记录 pointer 并按边缘热区驱动纵向自动滚动。
-    this.lastDragPointer = event
-    this.updateDragAutoScroll(event)
-
-    const target = this.computeRowReorderTarget(event, drag)
-    if (!target) {
-      drag.targetBeforeRowId = undefined
-      this.rowReorderOverlay?.show({
-        lineY: drag.startBandY,
-        dragBandY: drag.startBandY + (event.y - drag.startY),
-        bandHeight: drag.totalHeight,
-        width: this.host.getContainerSize().width,
-      })
-      this.host.setCursor('grabbing')
-      return true
-    }
-    drag.targetBeforeRowId = target.beforeRowId
-    this.rowReorderOverlay?.show(target.preview)
-    this.host.setCursor('grabbing')
-    return true
-  }
-
-  private commitRowReorderDrag(): void {
-    const drag = this.rowReorderDrag
-    this.rowReorderDrag = null
-    this.stopDragAutoScroll()
-    this.rowReorderOverlay?.hide()
-    this.host.setCursor(null)
-    if (!drag?.active) return
-    if (drag.targetBeforeRowId === undefined) return
-    if (this.engine.moveRows(drag.rowIds, drag.targetBeforeRowId)) {
-      this.afterEngineMutation()
-    }
-  }
-
-  private cancelRowReorderDrag(): void {
-    this.rowReorderDrag = null
-    this.stopDragAutoScroll()
-    this.rowReorderOverlay?.hide()
-    this.host.setCursor(null)
-  }
-
   /** 取消正在排队的拖拽自动滚动并清掉 pointer 记录。 */
   private stopDragAutoScroll(): void {
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
@@ -1892,7 +1751,9 @@ export class WebGridRuntime {
     return colCount > 0 && range.startCol === 0 && range.endCol === colCount - 1
   }
 
-  private hitTestColumnHeader(event: WebPointerEvent): { colIndex: number; fieldId: string } | null {
+  private hitTestColumnHeader(
+    event: WebPointerEvent,
+  ): { colIndex: number; fieldId: string } | null {
     const frame = this.engine.getFrame()
     const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
     if (event.y < 0 || event.y >= headerHeight) return null
@@ -1953,64 +1814,6 @@ export class WebGridRuntime {
       extentCell: { rowIndex: extentRow, colIndex: colCount - 1 },
       selectedRange: { startRow, endRow, startCol: 0, endCol: colCount - 1 },
     })
-  }
-
-  private sumVisibleRowHeights(startRow: number, endRow: number): number {
-    const axis = this.engine.getFrame().rowsAxis
-    let total = 0
-    for (let row = startRow; row <= endRow; row += 1) total += axis.getSize(row)
-    return total
-  }
-
-  private computeRowReorderTarget(
-    event: WebPointerEvent,
-    drag: NonNullable<WebGridRuntime['rowReorderDrag']>,
-  ): { beforeRowId: number | null; preview: RowReorderPreview } | null {
-    const frame = this.engine.getFrame()
-    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
-    if (event.y < headerHeight) return null
-    const rowCount = frame.rowsAxis.getCount()
-    if (rowCount === 0) return null
-    const scrollY = frame.viewport.scrollY ?? 0
-    const totalSize = frame.rowsAxis.getTotalSize()
-    const logicalY = event.y - headerHeight + scrollY
-    let beforeIndex: number
-    if (logicalY >= totalSize) {
-      beforeIndex = rowCount
-    } else if (logicalY < 0) {
-      beforeIndex = 0
-    } else {
-      const rowIndex = frame.rowsAxis.positionToIndex(logicalY)
-      const rowStart = frame.rowsAxis.indexToPosition(rowIndex)
-      const rowMid = rowStart + frame.rowsAxis.getSize(rowIndex) / 2
-      beforeIndex = logicalY < rowMid ? rowIndex : rowIndex + 1
-    }
-
-    if (beforeIndex >= drag.selectedRange.startRow && beforeIndex <= drag.selectedRange.endRow + 1) {
-      return null
-    }
-
-    const beforeRowId = beforeIndex >= rowCount ? null : beforeIndex
-    const lineLogicalY =
-      beforeIndex >= rowCount ? totalSize : frame.rowsAxis.indexToPosition(beforeIndex)
-    const lineY = headerHeight + lineLogicalY - scrollY
-    const { width } = this.host.getContainerSize()
-    return {
-      beforeRowId,
-      preview: {
-        lineY,
-        dragBandY: drag.startBandY + (event.y - drag.startY),
-        bandHeight: drag.totalHeight,
-        width,
-      },
-    }
-  }
-
-  private getRowViewportY(rowIndex: number): number {
-    const frame = this.engine.getFrame()
-    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
-    const scrollY = frame.viewport.scrollY ?? 0
-    return headerHeight + frame.rowsAxis.indexToPosition(rowIndex) - scrollY
   }
 
   private getColsTotalSizeForFrame(frame: ReturnType<GridEngine['getFrame']>): number {
@@ -2141,7 +1944,7 @@ export class WebGridRuntime {
     const active = selection.activeCell
     const visualRange = mergeVisualRange(frame.mergeRegions, range, active)
     const activeRect = active
-      ? computeRangeOverlayRects(
+      ? (computeRangeOverlayRects(
           frame,
           visualRange ?? {
             startRow: active.rowIndex,
@@ -2149,7 +1952,7 @@ export class WebGridRuntime {
             startCol: active.colIndex,
             endCol: active.colIndex,
           },
-        ).at(-1) ?? null
+        ).at(-1) ?? null)
       : null
     this.selectionOverlay.sync({
       rangeRects: computeRangeOverlayRects(frame, visualRange),
@@ -2157,12 +1960,10 @@ export class WebGridRuntime {
     })
   }
 
-  /** 当前驱动边缘自动滚动的拖拽种类；填充柄 / reorder / 表头拖选优先于普通选区。 */
+  /** 当前驱动边缘自动滚动的拖拽种类；活跃拖拽 / 填充柄优先于普通选区。 */
   private activeAutoScrollDrag(): AutoScrollDragKind | null {
     if (this.activeDrag?.active) return 'active-drag'
     if (this.fillDrag) return 'fill'
-    if (this.rowReorderDrag?.active) return 'row-reorder'
-    if (this.rowHeaderSelectDrag) return 'row-header'
     if (this.draggingSelection) return 'selection'
     return null
   }
@@ -2213,12 +2014,6 @@ export class WebGridRuntime {
       case 'active-drag':
         this.activeDrag?.reevaluate(pointer)
         return
-      case 'row-reorder':
-        this.updateRowReorderDrag(pointer)
-        return
-      case 'row-header':
-        this.updateRowHeaderSelectDrag(pointer)
-        return
       case 'fill':
         if (this.fillDrag?.lastPointer) this.applyFillPointerMove(this.fillDrag.lastPointer)
         return
@@ -2227,7 +2022,7 @@ export class WebGridRuntime {
 
   /**
    * 计算 pointer 靠近 viewport 边缘时每帧应滚动的距离。
-   * active-drag 按其 `autoScrollAxis`；行 reorder / 行表头拖选只纵向；选区与填充柄双向。
+   * active-drag 按其 `autoScrollAxis`；选区与填充柄双向。
    */
   private computeDragAutoScrollStep(
     pointer: WebPointerEvent,
@@ -2241,7 +2036,7 @@ export class WebGridRuntime {
       horizontal = axis === 'both' || axis === 'horizontal'
       vertical = axis === 'both' || axis === 'vertical'
     } else {
-      horizontal = kind !== 'row-reorder' && kind !== 'row-header'
+      horizontal = true
       vertical = true
     }
     return {
