@@ -56,6 +56,7 @@ export class FormatBorderPainter {
     const [colFirst, colLast] = args.colRange
 
     const rects: EdgeRect[] = []
+    const strokes: StrokeSeg[] = []
 
     for (const { rowIndex, colIndex, format } of cellFormats) {
       const { borders } = format
@@ -72,8 +73,6 @@ export class FormatBorderPainter {
       const clipRight = rect.x + rect.width + MAX_BORDER_OUTSET
       const clipTop = rect.y - MAX_BORDER_OUTSET
       const clipBottom = rect.y + rect.height + MAX_BORDER_OUTSET
-      const canvasLeft = 0
-      const canvasTop = 0
 
       // 合并区域内部边过滤：被覆盖格只保留与区域外框重合的边，丢弃相邻覆盖格之间的内部边。
       const region = merges?.regionAt(rowIndex, colIndex)
@@ -92,26 +91,45 @@ export class FormatBorderPainter {
 
       for (const side of sides) {
         const { edge } = side
-        if (!edge || edge.lineStyle !== 'solid') continue
+        if (!edge) continue
         const widthPx = WIDTH_MAP[edge.width] ?? 1
+        const c = side.rawCoord
 
-        if (side.isH) {
-          const x1 = Math.max(side.xA, clipLeft)
-          const x2 = Math.min(side.xB, clipRight)
-          if (x2 <= x1) continue
-          const y = edgeRectStart(side.rawCoord, widthPx, canvasTop)
-          pushClippedRect(rects, edge.color, x1, y, x2 - x1, widthPx, clipLeft, clipTop, clipRight, clipBottom)
+        // 沿边裁剪后的跨度（H 取 x、V 取 y）；为空则跳过。
+        const lo = side.isH ? Math.max(side.xA, clipLeft) : Math.max(side.yA, clipTop)
+        const hi = side.isH ? Math.min(side.xB, clipRight) : Math.min(side.yB, clipBottom)
+        if (hi <= lo) continue
+
+        if (edge.lineStyle === 'solid' || edge.lineStyle === 'double') {
+          // double：两条 1px 细线（间隙 1px，忽略 width，对齐 Google）；solid：一条 widthPx。
+          const offsets =
+            edge.lineStyle === 'double' ? [c - 1, c + 1] : [edgeRectStart(c, widthPx, 0)]
+          const thickness = edge.lineStyle === 'double' ? 1 : widthPx
+          for (const start of offsets) {
+            if (side.isH) {
+              pushClippedRect(rects, edge.color, lo, start, hi - lo, thickness, clipLeft, clipTop, clipRight, clipBottom)
+            } else {
+              pushClippedRect(rects, edge.color, start, lo, thickness, hi - lo, clipLeft, clipTop, clipRight, clipBottom)
+            }
+          }
         } else {
-          const y1 = Math.max(side.yA, clipTop)
-          const y2 = Math.min(side.yB, clipBottom)
-          if (y2 <= y1) continue
-          const x = edgeRectStart(side.rawCoord, widthPx, canvasLeft)
-          pushClippedRect(rects, edge.color, x, y1, widthPx, y2 - y1, clipLeft, clipTop, clipRight, clipBottom)
+          // dashed / dotted：沿边中线描线（受 width 影响），独立 stroke pass。
+          const dotted = edge.lineStyle === 'dotted'
+          strokes.push({
+            color: edge.color,
+            widthPx,
+            cap: dotted ? 'round' : 'butt',
+            dash: dotted ? [widthPx, widthPx] : [widthPx * 3, widthPx * 2],
+            x1: side.isH ? lo : c,
+            y1: side.isH ? c : lo,
+            x2: side.isH ? hi : c,
+            y2: side.isH ? c : hi,
+          })
         }
       }
     }
 
-    if (rects.length === 0) return
+    if (rects.length === 0 && strokes.length === 0) return
 
     ctx.save()
     ctx.beginPath()
@@ -132,8 +150,32 @@ export class FormatBorderPainter {
       ctx.fillRect(edgeRect.x, edgeRect.y, edgeRect.width, edgeRect.height)
     }
 
+    // dashed/dotted 描线 pass（同一 clip 内，叠在 rect 之上）。
+    for (const seg of strokes) {
+      ctx.strokeStyle = seg.color
+      ctx.lineWidth = seg.widthPx
+      ctx.lineCap = seg.cap
+      ctx.setLineDash(seg.dash)
+      ctx.beginPath()
+      ctx.moveTo(seg.x1, seg.y1)
+      ctx.lineTo(seg.x2, seg.y2)
+      ctx.stroke()
+    }
+    if (strokes.length > 0) ctx.setLineDash([]) // 复位虚线相位，避免影响后续绘制
+
     ctx.restore()
   }
+}
+
+interface StrokeSeg {
+  color: string
+  widthPx: number
+  cap: CanvasLineCap
+  dash: number[]
+  x1: number
+  y1: number
+  x2: number
+  y2: number
 }
 
 function edgeRectStart(rawCoord: number, widthPx: number, visibleStart: number): number {

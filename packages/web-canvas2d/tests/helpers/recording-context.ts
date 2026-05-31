@@ -12,6 +12,7 @@ export type RecordedOp =
   | { op: 'lineTo'; args: [number, number] }
   | { op: 'stroke' }
   | { op: 'strokePath' }
+  | { op: 'setLineDash'; args: [number[]] }
   | { op: 'fill' }
   | { op: 'fillPath' }
   | { op: 'translate'; args: [number, number] }
@@ -140,6 +141,12 @@ export function createRecordingContext(
     stroke(path?: Path2D) {
       if (path) ops.push({ op: 'strokePath' })
       else ops.push({ op: 'stroke' })
+    },
+    setLineDash(segments: readonly number[]) {
+      ops.push({ op: 'setLineDash', args: [[...segments]] })
+    },
+    getLineDash(): number[] {
+      return []
     },
     fill(path?: Path2D) {
       if (path) ops.push({ op: 'fillPath' })
