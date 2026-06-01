@@ -107,6 +107,24 @@ export type {
 export { computeCellRect } from './interaction/CellLayout'
 export type { CellRect } from './interaction/CellLayout'
 
+// 上下文扩展层
+export { createSheetContext } from './context/SheetContext'
+export type { SheetContext } from './context/SheetContext'
+export type {
+  CanvasHandle,
+  CellHandle,
+  GridHandle,
+  OverlayHandle,
+  Rect,
+  RuntimeScope,
+} from './context/RuntimeScope'
+export type {
+  CellExtension,
+  CommandHandler,
+  ExtensionRegistrar,
+  ExtensionRegistry,
+} from './context/extensions'
+
 // 剪贴板层（Phase 4.1）
 export { serializeRowsToTsv, parseTsvToCells } from './clipboard/TsvFormat'
 export type { ClipboardAction, PasteSkippedCell } from './clipboard/types'
