@@ -2,6 +2,8 @@
 
 > **给 agentic worker：** 实施本计划时必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`。步骤使用 checkbox（`- [ ]`）追踪进度。
 
+> **总路线图：** 本计划是 feature package 拆分总计划中的阶段 0-1，见 `docs/superpowers/plans/2026-06-02-novasheet-feature-package-roadmap.md`。完成本计划后，回到总路线图打勾。
+
 **目标：** 把已经实现并验证过的行/列表头拖拽排序能力移动到默认安装的 feature package 中，保持用户可见行为不变。
 
 **架构：** `@novasheet/core` 保持 DOM-free，只在 `SheetContext` 上提供通用 contribution registry。`@novasheet/web` 负责 typed web drag contribution 契约与 runtime 派发。`@novasheet/feature-row-column-reorder` 拥有现有 `RowHeaderDrag` 与 `ColumnHeaderDrag` 实现，并由 `@novasheet/sheet` 通过 `installDefaultExtensions` 默认安装。
