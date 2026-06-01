@@ -1,3 +1,4 @@
+import { createSheetContext } from '@novasheet/core'
 import type {
   BorderPreset,
   BorderStyle,
@@ -16,8 +17,10 @@ import type {
   FilterLayer,
   SortLayer,
   ViewPipeline,
+  SheetContext,
 } from '@novasheet/core'
 import { Canvas2DBackend } from './backends/Canvas2DBackend'
+import { installDefaultExtensions } from './defaults/installDefaultExtensions'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
@@ -30,8 +33,13 @@ import type {
 
 /** 已支持的渲染后端；WebGL 待 `@novasheet/web-webgl` 接入后扩展。 */
 export type GridRendererBackend = 'canvas2d'
+export type SheetExtensionInstall = (ctx: SheetContext) => void
 
 export interface GridOptions extends GridEngineOptions {
+  /** Extension context; pass the same context to share capabilities across Grid instances. */
+  context?: SheetContext
+  /** Extension installers applied after default NovaSheet capabilities. */
+  extensions?: readonly SheetExtensionInstall[]
   /** 渲染后端，默认 `'canvas2d'`。 */
   renderer?: GridRendererBackend
   /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后不传走默认引擎（grid.copy/cut/paste）。 */
@@ -74,6 +82,8 @@ export function withExcelHeaders<T extends GridOptions>(options: T): T {
 /** 从门面选项中剥离非引擎字段，只把引擎参数传给 `DefaultGridEngine`。 */
 function engineOptionsFrom(options: GridOptions): GridEngineOptions {
   const {
+    context: _ctx,
+    extensions: _ext,
     renderer: _r,
     onContextMenuAction: _a,
     onCopy: _c,
@@ -92,6 +102,8 @@ function engineOptionsFrom(options: GridOptions): GridEngineOptions {
     onColumnsMoved: _cm,
     ...engineOptions
   } = options
+  void _ctx
+  void _ext
   void _r
   void _a
   void _c
@@ -126,6 +138,9 @@ export class Grid {
     this.options = options
     const backend = options.renderer ?? 'canvas2d'
     const engineOptions = engineOptionsFrom(options)
+    const context = options.context ?? createSheetContext()
+    installDefaultExtensions(context)
+    for (const install of options.extensions ?? []) install(context)
 
     switch (backend) {
       case 'canvas2d':
@@ -138,6 +153,7 @@ export class Grid {
           onUndo: options.onUndo,
           onRedo: options.onRedo,
           onFill: options.onFill,
+          context,
         })
         break
       default:

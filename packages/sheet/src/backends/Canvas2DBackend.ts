@@ -31,6 +31,7 @@ import {
   type GridEngineOptions,
   type GridSelection,
   type PasteSkippedCell,
+  type SheetContext,
   type SortSpec,
   type Theme,
   type ViewLayerChange,
@@ -125,6 +126,7 @@ export class Canvas2DBackend implements GridController {
       onUndo?: (event: UndoEvent) => void
       onRedo?: (event: RedoEvent) => void
       onFill?: (event: FillEvent) => void
+      context?: SheetContext
     },
   ) {
     this.container = container
