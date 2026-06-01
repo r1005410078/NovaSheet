@@ -33,11 +33,12 @@ import type {
 
 /** 已支持的渲染后端；WebGL 待 `@novasheet/web-webgl` 接入后扩展。 */
 export type GridRendererBackend = 'canvas2d'
-export type SheetExtensionInstall = (ctx: SheetContext) => void
+export type GridSheetContext = SheetContext<CanvasRenderingContext2D, HTMLElement>
+export type SheetExtensionInstall = (ctx: GridSheetContext) => void
 
 export interface GridOptions extends GridEngineOptions {
   /** Extension context; pass the same context to share capabilities across Grid instances. */
-  context?: SheetContext
+  context?: GridSheetContext
   /** Extension installers applied after default NovaSheet capabilities. */
   extensions?: readonly SheetExtensionInstall[]
   /** 渲染后端，默认 `'canvas2d'`。 */
@@ -138,7 +139,7 @@ export class Grid {
     this.options = options
     const backend = options.renderer ?? 'canvas2d'
     const engineOptions = engineOptionsFrom(options)
-    const context = options.context ?? createSheetContext()
+    const context = options.context ?? createSheetContext<CanvasRenderingContext2D, HTMLElement>()
     installDefaultExtensions(context)
     for (const install of options.extensions ?? []) install(context)
 

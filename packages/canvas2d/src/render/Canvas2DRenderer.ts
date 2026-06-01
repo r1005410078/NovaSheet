@@ -66,6 +66,7 @@ import type {
   TextMeasurer,
   TextWrapMode,
   Theme,
+  SheetContext,
 } from '@novasheet/core'
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { MergeLookup, mergedRectSize } from '../paint/merge-lookup'
@@ -99,6 +100,8 @@ export interface Canvas2DRendererOptions {
    * 未提供时 wrap 字段静默退化为单行截断。
    */
   measurer?: TextMeasurer
+  /** Optional sheet context used to run custom cell draw extensions. */
+  sheetContext?: SheetContext<CanvasRenderingContext2D, HTMLElement>
 }
 
 /** scheduler key——每个 Renderer 实例同一时间最多一个待执行 flush */
@@ -156,6 +159,7 @@ export class Canvas2DRenderer {
   private formatFillPainter: FormatFillPainter
   /** 自定义边框绘制器（Phase 5-A） */
   private formatBorderPainter: FormatBorderPainter
+  private readonly sheetContext?: SheetContext<CanvasRenderingContext2D, HTMLElement>
 
   /**
    * 组装单帧绘制管线。
@@ -192,6 +196,7 @@ export class Canvas2DRenderer {
     // 正常路径由 Grid 传入 per-Grid scheduler，让 scroll/read/render 合并在同一 RAF。
     // fallback new FrameScheduler() 只用于直接单测 Renderer 或独立使用时的兜底。
     this.scheduler = opts.scheduler ?? new FrameScheduler()
+    this.sheetContext = opts.sheetContext
 
     // painter 分别负责不同绘制职责：
     //   - CellPainter：单元格内容、文本截断、类型分派
@@ -655,9 +660,20 @@ export class Canvas2DRenderer {
         ) {
           paintWidth += this.overflowExtra(r, c, value, colWidth, colRange, schema, data, merges, colsAxis)
         }
+        const paintRect = { x: cellX, y: cellY, width: paintWidth, height: rowHeight }
+        if (
+          this.paintCellExtension(field.type, {
+            value,
+            rect: paintRect,
+            rowIndex: r,
+            colIndex: c,
+          })
+        ) {
+          continue
+        }
         this.cellPainter.paint(this.ctx, {
           value,
-          rect: { x: cellX, y: cellY, width: paintWidth, height: rowHeight },
+          rect: paintRect,
           field,
           textWrap: mode,
         })
@@ -667,6 +683,41 @@ export class Canvas2DRenderer {
     this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, textWrapLookup, editingCell)
 
     this.ctx.restore()
+  }
+
+  private paintCellExtension(
+    type: string,
+    options: {
+      value: unknown
+      rect: { x: number; y: number; width: number; height: number }
+      rowIndex: number
+      colIndex: number
+    },
+  ): boolean {
+    const extension = this.sheetContext?.registry.cells.get(type)
+    if (!extension?.draw || !this.sheetContext) return false
+    this.sheetContext.run(
+      {
+        cell: {
+          value: () => options.value,
+          rect: () => options.rect,
+          address: () => ({ rowIndex: options.rowIndex, colIndex: options.colIndex }),
+          range: () => ({
+            startRow: options.rowIndex,
+            endRow: options.rowIndex,
+            startCol: options.colIndex,
+            endCol: options.colIndex,
+          }),
+          commit: () => {
+            throw new Error('NovaSheet: ctx.cell().commit() is not available during draw')
+          },
+          invalidate: () => this.invalidate(),
+        },
+        canvas: { ctx: () => this.ctx },
+      },
+      extension.draw,
+    )
+    return true
   }
 
   /**

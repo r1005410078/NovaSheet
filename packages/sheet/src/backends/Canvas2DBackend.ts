@@ -17,6 +17,7 @@ import {
   FrameScheduler,
   SortLayer,
   ViewPipeline,
+  createSheetContext,
   type BorderPreset,
   type BorderStyle,
   type TextWrapMode,
@@ -110,6 +111,7 @@ export class Canvas2DBackend implements GridController {
   private viewChangeListeners = new Set<(event: ViewChangeEvent) => void>()
   private sortChangeListeners = new Set<(event: SortChangeEvent) => void>()
   private filterChangeListeners = new Set<(event: FilterChangeEvent) => void>()
+  private readonly sheetContext: SheetContext<CanvasRenderingContext2D, HTMLElement>
   /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
    *  让 LRU 缓存跨绘制 / 度量复用。 */
   private measurer = new Canvas2DTextMeasurer()
@@ -126,10 +128,11 @@ export class Canvas2DBackend implements GridController {
       onUndo?: (event: UndoEvent) => void
       onRedo?: (event: RedoEvent) => void
       onFill?: (event: FillEvent) => void
-      context?: SheetContext
+      context?: SheetContext<CanvasRenderingContext2D, HTMLElement>
     },
   ) {
     this.container = container
+    this.sheetContext = gridOptions?.context ?? createSheetContext()
     this.rawSource = options.data
     this.pipeline = this.createPipeline(this.rawSource)
     this.subscribePipeline()
@@ -524,6 +527,7 @@ export class Canvas2DBackend implements GridController {
       theme: this.engine.getTheme(),
       scheduler: this.scheduler,
       measurer: this.measurer,
+      sheetContext: this.sheetContext,
     })
   }
 

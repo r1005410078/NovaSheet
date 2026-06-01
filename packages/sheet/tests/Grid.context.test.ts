@@ -9,7 +9,7 @@ const data = new InMemoryDataSource({
 
 describe('Grid SheetContext options', () => {
   it('uses the provided context', () => {
-    const ctx = createSheetContext()
+    const ctx = createSheetContext<CanvasRenderingContext2D, HTMLElement>()
     ctx.extensions.cell('rating', { text: () => 'rating' })
 
     const grid = new Grid(document.createElement('div'), { data, context: ctx })
@@ -19,7 +19,7 @@ describe('Grid SheetContext options', () => {
   })
 
   it('installs extensions into the selected context', () => {
-    const ctx = createSheetContext()
+    const ctx = createSheetContext<CanvasRenderingContext2D, HTMLElement>()
 
     const grid = new Grid(document.createElement('div'), {
       data,
