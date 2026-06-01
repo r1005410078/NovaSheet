@@ -41,6 +41,7 @@ import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { AxisViewBuilder } from './AxisViewBuilder'
 import { CollapsedColGapBuilder } from './CollapsedColGapBuilder'
+import { ColumnIndexMapBuilder } from './ColumnIndexMapBuilder'
 import { ColumnMoveNormalizer } from './ColumnMoveNormalizer'
 import { FrameBuilder } from './FrameBuilder'
 import { FrozenColumnSyncer } from './FrozenColumnSyncer'
@@ -98,6 +99,7 @@ export class DefaultGridEngine implements GridEngine {
   private undoStack = new UndoStack()
   private readonly axisViewBuilder = new AxisViewBuilder()
   private readonly collapsedColGaps = new CollapsedColGapBuilder()
+  private readonly columnIndexMapBuilder = new ColumnIndexMapBuilder()
   private readonly columnMoveNormalizer = new ColumnMoveNormalizer()
   private readonly frameBuilder = new FrameBuilder()
   private readonly frozenColumnSyncer = new FrozenColumnSyncer()
@@ -1630,17 +1632,7 @@ export class DefaultGridEngine implements GridEngine {
    * 推导 `oldRawIndex → newRawIndex` map（Trap 1）。必须在 `moveFields` 之后调用。
    */
   private buildColIndexMap(rawFieldIdsBefore: readonly string[]): ReadonlyMap<number, number> {
-    const newIndexById = new Map<string, number>()
-    const fieldsAfter = this.rawData.getSchema().fields
-    for (let i = 0; i < fieldsAfter.length; i += 1) {
-      newIndexById.set(fieldsAfter[i]!.id, i)
-    }
-    const indexMap = new Map<number, number>()
-    for (let oldIndex = 0; oldIndex < rawFieldIdsBefore.length; oldIndex += 1) {
-      const newIndex = newIndexById.get(rawFieldIdsBefore[oldIndex]!)
-      if (newIndex !== undefined) indexMap.set(oldIndex, newIndex)
-    }
-    return indexMap
+    return this.columnIndexMapBuilder.build(rawFieldIdsBefore, this.rawData.getSchema().fields)
   }
 
   private rebuildRawColsAxisFromWidths(widthById: ReadonlyMap<string, number>): void {
