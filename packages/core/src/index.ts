@@ -53,6 +53,8 @@ export { FrozenColumnSyncer } from './engine/FrozenColumnSyncer'
 export type { FrozenColumnDelete, FrozenColumnInsert } from './engine/FrozenColumnSyncer'
 export { SelectionRemapper } from './engine/SelectionRemapper'
 export type { SelectionRemapContext } from './engine/SelectionRemapper'
+export { RowMoveNormalizer } from './engine/RowMoveNormalizer'
+export type { RowMovePlan } from './engine/RowMoveNormalizer'
 export { ViewportRebuilder } from './engine/ViewportRebuilder'
 export type { ViewportRebuildParams, ViewportRebuildResult } from './engine/ViewportRebuilder'
 export type {
