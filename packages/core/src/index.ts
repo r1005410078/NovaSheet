@@ -49,6 +49,8 @@ export { FrameBuilder } from './engine/FrameBuilder'
 export type { FrameBuilderParams, FrameFormatResolver } from './engine/FrameBuilder'
 export { FrozenColumnSyncer } from './engine/FrozenColumnSyncer'
 export type { FrozenColumnDelete, FrozenColumnInsert } from './engine/FrozenColumnSyncer'
+export { SelectionRemapper } from './engine/SelectionRemapper'
+export type { SelectionRemapContext } from './engine/SelectionRemapper'
 export { ViewportRebuilder } from './engine/ViewportRebuilder'
 export type { ViewportRebuildParams, ViewportRebuildResult } from './engine/ViewportRebuilder'
 export type {

@@ -43,6 +43,7 @@ import { AxisViewBuilder } from './AxisViewBuilder'
 import { CollapsedColGapBuilder } from './CollapsedColGapBuilder'
 import { FrameBuilder } from './FrameBuilder'
 import { FrozenColumnSyncer } from './FrozenColumnSyncer'
+import { SelectionRemapper } from './SelectionRemapper'
 import { ViewportRebuilder } from './ViewportRebuilder'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
 import { FillStylePropagator } from './FillStylePropagator'
@@ -97,6 +98,7 @@ export class DefaultGridEngine implements GridEngine {
   private readonly collapsedColGaps = new CollapsedColGapBuilder()
   private readonly frameBuilder = new FrameBuilder()
   private readonly frozenColumnSyncer = new FrozenColumnSyncer()
+  private readonly selectionRemapper = new SelectionRemapper()
   private readonly viewportRebuilder = new ViewportRebuilder()
   /**
    * Phase 5-A — 稀疏格式存储，按 **raw** 坐标键控（Task 7 的结构变更按 raw 重映）。
@@ -1472,87 +1474,15 @@ export class DefaultGridEngine implements GridEngine {
     selection: GridSelection,
     oldResolveUnderlyingRow: (viewRow: number) => number,
   ): void {
-    if (
-      !selection.activeCell ||
-      !selection.anchorCell ||
-      !selection.extentCell ||
-      !selection.selectedRange
-    ) {
+    const remapped = this.selectionRemapper.remap(selection, {
+      oldViewRowToRaw: oldResolveUnderlyingRow,
+      rawRowToView: (rawRow) => this.coords.rawRowToView(rawRow),
+    })
+    if (!remapped) {
       this.selection.clear()
       return
     }
-
-    const activeCell = this.remapCell(selection.activeCell, oldResolveUnderlyingRow)
-    if (!activeCell) {
-      this.selection.clear()
-      return
-    }
-
-    if (isSingleCellRange(selection.selectedRange)) {
-      this.selection.selectCell(activeCell)
-      return
-    }
-
-    const anchorCell = this.remapCell(selection.anchorCell, oldResolveUnderlyingRow)
-    const extentCell = this.remapCell(selection.extentCell, oldResolveUnderlyingRow)
-    const remappedRows = this.remapSelectedRows(selection.selectedRange, oldResolveUnderlyingRow)
-
-    if (
-      anchorCell &&
-      extentCell &&
-      remappedRows &&
-      areContiguousRows(remappedRows) &&
-      selection.selectedRange.endRow - selection.selectedRange.startRow ===
-        Math.max(...remappedRows) - Math.min(...remappedRows)
-    ) {
-      const range = {
-        startRow: Math.min(...remappedRows),
-        endRow: Math.max(...remappedRows),
-        startCol: selection.selectedRange.startCol,
-        endCol: selection.selectedRange.endCol,
-      }
-      this.selection.setSelection({
-        activeCell,
-        anchorCell: { rowIndex: range.startRow, colIndex: range.startCol },
-        extentCell: { rowIndex: range.endRow, colIndex: range.endCol },
-        selectedRange: range,
-      })
-      return
-    }
-
-    this.selection.selectCell(activeCell)
-  }
-
-  private remapCell(
-    cell: CellAddress,
-    oldResolveUnderlyingRow: (viewRow: number) => number,
-  ): CellAddress | null {
-    return this.remapRangeEndpoint(cell.rowIndex, cell.colIndex, oldResolveUnderlyingRow)
-  }
-
-  private remapRangeEndpoint(
-    rowIndex: number,
-    colIndex: number,
-    oldResolveUnderlyingRow: (viewRow: number) => number,
-  ): CellAddress | null {
-    const underlyingRow = oldResolveUnderlyingRow(rowIndex)
-    const viewRow = this.coords.rawRowToView(underlyingRow)
-    if (viewRow === -1) return null
-    return { rowIndex: viewRow, colIndex }
-  }
-
-  private remapSelectedRows(
-    range: CellRange,
-    oldResolveUnderlyingRow: (viewRow: number) => number,
-  ): number[] | null {
-    const rows: number[] = []
-    for (let rowIndex = range.startRow; rowIndex <= range.endRow; rowIndex += 1) {
-      const underlyingRow = oldResolveUnderlyingRow(rowIndex)
-      const viewRow = this.coords.rawRowToView(underlyingRow)
-      if (viewRow === -1) return null
-      rows.push(viewRow)
-    }
-    return rows
+    this.selection.setSelection(remapped)
   }
 
   private resolveDefaultRowHeight(): number {
@@ -1972,10 +1902,6 @@ class VisibleColumnsDataSource implements DataSource {
   subscribe(listener: DataSourceListener): () => void {
     return this.upstream.subscribe((event: DataSourceEvent) => listener(event))
   }
-}
-
-function isSingleCellRange(range: CellRange): boolean {
-  return range.startRow === range.endRow && range.startCol === range.endCol
 }
 
 function areContiguousRows(rows: readonly number[]): boolean {
