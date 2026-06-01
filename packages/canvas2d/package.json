@@ -1,5 +1,5 @@
 {
-  "name": "@novasheet/web-canvas2d",
+  "name": "@novasheet/canvas2d",
   "version": "0.1.0",
   "description": "Canvas2D renderer for the NovaSheet spreadsheet engine.",
   "license": "MIT",
@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/r1005410078/NovaSheet.git",
-    "directory": "packages/web-canvas2d"
+    "directory": "packages/canvas2d"
   },
   "bugs": {
     "url": "https://github.com/r1005410078/NovaSheet/issues"

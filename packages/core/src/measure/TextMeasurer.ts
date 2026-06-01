@@ -3,7 +3,7 @@
  *
  * 拆分动机：
  *   - 行高 autofit 需要在 `@novasheet/core` 里跑算法，但 core 不依赖 Canvas / DOM
- *   - 平台侧（`@novasheet/web-canvas2d` 的 Canvas2DTextMeasurer）实现 `measureWidth`，
+ *   - 平台侧（`@novasheet/canvas2d` 的 Canvas2DTextMeasurer）实现 `measureWidth`，
  *     core 这边的 `wrapText` 调用 measurer 做行宽测量
  *
  * 切分规则：

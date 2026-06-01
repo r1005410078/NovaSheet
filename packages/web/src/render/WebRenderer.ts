@@ -1,7 +1,7 @@
 /**
  * 所有 Web 渲染后端的共享契约（Canvas2D / WebGL / WebGPU）。
  *
- * 实现分布在各包（如 `@novasheet/web-canvas2d`、未来 `@novasheet/web-webgl`）。
+ * 实现分布在各包（如 `@novasheet/canvas2d`、未来 `@novasheet/web-webgl`）。
  * 只负责绘制表面生命周期；滚动与布局状态由 `WebGridRuntime` + `GridEngine` 管理。
  */
 

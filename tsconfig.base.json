@@ -6,7 +6,7 @@
     "baseUrl": ".",
     "paths": {
       "@novasheet/core": ["packages/core/src/index.ts"],
-      "@novasheet/web-canvas2d": ["packages/web-canvas2d/src/index.ts"],
+      "@novasheet/canvas2d": ["packages/canvas2d/src/index.ts"],
       "@novasheet/web": ["packages/web/src/index.ts"]
     },
     "ignoreDeprecations": "6.0",
