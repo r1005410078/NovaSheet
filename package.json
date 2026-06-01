@@ -5,6 +5,7 @@
   "description": "High-performance Canvas spreadsheet engine for AI-native data workbenches.",
   "license": "MIT",
   "type": "module",
+  "packageManager": "bun@1.3.14",
   "homepage": "https://r1005410078.github.io/NovaSheet/",
   "repository": {
     "type": "git",
@@ -32,6 +33,9 @@
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "oxlint packages",
     "format": "prettier --write --cache --log-level warn \"**/*.{ts,tsx,js,json,md}\"",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "bun run lint && bun run typecheck && bun test && bun run build && changeset publish",
     "storybook": "bun run --filter @novasheet/storybook storybook",
     "build-storybook": "bun run --filter @novasheet/storybook build-storybook"
   },
@@ -39,6 +43,7 @@
     "esbuild"
   ],
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "oxlint": "^1.66.0",
     "prettier": "^3.2.5",
     "typescript": "^6.0.3"

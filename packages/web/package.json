@@ -1,6 +1,6 @@
 {
   "name": "@novasheet/web",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Browser Grid facade and runtime for NovaSheet.",
   "license": "MIT",
   "type": "module",
@@ -26,8 +26,8 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }
   },
@@ -41,8 +41,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@novasheet/core": "workspace:*",
-    "@novasheet/web-canvas2d": "workspace:*"
+    "@novasheet/core": "^0.1.0",
+    "@novasheet/web-canvas2d": "^0.1.0"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.9.0",

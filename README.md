@@ -6,7 +6,7 @@
 [![Live demo](https://img.shields.io/badge/demo-Storybook-ff4785)](https://r1005410078.github.io/NovaSheet/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[Live Demo](https://r1005410078.github.io/NovaSheet/) · [中文 README](README.zh-CN.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+[Live Demo](https://r1005410078.github.io/NovaSheet/) · [中文 README](README.zh-CN.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [0.1.0 Release Notes](docs/release/0.1.0.md)
 
 NovaSheet is an open-source spreadsheet engine for building large, interactive data applications. It uses a Canvas-first rendering architecture and is designed to scale toward **1,000,000+ rows x 500+ columns**, while keeping the core engine portable and the browser runtime ergonomic.
 
@@ -38,6 +38,15 @@ NovaSheet is pre-1.0 and actively developed.
 Recently delivered: **Phase 5-A merge cells + basic range formatting**.
 
 Next milestone: **Phase 5-B advanced borders**.
+
+## Demo And Release Readiness
+
+- Live Storybook demo: <https://r1005410078.github.io/NovaSheet/>
+- Planned public package milestone: [NovaSheet 0.1.0](docs/release/0.1.0.md)
+- npm release checklist: [docs/npm-publishing.md](docs/npm-publishing.md)
+- Release manager: Changesets
+
+The packages are prepared as public workspace packages, but they have not been published to npm yet. Before the first npm release, maintainers should verify package tarballs and reconcile package export paths with the files included in published artifacts.
 
 ## Quick Start
 
@@ -180,6 +189,7 @@ bun run lint
 bun run typecheck
 bun test
 bun run build
+bun run changeset status
 bun run storybook
 bun run build-storybook
 ```
