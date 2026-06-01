@@ -2,6 +2,7 @@ import { describe, expect, it, mock, spyOn } from 'bun:test'
 import { FilterLayer, InMemoryDataSource, SortLayer, ViewPipeline } from '@novasheet/core'
 import type {
   CellAddress,
+  CellValue,
   DataSource,
   GridEngine,
   GridSelection,
@@ -32,6 +33,7 @@ function makeEngine(): GridEngine {
     updateCellEditDraft: mock(() => {}),
     cancelCellEdit: mock(() => {}),
     commitCellEdit: mock(() => false),
+    setCellValue: mock((_cell: CellAddress, _value: CellValue) => false),
     isCellEditing: mock(() => false),
     clearRange: mock(() => {}),
     clearSelection: mock(() => {}),

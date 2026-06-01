@@ -2,6 +2,8 @@ import { mock } from 'bun:test'
 import { denseGridTheme } from '@novasheet/core'
 import type {
   Axis,
+  CellAddress,
+  CellValue,
   CellRange,
   DataSource,
   FillDirection,
@@ -95,6 +97,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     updateCellEditDraft: mock((_draft: string) => {}),
     cancelCellEdit: mock(() => {}),
     commitCellEdit: mock(() => true),
+    setCellValue: mock((_cell: CellAddress, _value: CellValue) => false),
     isCellEditing: mock(() => false),
     clearRange: mock((_range: CellRange) => {}),
     clearSelection: mock(() => {}),

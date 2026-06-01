@@ -5,7 +5,7 @@
  */
 
 import type { DataSource } from '../data/DataSource'
-import type { Field } from '../data/Schema'
+import type { CellValue, Field } from '../data/Schema'
 import type { RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../format/CellFormat'
@@ -68,6 +68,8 @@ export interface GridEngine {
   cancelCellEdit(): void
   /** 提交编辑；非法输入返回 false。 */
   commitCellEdit(): boolean
+  /** 写入单个 view cell；非法地址或只读源返回 false。 */
+  setCellValue(cell: CellAddress, value: CellValue): boolean
   isCellEditing(): boolean
   /** Phase 4.1 — 把 `range` 内每个 cell 置 null；非 MutableDataSource 静默 no-op。 */
   clearRange(range: CellRange): void

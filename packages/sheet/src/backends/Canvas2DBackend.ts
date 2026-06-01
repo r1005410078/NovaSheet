@@ -20,6 +20,8 @@ import {
   createSheetContext,
   type BorderPreset,
   type BorderStyle,
+  type CellAddress,
+  type CellValue,
   type TextWrapMode,
   type CellRange,
   type ContextMenuItem,
@@ -32,6 +34,7 @@ import {
   type GridEngineOptions,
   type GridSelection,
   type PasteSkippedCell,
+  type Rect,
   type SheetContext,
   type SortSpec,
   type Theme,
@@ -107,6 +110,7 @@ export class Canvas2DBackend implements GridController {
   private sortLayer = new SortLayer()
   private pipeline: ViewPipeline
   private unsubscribePipeline: () => void = () => {}
+  private extensionPopover: HTMLElement | null = null
   private suppressPipelineEvents = false
   private viewChangeListeners = new Set<(event: ViewChangeEvent) => void>()
   private sortChangeListeners = new Set<(event: SortChangeEvent) => void>()
@@ -214,6 +218,7 @@ export class Canvas2DBackend implements GridController {
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
       onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
+      openCustomCellEditor: (cell) => this.openCustomCellEditor(cell),
     })
 
     this.cellEditor = new DomCellEditor(this.container, {
@@ -346,6 +351,7 @@ export class Canvas2DBackend implements GridController {
   destroy(): void {
     this.unsubscribePipeline()
     this.pipeline.dispose()
+    this.closeExtensionPopover()
     this.contextMenuLayer.destroy()
     this.filterPopover.destroy()
     this.rowHeightPopover.destroy()
@@ -505,6 +511,10 @@ export class Canvas2DBackend implements GridController {
     return this.pipeline
   }
 
+  openCustomCellEditorForTest(cell: CellAddress): boolean {
+    return this.openCustomCellEditor(cell)
+  }
+
   on<K extends keyof GridPublicEventMap>(
     eventName: K,
     handler: (event: GridPublicEventMap[K]) => void,
@@ -538,6 +548,65 @@ export class Canvas2DBackend implements GridController {
     pipeline.add(this.sortLayer)
     pipeline.add(this.filterLayer)
     return pipeline
+  }
+
+  private openCustomCellEditor(cell: CellAddress): boolean {
+    const field = this.engine.getData().getSchema().fields[cell.colIndex]
+    if (!field) return false
+
+    const extension = this.sheetContext.registry.cells.get(field.type)
+    if (!extension?.edit) return false
+
+    const edit = extension.edit
+    const currentValue = this.engine.getData().getCell(cell.rowIndex, field.id)
+    return this.runtime.tryOpenCustomCellEditor(cell, (rect) => {
+      this.sheetContext.run(
+        {
+          cell: {
+            value: () => currentValue,
+            rect: () => rect,
+            address: () => cell,
+            range: () => ({
+              startRow: cell.rowIndex,
+              endRow: cell.rowIndex,
+              startCol: cell.colIndex,
+              endCol: cell.colIndex,
+            }),
+            commit: (value) => {
+              if (this.engine.setCellValue(cell, value as CellValue)) this.runtime.refresh()
+            },
+            invalidate: () => this.runtime.refresh(),
+          },
+          overlay: {
+            openPopover: ({ anchor, content }) => this.openExtensionPopover(anchor, content),
+            close: () => this.closeExtensionPopover(),
+          },
+        },
+        edit,
+      )
+      return true
+    })
+  }
+
+  private openExtensionPopover(anchor: Rect, content: HTMLElement): void {
+    this.closeExtensionPopover()
+
+    const layer = document.createElement('div')
+    layer.setAttribute('data-novasheet-extension-popover', '')
+    Object.assign(layer.style, {
+      position: 'absolute',
+      left: `${anchor.x}px`,
+      top: `${anchor.y + anchor.height}px`,
+      zIndex: '4',
+    })
+    layer.appendChild(content)
+    this.container.appendChild(layer)
+    this.extensionPopover = layer
+  }
+
+  private closeExtensionPopover(): void {
+    this.extensionPopover?.remove()
+    this.extensionPopover = null
   }
 
   private subscribePipeline(): void {

@@ -149,6 +149,8 @@ export interface WebGridRuntimeOptions {
   rowReorderOverlay?: RowReorderOverlay
   /** DOM body selection overlay; synced from the same frame as renderer.render. */
   selectionOverlay?: SelectionOverlay
+  /** Optional product-layer custom editor hook. */
+  openCustomCellEditor?: (cell: CellAddress) => boolean
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -247,6 +249,8 @@ export class WebGridRuntime {
   private rowReorderOverlay?: RowReorderOverlay
   /** DOM body selection overlay. */
   private selectionOverlay?: SelectionOverlay
+  /** Product-layer custom editor hook. */
+  private openCustomCellEditor?: WebGridRuntimeOptions['openCustomCellEditor']
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
   /** DOM 右键菜单 layer。 */
@@ -325,6 +329,7 @@ export class WebGridRuntime {
     this.columnReorderOverlay = opts.columnReorderOverlay
     this.rowReorderOverlay = opts.rowReorderOverlay
     this.selectionOverlay = opts.selectionOverlay
+    this.openCustomCellEditor = opts.openCustomCellEditor
     this.scrollMapper = new ScrollMapper()
     this.resizeDrag = new ResizeDrag({
       engine: this.engine,
@@ -1991,6 +1996,16 @@ export class WebGridRuntime {
     this.cellEditor?.applyTheme(this.engine.getTheme())
   }
 
+  tryOpenCustomCellEditor(
+    cell: CellAddress,
+    invoke: (rect: { x: number; y: number; width: number; height: number }) => boolean,
+  ): boolean {
+    if (this.destroyed || this.resizeDrag.active) return false
+    const rect = computeCellRect(this.engine.getFrame(), cell)
+    if (!rect) return false
+    return invoke(rect)
+  }
+
   /** 同步 context menu layer 主题。 */
   private syncContextMenuTheme(): void {
     this.contextMenuLayer?.applyTheme(this.engine.getTheme())
@@ -2004,6 +2019,7 @@ export class WebGridRuntime {
   /** 打开指定单元格编辑器，并按需全选原内容。 */
   private openCellEditor(cell: CellAddress, options: { selectAll?: boolean } = {}): boolean {
     if (!this.cellEditor || this.resizeDrag.active) return false
+    if (this.openCustomCellEditor?.(cell)) return true
     if (!this.engine.beginCellEdit(cell)) return false
     return this.showCellEditor(options)
   }
@@ -2011,6 +2027,7 @@ export class WebGridRuntime {
   /** 用首个键入字符作为 draft 打开编辑器。 */
   private beginCellEditWithDraft(cell: CellAddress, draft: string): boolean {
     if (!this.cellEditor || this.resizeDrag.active) return false
+    if (this.openCustomCellEditor?.(cell)) return true
     if (!this.engine.beginCellEdit(cell)) return false
     this.engine.updateCellEditDraft(draft)
     return this.showCellEditor({ selectAll: false })

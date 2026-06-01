@@ -272,6 +272,27 @@ export class DefaultGridEngine implements GridEngine {
     return true
   }
 
+  setCellValue(cell: CellAddress, value: CellValue): boolean {
+    if (!isMutableDataSource(this.data)) return false
+    if (cell.rowIndex < 0 || cell.rowIndex >= this.data.getRowCount()) return false
+
+    const field = this.fieldAt(cell.colIndex)
+    if (!field) return false
+
+    const before = this.data.getCell(cell.rowIndex, field.id) ?? null
+    const underlyingRow = this.coords.viewRowToRaw(cell.rowIndex)
+    this.data.updateCell(cell.rowIndex, field.id, value)
+    this.undoStack.push({
+      kind: 'editCell',
+      rowIndex: underlyingRow,
+      fieldId: field.id,
+      before,
+      after: value,
+    })
+    this.cellEdit.clear()
+    return true
+  }
+
   isCellEditing(): boolean {
     return this.cellEdit.isEditing()
   }
