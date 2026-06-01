@@ -1,27 +1,27 @@
-# Row Column Reorder Feature Package Implementation Plan
+# 行列拖拽排序能力包实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给 agentic worker：** 实施本计划时必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`。步骤使用 checkbox（`- [ ]`）追踪进度。
 
-**Goal:** Move the existing row/column header reorder drag behavior into a default-installed feature package without changing user-visible behavior.
+**目标：** 把已经实现并验证过的行/列表头拖拽排序能力移动到默认安装的 feature package 中，保持用户可见行为不变。
 
-**Architecture:** `@novasheet/core` stays DOM-free and only owns a generic contribution registry on `SheetContext`. `@novasheet/web` owns typed web drag contribution contracts and runtime dispatch. `@novasheet/feature-row-column-reorder` owns the existing `RowHeaderDrag` and `ColumnHeaderDrag` implementations, installed by `@novasheet/sheet` through `installDefaultExtensions`.
+**架构：** `@novasheet/core` 保持 DOM-free，只在 `SheetContext` 上提供通用 contribution registry。`@novasheet/web` 负责 typed web drag contribution 契约与 runtime 派发。`@novasheet/feature-row-column-reorder` 拥有现有 `RowHeaderDrag` 与 `ColumnHeaderDrag` 实现，并由 `@novasheet/sheet` 通过 `installDefaultExtensions` 默认安装。
 
-**Tech Stack:** Bun workspaces, TypeScript strict mode with `verbatimModuleSyntax`, `bun:test`, existing `WebGridRuntime` drag state machine, existing `SheetContext`.
+**技术栈：** Bun workspaces、TypeScript strict mode、`verbatimModuleSyntax`、`bun:test`、现有 `WebGridRuntime` drag state machine、现有 `SheetContext`。
 
 ---
 
-## Scope
+## 范围
 
-This plan only extracts the already-shipped row/column header reorder feature. It does not redesign drag behavior, selection semantics, overlays, undo, resize, fill handle, editing, clipboard, or context menus.
+本计划只抽取已经 shipped 的行/列表头拖拽排序能力，不重新设计拖拽行为、选区语义、overlay、undo、resize、fill handle、editing、clipboard 或 context menu。
 
-The intended implementation style is move-first:
+实施原则：
 
-- Use `git mv` for existing drag files and runtime tests where ownership changes.
-- Add thin adapter/registry code only where needed.
-- Keep default `@novasheet/sheet` behavior identical.
-- Do not keep compatibility aliases unless a test proves an internal import still needs a temporary path.
+- 以搬迁为主：旧实现优先 `git mv`，避免重写。
+- 只增加必要的薄 adapter / registry / installer。
+- 默认 `@novasheet/sheet` 行为必须保持一致。
+- 不保留兼容 alias，除非测试证明内部 import 还需要临时路径。
 
-## Target File Structure
+## 目标文件结构
 
 ```txt
 packages/core/src/context/extensions.ts
@@ -33,7 +33,6 @@ packages/web/src/interaction/drag/WebDragContribution.ts
 packages/web/src/runtime/WebGridRuntime.ts
 packages/web/src/index.ts
 packages/web/tests/interaction/drag/WebDragContribution.test.ts
-packages/web/tests/runtime/WebGridRuntime.drag-contributions.test.ts
 
 packages/feature-row-column-reorder/
   package.json
@@ -44,28 +43,29 @@ packages/feature-row-column-reorder/
   src/installRowColumnReorder.ts
   src/ColumnHeaderDrag.ts
   src/RowHeaderDrag.ts
-  tests/ColumnHeaderDrag.test.ts
-  tests/RowHeaderDrag.test.ts
-  tests/setup.ts
+  tests/installRowColumnReorder.test.ts
+  tests/WebGridRuntime.col-reorder.test.ts
+  tests/WebGridRuntime.row-reorder.test.ts
 
 packages/sheet/package.json
 packages/sheet/build.ts
+packages/sheet/src/backends/Canvas2DBackend.ts
 packages/sheet/src/defaults/installDefaultExtensions.ts
 packages/sheet/tests/Grid.col-reorder.test.ts
 ```
 
-## Task 1: Add Generic Contribution Points To `SheetContext`
+## Task 1: 给 `SheetContext` 增加通用 contribution point
 
-**Files:**
+**文件：**
 
-- Modify: `packages/core/src/context/extensions.ts`
-- Modify: `packages/core/src/context/SheetContext.ts`
-- Modify: `packages/core/tests/context/SheetContext.test.ts`
-- Modify: `packages/core/src/index.ts`
+- 修改：`packages/core/src/context/extensions.ts`
+- 修改：`packages/core/src/context/SheetContext.ts`
+- 修改：`packages/core/tests/context/SheetContext.test.ts`
+- 修改：`packages/core/src/index.ts`
 
-- [ ] **Step 1: Add the failing contribution registry test**
+- [ ] **Step 1: 先写失败测试**
 
-Append this test to `packages/core/tests/context/SheetContext.test.ts`:
+把下面测试追加到 `packages/core/tests/context/SheetContext.test.ts`：
 
 ```ts
 it('registers and reads generic extension contributions by point id', () => {
@@ -78,19 +78,17 @@ it('registers and reads generic extension contributions by point id', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run:
+- [ ] **Step 2: 运行测试确认失败**
 
 ```bash
 bun test packages/core/tests/context/SheetContext.test.ts
 ```
 
-Expected: FAIL with a TypeScript/runtime error indicating `contribute` or `contributions` does not exist.
+预期：失败，错误指向 `contribute` 或 `contributions` 不存在。
 
-- [ ] **Step 3: Add generic contribution types**
+- [ ] **Step 3: 增加通用 contribution 类型**
 
-Update `packages/core/src/context/extensions.ts` so the registry and registrar include a DOM-free contribution point:
+更新 `packages/core/src/context/extensions.ts`，让 registry / registrar 支持 DOM-free contribution point：
 
 ```ts
 /** Opaque extension contribution registered under a named contribution point. */
@@ -111,11 +109,11 @@ export interface ExtensionRegistrar {
 }
 ```
 
-Keep the existing `CellExtension` and `CommandHandler` definitions unchanged.
+保留已有 `CellExtension` 与 `CommandHandler` 定义，不改语义。
 
-- [ ] **Step 4: Store contributions in `createSheetContext`**
+- [ ] **Step 4: 在 `createSheetContext` 中存储 contributions**
 
-Update the registry object and registrar in `packages/core/src/context/SheetContext.ts`:
+更新 `packages/core/src/context/SheetContext.ts`：
 
 ```ts
 const registry: ExtensionRegistry = {
@@ -125,7 +123,7 @@ const registry: ExtensionRegistry = {
 }
 ```
 
-Add this method beside `cell()` and `command()`:
+在 `extensions` 对象里增加：
 
 ```ts
 contribute(point: string, contribution) {
@@ -134,19 +132,17 @@ contribute(point: string, contribution) {
 },
 ```
 
-- [ ] **Step 5: Export contribution types**
+- [ ] **Step 5: 导出新类型**
 
-Update `packages/core/src/index.ts` to export the new type:
+更新 `packages/core/src/index.ts`：
 
 ```ts
 export type { ExtensionContribution } from './context/extensions'
 ```
 
-If `index.ts` already has a grouped export for `context/extensions`, add `ExtensionContribution` to that group instead of creating a duplicate export block.
+如果已有 grouped export，就把 `ExtensionContribution` 加进原 export block，避免重复 export。
 
-- [ ] **Step 6: Verify core**
-
-Run:
+- [ ] **Step 6: 验证 core**
 
 ```bash
 bun test packages/core/tests/context/SheetContext.test.ts
@@ -155,26 +151,26 @@ bun run --filter @novasheet/core build
 bun run lint
 ```
 
-Expected: all commands exit 0.
+预期：全部 exit 0。
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: 提交**
 
 ```bash
 git add packages/core/src/context/extensions.ts packages/core/src/context/SheetContext.ts packages/core/tests/context/SheetContext.test.ts packages/core/src/index.ts
 git commit -m "feat(core): 增加通用扩展贡献点"
 ```
 
-## Task 2: Add Web Drag Contribution Contract
+## Task 2: 增加 Web drag contribution 契约
 
-**Files:**
+**文件：**
 
-- Create: `packages/web/src/interaction/drag/WebDragContribution.ts`
-- Modify: `packages/web/src/index.ts`
-- Add: `packages/web/tests/interaction/drag/WebDragContribution.test.ts`
+- 新增：`packages/web/src/interaction/drag/WebDragContribution.ts`
+- 修改：`packages/web/src/index.ts`
+- 新增：`packages/web/tests/interaction/drag/WebDragContribution.test.ts`
 
-- [ ] **Step 1: Add the failing web contribution helper test**
+- [ ] **Step 1: 先写失败测试**
 
-Create `packages/web/tests/interaction/drag/WebDragContribution.test.ts`:
+创建 `packages/web/tests/interaction/drag/WebDragContribution.test.ts`：
 
 ```ts
 import { describe, expect, it } from 'bun:test'
@@ -212,19 +208,17 @@ describe('web drag contributions', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run:
+- [ ] **Step 2: 运行测试确认失败**
 
 ```bash
 bun test packages/web/tests/interaction/drag/WebDragContribution.test.ts
 ```
 
-Expected: FAIL because `WEB_DRAG_CONTRIBUTION`, `registerWebDrag`, and `getWebDragContributions` are not exported.
+预期：失败，原因是 `WEB_DRAG_CONTRIBUTION`、`registerWebDrag`、`getWebDragContributions` 尚未导出。
 
-- [ ] **Step 3: Add the web drag contribution contract**
+- [ ] **Step 3: 增加 web drag contribution contract**
 
-Create `packages/web/src/interaction/drag/WebDragContribution.ts`:
+创建 `packages/web/src/interaction/drag/WebDragContribution.ts`：
 
 ```ts
 import type { SheetContext } from '@novasheet/core'
@@ -281,13 +275,17 @@ export function getWebDragContributions(ctx: SheetContext): readonly WebDragCont
 function isWebDragContribution(value: unknown): value is WebDragContribution {
   if (typeof value !== 'object' || value === null) return false
   const candidate = value as Partial<WebDragContribution>
-  return typeof candidate.id === 'string' && typeof candidate.order === 'number' && typeof candidate.create === 'function'
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.order === 'number' &&
+    typeof candidate.create === 'function'
+  )
 }
 ```
 
-- [ ] **Step 4: Export web drag types and helpers**
+- [ ] **Step 4: 从 web package 导出 contract**
 
-Update `packages/web/src/index.ts`:
+更新 `packages/web/src/index.ts`：
 
 ```ts
 export type { AutoScrollAxis, Drag } from './interaction/drag/Drag'
@@ -299,9 +297,7 @@ export {
 export type { WebDragContribution, WebDragRuntimeDeps } from './interaction/drag/WebDragContribution'
 ```
 
-- [ ] **Step 5: Verify web helper**
-
-Run:
+- [ ] **Step 5: 验证 web helper**
 
 ```bash
 bun test packages/web/tests/interaction/drag/WebDragContribution.test.ts
@@ -310,29 +306,29 @@ bun run --filter @novasheet/web build
 bun run lint
 ```
 
-Expected: all commands exit 0.
+预期：全部 exit 0。
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: 提交**
 
 ```bash
 git add packages/web/src/interaction/drag/WebDragContribution.ts packages/web/src/index.ts packages/web/tests/interaction/drag/WebDragContribution.test.ts
 git commit -m "feat(web): 增加拖拽贡献点契约"
 ```
 
-## Task 3: Create `@novasheet/feature-row-column-reorder`
+## Task 3: 新建 `@novasheet/feature-row-column-reorder`
 
-**Files:**
+**文件：**
 
-- Create directory: `packages/feature-row-column-reorder/`
-- Move: `packages/web/src/interaction/drag/ColumnHeaderDrag.ts` to `packages/feature-row-column-reorder/src/ColumnHeaderDrag.ts`
-- Move: `packages/web/src/interaction/drag/RowHeaderDrag.ts` to `packages/feature-row-column-reorder/src/RowHeaderDrag.ts`
-- Create: `packages/feature-row-column-reorder/src/installRowColumnReorder.ts`
-- Create: `packages/feature-row-column-reorder/src/index.ts`
-- Create package config/build files copied from the `packages/web` pattern
+- 新建目录：`packages/feature-row-column-reorder/`
+- 移动：`packages/web/src/interaction/drag/ColumnHeaderDrag.ts` → `packages/feature-row-column-reorder/src/ColumnHeaderDrag.ts`
+- 移动：`packages/web/src/interaction/drag/RowHeaderDrag.ts` → `packages/feature-row-column-reorder/src/RowHeaderDrag.ts`
+- 新增：`packages/feature-row-column-reorder/src/installRowColumnReorder.ts`
+- 新增：`packages/feature-row-column-reorder/src/index.ts`
+- 新增：package config / build files，沿用 `packages/web` 模式
 
-- [ ] **Step 1: Add package files**
+- [ ] **Step 1: 新建 package 文件**
 
-Create `packages/feature-row-column-reorder/package.json`:
+创建 `packages/feature-row-column-reorder/package.json`：
 
 ```json
 {
@@ -371,24 +367,22 @@ Create `packages/feature-row-column-reorder/package.json`:
 }
 ```
 
-Copy `packages/web/build.ts`, `packages/web/tsconfig.json`, and `packages/web/tsconfig.build.json` into the new package, then update the build script `EXTERNALS`:
+复制 `packages/web/build.ts`、`packages/web/tsconfig.json`、`packages/web/tsconfig.build.json` 到新包，并把 `build.ts` 里的 `EXTERNALS` 改成：
 
 ```ts
 const EXTERNALS = ['@novasheet/core', '@novasheet/web'] as const
 ```
 
-- [ ] **Step 2: Move existing drag implementations**
-
-Run:
+- [ ] **Step 2: 用 `git mv` 移动旧实现**
 
 ```bash
 git mv packages/web/src/interaction/drag/ColumnHeaderDrag.ts packages/feature-row-column-reorder/src/ColumnHeaderDrag.ts
 git mv packages/web/src/interaction/drag/RowHeaderDrag.ts packages/feature-row-column-reorder/src/RowHeaderDrag.ts
 ```
 
-- [ ] **Step 3: Update imports in moved files**
+- [ ] **Step 3: 更新 moved files 的 import**
 
-In both moved files, replace relative web imports with public web package imports:
+在两个 moved files 中，把相对 web import 改成从 public web package 导入：
 
 ```ts
 import type {
@@ -400,9 +394,9 @@ import type {
 } from '@novasheet/web'
 ```
 
-Keep `CellRange` and `GridEngine` imports from `@novasheet/core`.
+`CellRange` 和 `GridEngine` 继续从 `@novasheet/core` 导入。
 
-In `ColumnHeaderDrag.ts`, define:
+`ColumnHeaderDrag.ts` 中定义：
 
 ```ts
 export type ColumnHeaderDragDeps = Pick<
@@ -425,7 +419,7 @@ export type ColumnHeaderDragDeps = Pick<
 }
 ```
 
-In `RowHeaderDrag.ts`, define:
+`RowHeaderDrag.ts` 中定义：
 
 ```ts
 export type RowHeaderDragDeps = Pick<
@@ -446,9 +440,9 @@ export type RowHeaderDragDeps = Pick<
 }
 ```
 
-- [ ] **Step 4: Add installer**
+- [ ] **Step 4: 增加 installer**
 
-Create `packages/feature-row-column-reorder/src/installRowColumnReorder.ts`:
+创建 `packages/feature-row-column-reorder/src/installRowColumnReorder.ts`：
 
 ```ts
 import type { SheetContext } from '@novasheet/core'
@@ -502,7 +496,7 @@ export function installRowColumnReorder(ctx: SheetContext): void {
 }
 ```
 
-Create `packages/feature-row-column-reorder/src/index.ts`:
+创建 `packages/feature-row-column-reorder/src/index.ts`：
 
 ```ts
 export { installRowColumnReorder } from './installRowColumnReorder'
@@ -512,9 +506,9 @@ export { RowHeaderDrag } from './RowHeaderDrag'
 export type { RowHeaderDragDeps } from './RowHeaderDrag'
 ```
 
-- [ ] **Step 5: Add installer test**
+- [ ] **Step 5: 增加 installer 测试**
 
-Create `packages/feature-row-column-reorder/tests/installRowColumnReorder.test.ts`:
+创建 `packages/feature-row-column-reorder/tests/installRowColumnReorder.test.ts`：
 
 ```ts
 import { describe, expect, it } from 'bun:test'
@@ -536,9 +530,7 @@ describe('installRowColumnReorder', () => {
 })
 ```
 
-- [ ] **Step 6: Verify feature package**
-
-Run:
+- [ ] **Step 6: 验证 feature package**
 
 ```bash
 bun test packages/feature-row-column-reorder/tests/installRowColumnReorder.test.ts
@@ -547,33 +539,33 @@ bun run --filter @novasheet/feature-row-column-reorder build
 bun run lint
 ```
 
-Expected: all commands exit 0.
+预期：全部 exit 0。
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: 提交**
 
 ```bash
 git add packages/feature-row-column-reorder packages/web/src/interaction/drag/ColumnHeaderDrag.ts packages/web/src/interaction/drag/RowHeaderDrag.ts
 git commit -m "feat(row-column-reorder): 新增行列拖拽排序能力包"
 ```
 
-## Task 4: Make `WebGridRuntime` Consume Drag Contributions
+## Task 4: 让 `WebGridRuntime` 消费 drag contributions
 
-**Files:**
+**文件：**
 
-- Modify: `packages/web/src/runtime/WebGridRuntime.ts`
-- Modify tests: `packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts`
-- Modify tests: `packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts`
+- 修改：`packages/web/src/runtime/WebGridRuntime.ts`
+- 修改：`packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts`
+- 修改：`packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts`
 
-- [ ] **Step 1: Update runtime reorder tests to install the feature**
+- [ ] **Step 1: runtime reorder 测试显式安装 feature**
 
-In both reorder runtime tests, import context and installer:
+在两个 reorder runtime 测试中导入：
 
 ```ts
 import { createSheetContext } from '@novasheet/core'
 import { installRowColumnReorder } from '@novasheet/feature-row-column-reorder'
 ```
 
-Add this helper:
+增加 helper：
 
 ```ts
 function makeContext() {
@@ -583,60 +575,58 @@ function makeContext() {
 }
 ```
 
-Pass `context: makeContext()` into every `new WebGridRuntime({ ... })` call in those two test files.
+把 `context: makeContext()` 传给两个测试文件里所有 `new WebGridRuntime({ ... })`。
 
-- [ ] **Step 2: Run tests to verify they fail before runtime consumption**
-
-Run:
+- [ ] **Step 2: 运行测试确认 runtime 还没消费 contributions**
 
 ```bash
 bun test packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts
 ```
 
-Expected: FAIL after Task 3 because `WebGridRuntime` still imports moved drag files or does not consume registered drags.
+预期：失败，因为 `WebGridRuntime` 仍直接 import 已移动的 drag 文件，或还没有读取 registered drags。
 
-- [ ] **Step 3: Add context to runtime options**
+- [ ] **Step 3: 给 runtime options 增加 context**
 
-In `packages/web/src/runtime/WebGridRuntime.ts`, import:
+在 `packages/web/src/runtime/WebGridRuntime.ts` 导入：
 
 ```ts
 import { createSheetContext, type SheetContext } from '@novasheet/core'
 import { getWebDragContributions, type WebDragRuntimeDeps } from '../interaction/drag/WebDragContribution'
 ```
 
-Add to `WebGridRuntimeOptions`:
+给 `WebGridRuntimeOptions` 增加：
 
 ```ts
 /** Extension context used to read web runtime feature contributions. */
 context?: SheetContext
 ```
 
-Add a private field:
+增加私有字段：
 
 ```ts
 private readonly context: SheetContext
 ```
 
-In the constructor:
+构造函数中设置：
 
 ```ts
 this.context = opts.context ?? createSheetContext()
 ```
 
-- [ ] **Step 4: Remove hard-coded row/column drag construction**
+- [ ] **Step 4: 移除 hard-coded row/column drag 创建**
 
-Remove imports for `ColumnHeaderDrag` and `RowHeaderDrag` from `WebGridRuntime.ts`.
+从 `WebGridRuntime.ts` 移除 `ColumnHeaderDrag` 与 `RowHeaderDrag` import。
 
-Remove these private fields:
+移除字段：
 
 ```ts
 private columnHeaderDrag!: ColumnHeaderDrag
 private rowHeaderDrag!: RowHeaderDrag
 ```
 
-Remove the direct `new ColumnHeaderDrag(...)` and `new RowHeaderDrag(...)` constructor blocks.
+移除 constructor 里直接 `new ColumnHeaderDrag(...)` 和 `new RowHeaderDrag(...)` 的代码块。
 
-Add:
+改为：
 
 ```ts
 const contributedDrags = getWebDragContributions(this.context)
@@ -646,9 +636,9 @@ const contributedDrags = getWebDragContributions(this.context)
 this.drags = [...contributedDrags, this.selectionDrag]
 ```
 
-- [ ] **Step 5: Add runtime dependency factory**
+- [ ] **Step 5: 增加 runtime deps factory**
 
-Add this private method to `WebGridRuntime`:
+在 `WebGridRuntime` 中增加：
 
 ```ts
 private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
@@ -675,9 +665,7 @@ private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
 }
 ```
 
-- [ ] **Step 6: Verify runtime behavior**
-
-Run:
+- [ ] **Step 6: 验证 runtime 行为**
 
 ```bash
 bun test packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts
@@ -685,34 +673,34 @@ bun run --filter @novasheet/web typecheck
 bun run --filter @novasheet/web build
 ```
 
-Expected: all commands exit 0.
+预期：全部 exit 0。
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: 提交**
 
 ```bash
 git add packages/web/src/runtime/WebGridRuntime.ts packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts
 git commit -m "refactor(web): 通过扩展贡献装配行列拖拽"
 ```
 
-## Task 5: Install Row/Column Reorder In Default Sheet Assembly
+## Task 5: 在默认 sheet assembly 中安装行列拖拽排序
 
-**Files:**
+**文件：**
 
-- Modify: `packages/sheet/package.json`
-- Modify: `packages/sheet/build.ts`
-- Modify: `packages/sheet/src/backends/Canvas2DBackend.ts`
-- Modify: `packages/sheet/src/defaults/installDefaultExtensions.ts`
-- Modify: `packages/sheet/tests/Grid.col-reorder.test.ts`
+- 修改：`packages/sheet/package.json`
+- 修改：`packages/sheet/build.ts`
+- 修改：`packages/sheet/src/backends/Canvas2DBackend.ts`
+- 修改：`packages/sheet/src/defaults/installDefaultExtensions.ts`
+- 修改：`packages/sheet/tests/Grid.col-reorder.test.ts`
 
-- [ ] **Step 1: Add feature package dependency**
+- [ ] **Step 1: 增加 feature package 依赖**
 
-Update `packages/sheet/package.json` dependencies:
+更新 `packages/sheet/package.json` dependencies：
 
 ```json
 "@novasheet/feature-row-column-reorder": "^0.1.0"
 ```
 
-Update `packages/sheet/build.ts`:
+更新 `packages/sheet/build.ts`：
 
 ```ts
 const EXTERNALS = [
@@ -723,19 +711,19 @@ const EXTERNALS = [
 ] as const
 ```
 
-- [ ] **Step 2: Pass context to `WebGridRuntime`**
+- [ ] **Step 2: 把 context 传给 `WebGridRuntime`**
 
-In `packages/sheet/src/backends/Canvas2DBackend.ts`, add the existing sheet context to the runtime options:
+在 `packages/sheet/src/backends/Canvas2DBackend.ts` 的 `new WebGridRuntime({ ... })` 中加入：
 
 ```ts
 context: this.sheetContext,
 ```
 
-Place it beside `engine`, `host`, and `renderer` in the `new WebGridRuntime({ ... })` call.
+放在 `engine`、`host`、`renderer` 附近即可。
 
-- [ ] **Step 3: Install the feature by default**
+- [ ] **Step 3: 默认安装 feature**
 
-Update `packages/sheet/src/defaults/installDefaultExtensions.ts`:
+更新 `packages/sheet/src/defaults/installDefaultExtensions.ts`：
 
 ```ts
 import type { SheetContext } from '@novasheet/core'
@@ -749,9 +737,7 @@ export function installDefaultExtensions(ctx: SheetContext): void {
 }
 ```
 
-- [ ] **Step 4: Keep existing sheet behavior tests green**
-
-Run:
+- [ ] **Step 4: 保持现有 sheet 行为测试通过**
 
 ```bash
 bun test packages/sheet/tests/Grid.col-reorder.test.ts
@@ -759,68 +745,64 @@ bun run --filter @novasheet/sheet typecheck
 bun run --filter @novasheet/sheet build
 ```
 
-Expected: all commands exit 0.
+预期：全部 exit 0。
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: 提交**
 
 ```bash
 git add packages/sheet/package.json packages/sheet/build.ts packages/sheet/src/backends/Canvas2DBackend.ts packages/sheet/src/defaults/installDefaultExtensions.ts packages/sheet/tests/Grid.col-reorder.test.ts
 git commit -m "feat(sheet): 默认安装行列拖拽排序能力"
 ```
 
-## Task 6: Move Ownership Tests To The Feature Package
+## Task 6: 把 ownership 测试迁移到 feature package
 
-**Files:**
+**文件：**
 
-- Move: `packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts` to `packages/feature-row-column-reorder/tests/WebGridRuntime.col-reorder.test.ts`
-- Move: `packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts` to `packages/feature-row-column-reorder/tests/WebGridRuntime.row-reorder.test.ts`
-- Modify imports in moved tests
+- 移动：`packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts` → `packages/feature-row-column-reorder/tests/WebGridRuntime.col-reorder.test.ts`
+- 移动：`packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts` → `packages/feature-row-column-reorder/tests/WebGridRuntime.row-reorder.test.ts`
+- 修改 moved tests 的 imports
 
-- [ ] **Step 1: Move tests with `git mv`**
-
-Run:
+- [ ] **Step 1: 用 `git mv` 移动测试**
 
 ```bash
 git mv packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/feature-row-column-reorder/tests/WebGridRuntime.col-reorder.test.ts
 git mv packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts packages/feature-row-column-reorder/tests/WebGridRuntime.row-reorder.test.ts
 ```
 
-- [ ] **Step 2: Update moved test imports**
+- [ ] **Step 2: 更新 moved tests imports**
 
-In moved tests, replace relative web imports:
+列测试中替换相对 web imports：
 
 ```ts
 import type { ColumnReorderOverlay, WebHost, WebRenderer } from '@novasheet/web'
 import { WebGridRuntime } from '@novasheet/web'
 ```
 
-For row tests:
+行测试中：
 
 ```ts
 import type { RowReorderOverlay, WebHost, WebRenderer } from '@novasheet/web'
 import { WebGridRuntime } from '@novasheet/web'
 ```
 
-Keep:
+保留：
 
 ```ts
 import { installRowColumnReorder } from '../src'
 ```
 
-- [ ] **Step 3: Export overlay types from web if needed**
+- [ ] **Step 3: 必要时从 web 导出 overlay types**
 
-If typecheck reports that overlay classes are not exported as types, update `packages/web/src/index.ts`:
+如果 typecheck 报 overlay classes 没有作为 type 导出，更新 `packages/web/src/index.ts`：
 
 ```ts
 export type { ColumnReorderOverlay } from './overlay/ColumnReorderOverlay'
 export type { RowReorderOverlay } from './overlay/RowReorderOverlay'
 ```
 
-Do not remove the existing value exports for those classes.
+不要删除已有 value exports。
 
-- [ ] **Step 4: Verify feature-owned tests**
-
-Run:
+- [ ] **Step 4: 验证 feature-owned tests**
 
 ```bash
 bun test packages/feature-row-column-reorder/tests
@@ -829,25 +811,25 @@ bun run --filter @novasheet/feature-row-column-reorder typecheck
 bun run --filter @novasheet/web typecheck
 ```
 
-Expected: all commands exit 0. The web runtime tests should no longer own row/column reorder behavior directly.
+预期：全部 exit 0。`web` runtime tests 不再直接拥有 row/column reorder 行为。
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: 提交**
 
 ```bash
 git add packages/feature-row-column-reorder/tests packages/web/tests/runtime packages/web/src/index.ts
 git commit -m "test(row-column-reorder): 迁移拖拽排序运行时测试"
 ```
 
-## Task 7: Full Verification And Architecture Documentation
+## Task 7: 全量验证与架构文档
 
-**Files:**
+**文件：**
 
-- Modify: `docs/architecture.md`
-- Modify: `docs/superpowers/plans/2026-06-01-novasheet-core-to-context-extensions.md`
+- 修改：`docs/architecture.md`
+- 修改：`docs/superpowers/plans/2026-06-01-novasheet-core-to-context-extensions.md`
 
-- [ ] **Step 1: Document the new feature package boundary**
+- [ ] **Step 1: 记录 feature package 边界**
 
-Add a short section to `docs/architecture.md`:
+在 `docs/architecture.md` 增加：
 
 ```md
 ### Feature Packages
@@ -858,9 +840,9 @@ web drag contracts from `@novasheet/web` and calls engine APIs through runtime-p
 `@novasheet/sheet` installs this package by default so the assembled Grid keeps the existing behavior.
 ```
 
-- [ ] **Step 2: Update the active migration plan status**
+- [ ] **Step 2: 更新当前迁移计划状态**
 
-In `docs/superpowers/plans/2026-06-01-novasheet-core-to-context-extensions.md`, add a note near the current status section:
+在 `docs/superpowers/plans/2026-06-01-novasheet-core-to-context-extensions.md` 的状态区域附近增加：
 
 ```md
 ### Follow-up: Feature package extraction
@@ -868,9 +850,7 @@ In `docs/superpowers/plans/2026-06-01-novasheet-core-to-context-extensions.md`, 
 Row/column header reorder is the first user-visible capability moved from `@novasheet/web` fixed runtime construction into a default-installed feature package: `@novasheet/feature-row-column-reorder`.
 ```
 
-- [ ] **Step 3: Run full gates**
-
-Run:
+- [ ] **Step 3: 跑全量 gates**
 
 ```bash
 bun run lint
@@ -883,18 +863,18 @@ bun run --filter @novasheet/canvas2d build
 bun run --filter @novasheet/sheet build
 ```
 
-Expected: all commands exit 0.
+预期：全部 exit 0。
 
-- [ ] **Step 4: Commit docs**
+- [ ] **Step 4: 提交 docs**
 
 ```bash
 git add docs/architecture.md docs/superpowers/plans/2026-06-01-novasheet-core-to-context-extensions.md
 git commit -m "docs(architecture): 记录功能包拆分边界"
 ```
 
-## Self-Review
+## 自检
 
-- Spec coverage: The plan covers contribution registry, web drag contract, feature package creation, runtime consumption, default sheet installation, test ownership, docs, and full verification.
-- Placeholder scan: No placeholder markers or unspecified "write tests" steps remain.
-- Type consistency: `SheetContext` stores generic contributions; `@novasheet/web` owns typed `WebDragContribution`; the feature package depends on `@novasheet/web`; `@novasheet/sheet` depends on the feature package. `@novasheet/core` does not import DOM or web types.
-- Scope check: This plan extracts only row/column reorder. Resize, fill handle, editing, clipboard, context menu, and undo remain separate future feature plans.
+- 覆盖范围：计划覆盖 contribution registry、web drag contract、feature package 创建、runtime consumption、默认 sheet 安装、测试 ownership 迁移、文档与全量验证。
+- 占位扫描：没有占位标记，也没有未具体化的“写测试”步骤。
+- 类型一致性：`SheetContext` 存 generic contributions；`@novasheet/web` 拥有 typed `WebDragContribution`；feature package 依赖 `@novasheet/web`；`@novasheet/sheet` 依赖 feature package；`@novasheet/core` 不导入 DOM 或 web 类型。
+- 范围检查：本计划只抽取 row/column reorder。Resize、fill handle、editing、clipboard、context menu、undo 后续分别单独制定 feature plan。
