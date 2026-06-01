@@ -41,6 +41,8 @@ export type {
   RowBand,
 } from './layout/FrozenRegions'
 export { DefaultGridEngine } from './engine/DefaultGridEngine'
+export { FrameBuilder } from './engine/FrameBuilder'
+export type { FrameBuilderParams, FrameFormatResolver } from './engine/FrameBuilder'
 export type {
   FillCommitResult,
   GridEngine,

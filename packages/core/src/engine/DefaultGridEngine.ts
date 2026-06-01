@@ -39,6 +39,7 @@ import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
+import { FrameBuilder } from './FrameBuilder'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
 import { FillStylePropagator } from './FillStylePropagator'
 import type {
@@ -88,6 +89,7 @@ export class DefaultGridEngine implements GridEngine {
   private selection = new SelectionModel()
   private cellEdit = new CellEditModel()
   private undoStack = new UndoStack()
+  private readonly frameBuilder = new FrameBuilder()
   /**
    * Phase 5-A — 稀疏格式存储，按 **raw** 坐标键控（Task 7 的结构变更按 raw 重映）。
    * mutation 入口先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
@@ -329,55 +331,18 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   getFrame(): RenderFrame {
-    const vpSnap = this.viewport.snapshot()
-    const allGaps = this.hideRowsLayer.getCollapsedGaps()
-    const [firstVisible, lastVisible] = this.rowsAxis.getVisibleRange(
-      vpSnap.scrollY,
-      vpSnap.scrollY + vpSnap.contentRect.height,
-    )
-    const collapsedRowGaps = allGaps
-      .filter((g) => g.atViewRow >= firstVisible && g.atViewRow <= lastVisible)
-      .map((g) => ({
-        ...g,
-        yPx: this.rowsAxis.indexToPosition(g.atViewRow + 1) - vpSnap.scrollY,
-      }))
-    const allColGaps = this.computeCollapsedColGaps()
-    const [firstVisibleCol, lastVisibleCol] = this.colsAxis.getVisibleRange(
-      vpSnap.scrollX,
-      vpSnap.scrollX + vpSnap.contentRect.width,
-    )
-    const collapsedColGaps = allColGaps
-      .filter((g) => g.atViewCol >= firstVisibleCol && g.atViewCol <= lastVisibleCol)
-      .map((g) => ({
-        ...g,
-        xPx: this.colsAxis.indexToPosition(g.atViewCol + 1) - vpSnap.scrollX,
-      }))
-    const mergeRegions = this.frameFormat.mergeRegions(
-      firstVisible,
-      lastVisible,
-      firstVisibleCol,
-      lastVisibleCol,
-    )
-    const cellFormats = this.frameFormat.cellFormats(
-      firstVisible,
-      lastVisible,
-      firstVisibleCol,
-      lastVisibleCol,
-      mergeRegions,
-    )
-    return {
+    return this.frameBuilder.build({
       data: this.data,
       theme: this.theme,
       rowsAxis: this.rowsAxis,
       colsAxis: this.colsAxis,
-      viewport: vpSnap,
+      viewport: this.viewport.snapshot(),
       selection: this.selection.getSelection(),
       cellEdit: this.cellEdit.getSession() ?? undefined,
-      collapsedRowGaps,
-      collapsedColGaps,
-      cellFormats,
-      mergeRegions,
-    }
+      collapsedRowGaps: this.hideRowsLayer.getCollapsedGaps(),
+      collapsedColGaps: this.computeCollapsedColGaps(),
+      formatResolver: this.frameFormat,
+    })
   }
 
   getSelection(): GridSelection {
