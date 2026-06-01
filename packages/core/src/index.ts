@@ -45,6 +45,8 @@ export { AxisViewBuilder } from './engine/AxisViewBuilder'
 export type { BuildColsAxisParams, BuildRowsAxisParams } from './engine/AxisViewBuilder'
 export { FrameBuilder } from './engine/FrameBuilder'
 export type { FrameBuilderParams, FrameFormatResolver } from './engine/FrameBuilder'
+export { ViewportRebuilder } from './engine/ViewportRebuilder'
+export type { ViewportRebuildParams, ViewportRebuildResult } from './engine/ViewportRebuilder'
 export type {
   FillCommitResult,
   GridEngine,

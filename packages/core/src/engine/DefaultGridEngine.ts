@@ -41,6 +41,7 @@ import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { AxisViewBuilder } from './AxisViewBuilder'
 import { FrameBuilder } from './FrameBuilder'
+import { ViewportRebuilder } from './ViewportRebuilder'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
 import { FillStylePropagator } from './FillStylePropagator'
 import type {
@@ -92,6 +93,7 @@ export class DefaultGridEngine implements GridEngine {
   private undoStack = new UndoStack()
   private readonly axisViewBuilder = new AxisViewBuilder()
   private readonly frameBuilder = new FrameBuilder()
+  private readonly viewportRebuilder = new ViewportRebuilder()
   /**
    * Phase 5-A — 稀疏格式存储，按 **raw** 坐标键控（Task 7 的结构变更按 raw 重映）。
    * mutation 入口先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
@@ -1573,13 +1575,14 @@ export class DefaultGridEngine implements GridEngine {
    */
   private rebuildViewAxis(): void {
     this.rowsAxis = this.buildViewRowsAxis()
-    const snap = this.viewport.snapshot()
-    this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
-    this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
-    this.viewport.setHeaderHeight(snap.headerHeight)
-    this.viewport.setRowHeaderWidth(snap.rowHeaderWidth)
-    this.viewport.setSize(snap.contentRect.width, snap.contentRect.height)
-    this.viewport.setScroll(snap.scrollX, snap.scrollY)
+    const rebuilt = this.viewportRebuilder.rebuild({
+      rowsAxis: this.rowsAxis,
+      colsAxis: this.colsAxis,
+      previousViewport: this.viewport,
+      frozenConfig: this.frozen.getFrozenConfig(),
+    })
+    this.frozen = rebuilt.frozen
+    this.viewport = rebuilt.viewport
   }
 
   private buildViewColsAxis(): ChunkedAxis {
@@ -1592,13 +1595,14 @@ export class DefaultGridEngine implements GridEngine {
 
   private rebuildViewColsAxis(): void {
     this.colsAxis = this.buildViewColsAxis()
-    const snap = this.viewport.snapshot()
-    this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
-    this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
-    this.viewport.setHeaderHeight(snap.headerHeight)
-    this.viewport.setRowHeaderWidth(snap.rowHeaderWidth)
-    this.viewport.setSize(snap.contentRect.width, snap.contentRect.height)
-    this.viewport.setScroll(snap.scrollX, snap.scrollY)
+    const rebuilt = this.viewportRebuilder.rebuild({
+      rowsAxis: this.rowsAxis,
+      colsAxis: this.colsAxis,
+      previousViewport: this.viewport,
+      frozenConfig: this.frozen.getFrozenConfig(),
+    })
+    this.frozen = rebuilt.frozen
+    this.viewport = rebuilt.viewport
   }
 
   private wrapViewData(data: DataSource): DataSource {
