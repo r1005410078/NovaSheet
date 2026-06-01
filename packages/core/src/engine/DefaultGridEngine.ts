@@ -39,6 +39,7 @@ import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
+import { AxisViewBuilder } from './AxisViewBuilder'
 import { FrameBuilder } from './FrameBuilder'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
 import { FillStylePropagator } from './FillStylePropagator'
@@ -89,6 +90,7 @@ export class DefaultGridEngine implements GridEngine {
   private selection = new SelectionModel()
   private cellEdit = new CellEditModel()
   private undoStack = new UndoStack()
+  private readonly axisViewBuilder = new AxisViewBuilder()
   private readonly frameBuilder = new FrameBuilder()
   /**
    * Phase 5-A — 稀疏格式存储，按 **raw** 坐标键控（Task 7 的结构变更按 raw 重映）。
@@ -1557,15 +1559,11 @@ export class DefaultGridEngine implements GridEngine {
    * 在 hide/unhide/rebuildData/setRowHeight 等操作后调用以保持与 data 一致。
    */
   private buildViewRowsAxis(): ChunkedAxis {
-    const visibleRows = this.hideRowsLayer.getVisibleRows()
-    const defaultSize = this.resolveDefaultRowHeight()
-    const viewAxis = new ChunkedAxis({ count: visibleRows.length, defaultSize })
-    for (let viewRow = 0; viewRow < visibleRows.length; viewRow += 1) {
-      const underlyingRow = visibleRows[viewRow]!
-      const size = this.rawRowsAxis.getSize(underlyingRow)
-      if (size !== defaultSize) viewAxis.setSize(viewRow, size)
-    }
-    return viewAxis
+    return this.axisViewBuilder.buildRowsAxis({
+      rawRowsAxis: this.rawRowsAxis,
+      visibleRows: this.hideRowsLayer.getVisibleRows(),
+      defaultSize: this.resolveDefaultRowHeight(),
+    })
   }
 
   /**
@@ -1585,19 +1583,11 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private buildViewColsAxis(): ChunkedAxis {
-    const fields = this.rawData.getSchema().fields
-    const visibleIndices: number[] = []
-    for (let i = 0; i < fields.length; i += 1) {
-      if (!this.hiddenColIds.has(fields[i]!.id)) visibleIndices.push(i)
-    }
-    const defaultSize = this.rawColsAxis.getDefaultSize()
-    const viewAxis = new ChunkedAxis({ count: visibleIndices.length, defaultSize })
-    for (let viewCol = 0; viewCol < visibleIndices.length; viewCol += 1) {
-      const rawCol = visibleIndices[viewCol]!
-      const size = this.rawColsAxis.getSize(rawCol)
-      if (size !== defaultSize) viewAxis.setSize(viewCol, size)
-    }
-    return viewAxis
+    return this.axisViewBuilder.buildColsAxis({
+      rawColsAxis: this.rawColsAxis,
+      fields: this.rawData.getSchema().fields,
+      hiddenFieldIds: this.hiddenColIds,
+    })
   }
 
   private rebuildViewColsAxis(): void {
