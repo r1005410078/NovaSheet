@@ -42,6 +42,7 @@ import type { RawRange } from '../view/coordinates'
 import { AxisViewBuilder } from './AxisViewBuilder'
 import { CollapsedColGapBuilder } from './CollapsedColGapBuilder'
 import { FrameBuilder } from './FrameBuilder'
+import { FrozenColumnSyncer } from './FrozenColumnSyncer'
 import { ViewportRebuilder } from './ViewportRebuilder'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
 import { FillStylePropagator } from './FillStylePropagator'
@@ -95,6 +96,7 @@ export class DefaultGridEngine implements GridEngine {
   private readonly axisViewBuilder = new AxisViewBuilder()
   private readonly collapsedColGaps = new CollapsedColGapBuilder()
   private readonly frameBuilder = new FrameBuilder()
+  private readonly frozenColumnSyncer = new FrozenColumnSyncer()
   private readonly viewportRebuilder = new ViewportRebuilder()
   /**
    * Phase 5-A — 稀疏格式存储，按 **raw** 坐标键控（Task 7 的结构变更按 raw 重映）。
@@ -1618,10 +1620,7 @@ export class DefaultGridEngine implements GridEngine {
   private syncFrozenAfterColInsert(at: number, count: number): void {
     const cfg = this.frozen.getFrozenConfig()
     const oldTotalCols = this.rawData.getSchema().fields.length - count
-    let { leftCols, rightCols } = cfg
-    if (at < leftCols) leftCols += count
-    if (rightCols > 0 && at >= oldTotalCols - rightCols) rightCols += count
-    this.frozen.setFrozen({ topRows: cfg.topRows, leftCols, rightCols })
+    this.frozen.setFrozen(this.frozenColumnSyncer.afterInsert(cfg, { at, count, oldTotalCols }))
   }
 
   private syncFrozenAfterColDelete(
@@ -1629,14 +1628,9 @@ export class DefaultGridEngine implements GridEngine {
     totalColsBefore: number,
   ): void {
     const cfg = this.frozen.getFrozenConfig()
-    const leftHit = removedIndices.filter((idx) => idx < cfg.leftCols).length
-    const rightBoundary = totalColsBefore - cfg.rightCols
-    const rightHit = removedIndices.filter((idx) => idx >= rightBoundary).length
-    this.frozen.setFrozen({
-      topRows: cfg.topRows,
-      leftCols: Math.max(0, cfg.leftCols - leftHit),
-      rightCols: Math.max(0, cfg.rightCols - rightHit),
-    })
+    this.frozen.setFrozen(
+      this.frozenColumnSyncer.afterDelete(cfg, { removedIndices, totalColsBefore }),
+    )
   }
 
   private normalizeMoveCols(

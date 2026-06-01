@@ -47,6 +47,8 @@ export { CollapsedColGapBuilder } from './engine/CollapsedColGapBuilder'
 export type { CollapsedColGap } from './engine/CollapsedColGapBuilder'
 export { FrameBuilder } from './engine/FrameBuilder'
 export type { FrameBuilderParams, FrameFormatResolver } from './engine/FrameBuilder'
+export { FrozenColumnSyncer } from './engine/FrozenColumnSyncer'
+export type { FrozenColumnDelete, FrozenColumnInsert } from './engine/FrozenColumnSyncer'
 export { ViewportRebuilder } from './engine/ViewportRebuilder'
 export type { ViewportRebuildParams, ViewportRebuildResult } from './engine/ViewportRebuilder'
 export type {
