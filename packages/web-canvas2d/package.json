@@ -1,7 +1,26 @@
 {
   "name": "@novasheet/web-canvas2d",
   "version": "0.0.0",
+  "description": "Canvas2D renderer for the NovaSheet spreadsheet engine.",
+  "license": "MIT",
   "type": "module",
+  "homepage": "https://r1005410078.github.io/NovaSheet/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r1005410078/NovaSheet.git",
+    "directory": "packages/web-canvas2d"
+  },
+  "bugs": {
+    "url": "https://github.com/r1005410078/NovaSheet/issues"
+  },
+  "keywords": [
+    "spreadsheet",
+    "grid",
+    "canvas",
+    "canvas2d",
+    "renderer",
+    "typescript"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

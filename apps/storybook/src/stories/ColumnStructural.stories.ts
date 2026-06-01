@@ -5,10 +5,10 @@ import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
 
 const meta: Meta = {
-  title: '表格/列结构操作（Phase 4.6）',
+  title: 'Table/Column structure (Phase 4.6)',
   parameters: { layout: 'fullscreen' },
   ...docsMeta(
-    'Phase 4.6：列头右键菜单提供插入列、删除列、隐藏列、取消隐藏列、调整列宽；同时支持通过 Grid 公开 API 以编程方式操作。',
+    'Phase 4.6: column header context menus provide insert, delete, hide, unhide, and resize actions. The same operations are also exposed through the public Grid API.',
   ),
 }
 export default meta
@@ -22,11 +22,11 @@ type Story = StoryObj
 function columnSchema(): Schema {
   return {
     fields: [
-      { id: 'name', name: '姓名', type: 'text', width: 140 },
-      { id: 'team', name: '团队', type: 'text', width: 120 },
-      { id: 'revenue', name: '营收', type: 'number', width: 110 },
-      { id: 'date', name: '入职日期', type: 'date', width: 140 },
-      { id: 'active', name: '在职', type: 'checkbox', width: 80 },
+      { id: 'name', name: 'Name', type: 'text', width: 140 },
+      { id: 'team', name: 'Team', type: 'text', width: 120 },
+      { id: 'revenue', name: 'Revenue', type: 'number', width: 110 },
+      { id: 'date', name: 'Start date', type: 'date', width: 140 },
+      { id: 'active', name: 'Active', type: 'checkbox', width: 80 },
     ],
   }
 }
@@ -35,7 +35,7 @@ function makeRows(n: number): Row[] {
   const teams = ['Platform', 'Data', 'Design']
   const base = Date.UTC(2024, 0, 1)
   return Array.from({ length: n }, (_, i) => ({
-    name: `员工 ${String(i + 1).padStart(3, '0')}`,
+    name: `Employee ${String(i + 1).padStart(3, '0')}`,
     team: teams[i % teams.length]!,
     revenue: (i + 1) * 1000,
     date: new Date(base + i * 86400000),
@@ -53,10 +53,10 @@ createGridHost({ data })
 `
 
 export const Default: Story = {
-  name: '默认（列头右键菜单）',
+  name: 'Default column header menu',
   ...docsStory(
     defaultSource,
-    '右键任意列头打开列操作菜单：Insert column left / right、Delete column、Hide column、Resize column width。',
+    'Right-click any column header to open column actions: Insert column left / right, Delete column, Hide column, and Resize column width.',
   ),
   render: () => {
     const data = new InMemoryDataSource({ schema: columnSchema(), rows: makeRows(100) })
@@ -73,18 +73,18 @@ const data = new InMemoryDataSource({ schema, rows })
 const host = createGridHost({ data })
 const grid: Grid = (host as any).__grid
 
-// 在第 3 个字段前插入 2 列
+// Insert 2 columns before the third field
 grid.insertCols(2, 2)
 
-// 删除 team + revenue 两列
+// Delete the team + revenue columns
 grid.deleteCols(['team', 'revenue'])
 `
 
 export const InsertDelete: Story = {
-  name: '插入 / 删除列（编程式）',
+  name: 'Insert / delete columns programmatically',
   ...docsStory(
     insertDeleteSource,
-    '点击按钮在第 3 个字段前插入 2 列，或删除 team + revenue 两列。也可右键列头使用菜单操作。',
+    'Use the buttons to insert two columns before the third field or delete the team + revenue columns. You can also use the column header context menu.',
   ),
   render: () => {
     const data = new InMemoryDataSource({ schema: columnSchema(), rows: makeRows(30) })
@@ -99,13 +99,13 @@ export const InsertDelete: Story = {
       'display:flex;gap:8px;padding:8px;background:#f5f5f5;border-bottom:1px solid #ddd;flex-shrink:0'
 
     const btnInsert = document.createElement('button')
-    btnInsert.textContent = '在第 3 个字段前插入 2 列'
+    btnInsert.textContent = 'Insert 2 columns before field 3'
     btnInsert.addEventListener('click', () => {
       grid.insertCols(2, 2)
     })
 
     const btnDelete = document.createElement('button')
-    btnDelete.textContent = '删除 team + revenue'
+    btnDelete.textContent = 'Delete team + revenue'
     btnDelete.addEventListener('click', () => {
       grid.deleteCols(['team', 'revenue'])
     })
@@ -131,15 +131,15 @@ const data = new InMemoryDataSource({ schema, rows })
 const host = createGridHost({ data })
 const grid: Grid = (host as any).__grid
 
-// 隐藏 date + active 两列
+// Hide the date + active columns
 grid.hideCols(['date', 'active'])
 `
 
 export const PrefilledHidden: Story = {
-  name: '预隐藏列',
+  name: 'Pre-hidden columns',
   ...docsStory(
     hiddenSource,
-    'date 与 active 两列在挂载后立即被隐藏；列头显示折叠指示。点击按钮可取消隐藏。',
+    'The date and active columns are hidden on mount. Column headers show collapse indicators. Use the button to unhide all columns.',
   ),
   render: () => {
     const data = new InMemoryDataSource({ schema: columnSchema(), rows: makeRows(50) })
@@ -156,7 +156,7 @@ export const PrefilledHidden: Story = {
       'display:flex;gap:8px;padding:8px;background:#f5f5f5;border-bottom:1px solid #ddd;flex-shrink:0'
 
     const btnUnhide = document.createElement('button')
-    btnUnhide.textContent = '取消隐藏全部'
+    btnUnhide.textContent = 'Unhide all'
     btnUnhide.addEventListener('click', () => {
       grid.unhideCols(grid.getHiddenCols().slice())
     })

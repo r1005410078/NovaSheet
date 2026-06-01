@@ -7,30 +7,30 @@ import { docsMeta, docsStory } from '../story-docs'
 import resizeExcelSrc from './snippets/resize.excelHeaders.snippet.ts?raw'
 
 const RESIZE_DOCS = `
-Phase 3.4 行列 resize：DOM \`<handle>\` 命中区（spec §6.1），不挡 canvas 滚动。
+Phase 3.4 row and column resize uses DOM \`<handle>\` hit zones without blocking Canvas scrolling.
 
-### 列宽
+### Column width
 
-- 鼠标移到**列头底边**（8px 命中区），光标变为 \`col-resize\`；悬停显示双 pill grip（Sheets 式）
-- 拖拽调整列宽；松手后 spacer 与视口同步
+- Move the pointer to the **bottom edge of a column header**. The 8px hit zone switches to \`col-resize\` and shows a Sheets-style grip on hover.
+- Drag to resize the column. Spacer and viewport state sync after release.
 
-### 行高（需 Excel 行号列）
+### Row height (requires Excel row headers)
 
-- \`withExcelHeaders()\` 或 \`excelHeaders: true\` 开启左侧行号列后，**行号列右缘**出现 \`row-resize\` 命中区（悬停同样显示 grip）
-- 拖拽调整行高
+- Enable the left row-number rail with \`withExcelHeaders()\` or \`excelHeaders: true\`. The **right edge of the row header** becomes a \`row-resize\` hit zone.
+- Drag to resize row height.
 
-### 键盘（handle 聚焦后）
+### Keyboard (after a handle receives focus)
 
-| 按键 | 列 handle | 行 handle |
+| Key | Column handle | Row handle |
 |------|-----------|-----------|
-| ← / → | 缩窄 / 加宽（Shift 步长 32px） | — |
-| ↑ / ↓ | — | 减高 / 加高 |
+| ← / → | Narrow / widen (Shift steps by 32px) | — |
+| ↑ / ↓ | — | Decrease / increase height |
 
-最小尺寸 **20px**（\`MIN_RESIZE_SIZE\`）。拖拽时显示 Sheets 式竖线/横线预览（松手后表格才更新）。
+The minimum size is **20px** (\`MIN_RESIZE_SIZE\`). Dragging shows a Sheets-style vertical or horizontal preview line; the grid updates on release.
 `.trim()
 
 const meta: Meta = {
-  title: '表格/行列 resize',
+  title: 'Table/Row and column resize',
   ...docsMeta(RESIZE_DOCS),
 }
 export default meta
@@ -38,10 +38,10 @@ export default meta
 type Story = StoryObj
 
 export const ExcelHeadersResize: Story = {
-  name: '列头 + 行号列 resize',
+  name: 'Column header + row header resize',
   ...docsStory(
     resizeExcelSrc,
-    '列头拖列宽；左侧行号列拖行高。冻结区与普通区 handle 每帧随视口同步。',
+    'Drag column headers to resize widths and the left row header rail to resize heights. Frozen and normal-region handles sync with every frame.',
   ),
   render: () => {
     const schema = basicTextSchema()

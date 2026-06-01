@@ -1,5 +1,5 @@
 <script>
-  /* Storybook 外壳：同上，过滤扩展注入噪声 */
+  /* Storybook shell: filter noisy extension-injected console messages. */
   ;(function () {
     var NOISE = [
       /MetaMask encountered an error setting the global Ethereum provider/i,
@@ -31,9 +31,11 @@
           : reason && reason.message
             ? reason.message
             : String(reason != null ? reason : '')
-      if (NOISE.some(function (re) {
-        return re.test(text)
-      })) {
+      if (
+        NOISE.some(function (re) {
+          return re.test(text)
+        })
+      ) {
         event.preventDefault()
       }
     })
@@ -41,9 +43,11 @@
       'error',
       function (event) {
         var text = (event.message || '') + '\n' + (event.filename || '')
-        if (NOISE.some(function (re) {
-          return re.test(text)
-        })) {
+        if (
+          NOISE.some(function (re) {
+            return re.test(text)
+          })
+        ) {
           event.preventDefault()
           return true
         }

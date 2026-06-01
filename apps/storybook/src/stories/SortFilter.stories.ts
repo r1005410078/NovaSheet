@@ -4,10 +4,10 @@ import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
 
 const meta: Meta = {
-  title: '表格/排序筛选',
+  title: 'Table/Sort and filter',
   parameters: { layout: 'fullscreen' },
   ...docsMeta(
-    'Phase 4.4：列头右键菜单提供排序与筛选；列头绘制 sort/filter 状态图标；筛选支持 text / number / date / select / checkbox。',
+    'Phase 4.4: column header context menus provide sorting and filtering. Headers render sort/filter state icons, and filters support text, number, date, select, and checkbox fields.',
   ),
 }
 export default meta
@@ -31,10 +31,10 @@ createGridHost({ data })
 `
 
 export const Basic: Story = {
-  name: '列头排序与筛选',
+  name: 'Column header sort and filter',
   ...docsStory(
     source,
-    '右键任意列头打开菜单；选择 Sort ascending / descending 或 Filter... 观察行顺序、行数和列头图标。',
+    'Right-click any column header to open the menu. Choose Sort ascending / descending or Filter... to inspect row order, row count, and header icons.',
   ),
   render: () => {
     const data = new InMemoryDataSource({ schema: sortFilterSchema(), rows: sortFilterRows(80) })

@@ -1,5 +1,5 @@
 <script>
-  /* Storybook：屏蔽钱包扩展在 localhost 注入时的控制台噪声（非 NovaSheet 代码） */
+  /* Storybook: hide noisy wallet-extension console messages injected on localhost. */
   ;(function () {
     var NOISE = [
       /MetaMask encountered an error setting the global Ethereum provider/i,
@@ -31,9 +31,11 @@
           : reason && reason.message
             ? reason.message
             : String(reason != null ? reason : '')
-      if (NOISE.some(function (re) {
-        return re.test(text)
-      })) {
+      if (
+        NOISE.some(function (re) {
+          return re.test(text)
+        })
+      ) {
         event.preventDefault()
       }
     })
@@ -41,9 +43,11 @@
       'error',
       function (event) {
         var text = (event.message || '') + '\n' + (event.filename || '')
-        if (NOISE.some(function (re) {
-          return re.test(text)
-        })) {
+        if (
+          NOISE.some(function (re) {
+            return re.test(text)
+          })
+        ) {
           event.preventDefault()
           return true
         }

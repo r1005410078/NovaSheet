@@ -1,18 +1,22 @@
 /**
- * GeneratedDataSource——按需计算行的 DataSource 实现，演示 / 压测专用。
+ * GeneratedDataSource is an on-demand DataSource implementation for demos and stress tests.
  *
- * 与 InMemoryDataSource 的区别：不预分配行数组。1M 行的构造从 3-8 秒（V8 分配
- * 3000 万个 JS 值）降到 0ms（只 new 一个类实例）。Renderer 每帧只为可见 cell 调
- * `getCell` —— 单次调用 < 1μs，1M 行不再是 data-layer 瓶颈。
+ * Difference from InMemoryDataSource: it does not preallocate row arrays. A
+ * 1M-row demo goes from several seconds of V8 allocation to constructing one
+ * class instance. The renderer calls `getCell` only for visible cells, so 1M
+ * rows are no longer a data-layer bottleneck.
  *
- * 编辑覆盖：实现 `MutableDataSource`，`updateCell` 写入稀疏 `Map`，`getCell`
- * 优先读 override，再退回生成函数。编辑过的格保留生成行为同时支持改写——
- * 让大数据 demo 也能演示双击编辑。
+ * Editing overrides: implements `MutableDataSource`; `updateCell` writes to a
+ * sparse `Map`, and `getCell` reads overrides before falling back to the
+ * generator. This keeps generated behavior while allowing large demos to show
+ * double-click editing.
  *
- * 适用场景：可程序化生成的展示 / mock 数据。真实业务数据请用 InMemoryDataSource
- * （≤ 30万行）或 Phase 4 的分页 DataSource。
+ * Use for display / mock data that can be generated programmatically. Real
+ * business data should use InMemoryDataSource for smaller datasets or a paged
+ * DataSource for larger ones.
  *
- * 不在 @novasheet/core 里——这是 demo 工具，不属于公共 API。
+ * This intentionally stays outside @novasheet/core because it is a demo helper,
+ * not public API.
  */
 
 import type {
@@ -29,25 +33,25 @@ import type {
 
 export type CellGenerator = (rowIndex: number, fieldId: string) => CellValue
 
-/** deleteRows 返回的快照（结构等同 core 的 DeletedRowSnapshot，未导出故内联）。 */
+/** Snapshot returned by deleteRows; mirrors the core DeletedRowSnapshot shape inline. */
 interface DeletedRowSnapshot {
   readonly originalUnderlyingRow: number
   readonly cells: Readonly<Record<string, CellValue>>
 }
 
 export class GeneratedDataSource implements DataSource, MutableDataSource {
-  /** override / 删除快照按**稳定行 key** 锚定，不随结构变动而错位；key 为 `${rowKey}:${fieldId}`。 */
+  /** Overrides / delete snapshots are anchored by stable row key; key is `${rowKey}:${fieldId}`. */
   private overrides = new Map<string, CellValue>()
   private listeners = new Set<DataSourceListener>()
-  /** 构造时的生成行数；生成行 key ∈ [0, initialRowCount)，cellFn 仅对这些 key 生成。 */
+  /** Initial generated row count; generated row keys are in [0, initialRowCount). */
   private readonly initialRowCount: number
   /**
-   * 视图顺序下每行的稳定 key；`null` 表示尚未发生行结构变动（恒等映射 key==index）。
-   * 惰性物化：保留 GeneratedDataSource「0ms 挂载、不预分配 1M 数组」的初衷，
-   * 仅当首次 insert/delete/move 行时才分配。
+   * Stable row key for each row in view order. `null` means row structure has
+   * not changed yet and key === index.
+   * Lazily materialized to preserve the "no 1M-row preallocation" property.
    */
   private rowOrder: number[] | null = null
-  /** 插入空白行的稳定 key 计数器（从 initialRowCount 起，永不与生成 key 冲突）。 */
+  /** Stable key counter for inserted blank rows; starts after generated keys. */
   private nextRowKey: number
 
   constructor(
@@ -59,17 +63,17 @@ export class GeneratedDataSource implements DataSource, MutableDataSource {
     this.nextRowKey = rowCount
   }
 
-  /** 当前行数：物化后取 rowOrder 长度，否则为初始生成行数。 */
+  /** Current row count: rowOrder length after materialization, otherwise initial count. */
   private get count(): number {
     return this.rowOrder ? this.rowOrder.length : this.initialRowCount
   }
 
-  /** 视图行下标 → 稳定行 key。 */
+  /** View row index -> stable row key. */
   private keyAt(rowIndex: number): number {
     return this.rowOrder ? this.rowOrder[rowIndex]! : rowIndex
   }
 
-  /** 首次行结构变动前物化 rowOrder 为恒等序列 [0, initialRowCount)。 */
+  /** Materialize rowOrder as identity sequence before the first structural row mutation. */
   private materializeRowOrder(): void {
     if (!this.rowOrder) {
       this.rowOrder = Array.from({ length: this.initialRowCount }, (_, i) => i)
@@ -85,9 +89,9 @@ export class GeneratedDataSource implements DataSource, MutableDataSource {
   }
 
   /**
-   * Renderer 每帧调一次（区间预热）；按 endIndex inclusive 的约定（与
-   * ChunkedAxis.getVisibleRange 一致——CLAUDE.md 不变量 #4）。
-   * 同步返回——无 IO，无缓存，纯计算。
+   * Called once per render frame for range prewarming. `endIndex` is inclusive,
+   * matching ChunkedAxis.getVisibleRange and the repository invariant.
+   * Returns synchronously with no IO or cache dependency.
    */
   getRows(startIndex: number, endIndex: number): Row[] {
     const start = Math.max(0, startIndex)
@@ -102,13 +106,13 @@ export class GeneratedDataSource implements DataSource, MutableDataSource {
     return out
   }
 
-  /** Paint hot path——必须同步、零分配。Renderer 每帧调 ~600 次。 */
+  /** Paint hot path: must stay synchronous and allocation-light. */
   getCell(rowIndex: number, fieldId: string): CellValue | undefined {
     if (rowIndex < 0 || rowIndex >= this.count) return undefined
     const key = this.keyAt(rowIndex)
     const override = this.overrides.get(`${key}:${fieldId}`)
     if (override !== undefined) return override
-    // 生成行才回退 cellFn；插入的空白行（key >= initialRowCount）无生成内容。
+    // Only generated rows fall back to cellFn; inserted blank rows have no generated content.
     return key < this.initialRowCount ? this.cellFn(key, fieldId) : undefined
   }
 
@@ -118,7 +122,7 @@ export class GeneratedDataSource implements DataSource, MutableDataSource {
     this.emit({ type: 'rowsChanged', startIndex: rowIndex, endIndex: rowIndex })
   }
 
-  /** GeneratedDataSource 无 view↔raw 间接层，underlying row 即行下标。 */
+  /** GeneratedDataSource has no view/raw indirection; the underlying row is the row index. */
   updateCellByUnderlyingRow(underlyingRow: number, fieldId: string, value: CellValue): void {
     this.updateCell(underlyingRow, fieldId, value)
   }
@@ -189,7 +193,7 @@ export class GeneratedDataSource implements DataSource, MutableDataSource {
     const idx = this.schema.fields.findIndex((field) => field.id === fieldId)
     if (idx < 0) return null
     const field = this.schema.fields[idx]!
-    // 稀疏 cells：只装 override（生成值在 undo 时由 cellFn 重新生成，无需物化 1M 列）。
+    // Sparse cells: only overrides are stored; generated values can be regenerated on undo.
     const cells: (CellValue | undefined)[] = new Array(this.count)
     for (const [overrideKey, value] of this.overrides) {
       const sep = overrideKey.indexOf(':')

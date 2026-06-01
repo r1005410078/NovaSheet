@@ -9,5 +9,5 @@ const data = new InMemoryDataSource({
   rows: generateRows(basicTextSchema(), 200),
 })
 
-// 先点击表格，scroll-host 获得焦点后即可用键盘导航（无需额外 API）
+// Click the grid first. Once the scroll host has focus, keyboard navigation works without extra API calls.
 createGridHost({ data })

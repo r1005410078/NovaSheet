@@ -6,10 +6,10 @@ import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/contextMenu.basic.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/右键菜单',
+  title: 'Table/Context menu',
   parameters: { layout: 'centered' },
   ...docsMeta(
-    'Phase 4.0：body 单元格右键打开 Cut / Copy / Paste。MutableDataSource 下 Paste 默认 enabled；点击 Cut/Copy 可通过 `onContextMenuAction` 回调外抛。',
+    'Phase 4.0: right-click a body cell to open Cut / Copy / Paste. Paste is enabled by default for MutableDataSource, and Cut/Copy actions are exposed through `onContextMenuAction`.',
   ),
 }
 export default meta
@@ -17,8 +17,11 @@ export default meta
 type Story = StoryObj
 
 export const Basic: Story = {
-  name: '基础右键菜单',
-  ...docsStory(basicSrc, '右键 body 区域看菜单；Esc 关闭；↑↓ 切换；Enter 触发回调（看控制台）。'),
+  name: 'Basic context menu',
+  ...docsStory(
+    basicSrc,
+    'Right-click the body area to open the menu. Esc closes it, arrow keys move focus, and Enter triggers the callback.',
+  ),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 30) })
@@ -39,8 +42,8 @@ export const Basic: Story = {
 }
 
 export const PasteEnabled: Story = {
-  name: 'Paste 启用',
-  ...docsStory(basicSrc, '使用 MutableDataSource 时 Paste 项默认可用。'),
+  name: 'Paste enabled',
+  ...docsStory(basicSrc, 'Paste is enabled by default when using a MutableDataSource.'),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 30) })

@@ -5,8 +5,8 @@ import { InMemoryDataSource, type Schema } from '@novasheet/core'
 
 const schema: Schema = {
   fields: [
-    { id: 'name', name: '姓名', type: 'text', width: 120 },
-    { id: 'team', name: '团队', type: 'text', width: 120 },
+    { id: 'name', name: 'Name', type: 'text', width: 120 },
+    { id: 'team', name: 'Team', type: 'text', width: 120 },
   ],
 }
 

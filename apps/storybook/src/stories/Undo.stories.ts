@@ -5,33 +5,33 @@ import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/undo.basic.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/撤销重做',
+  title: 'Table/Undo and redo',
   parameters: { layout: 'centered' },
   ...docsMeta(
-    'Phase 4.2：UndoStack（深 100）+ discriminated-union UndoCommand；cell edit / Cut / Paste / Row+Col resize 进栈；Cmd/Ctrl+Z 撤销，Cmd+Shift+Z 或 Ctrl+Y 重做；编辑中 Cmd/Ctrl+Z 交给浏览器 input 原生；Undo/Redo 后选区恢复到受影响范围；Grid.undo() / redo() / canUndo() / canRedo() + onUndo / onRedo 事件。',
+    'Phase 4.2: UndoStack with depth 100 and discriminated UndoCommand variants. Cell edit, Cut, Paste, and row/column resize enter the stack. Cmd/Ctrl+Z undoes, Cmd+Shift+Z or Ctrl+Y redoes, and Grid exposes undo(), redo(), canUndo(), canRedo(), onUndo, and onRedo.',
   ),
 }
 export default meta
 type Story = StoryObj
 
 export const Basic: Story = {
-  name: '基础撤销重做',
+  name: 'Basic undo and redo',
   ...docsStory(
     basicSrc,
-    '双击单元格编辑，或 Ctrl/Cmd+X/V 剪贴操作，然后 Ctrl/Cmd+Z 撤销；工具栏按钮展示 canUndo / canRedo 状态。',
+    'Double-click a cell to edit, or use Ctrl/Cmd+X/V clipboard actions, then Ctrl/Cmd+Z to undo. Toolbar buttons show canUndo / canRedo state.',
   ),
   render: () => {
     const schema = {
       fields: [
-        { id: 'name', name: '名称', type: 'text' as const, width: 140 },
-        { id: 'qty', name: '数量', type: 'number' as const, width: 100 },
+        { id: 'name', name: 'Name', type: 'text' as const, width: 140 },
+        { id: 'qty', name: 'Quantity', type: 'number' as const, width: 100 },
       ],
     }
 
     const data = new InMemoryDataSource({
       schema,
       rows: Array.from({ length: 30 }, (_, i) => ({
-        name: `产品 ${i + 1}`,
+        name: `Product ${i + 1}`,
         qty: 10 + i,
       })),
     })
@@ -61,7 +61,7 @@ export const Basic: Story = {
 
     const statusEl = document.createElement('span')
     Object.assign(statusEl.style, { fontFamily: 'monospace', fontSize: '12px', color: '#555' })
-    statusEl.textContent = '最近事件: (无)'
+    statusEl.textContent = 'Latest event: (none)'
 
     toolbar.appendChild(undoBtn)
     toolbar.appendChild(redoBtn)
@@ -77,11 +77,11 @@ export const Basic: Story = {
       {
         data,
         onUndo: (e) => {
-          statusEl.textContent = `最近事件: undo (${e.command.kind})`
+          statusEl.textContent = `Latest event: undo (${e.command.kind})`
           syncButtons()
         },
         onRedo: (e) => {
-          statusEl.textContent = `最近事件: redo (${e.command.kind})`
+          statusEl.textContent = `Latest event: redo (${e.command.kind})`
           syncButtons()
         },
       },

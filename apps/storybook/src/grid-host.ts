@@ -5,8 +5,9 @@ import { Grid, type GridOptions } from '@novasheet/web'
  * Grid instance attached as `__grid` so stories can call imperative APIs (scrollToRow,
  * setTheme, etc.) and devtools can inspect it.
  *
- * 默认填满 Storybook 画布（width/height = 100%）。容器尺寸变化时 Grid 的 ResizeObserver 会重算视口。
- * 仅在单测或需要固定 px 视口时传 number。
+ * Defaults to filling the Storybook canvas (width/height = 100%). Grid's
+ * ResizeObserver recalculates the viewport when the container changes size.
+ * Pass numbers only for tests or stories that need a fixed px viewport.
  */
 export function createGridHost(
   opts: GridOptions,

@@ -3,7 +3,7 @@
 import type { Grid } from '@novasheet/web'
 import { createGridHost } from '../grid-host'
 
-const host = createGridHost({ data /* 2000 行 */ })
+const host = createGridHost({ data /* 2,000 rows */ })
 requestAnimationFrame(() => {
   const grid = (host as HTMLElement & { __grid: Grid }).__grid
   grid.scrollToRow(500, 'center')

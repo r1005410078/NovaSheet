@@ -6,20 +6,20 @@ import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/clipboard.basic.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/剪贴板',
+  title: 'Table/Clipboard',
   parameters: { layout: 'centered' },
   ...docsMeta(
-    'Phase 4.1：Cut / Copy / Paste。Ctrl/Cmd+X/C/V 快捷键 + 右键菜单同一引擎；与 Excel / Sheets 双向互通（TSV）；类型不匹配跳过 + onPasteSkipped 事件。',
+    'Phase 4.1: Cut / Copy / Paste. Ctrl/Cmd+X/C/V and the context menu share the same engine, TSV interops with Excel / Sheets, and incompatible cells are skipped through `onPasteSkipped`.',
   ),
 }
 export default meta
 type Story = StoryObj
 
 export const Basic: Story = {
-  name: '基础剪贴板',
+  name: 'Basic clipboard',
   ...docsStory(
     basicSrc,
-    '点选区域 → Ctrl/Cmd+C/X/V 或右键菜单；打开浏览器 console 看 onCopy/onCut/onPaste 输出。',
+    'Select a range, then use Ctrl/Cmd+C/X/V or the context menu. Open the browser console to inspect onCopy/onCut/onPaste output.',
   ),
   render: () => {
     const schema = basicTextSchema()

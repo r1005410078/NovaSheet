@@ -2,7 +2,7 @@ import type { Row, Schema } from '@novasheet/core'
 import { GeneratedDataSource } from './generated-data-source'
 
 /**
- * 3 个 text 字段——Default story 默认 schema。
+ * Three text fields used by the default story schema.
  */
 export function basicTextSchema(): Schema {
   return {
@@ -15,8 +15,9 @@ export function basicTextSchema(): Schema {
 }
 
 /**
- * 覆盖全部 7 种 FieldType——FieldTypes story 用。M1 里非 text/number
- * 都走 fallback（toString → text），但 schema 仍按真实类型声明。
+ * Covers all seven FieldType values for the FieldTypes story. In M1,
+ * non-text / non-number fields use fallback text rendering, but the schema
+ * still declares their real field types.
  */
 export function mixedTypesSchema(): Schema {
   return {
@@ -56,7 +57,8 @@ const STATUSES = ['Open', 'In Progress', 'Blocked', 'Done']
 const TAG_POOL = ['urgent', 'frontend', 'backend', 'design', 'ops', 'docs', 'research']
 
 /**
- * 确定性 mock 行：通过 index 派生字段值，保证多次渲染、SSR、对比测试结果稳定。
+ * Deterministic mock rows: derive field values from index so repeated renders,
+ * SSR, and comparison tests stay stable.
  */
 export function generateRows(schema: Schema, n: number): Row[] {
   const rows: Row[] = []
@@ -108,118 +110,118 @@ export function generateRows(schema: Schema, n: number): Row[] {
   return rows
 }
 
-/** 行高自适应 / 换行 demo 用的 Schema（含 wrap 列）。 */
+/** Schema for row-height autofit / wrapping demos. */
 export function wrapAutofitSchema(): Schema {
   return {
     fields: [
-      { id: 'name', name: '员工', type: 'text', width: 100 },
-      { id: 'role', name: '角色', type: 'text', width: 88 },
-      { id: 'desc', name: '描述', type: 'text', width: 220, wrap: true },
-      { id: 'note', name: '备注', type: 'text', width: 160, wrap: true },
-      { id: 'amount', name: '金额', type: 'number', width: 100 },
+      { id: 'name', name: 'Employee', type: 'text', width: 100 },
+      { id: 'role', name: 'Role', type: 'text', width: 88 },
+      { id: 'desc', name: 'Description', type: 'text', width: 220, wrap: true },
+      { id: 'note', name: 'Note', type: 'text', width: 160, wrap: true },
+      { id: 'amount', name: 'Amount', type: 'number', width: 100 },
     ],
   }
 }
 
-/** 换行 demo：多类文案（长/短/中英混排/符号/空备注）。 */
+/** Wrapping demo with long, short, symbol-heavy, and empty-note samples. */
 export function wrapAutofitSampleRows(): Row[] {
   return [
     {
-      name: '张三',
-      role: '前端',
-      desc: '负责前端架构与跨平台渲染系统的设计与实现，覆盖 Canvas2D / WebGL / Flutter 三端。',
-      note: '本季度推进 M3 frozen + autofit。',
+      name: 'Alice Zhang',
+      role: 'Frontend',
+      desc: 'Owns frontend architecture and cross-platform rendering systems across Canvas2D, WebGL, and Flutter.',
+      note: 'Driving M3 frozen regions and autofit this quarter.',
       amount: 85000,
     },
     {
-      name: '李四',
-      role: '数据',
-      desc: '数据工程师，主导 ETL pipeline 和数据质量监控；近期接入 ClickHouse 替换原 PostgreSQL OLAP。',
-      note: '需评审下季度迁移方案；附件见 wiki /data-migration-v2。',
+      name: 'Bob Li',
+      role: 'Data',
+      desc: 'Data engineer leading ETL pipelines and data quality monitoring; recently migrated OLAP workloads from PostgreSQL to ClickHouse.',
+      note: 'Review next-quarter migration plan; attachments live at wiki /data-migration-v2.',
       amount: 92000,
     },
     {
-      name: '王五',
-      role: '测试',
-      desc: '短描述。',
+      name: 'Carol Wang',
+      role: 'QA',
+      desc: 'Short description.',
       note: '—',
       amount: 70000,
     },
     {
-      name: '赵六',
-      role: '设计',
-      desc: '设计系统与 Storybook 维护；推动 dense / compact 双主题落地，新增空数据插画与暗色模式适配。',
-      note: '协调与品牌团队的 token 对齐；Figma → code 每周 sync。',
+      name: 'David Zhao',
+      role: 'Design',
+      desc: 'Maintains the design system and Storybook; shipped dense / compact themes, empty-state artwork, and dark-mode adaptation.',
+      note: 'Coordinates token alignment with brand design; Figma to code sync runs weekly.',
       amount: 78000,
     },
     {
-      name: '钱七',
-      role: '运维',
-      desc: '运维：CI 看板。',
-      note: '单行对比用例。',
+      name: 'Eve Qian',
+      role: 'Ops',
+      desc: 'Operations: CI dashboard.',
+      note: 'Single-line comparison case.',
       amount: 65000,
     },
     {
-      name: '孙八',
-      role: '产品',
-      desc: 'PRD-2026-Q2：用户画像分层 + 埋点规范 v3；需与增长、数据、客户端三方评审。',
+      name: 'Frank Sun',
+      role: 'Product',
+      desc: 'PRD-2026-Q2: user segmentation plus analytics schema v3; needs review with growth, data, and client teams.',
       note: 'English note: rollout gated by feature flag `sheet.wrap_beta`.',
       amount: 81000,
     },
     {
-      name: '周九',
-      role: '算法',
-      desc: '模型 serving latency P99<120ms；特征仓日增量 2.1TB；异常检测规则 #42/#57 待下线。',
-      note: '含公式：score = 0.7×ctr + 0.3×cvr；阈值 τ=0.15（可调）。',
+      name: 'Grace Zhou',
+      role: 'ML',
+      desc: 'Model serving latency P99 < 120ms; feature store daily increment is 2.1TB; anomaly rules #42/#57 are scheduled for removal.',
+      note: 'Formula included: score = 0.7 x ctr + 0.3 x cvr; threshold tau = 0.15.',
       amount: 105000,
     },
     {
-      name: '吴十',
-      role: '安全',
-      desc: '【高】依赖漏洞 CVE-2026-xxxxx；SBOM 扫描每周一；零信任网关策略变更窗口周三 02:00–04:00 UTC。',
+      name: 'Heidi Wu',
+      role: 'Security',
+      desc: '[High] dependency vulnerability CVE-2026-xxxxx; SBOM scans run every Monday; zero-trust gateway policy window is Wednesday 02:00-04:00 UTC.',
       note: '',
       amount: 99000,
     },
     {
-      name: '郑十一',
-      role: '国际化',
-      desc: 'RTL 布局回归；`zh-CN` / `en-US` / `ja-JP` 文案长度差异导致列宽抖动——优先 wrap 列验证。',
+      name: 'Ivan Zheng',
+      role: 'I18n',
+      desc: 'RTL layout regression; `zh-CN`, `en-US`, and `ja-JP` copy length differences can shift column widths, so wrap columns are the priority.',
       note: 'URL: https://docs.example.com/i18n/grid-wrap',
       amount: 73000,
     },
     {
-      name: '王十二',
-      role: '实习',
-      desc: 'Onboarding week-2：阅读 architecture.md + 跑通 bun test；首任务：补 CellPainter 单测。',
-      note: '导师：张三；截止 2026-06-01。',
+      name: 'Judy Wang',
+      role: 'Intern',
+      desc: 'Onboarding week 2: read architecture.md and run bun test; first task is adding CellPainter tests.',
+      note: 'Mentor: Alice Zhang; due 2026-06-01.',
       amount: 12000,
     },
   ]
 }
 
-const WRAP_BIG_DEPTS = ['平台', '数据', '设计', '增长', '运维', '安全']
-const WRAP_BIG_REGIONS = ['华北', '华东', '华南', '西南']
-const WRAP_BIG_STATUSES = ['进行中', '已完成', '阻塞', '待评审']
+const WRAP_BIG_DEPTS = ['Platform', 'Data', 'Design', 'Growth', 'Ops', 'Security']
+const WRAP_BIG_REGIONS = ['North', 'East', 'South', 'West']
+const WRAP_BIG_STATUSES = ['In progress', 'Done', 'Blocked', 'In review']
 
-/** 1 万行 × 10 列换行滚动压测 Schema。 */
+/** 10k-row x 10-column wrapping scroll stress-test schema. */
 export function wrapAutofitBigSchema(): Schema {
   return {
     fields: [
-      { id: 'id', name: '序号', type: 'number', width: 72 },
-      { id: 'name', name: '员工', type: 'text', width: 96 },
-      { id: 'dept', name: '部门', type: 'text', width: 80 },
-      { id: 'region', name: '区域', type: 'text', width: 72 },
-      { id: 'status', name: '状态', type: 'text', width: 80 },
-      { id: 'desc', name: '描述', type: 'text', width: 200, wrap: true },
-      { id: 'note', name: '备注', type: 'text', width: 140, wrap: true },
-      { id: 'score', name: '得分', type: 'number', width: 72 },
-      { id: 'owner', name: '负责人', type: 'text', width: 88 },
-      { id: 'tags', name: '标签', type: 'text', width: 120 },
+      { id: 'id', name: 'ID', type: 'number', width: 72 },
+      { id: 'name', name: 'Employee', type: 'text', width: 96 },
+      { id: 'dept', name: 'Department', type: 'text', width: 80 },
+      { id: 'region', name: 'Region', type: 'text', width: 72 },
+      { id: 'status', name: 'Status', type: 'text', width: 80 },
+      { id: 'desc', name: 'Description', type: 'text', width: 200, wrap: true },
+      { id: 'note', name: 'Note', type: 'text', width: 140, wrap: true },
+      { id: 'score', name: 'Score', type: 'number', width: 72 },
+      { id: 'owner', name: 'Owner', type: 'text', width: 88 },
+      { id: 'tags', name: 'Tags', type: 'text', width: 120 },
     ],
   }
 }
 
-/** 按需生成 1W×10 数据；Story 内分批 `autofitRows()` 撑开 wrap 行高。 */
+/** Generates 10k x 10 data on demand; the story expands wrapped row heights in batches. */
 export function createWrapAutofitBigDataSource(rowCount = 10_000): GeneratedDataSource {
   const schema = wrapAutofitBigSchema()
   return new GeneratedDataSource(rowCount, schema, (row, fieldId) => {
@@ -227,7 +229,7 @@ export function createWrapAutofitBigDataSource(rowCount = 10_000): GeneratedData
       case 'id':
         return row
       case 'name':
-        return `员工 ${row}`
+        return `Employee ${row}`
       case 'dept':
         return WRAP_BIG_DEPTS[row % WRAP_BIG_DEPTS.length]!
       case 'region':
@@ -237,28 +239,28 @@ export function createWrapAutofitBigDataSource(rowCount = 10_000): GeneratedData
       case 'score':
         return (row * 17) % 1000
       case 'owner':
-        return `负责人-${row % 128}`
+        return `Owner-${row % 128}`
       case 'tags':
         return `tag-${row % 20},tag-${(row + 7) % 20}`
       case 'desc': {
         const kind = row % 5
-        if (kind === 0) return `短描述 row=${row}`
+        if (kind === 0) return `Short description row=${row}`
         if (kind === 1) {
-          return `中等：${WRAP_BIG_REGIONS[row % 4]!}·${WRAP_BIG_DEPTS[row % 6]!} 协作项 #${row}，含中英文 mix & 符号 ()[]。`
+          return `Medium: ${WRAP_BIG_REGIONS[row % 4]!} / ${WRAP_BIG_DEPTS[row % 6]!} collaboration item #${row}, with mixed words and symbols ()[].`
         }
         if (kind === 2) {
-          return `长文本压测 row=${row}：Canvas 虚拟滚动 + wrap 绘制；请纵向滚动观察帧率与换行截断。`.repeat(
+          return `Long text stress row=${row}: Canvas virtual scrolling plus wrapped text painting; scroll vertically to inspect frame rate and line clipping. `.repeat(
             1 + (row % 3),
           )
         }
         if (kind === 3)
           return `EN-only row ${row}: rollout behind flag sheet.wrap_v2; monitor P99 latency.`
-        return `【阻塞】row ${row} 依赖上游 API；重试 3 次后失败；日志 id=0x${((row * 2654435761) >>> 0).toString(16).slice(0, 8)}`
+        return `[Blocked] row ${row} depends on an upstream API; failed after 3 retries; log id=0x${((row * 2654435761) >>> 0).toString(16).slice(0, 8)}`
       }
       case 'note': {
         if (row % 7 === 0) return ''
-        if (row % 3 === 0) return `备注 ${row}`
-        return `note-${row}：跟进中 / 下周复盘；链接 https://example.com/t/${row}`
+        if (row % 3 === 0) return `Note ${row}`
+        return `note-${row}: follow-up in progress / review next week; link https://example.com/t/${row}`
       }
       default:
         return ''

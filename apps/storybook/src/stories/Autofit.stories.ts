@@ -17,9 +17,9 @@ const schema = wrapAutofitSchema()
 const sampleRows = wrapAutofitSampleRows()
 
 const meta: Meta = {
-  title: '表格/行高自适应',
+  title: 'Table/Row height autofit',
   ...docsMeta(
-    'M3 autofit：`field.wrap = true` 时支持多行换行；`grid.autofitRows()` 按当前列宽与文本内容批量重算行高。',
+    'M3 autofit: when `field.wrap = true`, cells can wrap across multiple lines. `grid.autofitRows()` recalculates row heights from current column widths and text content.',
   ),
 }
 export default meta
@@ -36,12 +36,15 @@ function mountAutofit(host: HTMLElement): void {
 }
 
 /**
- * 长文本 + autofit：mount 后调用 `grid.autofitRows()` 自动按内容把每行撑开。
- * 含长/短/中英/符号/空备注等多类样本。
+ * Long text + autofit: call `grid.autofitRows()` after mount to expand each row by content.
+ * Includes long, short, bilingual, symbol-heavy, and empty-note samples.
  */
 export const LongTextAutofit: Story = {
-  name: '长文本 + autofitRows()',
-  ...docsStory(autofitLongTextSrc, '10 行多样本；加载后自动 `autofitRows()` 撑开行高。'),
+  name: 'Long text + autofitRows()',
+  ...docsStory(
+    autofitLongTextSrc,
+    '10 diverse sample rows. `autofitRows()` runs on load to expand row heights.',
+  ),
   render: () => {
     const data = new InMemoryDataSource({ schema, rows: sampleRows })
     const host = createGridHost({ data })
@@ -51,13 +54,13 @@ export const LongTextAutofit: Story = {
 }
 
 /**
- * wrap=true 但 **不调** autofitRows：行高仍是默认值，长文本只展示首行（被单元格底部裁掉）。
+ * wrap=true without calling autofitRows: row heights stay at defaults, so long text shows only the first clipped lines.
  */
 export const WrapWithoutAutofit: Story = {
-  name: '只换行不 autofit（对比）',
+  name: 'Wrap without autofit (comparison)',
   ...docsStory(
     autofitLongTextDisabledSrc,
-    'CellPainter 仍按 wrap 模式绘制，但行高保持默认；长文本会被单元格底部裁切。',
+    'CellPainter still paints in wrap mode, but row heights stay at defaults, so long text is clipped by the cell bottom.',
   ),
   render: () => {
     const data = new InMemoryDataSource({ schema, rows: sampleRows })
@@ -66,13 +69,13 @@ export const WrapWithoutAutofit: Story = {
 }
 
 /**
- * 调用 autofitRows 后修改列宽——新 wrap 形态下，旧行高不再合适。
+ * Change column width after calling autofitRows; the old row heights no longer match the new wrapping shape.
  */
 export const AfterColumnResize: Story = {
-  name: '列宽变化后再次 autofit',
+  name: 'Autofit after column resize',
   ...docsStory(
     autofitAfterColumnResizeSrc,
-    'mount 后两次 autofitRows；第二次在拖窄 desc 列之后执行。',
+    '`autofitRows()` runs twice after mount; the second run happens after narrowing the desc column.',
   ),
   render: () => {
     const data = new InMemoryDataSource({ schema, rows: sampleRows })
@@ -93,7 +96,7 @@ export const AfterColumnResize: Story = {
 
 const BIG_DATA_ROW_COUNT = 10_000
 
-/** 分批 autofit，避免 1W 行一次性量度长时间阻塞首帧。 */
+/** Batched autofit avoids blocking the first frame by measuring all 10k rows at once. */
 function mountBigDataAutofit(host: HTMLElement, rowCount: number, onDone: () => void): void {
   const batchSize = 500
   requestAnimationFrame(() => {
@@ -113,12 +116,12 @@ function mountBigDataAutofit(host: HTMLElement, rowCount: number, onDone: () => 
   })
 }
 
-/** 1 万行 × 10 列：wrap + 全表 autofit 后纵向滚动。 */
+/** 10k rows x 10 columns: wrap + full-table autofit, then vertical scrolling. */
 export const TenThousandWrapScroll: Story = {
-  name: '一万行 × 十列（换行 + 滚动）',
+  name: '10,000 rows x 10 columns (wrap + scroll)',
   ...docsStory(
     autofitTenThousandSrc,
-    '描述/备注 `wrap: true`；挂载后分批 `autofitRows()` 按内容撑开行高，再滚到第 5000 行。',
+    'Description and notes columns use `wrap: true`. After mount, batched `autofitRows()` expands row heights by content, then scrolls to row 5000.',
   ),
   render: () => {
     const data = createWrapAutofitBigDataSource(BIG_DATA_ROW_COUNT)

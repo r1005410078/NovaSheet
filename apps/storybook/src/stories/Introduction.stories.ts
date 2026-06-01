@@ -3,12 +3,12 @@ import { docsMeta, docsStory } from '../story-docs'
 import introSrc from './snippets/intro.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '介绍',
+  title: 'Introduction',
   parameters: {
     layout: 'fullscreen',
   },
   ...docsMeta(
-    'NovaSheet Storybook：左侧 **表格/** 分组为 Grid 演示；点 **README** 查看说明与 TypeScript 示例。每个 story 下方可展开 **Show code** 复制源码。',
+    'NovaSheet Storybook: use the **Table/** group for Grid demos. Open **README** for notes and TypeScript examples. Each story can show its source through **Show code**.',
   ),
 }
 export default meta
@@ -16,8 +16,11 @@ export default meta
 type Story = StoryObj
 
 export const Welcome: Story = {
-  name: '欢迎',
-  ...docsStory(introSrc, '最小 Grid 用法；完整示例见各 **表格/** 分组 README。'),
+  name: 'Welcome',
+  ...docsStory(
+    introSrc,
+    'Minimal Grid usage. Full examples live under the **Table/** story group.',
+  ),
   render: () => {
     const root = document.createElement('div')
     root.style.cssText = [
@@ -30,16 +33,16 @@ export const Welcome: Story = {
     root.innerHTML = `
       <h1 style="margin: 0 0 8px; font-size: 22px;">NovaSheet Storybook</h1>
       <p style="margin: 0 0 16px; color: #656d76; font-size: 14px;">
-        左侧选择 <strong>表格/</strong> 下的 story 查看 Grid；选择同组的 <strong>README</strong> 查看说明与代码示例。
+        Select a story under <strong>Table/</strong> to inspect a Grid demo. Open <strong>README</strong> in the same group for notes and code examples.
       </p>
-      <h2 style="margin: 20px 0 6px; font-size: 16px;">当前能力</h2>
+      <h2 style="margin: 20px 0 6px; font-size: 16px;">Current capabilities</h2>
       <ul style="margin: 0 0 16px 20px; padding: 0; font-size: 13px;">
-        <li><strong>M2</strong> — 虚拟滚动、原生滚动条</li>
-        <li><strong>M3</strong> — 冻结、行高 autofit、wrap 换行</li>
-        <li><strong>Phase 3</strong> — 选区 + 键盘导航（<strong>表格/选择与键盘</strong>）；行列 resize（<strong>表格/行列 resize</strong>）</li>
+        <li><strong>M2</strong> — virtual scrolling with native scrollbars</li>
+        <li><strong>M3</strong> — frozen regions, row-height autofit, and wrapped text</li>
+        <li><strong>Phase 3+</strong> — selection, keyboard navigation, editing, resize, clipboard, undo/redo, fill handle, sort/filter, structural operations, merge cells, and range formatting</li>
       </ul>
       <p style="margin: 20px 0 0; color: #656d76; font-size: 12px;">
-        设计文档：<code>docs/superpowers/specs/</code>
+        Design docs: <code>docs/superpowers/specs/</code>
       </p>
     `
     return root

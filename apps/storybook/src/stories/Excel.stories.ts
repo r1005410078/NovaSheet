@@ -6,15 +6,17 @@ import { docsMeta, docsStory } from '../story-docs'
 import { withExcelHeaders } from '@novasheet/web'
 
 const meta: Meta = {
-  title: '表格/Excel 门面',
-  ...docsMeta('`excelHeaders: true` 时列头显示 A/B/…、左侧显示 1-based 行号，左上角为交汇格。'),
+  title: 'Table/Excel facade',
+  ...docsMeta(
+    'With `excelHeaders: true`, column headers show A/B/... labels, the left rail shows 1-based row numbers, and the top-left corner renders the intersection cell.',
+  ),
 }
 export default meta
 
 type Story = StoryObj
 
 export const WithRowAndColumnHeaders: Story = {
-  name: '列标 + 行号',
+  name: 'Column letters and row numbers',
   ...docsStory(`import { InMemoryDataSource } from '@novasheet/core'
 import { withExcelHeaders } from '@novasheet/web'
 import { createGridHost } from '../grid-host'

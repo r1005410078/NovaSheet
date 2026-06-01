@@ -2,6 +2,8 @@
   "name": "@novasheet/storybook",
   "version": "0.0.0",
   "private": true,
+  "description": "Interactive NovaSheet component and behavior demos.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "storybook": "storybook dev -p 6006",

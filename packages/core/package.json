@@ -1,7 +1,25 @@
 {
   "name": "@novasheet/core",
   "version": "0.0.0",
+  "description": "Platform-independent core engine for NovaSheet.",
+  "license": "MIT",
   "type": "module",
+  "homepage": "https://r1005410078.github.io/NovaSheet/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r1005410078/NovaSheet.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/r1005410078/NovaSheet/issues"
+  },
+  "keywords": [
+    "spreadsheet",
+    "grid",
+    "data-grid",
+    "typescript",
+    "ai-native"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -6,15 +6,17 @@ import { docsMeta, docsStory } from '../story-docs'
 import hundredRowsSrc from './snippets/default.hundredRows.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/默认',
-  ...docsMeta('100 行 × 3 列纯文本，验证默认 `denseGridTheme`、列头与单元格对齐。'),
+  title: 'Table/Default',
+  ...docsMeta(
+    '100 rows x 3 text columns for checking the default `denseGridTheme`, headers, and cell alignment.',
+  ),
 }
 export default meta
 
 type Story = StoryObj
 
 export const HundredRowsThreeColumns: Story = {
-  name: '100 行 × 3 列',
+  name: '100 rows x 3 columns',
   ...docsStory(hundredRowsSrc),
   render: () => {
     const schema = basicTextSchema()

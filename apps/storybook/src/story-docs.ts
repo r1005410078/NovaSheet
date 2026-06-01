@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
 
-/** 组件级 Docs 说明（Markdown）。 */
+/** Component-level Docs description in Markdown. */
 export function docsMeta(description: string): Pick<Meta, 'parameters'> {
   return {
     parameters: {
@@ -11,12 +11,12 @@ export function docsMeta(description: string): Pick<Meta, 'parameters'> {
   }
 }
 
-/** Snippet 文件首行的 `// @ts-nocheck` 是给 IDE 用的，展示时剥掉。 */
+/** Remove the first-line `// @ts-nocheck` pragma from displayed snippets. */
 function stripSnippetPragma(code: string): string {
   return code.replace(/^\s*\/\/\s*@ts-nocheck.*\r?\n/, '')
 }
 
-/** Story 级 TypeScript 源码示例（HTML renderer 无法从 render 自动提取 TS）。 */
+/** Story-level TypeScript source example; the HTML renderer cannot infer TS from render. */
 export function docsStory(code: string, storyDescription?: string): Pick<StoryObj, 'parameters'> {
   return {
     parameters: {

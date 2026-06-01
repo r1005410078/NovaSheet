@@ -6,15 +6,15 @@ import { docsMeta, docsStory } from '../story-docs'
 import thousandRowsSrc from './snippets/larger.thousandRows.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/大数据',
-  ...docsMeta('1000 行 × 5 列，配合原生滚动查看视口外内容。'),
+  title: 'Table/Large data',
+  ...docsMeta('1,000 rows x 5 columns with native scrolling for content outside the viewport.'),
 }
 export default meta
 
 type Story = StoryObj
 
 export const ThousandRowsFiveColumns: Story = {
-  name: '1000 行 × 5 列',
+  name: '1,000 rows x 5 columns',
   ...docsStory(thousandRowsSrc),
   render: () => {
     const schema: Schema = {

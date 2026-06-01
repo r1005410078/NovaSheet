@@ -7,15 +7,15 @@ import themeDenseSrc from './snippets/theme.dense.snippet.ts?raw'
 import themeCompactSrc from './snippets/theme.compact.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/主题',
-  ...docsMeta('通过 `theme` 选项或 `setTheme` 切换 Theme Token。'),
+  title: 'Table/Theme',
+  ...docsMeta('Switch theme tokens through the `theme` option or `setTheme`.'),
 }
 export default meta
 
 type Story = StoryObj
 
 export const Dense: Story = {
-  name: '默认紧凑',
+  name: 'Dense default',
   ...docsStory(themeDenseSrc),
   render: () => {
     const schema = basicTextSchema()
@@ -44,7 +44,7 @@ const compactTheme: Theme = {
 }
 
 export const Compact: Story = {
-  name: '更紧凑',
+  name: 'Compact',
   ...docsStory(themeCompactSrc),
   render: () => {
     const schema = basicTextSchema()

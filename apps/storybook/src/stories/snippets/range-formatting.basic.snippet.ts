@@ -17,7 +17,7 @@ const schema = {
 const data = new InMemoryDataSource({
   schema,
   rows: Array.from({ length: 20 }, (_, i) => ({
-    name: `员工 ${i + 1}`,
+    name: `Employee ${i + 1}`,
     role: ['Engineer', 'Designer', 'PM'][i % 3],
     team: ['Platform', 'Growth', 'Data'][i % 3],
   })),

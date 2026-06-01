@@ -20,14 +20,14 @@ const schema: Schema = {
 }
 
 const meta: Meta = {
-  title: '表格/滚动',
-  ...docsMeta('M2 原生滚动 + `ScrollMapper` 非线性 `scrollTop` 映射。'),
+  title: 'Table/Scrolling',
+  ...docsMeta('M2 native scrolling with nonlinear `scrollTop` mapping through `ScrollMapper`.'),
 }
 export default meta
 type Story = StoryObj
 
 export const TenThousandRows: Story = {
-  name: '一万行',
+  name: '10,000 rows',
   ...docsStory(tenThousandSrc),
   render: () => {
     const rows = Array.from({ length: 10_000 }, (_, i) => ({
@@ -42,8 +42,11 @@ export const TenThousandRows: Story = {
 }
 
 export const OneMillionRows: Story = {
-  name: '一百万行 × 30 列',
-  ...docsStory(oneMillionSrc, '`GeneratedDataSource` 按需生成，挂载无预分配。'),
+  name: '1,000,000 rows x 30 columns',
+  ...docsStory(
+    oneMillionSrc,
+    '`GeneratedDataSource` generates rows on demand, so mount does not pre-allocate all data.',
+  ),
   render: () => {
     const colCount = 30
     const wideSchema: Schema = {
@@ -63,7 +66,7 @@ export const OneMillionRows: Story = {
 }
 
 export const ScrollToRow500: Story = {
-  name: '滚动到第 500 行',
+  name: 'Scroll to row 500',
   ...docsStory(scrollToRowSrc),
   render: () => {
     const rows = Array.from({ length: 2_000 }, (_, i) => ({
@@ -83,7 +86,7 @@ export const ScrollToRow500: Story = {
 }
 
 export const BothAxisScroll: Story = {
-  name: '双向滚动（30 列）',
+  name: 'Two-axis scrolling (30 columns)',
   ...docsStory(bothAxisSrc),
   render: () => {
     const colCount = 30
@@ -108,7 +111,7 @@ export const BothAxisScroll: Story = {
 }
 
 export const ScrollToCellFar: Story = {
-  name: '滚动到远列',
+  name: 'Scroll to a far column',
   ...docsStory(scrollToCellSrc),
   render: () => {
     const colCount = 30

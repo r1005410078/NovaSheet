@@ -7,11 +7,10 @@ import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/range-formatting.basic.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/合并与格式化',
+  title: 'Table/Merge and formatting',
   parameters: { layout: 'centered' },
   ...docsMeta(
-    'Phase 5-A/5-B：手动填充色、自定义边框（all/outer/inner/单边预设 + 实线/虚线/点线/双线）、' +
-      '合并/取消合并单元格、文本显示三态（溢出/换行/裁断）、Undo/Redo。按钮作用于当前任意选区。',
+    'Phase 5-A/5-B: fill colors, custom borders (all/outer/inner/single-edge presets plus solid/dashed/dotted/double styles), merge/unmerge, text-wrap modes, and Undo/Redo. Toolbar actions apply to the current selection.',
   ),
 }
 export default meta
@@ -41,8 +40,11 @@ function rangeLabel(range: CellRange): string {
 }
 
 export const Basic: Story = {
-  name: '合并与格式化',
-  ...docsStory(basicSrc, '工具栏按钮操作当前选区；状态行显示最近操作与作用范围。'),
+  name: 'Merge and formatting',
+  ...docsStory(
+    basicSrc,
+    'Toolbar buttons operate on the current selection. The status line shows the latest operation and affected range.',
+  ),
   render: () => {
     const schema = basicTextSchema()
     const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 30) })
@@ -59,7 +61,12 @@ export const Basic: Story = {
     })
 
     const toolbar = document.createElement('div')
-    Object.assign(toolbar.style, { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' })
+    Object.assign(toolbar.style, {
+      display: 'flex',
+      gap: '6px',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+    })
 
     function makeBtn(label: string): HTMLButtonElement {
       const btn = document.createElement('button')
@@ -68,25 +75,25 @@ export const Basic: Story = {
       return btn
     }
 
-    const fillYellowBtn = makeBtn('填充黄色')
-    const borderOuterBtn = makeBtn('外框红色')
-    const borderAllBtn = makeBtn('全部细边框')
-    const borderInnerBtn = makeBtn('内部边框')
-    const borderInnerHorizontalBtn = makeBtn('内部横线')
-    const borderInnerVerticalBtn = makeBtn('内部竖线')
-    const borderTopBtn = makeBtn('上边框')
-    const borderBottomBtn = makeBtn('下边框')
-    const borderLeftBtn = makeBtn('左边框')
-    const borderRightBtn = makeBtn('右边框')
-    const borderDashedBtn = makeBtn('外框虚线')
-    const borderDottedBtn = makeBtn('外框点线')
-    const borderDoubleBtn = makeBtn('外框双线')
-    const borderClearBtn = makeBtn('清除边框')
-    const mergeBtn = makeBtn('合并选区')
-    const unmergeBtn = makeBtn('取消合并')
-    const wrapOverflowBtn = makeBtn('溢出')
-    const wrapWrapBtn = makeBtn('换行')
-    const wrapClipBtn = makeBtn('裁断')
+    const fillYellowBtn = makeBtn('Fill yellow')
+    const borderOuterBtn = makeBtn('Red outer')
+    const borderAllBtn = makeBtn('All thin')
+    const borderInnerBtn = makeBtn('Inner borders')
+    const borderInnerHorizontalBtn = makeBtn('Inner horizontal')
+    const borderInnerVerticalBtn = makeBtn('Inner vertical')
+    const borderTopBtn = makeBtn('Top border')
+    const borderBottomBtn = makeBtn('Bottom border')
+    const borderLeftBtn = makeBtn('Left border')
+    const borderRightBtn = makeBtn('Right border')
+    const borderDashedBtn = makeBtn('Dashed outer')
+    const borderDottedBtn = makeBtn('Dotted outer')
+    const borderDoubleBtn = makeBtn('Double outer')
+    const borderClearBtn = makeBtn('Clear borders')
+    const mergeBtn = makeBtn('Merge')
+    const unmergeBtn = makeBtn('Unmerge')
+    const wrapOverflowBtn = makeBtn('Overflow')
+    const wrapWrapBtn = makeBtn('Wrap')
+    const wrapClipBtn = makeBtn('Clip')
     const undoBtn = makeBtn('Undo')
     const redoBtn = makeBtn('Redo')
     undoBtn.disabled = true
@@ -94,7 +101,7 @@ export const Basic: Story = {
 
     const statusEl = document.createElement('span')
     Object.assign(statusEl.style, { fontFamily: 'monospace', fontSize: '12px', color: '#555' })
-    statusEl.textContent = '选择任意范围后点击按钮操作'
+    statusEl.textContent = 'Select any range, then click a toolbar button'
 
     for (const btn of [
       fillYellowBtn,
@@ -132,7 +139,8 @@ export const Basic: Story = {
     const gridEl = createGridHost({ data }, '100%', '100%')
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/web').Grid }).__grid
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/web').Grid })
+      .__grid
 
     function syncButtons(): void {
       undoBtn.disabled = !grid.canUndo()
@@ -142,17 +150,17 @@ export const Basic: Story = {
     function applyAndStatus(action: (range: CellRange) => boolean, label: string): void {
       const range = grid.getSelection().selectedRange
       if (!range) {
-        statusEl.textContent = `${label} 失败 (无选区)`
+        statusEl.textContent = `${label} failed (no selection)`
         return
       }
       const ok = action(range)
       const labelText = rangeLabel(range)
-      statusEl.textContent = ok ? `已${label} ${labelText}` : `${label} 失败 (${labelText})`
+      statusEl.textContent = ok ? `${label} ${labelText}` : `${label} failed (${labelText})`
       syncButtons()
     }
 
     fillYellowBtn.addEventListener('click', () => {
-      applyAndStatus((range) => grid.setFillColor(range, '#fff2cc'), '填充黄色')
+      applyAndStatus((range) => grid.setFillColor(range, '#fff2cc'), 'Filled yellow')
     })
 
     function applyBorder(
@@ -166,47 +174,52 @@ export const Basic: Story = {
       })
     }
 
-    applyBorder(borderOuterBtn, 'outer', '设置外框红色', RED_BORDER)
-    applyBorder(borderAllBtn, 'all', '设置全部细边框', THIN_BORDER)
-    applyBorder(borderInnerBtn, 'inner', '设置内部边框', THIN_BORDER)
-    applyBorder(borderInnerHorizontalBtn, 'innerHorizontal', '设置内部横线', THIN_BORDER)
-    applyBorder(borderInnerVerticalBtn, 'innerVertical', '设置内部竖线', THIN_BORDER)
-    applyBorder(borderTopBtn, 'top', '设置上边框', RED_BORDER)
-    applyBorder(borderBottomBtn, 'bottom', '设置下边框', RED_BORDER)
-    applyBorder(borderLeftBtn, 'left', '设置左边框', RED_BORDER)
-    applyBorder(borderRightBtn, 'right', '设置右边框', RED_BORDER)
-    applyBorder(borderDashedBtn, 'outer', '设置外框虚线', DASHED_BORDER)
-    applyBorder(borderDottedBtn, 'outer', '设置外框点线', DOTTED_BORDER)
-    applyBorder(borderDoubleBtn, 'outer', '设置外框双线', DOUBLE_BORDER)
-    applyBorder(borderClearBtn, 'clear', '清除边框', null)
+    applyBorder(borderOuterBtn, 'outer', 'Set red outer border', RED_BORDER)
+    applyBorder(borderAllBtn, 'all', 'Set all thin borders', THIN_BORDER)
+    applyBorder(borderInnerBtn, 'inner', 'Set inner borders', THIN_BORDER)
+    applyBorder(
+      borderInnerHorizontalBtn,
+      'innerHorizontal',
+      'Set inner horizontal borders',
+      THIN_BORDER,
+    )
+    applyBorder(borderInnerVerticalBtn, 'innerVertical', 'Set inner vertical borders', THIN_BORDER)
+    applyBorder(borderTopBtn, 'top', 'Set top border', RED_BORDER)
+    applyBorder(borderBottomBtn, 'bottom', 'Set bottom border', RED_BORDER)
+    applyBorder(borderLeftBtn, 'left', 'Set left border', RED_BORDER)
+    applyBorder(borderRightBtn, 'right', 'Set right border', RED_BORDER)
+    applyBorder(borderDashedBtn, 'outer', 'Set dashed outer border', DASHED_BORDER)
+    applyBorder(borderDottedBtn, 'outer', 'Set dotted outer border', DOTTED_BORDER)
+    applyBorder(borderDoubleBtn, 'outer', 'Set double outer border', DOUBLE_BORDER)
+    applyBorder(borderClearBtn, 'clear', 'Cleared borders', null)
 
     mergeBtn.addEventListener('click', () => {
-      applyAndStatus((range) => grid.mergeCells(range), '合并选区')
+      applyAndStatus((range) => grid.mergeCells(range), 'Merged selection')
     })
 
     unmergeBtn.addEventListener('click', () => {
-      applyAndStatus((range) => grid.unmergeCells(range), '取消合并')
+      applyAndStatus((range) => grid.unmergeCells(range), 'Unmerged selection')
     })
 
     wrapOverflowBtn.addEventListener('click', () => {
-      applyAndStatus((range) => grid.setTextWrap(range, 'overflow'), '设为溢出')
+      applyAndStatus((range) => grid.setTextWrap(range, 'overflow'), 'Set overflow')
     })
     wrapWrapBtn.addEventListener('click', () => {
-      applyAndStatus((range) => grid.setTextWrap(range, 'wrap'), '设为换行')
+      applyAndStatus((range) => grid.setTextWrap(range, 'wrap'), 'Set wrap')
     })
     wrapClipBtn.addEventListener('click', () => {
-      applyAndStatus((range) => grid.setTextWrap(range, 'clip'), '设为裁断')
+      applyAndStatus((range) => grid.setTextWrap(range, 'clip'), 'Set clip')
     })
 
     undoBtn.addEventListener('click', () => {
       grid.undo()
-      statusEl.textContent = `已撤销`
+      statusEl.textContent = 'Undone'
       syncButtons()
     })
 
     redoBtn.addEventListener('click', () => {
       grid.redo()
-      statusEl.textContent = `已重做`
+      statusEl.textContent = 'Redone'
       syncButtons()
     })
 

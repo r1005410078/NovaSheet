@@ -7,15 +7,17 @@ import { docsMeta, docsStory } from '../story-docs'
 import sizingCustomSrc from './snippets/sizing.custom.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/尺寸',
-  ...docsMeta('Schema 非均匀列宽 + `setRowHeight` 覆盖单行高度。'),
+  title: 'Table/Sizing',
+  ...docsMeta(
+    'Non-uniform schema column widths plus single-row height overrides via `setRowHeight`.',
+  ),
 }
 export default meta
 
 type Story = StoryObj
 
 export const CustomColumnWidthsAndRowHeights: Story = {
-  name: '自定义列宽与行高',
+  name: 'Custom column widths and row heights',
   ...docsStory(sizingCustomSrc),
   render: () => {
     const schema: Schema = {

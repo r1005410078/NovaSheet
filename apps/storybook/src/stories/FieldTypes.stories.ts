@@ -6,15 +6,17 @@ import { docsMeta, docsStory } from '../story-docs'
 import allSevenSrc from './snippets/fieldTypes.allSeven.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/字段类型',
-  ...docsMeta('7 种 `FieldType` 各一列；`text` / `number` 有专门绘制路径，其余走文本 fallback。'),
+  title: 'Table/Field types',
+  ...docsMeta(
+    'One column for each of the seven `FieldType` values. `text` and `number` use dedicated paint paths; the rest use text fallback.',
+  ),
 }
 export default meta
 
 type Story = StoryObj
 
 export const AllSevenTypes: Story = {
-  name: '七种字段类型',
+  name: 'Seven field types',
   ...docsStory(allSevenSrc),
   render: () => {
     const schema = mixedTypesSchema()

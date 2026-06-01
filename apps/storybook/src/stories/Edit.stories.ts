@@ -5,27 +5,27 @@ import { mixedTypesSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
 
 const EDIT_DOCS = `
-Phase 3.5 基础单元格编辑（\`text\` / \`number\` 列）。
+Phase 3.5 basic cell editing for \`text\` and \`number\` columns.
 
-### 进入编辑（Google Sheets 式）
+### Enter edit mode (Google Sheets style)
 
-- **单击选中**后**直接打字**（首字符覆盖原内容，继续输入追加）
-- **F2** 或 **双击**：在原内容末尾编辑（不全选）
-- **Enter** 在未编辑时**下移一行**（不进入编辑）
+- **Click to select**, then **type directly**. The first character replaces the old value and later input appends.
+- **F2** or **double-click** edits at the end of the existing value without selecting all text.
+- **Enter** moves down one row when the cell is not being edited.
 
-### 提交 / 取消
+### Commit / cancel
 
-| 操作 | 效果 |
+| Action | Effect |
 |------|------|
-| **Enter** | 提交并下移一行 |
-| 点击其他单元格 / 失焦 | 提交，焦点留在当前格 |
-| **Esc** | 取消，恢复原值 |
+| **Enter** | Commits and moves down one row |
+| Click another cell / blur | Commits and keeps focus on the current cell |
+| **Esc** | Cancels and restores the old value |
 
-编辑器为 DOM \`<input>\`，叠在单元格上（Theme 边框色与选区一致）。
+The editor is a DOM \`<input>\` overlaid on the cell, using the theme selection border color.
 `.trim()
 
 const meta: Meta = {
-  title: '表格/基础编辑',
+  title: 'Table/Basic editing',
   ...docsMeta(EDIT_DOCS),
 }
 export default meta

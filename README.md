@@ -1,63 +1,47 @@
 # NovaSheet
 
-> 高性能、AI-Native 数据工作台的 Spreadsheet Engine。
+> A high-performance Canvas spreadsheet engine for AI-native data workbenches.
 
-**[Live demo（Storybook）](https://r1005410078.github.io/NovaSheet/)** — 在线查看表格变体（冻结、滚动、autofit、Excel 表头等）。
+[![CI](https://github.com/r1005410078/NovaSheet/actions/workflows/ci.yml/badge.svg)](https://github.com/r1005410078/NovaSheet/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/demo-Storybook-ff4785)](https://r1005410078.github.io/NovaSheet/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-NovaSheet 旨在演进为 AI Native 数据工作台。它提供一个基于 Canvas 的高性能现代表格渲染引擎，目标支撑 **1,000,000+ 行 × 500+ 列** 的数据规模，支持海量数据、实时更新、多视图与 Workbench 化扩展。
+[Live Demo](https://r1005410078.github.io/NovaSheet/) · [中文 README](README.zh-CN.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
----
+NovaSheet is an open-source spreadsheet engine for building large, interactive data applications. It uses a Canvas-first rendering architecture and is designed to scale toward **1,000,000+ rows x 500+ columns**, while keeping the core engine portable and the browser runtime ergonomic.
 
-## 当前状态
+The long-term goal is to provide infrastructure for AI-native data workbenches: fast grids, structured data editing, formulas, import/export, multi-view workflows, and natural-language assistance on top of a reliable spreadsheet foundation.
 
-最近交付：**Phase 5-A 合并 + 基础 Range 格式化**。下一里程碑：**Phase 5-B 高级边框**。
+## Why NovaSheet
 
-| 维度                     | 数值                                                                                                                 |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d`                                                     |
-| 测试                     | 693 passing（bun:test，跨三包）                                                                                      |
-| Lint / Typecheck / Build | 全部 clean                                                                                                           |
-| 公共 API                 | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
+- **Canvas-first performance**: a single visible-region redraw path for large datasets.
+- **Portable core**: `@novasheet/core` has no DOM or Canvas dependency.
+- **Browser-ready facade**: `@novasheet/web` exposes the public `Grid` API.
+- **Dedicated renderer package**: `@novasheet/web-canvas2d` owns Canvas2D painting.
+- **Spreadsheet interactions**: selection, keyboard navigation, editing, clipboard, undo/redo, fill handle, sorting, filtering, row/column operations, merge cells, and range formatting.
+- **Live Storybook demos**: interactive examples for scroll, frozen regions, autofit, Excel-style headers, editing, clipboard, selection, formatting, and more.
+- **Tested monorepo**: 842 passing `bun:test` tests across the workspace.
 
----
+## Current Status
 
-## 里程碑总表
+NovaSheet is pre-1.0 and actively developed.
 
-唯一权威阶段表。所有「已交付 / 计划中 / 验证项」状态以本表为准。
+| Area       | Status                                                         |
+| ---------- | -------------------------------------------------------------- |
+| Packages   | `@novasheet/core`, `@novasheet/web`, `@novasheet/web-canvas2d` |
+| Tests      | 842 passing tests with `bun:test`                              |
+| CI gates   | lint, typecheck, test, build                                   |
+| Public API | `import { Grid } from '@novasheet/web'`                        |
+| Demo       | Storybook on GitHub Pages                                      |
+| License    | MIT                                                            |
 
-| 阶段                              | 范围                                                                                                          | 状态      | Spec / Plan                                                                                            |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------ |
-| M1 Foundation                     | Canvas 单帧渲染 · Theme Token · DataSource · ChunkedAxis · Painters · FrameScheduler · Grid facade（destroy 幂等） | ✅        | [spec](docs/superpowers/specs/2026-05-13-novasheet-phase1-canvas-grid-design.md)                       |
-| M2 虚拟滚动                       | NativeScroller + 非线性 scrollTop 映射 · scrollToRow/Cell · 1M+ 行                                            | ✅        | [plan](docs/superpowers/plans/2026-05-15-novasheet-m2-virtualization.md)                               |
-| M3 冻结 / autofit                 | 顶 / 左 / 右冻结（FrozenRegions + 分区绘制 + 分隔线）· 动态行高 · 多行文本 autofit                            | ✅        | —                                                                                                      |
-| Phase 2 Canvas 绘制分层           | background / content / grid / overlay 层；为 Selection · Resize · Fill handle 预留接口                        | ✅        | —                                                                                                      |
-| Phase 3.1 选择模型                | SelectionModel · hitTestCell · 点击选中 · 选区填充 + active cell 边框                                         | ✅        | —                                                                                                      |
-| Phase 3.2 扩展选择                | Shift+点击 · 拖拽框选 · 自动滚动 · Excel 头联动 · range overlay                                               | ✅        | —                                                                                                      |
-| Phase 3.3 键盘导航                | ↑↓←→ / Tab / Enter · Shift+扩展 · 滚动跟随 active cell                                                        | ✅        | —                                                                                                      |
-| Phase 3.4 行列 resize             | DOM handle 命中区 · 拖拽列宽 / 行高（最小 20px）· 冻结同步                                                    | ✅        | —                                                                                                      |
-| Phase 3.5 基础编辑                | 选中即键入 · F2 / 双击 · Esc 取消 · Enter 提交下移 · text / number                                            | ✅        | —                                                                                                      |
-| Phase 4.0 单元格右键菜单          | ContextMenuLayer portal · Cut / Copy / Paste · `onContextMenuAction` · ARIA + 键盘                            | ✅        | [spec](docs/superpowers/specs/2026-05-17-context-menu-design.md)                                       |
-| Phase 4.1 剪贴板                  | TSV + 内部 hash · Cmd/Ctrl+X/C/V · Excel/Sheets 互通 · `onPasteSkipped` · 编程 API                            | ✅        | [spec](docs/superpowers/specs/2026-05-18-clipboard-design.md)                                          |
-| Phase 4.2 Undo / Redo             | UndoStack(100) + discriminated UndoCommand · cell / Cut / Paste / resize 进栈 · 键盘 + 事件                   | ✅        | [spec](docs/superpowers/specs/2026-05-21-undo-redo-design.md)                                          |
-| Phase 4.3 填充柄                  | 选区右下角 fill handle · 四方向 · 单值 / 数字等差 / 文本尾号 / Date 序列 · 进 undo                            | ✅        | [spec](docs/superpowers/specs/2026-05-21-fill-handle-design.md)                                        |
-| Phase 4.4 排序 / 筛选             | ViewLayer / ViewPipeline · 列头菜单 · header 图标 · DOM FilterPopover · 底层行语义                            | ✅        | [spec](docs/superpowers/specs/2026-05-22-sort-filter-design.md)                                        |
-| Phase 4.5 行结构 + 行头菜单       | 行 insert / delete / hide · 行头右键菜单 · HideRowsLayer · 三角 unhide handle · 行高弹层                      | ✅        | [spec](docs/superpowers/specs/2026-05-23-novasheet-phase-4-5-row-structural.md)                       |
-| Phase 4.6 列结构 + 列头菜单扩展   | 列 insert / delete / hide · 列头菜单新增结构项 · 列头 unhide 入口                                             | ✅        | [spec](docs/superpowers/specs/2026-05-24-novasheet-phase-4-6-column-structural.md)                       |
-| Phase 4.7 列拖拽重排              | Google Sheets 式先选列再拖动 · DOM 目标列带 + 落点线 · 多列重排 · undo/redo                                 | ✅        | [spec](docs/superpowers/specs/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md) · [plan](docs/superpowers/plans/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md) |
-| Phase 5-A 合并 + 基础 Range 格式化 | 单元格合并 / 取消合并 · 填充色 · 基础边框（all/outer/inner/clear · 颜色 · thin/medium/thick · solid）· 结构变更坐标同步 · undo/redo · 内部复制粘贴合并保护 · 公开 API · Storybook | ✅        | [spec](docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md) · [plan](docs/superpowers/plans/2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md) |
-| Phase 5-B/C/D 进阶格式化          | 5-B 高级边框（单边 · dashed/dotted/double）；5-C 数字 · 日期 · 百分比 · 货币格式化；5-D 条件格式 | 计划中    | [spec](docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md)                 |
-| Phase 6 字段类型 + Schema         | 字段编辑器 · Schema 校验 · 单元格校验 · lookup / rollup · 分组 / 聚合                                         | 计划中    | —                                                                                                      |
-| Phase 7 公式 / 导入导出           | 公式引擎 · 跨 sheet · 命名区域 · 透视表 · 图表 · xlsx / csv                                                   | 计划中    | —                                                                                                      |
-| Phase 8 服务端 / 多视图           | 服务端分页 DataSource · OPFS · 协同 · Grid / Kanban / Calendar / Gallery                                      | 计划中    | —                                                                                                      |
-| Phase 9 框架适配                  | React Wrapper · Vue Wrapper · 框架适配层                                                                      | 计划中    | —                                                                                                      |
-| Phase 10 AI Native                | 自然语言查询 · 洞察 · 智能补全                                                                                | 计划中    | —                                                                                                      |
-| 验证项（低优先级）                | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机                                           | 待启动    | —                                                                                                      |
+Recently delivered: **Phase 5-A merge cells + basic range formatting**.
 
-架构细节见 [docs/architecture.md](docs/architecture.md)；设计 spec 与 plan 见 [docs/superpowers/](docs/superpowers/)。
-
----
+Next milestone: **Phase 5-B advanced borders**.
 
 ## Quick Start
+
+NovaSheet uses Bun workspaces.
 
 ```bash
 bun install
@@ -67,8 +51,8 @@ bun run --filter @novasheet/web build
 ```
 
 ```ts
-import { Grid } from '@novasheet/web'
 import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { Grid } from '@novasheet/web'
 
 const data = new InMemoryDataSource({
   schema: {
@@ -99,52 +83,47 @@ const container = document.getElementById('app')!
 const grid = new Grid(container, {
   data,
   theme: denseGridTheme,
-  frozen: { topRows: 1, leftCols: 1, rightCols: 1 }, // 顶行 + 左/右列冻结，中间列可横滚
+  frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
 })
 
-grid.scrollToCell(500, 'owner') // 滚到中间列，观察左右冻结列固定
+grid.scrollToCell(500, 'owner')
 grid.setColumnWidth('revenue', 140)
 grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 
 // grid.destroy()
 ```
 
-本地查看变体：`bun run storybook` → 选 **表格 /** 分组下的 **README**（如 **表格/选择与键盘**）查看说明与快捷键表；各 story 画布可交互，**Show code** 可复制源码。
+Run the local demo:
 
-### 键盘 / 选择速查
-
-挂载 `Grid` 后，**先点击表格**获得焦点，即可使用：
-
-| 操作                     | 效果                              |
-| ------------------------ | --------------------------------- |
-| 单击 / Shift+单击 / 拖拽 | 单选、扩展选区、框选              |
-| ↑↓←→                     | 移动 active cell                  |
-| Shift + ↑↓←→             | 扩展选区                          |
-| Tab / Shift+Tab          | 右移 / 左移（末列换行）           |
-| Enter / Shift+Enter      | 下移 / 上移                       |
-| F2 / 双击                | 在原内容末尾进入编辑              |
-| 任意可打印字符           | 选中即键入（Sheets 式）           |
-| Esc                      | 取消编辑                          |
-| Cmd/Ctrl+X / C / V       | 剪切 / 复制 / 粘贴（含 TSV 互通） |
-| Cmd/Ctrl+Z / Shift+Z     | Undo / Redo                       |
-
-焦点格滚出视口时会自动滚入可见区域。完整说明见 Storybook **表格/选择与键盘**。
-
-### 行列 resize 速查
-
-- **列宽**：列头底边 8px 命中区，`col-resize` 拖拽（拖中竖线预览，松手提交）
-- **行高**：需 `excelHeaders: true`（或 `withExcelHeaders()`），行号列右缘 `row-resize` 拖拽
-- 最小 20px；handle 聚焦后可用方向键微调（Shift 加大步长）
-
-详见 Storybook **表格/行列 resize**。
-
-在线 demo 由 GitHub Pages 托管（push `main` 后自动部署）。首次启用需在仓库 **Settings → Pages → Build and deployment → Source** 选 **GitHub Actions**。
-
----
-
-## 架构概览
-
+```bash
+bun run storybook
 ```
+
+Open Storybook and choose the `Table /` stories to explore interactive variants. Each story canvas is editable, and Storybook's code panel can be used as a usage reference.
+
+## Packages
+
+```text
+novasheet/
+├── packages/
+│   ├── core/                @novasheet/core
+│   ├── web/                 @novasheet/web
+│   └── web-canvas2d/        @novasheet/web-canvas2d
+├── apps/
+│   └── storybook/           interactive demo app
+├── docs/
+│   ├── architecture.md
+│   └── superpowers/
+│       ├── specs/
+│       └── plans/
+├── bunfig.toml
+├── bun.lock
+└── package.json
+```
+
+## Architecture
+
+```text
 ┌────────────────────────────────────────────────────────────┐
 │   @novasheet/web                                           │
 │   Grid (public facade) · Canvas2DBackend · WebGridRuntime  │
@@ -166,50 +145,46 @@ grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 └────────────────────────────────────────────────────────────┘
 ```
 
-**依赖方向（无环）**：`core` ← `web-canvas2d` ← `web` ← 应用 / Storybook。
+Dependency direction is intentionally one-way:
 
----
-
-## 仓库结构
-
-```
-novasheet/
-├── packages/
-│   ├── core/                @novasheet/core — 平台无关引擎
-│   ├── web/                 @novasheet/web — 对外 Grid + 浏览器编排
-│   └── web-canvas2d/        @novasheet/web-canvas2d — Canvas2D 渲染器
-├── apps/
-│   └── storybook/           组件变体玩具间（vanilla HTML，无 React 依赖）
-├── docs/
-│   ├── architecture.md      当前架构图（Mermaid + 单帧序列）
-│   └── superpowers/
-│       ├── specs/           设计 spec
-│       └── plans/           实现 plan + 里程碑追踪
-├── bunfig.toml
-├── bun.lock
-└── package.json
+```text
+core <- web-canvas2d <- web <- apps
 ```
 
----
+See [docs/architecture.md](docs/architecture.md) for the detailed architecture notes.
 
-## 开发脚本
+## Roadmap
+
+| Milestone                          | Scope                                                                                              | Status  |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------- | ------- |
+| M1 Foundation                      | Canvas rendering, theme tokens, data source, axes, painters, frame scheduler, Grid facade          | Done    |
+| M2 Virtual scrolling               | Native scroll host, nonlinear scroll mapping, `scrollToRow`, `scrollToCell`, 1M+ rows              | Done    |
+| M3 Frozen regions / autofit        | top / left / right frozen regions, dynamic row height, multiline autofit                           | Done    |
+| Phase 3 Interactions               | selection, keyboard navigation, resize, basic editing                                              | Done    |
+| Phase 4 Spreadsheet workflows      | context menu, clipboard, undo/redo, fill handle, sort/filter, row/column structure, column reorder | Done    |
+| Phase 5-A Merge + basic formatting | merge/unmerge, fill color, basic borders, undo/redo, Storybook coverage                            | Done    |
+| Phase 5-B/C/D Advanced formatting  | advanced borders, number/date/percent/currency formats, conditional formatting                     | Planned |
+| Phase 6 Schema + field types       | field editor, validation, lookup, rollup, grouping, aggregation                                    | Planned |
+| Phase 7 Formulas + import/export   | formula engine, multi-sheet support, named ranges, pivot tables, charts, xlsx/csv                  | Planned |
+| Phase 8 Server + multi-view        | server-paginated data sources, OPFS, collaboration, Grid/Kanban/Calendar/Gallery views             | Planned |
+| Phase 9 Framework adapters         | React and Vue adapters                                                                             | Planned |
+| Phase 10 AI-native workflows       | natural-language queries, insights, autocomplete, data-cleaning assistance                         | Planned |
+
+Detailed design specs and implementation plans live in [docs/superpowers](docs/superpowers).
+
+## Development
 
 ```bash
-bun install                # 安装依赖
-bun test                   # 跑全部包测试
-bun run --filter @novasheet/core build
-bun run --filter @novasheet/web-canvas2d build
-bun run --filter @novasheet/web build
-bun run lint               # oxlint
-bun run format             # Prettier 全量格式化（带 --cache）
-bun run storybook          # 启动组件变体玩具间（localhost:6006）
-bun run build-storybook    # 构建静态 storybook 站点
-# 本地预览 GitHub Pages 路径（与 CI 一致）：
-STORYBOOK_BASE_PATH=/NovaSheet/ bun run build-storybook
-bunx serve apps/storybook/storybook-static
+bun install
+bun run lint
+bun run typecheck
+bun test
+bun run build
+bun run storybook
+bun run build-storybook
 ```
 
-针对单包：
+Package-level commands:
 
 ```bash
 bun run --filter @novasheet/core test
@@ -217,8 +192,21 @@ bun run --filter @novasheet/core typecheck
 bun run --filter @novasheet/core build
 ```
 
----
+Build Storybook with the same base path used by GitHub Pages:
+
+```bash
+STORYBOOK_BASE_PATH=/NovaSheet/ bun run build-storybook
+bunx serve apps/storybook/storybook-static
+```
+
+## Contributing
+
+NovaSheet is early, but it is maintained as a long-term open-source infrastructure project.
+
+Good contributions include reproducible bugs, performance regressions, Storybook examples, documentation improvements, tests, and roadmap-aligned engine / renderer / web runtime work.
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Security reports should follow [SECURITY.md](SECURITY.md).
 
 ## License
 
-TBD
+NovaSheet is licensed under the [MIT License](LICENSE).

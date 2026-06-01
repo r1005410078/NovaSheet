@@ -5,20 +5,20 @@ import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/fill-handle.basic.snippet.ts?raw'
 
 const meta: Meta = {
-  title: '表格/填充柄',
+  title: 'Table/Fill handle',
   parameters: { layout: 'centered' },
   ...docsMeta(
-    'Phase 4.3：选区右下角 DOM fill handle；支持向下/上/右/左拖拽，单值复制、数字等差、文本尾号、Date 序列，拖拽 preview，一次 fill 进入 undo/redo，并触发 Grid.onFill()。',
+    'Phase 4.3: a DOM fill handle appears at the bottom-right of the selection. It supports dragging down/up/right/left, single-value copy, numeric series, text suffix series, Date series, drag preview, undo/redo integration, and Grid.onFill().',
   ),
 }
 export default meta
 type Story = StoryObj
 
 export const Basic: Story = {
-  name: '序列填充',
+  name: 'Series fill',
   ...docsStory(
     basicSrc,
-    '选中前两行的 Task / Count / Due / Done 单元格，拖动选区右下角的小方块向下填充；状态栏会显示最近一次 fill 方向和目标范围。',
+    'Select the first two rows of Task / Count / Due / Done cells, then drag the small square at the bottom-right of the selection downward. The status line shows the latest fill direction and target range.',
   ),
   render: () => {
     const schema = {
@@ -58,7 +58,7 @@ export const Basic: Story = {
       color: '#555',
       minHeight: '18px',
     })
-    status.textContent = '最近填充: (无)'
+    status.textContent = 'Latest fill: (none)'
 
     const gridContainer = document.createElement('div')
     Object.assign(gridContainer.style, { flex: '1', minHeight: '0', position: 'relative' })
@@ -70,7 +70,7 @@ export const Basic: Story = {
       {
         data,
         onFill: (event) => {
-          status.textContent = `最近填充: ${event.direction} R${event.fill.startRow + 1}:R${event.fill.endRow + 1}, C${event.fill.startCol + 1}:C${event.fill.endCol + 1}`
+          status.textContent = `Latest fill: ${event.direction} R${event.fill.startRow + 1}:R${event.fill.endRow + 1}, C${event.fill.startCol + 1}:C${event.fill.endCol + 1}`
         },
       },
       '100%',
