@@ -91,6 +91,11 @@
 
 `CellPainter.truncationCache`（含新增 `hardCut` 缓存）无 LRU 上限（代码内已有 TODO）。大数据 + 多样文本下可能缓慢增长 → 加 LRU 上限或按帧/按字体清理。
 
+### R9 🟠 core 过大：迁往 SheetContext + sheet composition root
+
+已决定把默认产品装配迁入 `@novasheet/sheet`，`@novasheet/core`
+收敛为小内核，功能能力逐步通过 `SheetContext` 注册。
+
 ---
 
 ## 3. 建议的收口顺序（低风险→高杠杆）

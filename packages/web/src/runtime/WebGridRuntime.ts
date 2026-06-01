@@ -14,7 +14,7 @@
  * 不在职责范围内的：
  *   - canvas/WebGL 上下文（由 `WebRenderer` 实现拥有）
  *   - DOM 节点的创建与销毁（由 `WebHost` 实现拥有）
- *   - 公开 API 面（由 `@novasheet/web` 的 `Grid` facade 包一层暴露）
+ *   - 公开 API 面（由 `@novasheet/sheet` 的 `Grid` facade 包一层暴露）
  */
 
 import type {

@@ -7,7 +7,7 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 ## Project shape
 
 - High-performance Canvas-based table engine, eventual AI-Native data workbench
-- Greenfield TS monorepo (bun workspaces); three packages: `@novasheet/core`, `@novasheet/web`, `@novasheet/canvas2d` (`@novasheet/web` exposes the public `Grid` facade)
+- Greenfield TS monorepo (bun workspaces); four packages: `@novasheet/core`, `@novasheet/web`, `@novasheet/canvas2d`, `@novasheet/sheet` (`@novasheet/sheet` exposes the public `Grid` facade)
 - See `README.md` for product framing and Quick Start
 - See `docs/superpowers/specs/` for the design specs that drive plans
 - See `docs/superpowers/plans/` for milestone implementation plans (M1 done; M2-M5 outlined)
@@ -24,17 +24,18 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 **Phase 5-A coordinate invariant (important):** `RangeStyleStore`/`MergeStore` key cells by **raw** underlying row index + raw col index; `getFrame()` translates the visible region raw→view so painters consume VIEW coords only. Formatting/merge mutations translate the incoming view selection to a contiguous raw range via `viewRangeToRawRange`; when a sort/filter scatters the mapping (non-contiguous) the mutation conservatively returns `false` (no-op) — consistent with the spec's "5-A 保守禁用冲突 mutation" posture.
 
-- `@novasheet/core` — platform-independent (data, schema, theme, layout, `DefaultGridEngine`, `RenderFrame`). No DOM.
-- `@novasheet/web` — browser host/runtime (`DomGridHost`, `NativeScroller`, `ScrollMapper`, `WebGridRuntime`) plus public `Grid` facade and Canvas2D backend assembly.
-- `@novasheet/canvas2d` — Canvas2D renderer, text measurer, and surface utilities. Consumers normally import `Grid` from `@novasheet/web`.
+- `@novasheet/core` — platform-independent (data, schema, theme, layout, `DefaultGridEngine`, `RenderFrame`, `SheetContext`). No DOM.
+- `@novasheet/web` — browser host/runtime primitives (`DomGridHost`, `NativeScroller`, `ScrollMapper`, `WebGridRuntime`) and DOM interaction layers.
+- `@novasheet/canvas2d` — Canvas2D renderer, text measurer, and surface utilities.
+- `@novasheet/sheet` — default assembled spreadsheet product: public `Grid` facade, `Canvas2DBackend`, default extension installation. Consumers normally import `Grid` from `@novasheet/sheet`.
 
-M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses the public `Grid` facade from `@novasheet/web`.
+M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses the public `Grid` facade from `@novasheet/sheet`.
 
 **Next milestone:** **Phase 5-C** number/date/currency formatting, then 5-D conditional formatting — unless the user redirects. (5-B advanced borders shipped: `setBorders` accepts all `lineStyle`; `FormatBorderPainter` renders dashed/dotted via stroke+`setLineDash` and double via two 1px rects; spec/plan `2026-05-31-novasheet-phase-5-b-advanced-borders`. Text-wrap tri-state + multi-line text also shipped — see Last shipped above the prior entry.) Phase 5-A is documented in `docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md` + the implementation plan at `docs/superpowers/plans/2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md` (the plan also contains Task 7b, the structural-undo store-alignment fix added mid-execution).
 
 **Per-Grid scheduler convention** (invariant #5): each `Grid` owns `new FrameScheduler()` shared by `Canvas2DRenderer` and `NativeScroller` via `WebGridRuntime`; the `frameScheduler` singleton from `util/raf` is NOT used cross-Grid.
 
-**Dependency direction:** `@novasheet/core` is platform-independent. `@novasheet/canvas2d` depends on core for render contracts; `@novasheet/web` depends on core + canvas2d to expose the browser `Grid` facade and Canvas2D backend. `apps/storybook` depends on `@novasheet/web` + `@novasheet/core`.
+**Dependency direction:** `@novasheet/core` is platform-independent. `@novasheet/web` depends on core for host/runtime contracts. `@novasheet/canvas2d` depends on core for render contracts. `@novasheet/sheet` depends on core + web + canvas2d to expose the browser `Grid` facade and Canvas2D backend. `apps/storybook` depends on `@novasheet/sheet` + `@novasheet/core`.
 
 **Phase 4 status:** 4.0 context menu, 4.1 clipboard, 4.2 undo/redo, 4.3 fill handle, 4.4 sort/filter, 4.5 row structural + row header menu, 4.6 column structural + column header menu extension, and 4.7 column drag reorder are shipped.
 
@@ -73,7 +74,7 @@ Built up over the M1 cycle. Apply to all sessions, not just M1:
 - **Test:** `bun test` (top-level). Tests live in each `packages/<pkg>/tests/`. Preload chain in `bunfig.toml`: core → web → canvas2d setup files.
 - **Typecheck:** `bun run --filter '*' typecheck` — TypeScript is strict + `noUncheckedIndexedAccess` + `verbatimModuleSyntax`.
 - **Lint:** `bun run lint` — must be clean (0 errors, 0 warnings).
-- **Build:** `bun run --filter @novasheet/web build && bun run --filter @novasheet/canvas2d build && bun run --filter @novasheet/core build` (order matters; core externalizes web packages).
+- **Build:** `bun run --filter @novasheet/sheet build && bun run --filter @novasheet/web build && bun run --filter @novasheet/canvas2d build && bun run --filter @novasheet/core build`.
 - **Storybook:** `bun run storybook` (or `bun run --filter @novasheet/storybook storybook`).
 - **All four (lint, typecheck, test, build) must pass** before any commit lands on `main` (CI enforces).
 - **Mock APIs in tests:** `bun:test` exports `mock` and `spyOn` (replaces Vitest's `vi.fn` / `vi.spyOn`). For global stubbing (no `vi.stubGlobal` in bun:test), use `packages/core/tests/helpers/global-stub.ts` (`stubGlobal` / `unstubAllGlobals`).

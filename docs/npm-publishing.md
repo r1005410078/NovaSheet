@@ -9,8 +9,9 @@ Do not publish from a dirty working tree.
 Changesets publishes packages in dependency order:
 
 1. `@novasheet/core`
-2. `@novasheet/web-canvas2d`
-3. `@novasheet/web`
+2. `@novasheet/web`
+3. `@novasheet/canvas2d`
+4. `@novasheet/sheet`
 
 The root workspace and Storybook app are private and should not be published.
 
@@ -30,8 +31,9 @@ Confirm that each publishable package has the expected generated files:
 
 ```bash
 ls packages/core/dist
-ls packages/web-canvas2d/dist
 ls packages/web/dist
+ls packages/canvas2d/dist
+ls packages/sheet/dist
 ```
 
 ## Manifest Review
@@ -74,10 +76,13 @@ Run a dry run from each package directory and inspect the included files:
 cd packages/core
 npm publish --dry-run
 
-cd ../web-canvas2d
+cd ../web
 npm publish --dry-run
 
-cd ../web
+cd ../canvas2d
+npm publish --dry-run
+
+cd ../sheet
 npm publish --dry-run
 ```
 
@@ -91,10 +96,13 @@ Only publish manually after dry runs look correct:
 cd packages/core
 npm publish --access public
 
-cd ../web-canvas2d
+cd ../web
 npm publish --access public
 
-cd ../web
+cd ../canvas2d
+npm publish --access public
+
+cd ../sheet
 npm publish --access public
 ```
 
@@ -103,4 +111,4 @@ npm publish --access public
 - Confirm the Changesets release commit and tags were pushed by the release workflow, or create and push a signed or annotated `v0.1.0` tag manually.
 - Create a GitHub release that links to [docs/release/0.1.0.md](release/0.1.0.md).
 - Confirm the Storybook deployment is available at `https://r1005410078.github.io/NovaSheet/`.
-- Open a fresh project and install `@novasheet/web` to validate the published package path.
+- Open a fresh project and install `@novasheet/sheet` to validate the published package path.
