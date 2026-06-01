@@ -890,8 +890,18 @@ Create `packages/sheet/tests/Grid.cell-extension-edit.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'bun:test'
-import { createSheetContext, InMemoryDataSource } from '@novasheet/core'
+import { createSheetContext, InMemoryDataSource, type CellAddress } from '@novasheet/core'
 import { Grid } from '../src/Grid'
+
+function canvas2dDelegate(grid: Grid) {
+  return (
+    grid as unknown as {
+      delegate: {
+        openCustomCellEditorForTest: (cell: CellAddress) => boolean
+      }
+    }
+  ).delegate
+}
 
 describe('cell edit extensions', () => {
   it('calls custom edit and exposes overlay handle', () => {
@@ -918,7 +928,7 @@ describe('cell edit extensions', () => {
       context: ctx,
     })
 
-    grid.openEditorForTest({ rowIndex: 0, colIndex: 0 })
+    expect(canvas2dDelegate(grid).openCustomCellEditorForTest({ rowIndex: 0, colIndex: 0 })).toBe(true)
 
     expect(opened).toBe(true)
     grid.destroy()
@@ -926,7 +936,7 @@ describe('cell edit extensions', () => {
 })
 ```
 
-This task adds `Grid.openEditorForTest(cell: CellAddress): void` as an internal test helper and keeps it out of public docs.
+This test follows the existing `Grid.test.ts` pattern: the public `Grid` facade stays unchanged, and the test reaches `Canvas2DBackend` internals through a local helper.
 
 - [ ] **Step 2: Add a runtime seam for custom edit**
 
@@ -952,7 +962,16 @@ private closeExtensionPopover(): void
 
 The implementation appends a positioned absolutely placed `<div data-novasheet-extension-popover>` to the container and removes the previous one before opening a new one.
 
-- [ ] **Step 4: Invoke custom edit before default editor**
+- [ ] **Step 4: Add backend edit invoker**
+
+In `packages/sheet/src/backends/Canvas2DBackend.ts`, add an internal method that is not exported through `GridController` or `Grid`:
+
+```ts
+openCustomCellEditorForTest(cell: CellAddress): boolean
+private openCustomCellEditor(cell: CellAddress): boolean
+```
+
+- [ ] **Step 5: Invoke custom edit before default editor**
 
 In the begin-edit path, check the field type:
 
@@ -983,7 +1002,7 @@ if (extension?.edit) {
 }
 ```
 
-- [ ] **Step 5: Add single-cell commit API**
+- [ ] **Step 6: Add single-cell commit API**
 
 Edit `packages/core/src/engine/GridEngine.ts`:
 
@@ -993,7 +1012,7 @@ setCellValue(cell: CellAddress, value: CellValue): boolean
 
 Implement it in `packages/core/src/engine/DefaultGridEngine.ts` by resolving the target field, writing through the existing mutable data path, and returning `false` when the data source is not mutable or the address is outside the schema/row bounds. Add `packages/core/tests/engine/DefaultGridEngine.set-cell-value.test.ts` covering success, read-only source, and invalid address.
 
-- [ ] **Step 6: Verify**
+- [ ] **Step 7: Verify**
 
 Run:
 
@@ -1006,7 +1025,7 @@ bun run --filter @novasheet/sheet build
 
 Expected: all pass.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add packages/sheet packages/web packages/core
