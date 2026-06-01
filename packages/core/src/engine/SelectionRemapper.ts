@@ -1,7 +1,9 @@
 import type { CellAddress, CellRange, GridSelection } from '../interaction/SelectionModel'
 
 export interface SelectionRemapContext {
+  /** Resolves a row index from the previous view to its stable raw row identity. */
   readonly oldViewRowToRaw: (viewRow: number) => number
+  /** Resolves a raw row identity to its row index in the current view, or `-1` if hidden. */
   readonly rawRowToView: (rawRow: number) => number
 }
 

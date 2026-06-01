@@ -1,6 +1,7 @@
 import type { Field } from '../data/Schema'
 import type { RenderFrameCollapsedColGap } from '../render/RenderFrame'
 
+/** Collapsed hidden-column run before it is projected into pixel coordinates. */
 export type CollapsedColGap = Omit<RenderFrameCollapsedColGap, 'xPx'>
 
 /** Computes collapsed column gaps from raw schema order plus hidden field ids. */

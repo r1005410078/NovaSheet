@@ -1,13 +1,20 @@
 import type { FrozenConfig } from '../layout/FrozenRegions'
 
+/** Column insertion summary used to expand frozen column counts. */
 export interface FrozenColumnInsert {
+  /** Raw column index where new columns were inserted. */
   readonly at: number
+  /** Number of inserted columns. */
   readonly count: number
+  /** Total raw column count before insertion. */
   readonly oldTotalCols: number
 }
 
+/** Column deletion summary used to shrink frozen column counts. */
 export interface FrozenColumnDelete {
+  /** Raw column indices removed from the schema before deletion was applied. */
   readonly removedIndices: readonly number[]
+  /** Total raw column count before deletion. */
   readonly totalColsBefore: number
 }
 

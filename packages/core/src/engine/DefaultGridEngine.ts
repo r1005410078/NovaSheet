@@ -41,6 +41,7 @@ import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { AxisViewBuilder } from './AxisViewBuilder'
 import { CollapsedColGapBuilder } from './CollapsedColGapBuilder'
+import { ColumnMoveNormalizer } from './ColumnMoveNormalizer'
 import { FrameBuilder } from './FrameBuilder'
 import { FrozenColumnSyncer } from './FrozenColumnSyncer'
 import { SelectionRemapper } from './SelectionRemapper'
@@ -96,6 +97,7 @@ export class DefaultGridEngine implements GridEngine {
   private undoStack = new UndoStack()
   private readonly axisViewBuilder = new AxisViewBuilder()
   private readonly collapsedColGaps = new CollapsedColGapBuilder()
+  private readonly columnMoveNormalizer = new ColumnMoveNormalizer()
   private readonly frameBuilder = new FrameBuilder()
   private readonly frozenColumnSyncer = new FrozenColumnSyncer()
   private readonly selectionRemapper = new SelectionRemapper()
@@ -1571,36 +1573,11 @@ export class DefaultGridEngine implements GridEngine {
     readonly beforeFieldId: string | null
     readonly inverseBeforeFieldId: string | null
   } | null {
-    const fields = this.rawData.getSchema().fields
-    const requested = new Set(fieldIds)
-    const moving = fields.filter((field) => requested.has(field.id)).map((field) => field.id)
-    if (moving.length === 0) return null
-    if (!this.isContiguousFieldGroup(moving)) return null
-    const movingSet = new Set(moving)
-    if (beforeFieldId !== null) {
-      if (movingSet.has(beforeFieldId)) return null
-      if (!fields.some((field) => field.id === beforeFieldId)) return null
-    }
-
-    const remaining = fields.filter((field) => !movingSet.has(field.id)).map((field) => field.id)
-    const insertAt = beforeFieldId === null ? remaining.length : remaining.indexOf(beforeFieldId)
-    if (insertAt < 0) return null
-
-    const next = remaining.slice()
-    next.splice(insertAt, 0, ...moving)
-    const current = fields.map((field) => field.id)
-    if (sameStringOrder(current, next)) return null
-
-    const firstMovingIndex = current.findIndex((id) => movingSet.has(id))
-    let inverseBeforeFieldId: string | null = null
-    for (let i = firstMovingIndex + moving.length; i < current.length; i += 1) {
-      const id = current[i]!
-      if (!movingSet.has(id)) {
-        inverseBeforeFieldId = id
-        break
-      }
-    }
-    return { fieldIds: moving, beforeFieldId, inverseBeforeFieldId }
+    return this.columnMoveNormalizer.normalize(
+      this.rawData.getSchema().fields,
+      fieldIds,
+      beforeFieldId,
+    )
   }
 
   private normalizeMoveRows(
@@ -1665,19 +1642,6 @@ export class DefaultGridEngine implements GridEngine {
       widths.set(fields[i]!.id, this.rawColsAxis.getSize(i))
     }
     return widths
-  }
-
-  private isContiguousFieldGroup(fieldIds: readonly string[]): boolean {
-    const fields = this.rawData.getSchema().fields
-    const indices = fieldIds
-      .map((id) => fields.findIndex((field) => field.id === id))
-      .filter((index) => index >= 0)
-      .sort((a, b) => a - b)
-    if (indices.length !== fieldIds.length) return false
-    for (let i = 1; i < indices.length; i += 1) {
-      if (indices[i]! !== indices[i - 1]! + 1) return false
-    }
-    return true
   }
 
   /**
@@ -1910,14 +1874,6 @@ function areContiguousRows(rows: readonly number[]): boolean {
   const minRow = Math.min(...rows)
   const maxRow = Math.max(...rows)
   return maxRow - minRow + 1 === rows.length
-}
-
-function sameStringOrder(a: readonly string[], b: readonly string[]): boolean {
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false
-  }
-  return true
 }
 
 function sameNumberOrder(a: readonly number[], b: readonly number[]): boolean {
