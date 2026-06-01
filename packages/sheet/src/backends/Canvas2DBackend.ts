@@ -36,7 +36,6 @@ import {
   type ViewLayerChange,
 } from '@novasheet/core'
 import { Canvas2DRenderer, Canvas2DTextMeasurer, HighDPI } from '@novasheet/canvas2d'
-import { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
@@ -46,21 +45,26 @@ import type {
   SortChangeEvent,
   ViewChangeEvent,
 } from '../grid/GridController'
-import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
-import { DomGridHost } from '../host/DomGridHost'
-import { DomCellEditor } from '../interaction/DomCellEditor'
-import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
-import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
-import { DomHandleLayer } from '../interaction/DomHandleLayer'
-import { HideToggleHandle } from '../handle/HideToggleHandle'
-import { HideColToggleHandle } from '../handle/HideColToggleHandle'
-import { FilterPopover } from '../interaction/FilterPopover'
-import { RowHeightPopover } from '../overlay/RowHeightPopover'
-import { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
-import { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
-import { RowReorderOverlay } from '../overlay/RowReorderOverlay'
-import { SelectionOverlay } from '../overlay/SelectionOverlay'
-import { WebGridRuntime } from '../runtime/WebGridRuntime'
+import {
+  ColumnReorderOverlay,
+  ColumnWidthPopover,
+  DomCellEditor,
+  DomContextMenuLayer,
+  DomFillHandleLayer,
+  DomGridHost,
+  DomHandleLayer,
+  FilterPopover,
+  HideColToggleHandle,
+  HideToggleHandle,
+  RowHeightPopover,
+  RowReorderOverlay,
+  SelectionOverlay,
+  WebClipboardAdapter,
+  WebGridRuntime,
+  type FillEvent,
+  type RedoEvent,
+  type UndoEvent,
+} from '@novasheet/web'
 
 /**
  * Canvas2D 渲染后端装配（`Grid` 在 `renderer: 'canvas2d'` 时使用）。

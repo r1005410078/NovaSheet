@@ -7,13 +7,16 @@ import {
   type GridSelection,
 } from '@novasheet/core'
 import { Grid } from '../../src/Grid'
-import type { WebHost } from '../../src/host/WebHost'
-import type { WebRenderer } from '../../src/render/WebRenderer'
-import type { SelectionOverlay, SelectionOverlayState } from '../../src/overlay/SelectionOverlay'
-import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
-import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
-import { makeMockGridEngine } from '../helpers/mock-grid-engine'
+import {
+  WebGridRuntime,
+  type DomFillHandleLayer,
+  type OverlayRect,
+  type SelectionOverlay,
+  type SelectionOverlayState,
+  type WebHost,
+  type WebRenderer,
+} from '@novasheet/web'
+import { makeMockGridEngine } from '../../../web/tests/helpers/mock-grid-engine'
 
 function makeFillLayer(): DomFillHandleLayer {
   return {

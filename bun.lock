@@ -72,7 +72,6 @@
       "name": "@novasheet/web",
       "version": "0.1.0",
       "dependencies": {
-        "@novasheet/canvas2d": "^0.1.0",
         "@novasheet/core": "^0.1.0",
       },
       "devDependencies": {

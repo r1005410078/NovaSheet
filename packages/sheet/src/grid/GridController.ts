@@ -16,7 +16,7 @@ import type {
   Theme,
   ViewPipeline,
 } from '@novasheet/core'
-import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
+import type { FillEvent, RedoEvent, UndoEvent } from '@novasheet/web'
 export type { FillEvent, RedoEvent, UndoEvent }
 
 export interface ViewChangeEvent {

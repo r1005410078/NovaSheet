@@ -1,7 +1,7 @@
 {
   "name": "@novasheet/web",
   "version": "0.1.0",
-  "description": "Browser Grid facade and runtime for NovaSheet.",
+  "description": "Browser host primitives and runtime for NovaSheet.",
   "license": "MIT",
   "type": "module",
   "homepage": "https://r1005410078.github.io/NovaSheet/",
@@ -41,8 +41,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@novasheet/core": "^0.1.0",
-    "@novasheet/canvas2d": "^0.1.0"
+    "@novasheet/core": "^0.1.0"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.9.0",
