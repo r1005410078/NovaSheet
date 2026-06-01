@@ -40,6 +40,7 @@ import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { AxisViewBuilder } from './AxisViewBuilder'
+import { CollapsedColGapBuilder } from './CollapsedColGapBuilder'
 import { FrameBuilder } from './FrameBuilder'
 import { ViewportRebuilder } from './ViewportRebuilder'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
@@ -92,6 +93,7 @@ export class DefaultGridEngine implements GridEngine {
   private cellEdit = new CellEditModel()
   private undoStack = new UndoStack()
   private readonly axisViewBuilder = new AxisViewBuilder()
+  private readonly collapsedColGaps = new CollapsedColGapBuilder()
   private readonly frameBuilder = new FrameBuilder()
   private readonly viewportRebuilder = new ViewportRebuilder()
   /**
@@ -1610,46 +1612,7 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private computeCollapsedColGaps(): readonly Omit<RenderFrameCollapsedColGap, 'xPx'>[] {
-    if (this.hiddenColIds.size === 0) return []
-    const fields = this.rawData.getSchema().fields
-    const hiddenSchemaIndices: number[] = []
-    for (let i = 0; i < fields.length; i += 1) {
-      if (this.hiddenColIds.has(fields[i]!.id)) hiddenSchemaIndices.push(i)
-    }
-
-    const gaps: Omit<RenderFrameCollapsedColGap, 'xPx'>[] = []
-    let run: number[] = []
-    for (const schemaIndex of hiddenSchemaIndices) {
-      if (run.length === 0 || schemaIndex === run[run.length - 1]! + 1) {
-        run.push(schemaIndex)
-        continue
-      }
-      gaps.push(this.makeColGap(run, fields))
-      run = [schemaIndex]
-    }
-    if (run.length > 0) gaps.push(this.makeColGap(run, fields))
-    return gaps
-  }
-
-  private makeColGap(
-    run: readonly number[],
-    fields: readonly Field[],
-  ): Omit<RenderFrameCollapsedColGap, 'xPx'> {
-    const upperRawCol = run[0]! - 1
-    let atViewCol = -1
-    if (upperRawCol >= 0) {
-      let visibleCount = 0
-      for (let rawCol = 0; rawCol <= upperRawCol; rawCol += 1) {
-        if (this.hiddenColIds.has(fields[rawCol]!.id)) continue
-        if (rawCol === upperRawCol) atViewCol = visibleCount
-        visibleCount += 1
-      }
-    }
-    return {
-      atViewCol,
-      hiddenCount: run.length,
-      hiddenFieldIds: run.map((rawCol) => fields[rawCol]!.id),
-    }
+    return this.collapsedColGaps.build(this.rawData.getSchema().fields, this.hiddenColIds)
   }
 
   private syncFrozenAfterColInsert(at: number, count: number): void {
