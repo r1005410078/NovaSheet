@@ -16,7 +16,7 @@ The long-term goal is to provide infrastructure for AI-native data workbenches: 
 
 - **Canvas-first performance**: a single visible-region redraw path for large datasets.
 - **Portable core**: `@novasheet/core` has no DOM or Canvas dependency.
-- **Browser-ready facade**: `@novasheet/web` exposes the public `Grid` API.
+- **Browser-ready facade**: `@novasheet/sheet` exposes the public `Grid` API.
 - **Dedicated renderer package**: `@novasheet/canvas2d` owns Canvas2D painting.
 - **Spreadsheet interactions**: selection, keyboard navigation, editing, clipboard, undo/redo, fill handle, sorting, filtering, row/column operations, merge cells, and range formatting.
 - **Live Storybook demos**: interactive examples for scroll, frozen regions, autofit, Excel-style headers, editing, clipboard, selection, formatting, and more.
@@ -28,10 +28,10 @@ NovaSheet is pre-1.0 and actively developed.
 
 | Area       | Status                                                         |
 | ---------- | -------------------------------------------------------------- |
-| Packages   | `@novasheet/core`, `@novasheet/web`, `@novasheet/canvas2d` |
+| Packages   | `@novasheet/core`, `@novasheet/web`, `@novasheet/canvas2d`, `@novasheet/sheet` |
 | Tests      | 842 passing tests with `bun:test`                              |
 | CI gates   | lint, typecheck, test, build                                   |
-| Public API | `import { Grid } from '@novasheet/web'`                        |
+| Public API | `import { Grid } from '@novasheet/sheet'`                        |
 | Demo       | Storybook on GitHub Pages                                      |
 | License    | MIT                                                            |
 
@@ -56,12 +56,12 @@ NovaSheet uses Bun workspaces.
 bun install
 bun run --filter @novasheet/core build
 bun run --filter @novasheet/canvas2d build
-bun run --filter @novasheet/web build
+bun run --filter @novasheet/sheet build
 ```
 
 ```ts
 import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
-import { Grid } from '@novasheet/web'
+import { Grid } from '@novasheet/sheet'
 
 const data = new InMemoryDataSource({
   schema: {
@@ -117,7 +117,8 @@ novasheet/
 ├── packages/
 │   ├── core/                @novasheet/core
 │   ├── web/                 @novasheet/web
-│   └── canvas2d/        @novasheet/canvas2d
+│   ├── canvas2d/            @novasheet/canvas2d
+│   └── sheet/               @novasheet/sheet
 ├── apps/
 │   └── storybook/           interactive demo app
 ├── docs/
@@ -134,19 +135,22 @@ novasheet/
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│   @novasheet/web                                           │
-│   Grid (public facade) · Canvas2DBackend · WebGridRuntime  │
-│   DomGridHost · ScrollMapper · NativeScroller              │
+│   @novasheet/sheet                                         │
+│   Grid (public facade) · Canvas2DBackend                   │
 └────────────────────────────┬───────────────────────────────┘
-                             │ depends on
-                             ▼
+              depends on     │
+        ┌────────────────────┼────────────────────┐
+        ▼                    ▼                    ▼
 ┌────────────────────────────────────────────────────────────┐
-│   @novasheet/canvas2d                                  │
+│   @novasheet/web                                           │
+│   WebGridRuntime · DomGridHost · ScrollMapper              │
+│   NativeScroller · DOM interaction layers                  │
+└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│   @novasheet/canvas2d                                      │
 │   Canvas2DRenderer · Cell / Header / GridLines painters    │
 │   HighDPI                                                  │
-└────────────────────────────┬───────────────────────────────┘
-                             │ depends on
-                             ▼
+└────────────────────────────────────────────────────────────┘
 ┌────────────────────────────────────────────────────────────┐
 │   @novasheet/core (no DOM, no canvas)                      │
 │   DefaultGridEngine · DataSource · Theme · ChunkedAxis     │
@@ -157,7 +161,7 @@ novasheet/
 Dependency direction is intentionally one-way:
 
 ```text
-core <- canvas2d <- web <- apps
+core <- (web, canvas2d) <- sheet <- apps
 ```
 
 See [docs/architecture.md](docs/architecture.md) for the detailed architecture notes.

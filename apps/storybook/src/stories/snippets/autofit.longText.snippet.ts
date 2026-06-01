@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck — storybook docs display snippet; references
-import { Grid } from '@novasheet/web'
+import { Grid } from '@novasheet/sheet'
 import { InMemoryDataSource } from '@novasheet/core'
 import { wrapAutofitSampleRows, wrapAutofitSchema } from '../mock-data'
 import { createGridHost } from '../grid-host'

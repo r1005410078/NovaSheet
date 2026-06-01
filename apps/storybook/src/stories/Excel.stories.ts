@@ -3,7 +3,7 @@ import { InMemoryDataSource } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
-import { withExcelHeaders } from '@novasheet/web'
+import { withExcelHeaders } from '@novasheet/sheet'
 
 const meta: Meta = {
   title: 'Table/Excel facade',
@@ -18,7 +18,7 @@ type Story = StoryObj
 export const WithRowAndColumnHeaders: Story = {
   name: 'Column letters and row numbers',
   ...docsStory(`import { InMemoryDataSource } from '@novasheet/core'
-import { withExcelHeaders } from '@novasheet/web'
+import { withExcelHeaders } from '@novasheet/sheet'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 

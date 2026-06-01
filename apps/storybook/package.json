@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@novasheet/core": "workspace:*",
-    "@novasheet/web": "workspace:*"
+    "@novasheet/sheet": "workspace:*"
   },
   "devDependencies": {
     "@storybook/addon-docs": "10.4.0",
