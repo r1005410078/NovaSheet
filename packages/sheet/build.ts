@@ -9,7 +9,12 @@ const ROOT = new URL('.', import.meta.url).pathname
 
 await rm(`${ROOT}dist`, { recursive: true, force: true })
 
-const EXTERNALS = ['@novasheet/core', '@novasheet/web', '@novasheet/canvas2d'] as const
+const EXTERNALS = [
+  '@novasheet/core',
+  '@novasheet/web',
+  '@novasheet/canvas2d',
+  '@novasheet/feature-row-column-reorder',
+] as const
 
 const common = {
   entrypoints: [`${ROOT}src/index.ts`],

@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { InMemoryDataSource, createSheetContext, denseGridTheme } from '@novasheet/core'
+import { getWebDragContributions } from '@novasheet/web'
 import { Grid } from '../src/Grid'
 
 const schema = {
@@ -26,6 +27,27 @@ function mkGrid(onColumnsMoved?: (event: { fieldIds: readonly string[]; beforeFi
 }
 
 describe('Grid column reorder — Phase 4.7', () => {
+  it('installs row and column reorder drags in the default sheet context', () => {
+    const ctx = createSheetContext<CanvasRenderingContext2D, HTMLElement>()
+    const data = new InMemoryDataSource({
+      schema: { fields: schema.fields.map((field) => ({ ...field })) },
+      rows: [{ a: 'A', b: 'B', c: 'C' }],
+    })
+    const container = document.createElement('div')
+    const grid = new Grid(container, {
+      data,
+      context: ctx,
+      theme: denseGridTheme,
+    })
+
+    expect(getWebDragContributions(ctx).map((contribution) => contribution.id)).toEqual([
+      'column-header-reorder',
+      'row-header-reorder',
+    ])
+
+    grid.destroy()
+  })
+
   it('Grid.moveCols delegates and emits onColumnsMoved only when order changes', () => {
     const onColumnsMoved = mock<(event: { fieldIds: readonly string[]; beforeFieldId: string | null }) => void>()
     const { grid, data, container } = mkGrid(onColumnsMoved)

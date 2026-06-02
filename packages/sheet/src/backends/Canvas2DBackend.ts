@@ -203,6 +203,7 @@ export class Canvas2DBackend implements GridController {
 
     this.runtime = new WebGridRuntime({
       engine: this.engine,
+      context: this.sheetContext,
       host: this.host,
       renderer: this.renderer,
       scheduler: this.scheduler,
