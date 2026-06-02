@@ -21,7 +21,7 @@
 |---|---:|---|---|---|---|
 | [x] | 0 | Feature contribution 基座 | `@novasheet/core` / `@novasheet/web` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` Task 1-2 | `SheetContext` 支持 generic contributions；`web` 支持 typed drag contributions |
 | [x] | 1 | 行列拖拽排序 | `@novasheet/feature-row-column-reorder` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` | `RowHeaderDrag` / `ColumnHeaderDrag` 通过 feature 安装，默认行为不变 |
-| [ ] | 2 | 行高列宽 resize | `@novasheet/feature-resize` | 未开始：实施前单独写计划 | `ResizeDrag` 从 runtime 固定创建改为 feature 安装 |
+| [x] | 2 | 行高列宽 resize | `@novasheet/feature-resize` | `2026-06-02-novasheet-resize-feature-package.md` | `ResizeDrag` 从 runtime 固定创建改为 feature 安装 |
 | [ ] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | 未开始：实施前单独写计划 | `FillHandleDrag` 和填充 preview/commit 通过 feature 安装 |
 | [ ] | 4 | 单元格编辑 | `@novasheet/feature-editing` | 未开始：实施前单独写计划 | `DomCellEditor` / edit lifecycle 通过 feature 安装，自定义 editor 仍可用 |
 | [ ] | 5 | 剪贴板 | `@novasheet/feature-clipboard` | 未开始：实施前单独写计划 | copy/paste adapter 与 paste commit 通过 feature 安装 |
@@ -36,12 +36,13 @@
 
 ## 当前执行焦点
 
-当前只执行阶段 0-1：
+阶段 0-2 已完成：
 
 - 基座：`SheetContext` generic contributions + `@novasheet/web` typed drag contributions。
 - 第一包：`@novasheet/feature-row-column-reorder`。
+- 第二包：`@novasheet/feature-resize`。
 
-不要在阶段 0-1 中顺手拆 resize、fill handle、editing、clipboard。每个 feature 都需要单独计划，避免一次性改穿 runtime。
+下一个执行焦点是阶段 3：`@novasheet/feature-fill-handle`。不要在阶段 3 中顺手拆 editing、clipboard、context menu。每个 feature 都需要单独计划，避免一次性改穿 runtime。
 
 ## 大能力拆包顺序
 

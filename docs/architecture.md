@@ -88,6 +88,8 @@ Feature package 依赖 `core` + 对应平台契约包，并由 `sheet` 默认安
 Feature package 拥有用户可见表格能力，并通过 `SheetContext` 安装。`@novasheet/feature-row-column-reorder`
 拥有行/列表头拖拽排序：它复用 `@novasheet/web` 的 drag contribution 契约，由 `WebGridRuntime`
 提供运行时依赖并调用 engine API。`@novasheet/sheet` 默认安装该能力包，默认 `Grid` 保持原有行列拖拽行为。
+`@novasheet/feature-resize` 拥有行高/列宽 resize 拖拽状态机：它通过 web drag runtime deps
+消费 `DomHandleLayer`，而 DOM handle layer 与 resize handle 样式仍属于 `@novasheet/web`。
 
 ---
 

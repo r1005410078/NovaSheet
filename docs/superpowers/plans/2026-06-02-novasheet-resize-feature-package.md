@@ -1,8 +1,10 @@
 # Resize Feature Package Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Move the existing row/column resize drag state machine into `@novasheet/feature-resize` while preserving default `@novasheet/sheet` behavior.
+
+**Execution Status (2026-06-02):** Completed Task 1-6. Full gates passed: `bun run lint`, `bun run --filter '*' typecheck`, `bun test`, and package builds for `@novasheet/core` / `@novasheet/web` / `@novasheet/feature-resize` / `@novasheet/canvas2d` / `@novasheet/sheet`.
 
 **Architecture:** `@novasheet/web` keeps DOM handle infrastructure and runtime dispatch contracts. `@novasheet/feature-resize` owns `ResizeDrag` and registers it through `SheetContext` as a web drag contribution. `@novasheet/sheet` installs the feature by default.
 
@@ -70,7 +72,7 @@ packages/feature-resize/
 - Modify: `packages/web/src/index.ts`
 - Test: `packages/web/tests/interaction/drag/WebDragContribution.test.ts`
 
-- [ ] **Step 1: Add failing test for `handleLayer` in runtime deps**
+- [x] **Step 1: Add failing test for `handleLayer` in runtime deps**
 
 Append to `packages/web/tests/interaction/drag/WebDragContribution.test.ts`:
 
@@ -101,7 +103,7 @@ bun test packages/web/tests/interaction/drag/WebDragContribution.test.ts
 
 Expected: FAIL with TypeScript/typecheck later because `WebDragRuntimeDeps` has no `handleLayer`.
 
-- [ ] **Step 2: Add handle layer to web drag deps**
+- [x] **Step 2: Add handle layer to web drag deps**
 
 Update `packages/web/src/interaction/drag/WebDragContribution.ts`:
 
@@ -133,7 +135,7 @@ return {
 
 No new export is required because `DomHandleLayer` is already exported from `packages/web/src/index.ts`.
 
-- [ ] **Step 3: Verify web contract**
+- [x] **Step 3: Verify web contract**
 
 Run:
 
@@ -146,7 +148,7 @@ bun run lint
 
 Expected: all exit 0.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/web/src/interaction/drag/WebDragContribution.ts packages/web/src/runtime/WebGridRuntime.ts packages/web/tests/interaction/drag/WebDragContribution.test.ts
@@ -169,7 +171,7 @@ git commit -m "feat(web): 扩展拖拽贡献点 resize 依赖"
 - Modify: `tsconfig.base.json`
 - Test: `packages/feature-resize/tests/installResizeFeature.test.ts`
 
-- [ ] **Step 1: Add package files**
+- [x] **Step 1: Add package files**
 
 Create `packages/feature-resize/package.json`:
 
@@ -244,7 +246,7 @@ Create `packages/feature-resize/tsconfig.build.json`:
 }
 ```
 
-- [ ] **Step 2: Add workspace path**
+- [x] **Step 2: Add workspace path**
 
 Update `tsconfig.base.json` paths:
 
@@ -262,7 +264,7 @@ bun install
 
 Expected: lockfile updates with the new workspace package.
 
-- [ ] **Step 3: Move old implementation**
+- [x] **Step 3: Move old implementation**
 
 Run:
 
@@ -279,7 +281,7 @@ import type { AutoScrollAxis, DomHandleLayer, Drag, WebPointerEvent } from '@nov
 
 Keep existing `ResizeDragDeps`, `ResizeDrag`, and behavior unchanged.
 
-- [ ] **Step 4: Add installer and exports**
+- [x] **Step 4: Add installer and exports**
 
 Create `packages/feature-resize/src/installResizeFeature.ts`:
 
@@ -311,7 +313,7 @@ export { ResizeDrag } from './ResizeDrag'
 export type { ResizeDragDeps } from './ResizeDrag'
 ```
 
-- [ ] **Step 5: Add installer test**
+- [x] **Step 5: Add installer test**
 
 Create `packages/feature-resize/tests/installResizeFeature.test.ts`:
 
@@ -332,7 +334,7 @@ describe('installResizeFeature', () => {
 })
 ```
 
-- [ ] **Step 6: Continue immediately to runtime wiring**
+- [x] **Step 6: Continue immediately to runtime wiring**
 
 Do not verify or commit yet. After `git mv`, `@novasheet/web` still imports the old
 `ResizeDrag` path, so package creation and runtime contribution wiring are one atomic change.
@@ -348,7 +350,7 @@ Task 3 performs the first green verification and commit for this package move.
 - Test: `packages/web/tests/runtime/WebGridRuntime.test.ts`
 - Test: `packages/feature-resize/tests/WebGridRuntime.resize.test.ts`
 
-- [ ] **Step 1: Add no-feature runtime test**
+- [x] **Step 1: Add no-feature runtime test**
 
 In `packages/web/tests/runtime/WebGridRuntime.test.ts`, add a test near the resize describe block:
 
@@ -382,7 +384,7 @@ bun test packages/web/tests/runtime/WebGridRuntime.test.ts
 
 Expected: FAIL while runtime still directly constructs old `ResizeDrag`, or compile fails because the old import path no longer exists.
 
-- [ ] **Step 2: Add resize contribution shape in runtime**
+- [x] **Step 2: Add resize contribution shape in runtime**
 
 In `packages/web/src/runtime/WebGridRuntime.ts`:
 
@@ -476,7 +478,7 @@ For all other `this.resizeDrag.active` checks, use:
 this.resizeDrag?.active === true
 ```
 
-- [ ] **Step 3: Move resize behavior tests to feature package**
+- [x] **Step 3: Move resize behavior tests to feature package**
 
 Create `packages/feature-resize/tests/WebGridRuntime.resize.test.ts` with the two pointer resize tests from `packages/web/tests/runtime/WebGridRuntime.test.ts`, but add:
 
@@ -539,7 +541,7 @@ export function makeMockGridEngine(options: { colWidth?: number; rowHeight?: num
 }
 ```
 
-- [ ] **Step 4: Verify runtime wiring**
+- [x] **Step 4: Verify runtime wiring**
 
 Run:
 
@@ -556,7 +558,7 @@ bun run lint
 
 Expected: all exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bun.lock tsconfig.base.json packages/feature-resize packages/web/src/runtime/WebGridRuntime.ts packages/web/src/interaction/drag/ResizeDrag.ts packages/web/tests/runtime/WebGridRuntime.test.ts packages/web/tests/interaction/drag
@@ -574,7 +576,7 @@ git commit -m "feat(resize): 新增 resize 能力包并接入 runtime"
 - Modify: `packages/sheet/src/defaults/installDefaultExtensions.ts`
 - Test: `packages/sheet/tests/Grid.test.ts` or `packages/sheet/tests/Grid.context.test.ts`
 
-- [ ] **Step 1: Add failing sheet default install test**
+- [x] **Step 1: Add failing sheet default install test**
 
 Add to `packages/sheet/tests/Grid.context.test.ts`:
 
@@ -599,7 +601,7 @@ bun test packages/sheet/tests/Grid.context.test.ts
 
 Expected: FAIL because `installDefaultExtensions` does not install resize feature yet.
 
-- [ ] **Step 2: Add sheet dependency and external**
+- [x] **Step 2: Add sheet dependency and external**
 
 Update `packages/sheet/package.json` dependencies:
 
@@ -625,7 +627,7 @@ Run:
 bun install
 ```
 
-- [ ] **Step 3: Install resize feature by default**
+- [x] **Step 3: Install resize feature by default**
 
 Update `packages/sheet/src/defaults/installDefaultExtensions.ts`:
 
@@ -641,7 +643,7 @@ export function installDefaultExtensions(ctx: SheetContext): void {
 
 Keep row/column reorder installed after resize so contribution order remains deterministic through `order`.
 
-- [ ] **Step 4: Verify sheet behavior**
+- [x] **Step 4: Verify sheet behavior**
 
 Run:
 
@@ -656,7 +658,7 @@ bun run lint
 
 Expected: all exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add bun.lock packages/sheet/package.json packages/sheet/build.ts packages/sheet/src/defaults/installDefaultExtensions.ts packages/sheet/tests/Grid.context.test.ts
@@ -672,7 +674,7 @@ git commit -m "feat(sheet): 默认安装 resize 能力"
 - Verify: `packages/feature-resize/tests/ResizeDrag.test.ts`
 - Verify: `packages/web/tests/interaction/drag`
 
-- [ ] **Step 1: Confirm old direct test is gone**
+- [x] **Step 1: Confirm old direct test is gone**
 
 Run:
 
@@ -682,7 +684,7 @@ rg -n "ResizeDrag" packages/web/tests/interaction/drag packages/web/src/interact
 
 Expected: no output.
 
-- [ ] **Step 2: Verify ownership**
+- [x] **Step 2: Verify ownership**
 
 Run:
 
@@ -696,7 +698,7 @@ bun run lint
 
 Expected: all exit 0.
 
-- [ ] **Step 3: Continue to final docs**
+- [x] **Step 3: Continue to final docs**
 
 No commit is expected in this task. The ownership move is committed in Task 3 because it must be
 atomic with moving `ResizeDrag.ts`.
@@ -711,7 +713,7 @@ atomic with moving `ResizeDrag.ts`.
 - Modify: `docs/superpowers/plans/2026-06-02-novasheet-feature-package-roadmap.md`
 - Modify: `docs/superpowers/plans/2026-06-02-novasheet-resize-feature-package.md`
 
-- [ ] **Step 1: Update architecture docs**
+- [x] **Step 1: Update architecture docs**
 
 In `docs/architecture.md` Feature Packages section, add:
 
@@ -721,7 +723,7 @@ through the web drag runtime deps, while the DOM handle layer and resize handle 
 `@novasheet/web`.
 ```
 
-- [ ] **Step 2: Mark roadmap stage 2 complete**
+- [x] **Step 2: Mark roadmap stage 2 complete**
 
 Update `docs/superpowers/plans/2026-06-02-novasheet-feature-package-roadmap.md`:
 
@@ -731,7 +733,7 @@ Update `docs/superpowers/plans/2026-06-02-novasheet-feature-package-roadmap.md`:
 
 Update current focus text so it says phases 0-2 are complete and next focus is `fill-handle`.
 
-- [ ] **Step 3: Record plan execution status**
+- [x] **Step 3: Record plan execution status**
 
 At the top of `docs/superpowers/plans/2026-06-02-novasheet-resize-feature-package.md`, add:
 
@@ -739,7 +741,7 @@ At the top of `docs/superpowers/plans/2026-06-02-novasheet-resize-feature-packag
 **Execution Status (2026-06-02):** Completed Task 1-6. Full gates passed: `bun run lint`, `bun run --filter '*' typecheck`, `bun test`, and package builds for `@novasheet/core` / `@novasheet/web` / `@novasheet/feature-resize` / `@novasheet/canvas2d` / `@novasheet/sheet`.
 ```
 
-- [ ] **Step 4: Run full gates**
+- [x] **Step 4: Run full gates**
 
 Run:
 
@@ -756,7 +758,7 @@ bun run --filter @novasheet/sheet build
 
 Expected: all exit 0.
 
-- [ ] **Step 5: Commit docs**
+- [x] **Step 5: Commit docs**
 
 ```bash
 git add docs/architecture.md docs/superpowers/plans/2026-06-02-novasheet-feature-package-roadmap.md docs/superpowers/plans/2026-06-02-novasheet-resize-feature-package.md
