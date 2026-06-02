@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { createSheetContext, InMemoryDataSource, type SheetContext } from '@novasheet/core'
+import { getWebDragContributions } from '@novasheet/web'
 import { Grid } from '../src/Grid'
 
 const data = new InMemoryDataSource({
@@ -28,6 +29,15 @@ describe('Grid SheetContext options', () => {
     })
 
     expect(ctx.registry.cells.has('rating')).toBe(true)
+    grid.destroy()
+  })
+
+  it('installs resize drag in the default context', () => {
+    const ctx = createSheetContext<CanvasRenderingContext2D, HTMLElement>()
+
+    const grid = new Grid(document.createElement('div'), { data, context: ctx })
+
+    expect(getWebDragContributions(ctx).map((contribution) => contribution.id)).toContain('resize')
     grid.destroy()
   })
 })

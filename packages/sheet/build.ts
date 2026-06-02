@@ -14,6 +14,7 @@ const EXTERNALS = [
   '@novasheet/web',
   '@novasheet/canvas2d',
   '@novasheet/feature-row-column-reorder',
+  '@novasheet/feature-resize',
 ] as const
 
 const common = {

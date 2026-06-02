@@ -87,6 +87,7 @@
       "dependencies": {
         "@novasheet/canvas2d": "^0.1.0",
         "@novasheet/core": "^0.1.0",
+        "@novasheet/feature-resize": "^0.1.0",
         "@novasheet/feature-row-column-reorder": "^0.1.0",
         "@novasheet/web": "^0.1.0",
       },
