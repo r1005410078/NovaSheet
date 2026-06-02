@@ -26,6 +26,7 @@ export function createSheetContext<TCanvasContext = unknown, TElement = unknown>
   const registry: ExtensionRegistry = {
     cells: new Map(),
     commands: new Map(),
+    contributions: new Map(),
   }
   const scopes: Array<RuntimeScope<TCanvasContext, TElement>> = []
   const topScope = () => scopes[scopes.length - 1]
@@ -38,6 +39,10 @@ export function createSheetContext<TCanvasContext = unknown, TElement = unknown>
       },
       command(id: string, handler: CommandHandler) {
         registry.commands.set(id, handler)
+      },
+      contribute(point: string, contribution) {
+        const existing = registry.contributions.get(point) ?? []
+        registry.contributions.set(point, [...existing, contribution])
       },
     },
     run<T>(scope: RuntimeScope<TCanvasContext, TElement>, fn: () => T): T {

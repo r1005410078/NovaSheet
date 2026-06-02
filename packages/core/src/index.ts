@@ -138,6 +138,7 @@ export type {
 export type {
   CellExtension,
   CommandHandler,
+  ExtensionContribution,
   ExtensionRegistrar,
   ExtensionRegistry,
 } from './context/extensions'

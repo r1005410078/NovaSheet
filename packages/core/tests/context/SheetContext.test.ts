@@ -36,4 +36,13 @@ describe('SheetContext', () => {
     expect(value).toBe(3)
     expect(() => ctx.cell()).toThrow()
   })
+
+  it('registers and reads generic extension contributions by point id', () => {
+    const ctx = createSheetContext()
+    const contribution = { id: 'feature-a' }
+
+    ctx.extensions.contribute('web.drag', contribution)
+
+    expect(ctx.registry.contributions.get('web.drag')).toEqual([contribution])
+  })
 })
