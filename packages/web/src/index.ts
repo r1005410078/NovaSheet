@@ -14,7 +14,12 @@ export {
   getWebDragContributions,
   registerWebDrag,
 } from './interaction/drag/WebDragContribution'
-export type { WebDragContribution, WebDragRuntimeDeps } from './interaction/drag/WebDragContribution'
+export type {
+  WebDragContribution,
+  WebDragRuntimeDeps,
+  WebFrameSync,
+  WebInteractionStatus,
+} from './interaction/drag/WebDragContribution'
 export { DomCellEditor } from './interaction/DomCellEditor'
 export { DomContextMenuLayer } from './interaction/DomContextMenuLayer'
 export { DomFillHandleLayer } from './interaction/DomFillHandleLayer'

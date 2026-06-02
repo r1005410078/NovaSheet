@@ -43,6 +43,7 @@ function trackingHost(): { host: WebHost; pos: { top: number; left: number } } {
     getContainerBoundingRect: () => ({ left: 0, top: 0 }),
     focusScrollHost: mock(() => {}),
     destroy: mock(() => {}),
+    container: document.createElement('div'),
   } satisfies WebHost
   return { host, pos }
 }

@@ -11,7 +11,7 @@ import type { WebHost, WebHostOptions } from './WebHost'
  * - 程序化滚动委托给 `NativeScroller`
  */
 export class DomGridHost implements WebHost {
-  private container: HTMLElement
+  readonly container: HTMLElement
   private scheduler: FrameScheduler
   private onScroll: WebHostOptions['onScroll']
   private onResize: WebHostOptions['onResize']

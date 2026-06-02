@@ -139,6 +139,7 @@ function makeHost(): WebHost {
     getScrollPosition: () => ({ scrollTop: 0, scrollLeft: 0 }),
     focusScrollHost: mock(() => {}),
     destroy: mock(() => {}),
+    container: document.createElement('div'),
   }
 }
 

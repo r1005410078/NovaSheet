@@ -61,6 +61,8 @@ export interface WebHostOptions {
  * canvas 由具体 `WebRenderer` 实现挂载。
  */
 export interface WebHost {
+  /** The host container element; used by feature overlays that need to append DOM children. */
+  readonly container: HTMLElement
   attach(): void
   /** 将 Theme `scrollbar` 应用到原生 scroll-host（`setTheme` / 初次 attach 时调用）。 */
   applyScrollbarTheme(scrollbar: ThemeScrollbar): void

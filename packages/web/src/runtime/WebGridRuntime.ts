@@ -63,7 +63,6 @@ import {
   type ContextMenuAction,
   type ContextMenuContext,
   type ContextMenuItem,
-  type FillDirection,
   type GridSelection,
   type PasteSkippedCell,
   type ResizeHandleRect,
@@ -87,7 +86,10 @@ import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
 import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import {
   getWebDragContributions,
+  type FillEvent,
   type WebDragRuntimeDeps,
+  type WebFrameSync,
+  type WebInteractionStatus,
 } from '../interaction/drag/WebDragContribution'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
@@ -176,17 +178,8 @@ export interface RedoEvent {
   readonly command: UndoCommand
 }
 
-/** Fill handle 提交后的 runtime 事件。 */
-export interface FillEvent {
-  /** 填充源区域。 */
-  readonly source: CellRange
-  /** 实际写入的填充区域。 */
-  readonly fill: CellRange
-  /** 用户可见的最终选区。 */
-  readonly result: CellRange
-  /** 填充方向。 */
-  readonly direction: FillDirection
-}
+// FillEvent is imported from WebDragContribution; re-export for backwards compat via index.ts.
+export type { FillEvent }
 
 /** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
 const HOST_RESIZE_KEY = 'host:resize'
@@ -210,6 +203,15 @@ function mergeVisualRange(
   if (!activeCell || !mergeRegions) return range
   const merge = mergeRegions.find((m) => cellInRange(activeCell, m.range))?.range
   return merge ? unionRange(range, merge) : range
+}
+
+function isWebFrameSync(drag: Drag): drag is Drag & WebFrameSync {
+  const c = drag as Partial<WebFrameSync>
+  return (
+    typeof c.attach === 'function' &&
+    typeof c.syncFrame === 'function' &&
+    typeof c.destroy === 'function'
+  )
 }
 
 function isWebResizeDrag(drag: Drag): drag is WebResizeDrag {
@@ -328,6 +330,8 @@ export class WebGridRuntime {
   private selectionDrag!: SelectionDrag
   /** pointerdown 按序尝试起拖的 Drag 列表；加新拖拽 = 实现 Drag + 入此数组。 */
   private drags: readonly Drag[] = []
+  /** Contributed drags that also implement WebFrameSync；每帧同步派发。 */
+  private frameSyncs: WebFrameSync[] = []
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: WebGridRuntimeOptions) {
@@ -379,6 +383,8 @@ export class WebGridRuntime {
       ...contributedDrags.filter((drag) => drag !== this.resizeDrag),
       this.selectionDrag,
     ]
+    this.frameSyncs = this.drags.filter(isWebFrameSync)
+    for (const fs of this.frameSyncs) fs.attach(this.host.container)
   }
 
   private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
@@ -402,11 +408,14 @@ export class WebGridRuntime {
       selectWholeColumnRange: (anchor, extent) => this.selectWholeColumnRange(anchor, extent),
       selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
       getColsTotalSize: () => this.getColsTotalSizeForFrame(this.engine.getFrame()),
+      autofitRows: (options) => this.autofitRows(options),
+      commitActiveEdit: (moveSelection) => this.commitCellEdit(moveSelection),
+      onFill: (event) => this.onFill?.(event),
     }
   }
 
   private isDragBlocked(): boolean {
-    return this.resizeDrag?.active === true || !!this.activeDrag
+    return this.resizeDrag?.active === true || this.drags.some((d) => d.active) || !!this.activeDrag
   }
 
   /** 起拖期间记录 pointer 并按边缘热区驱动自动滚动（供 Drag 经 deps 调用）。 */
@@ -1459,6 +1468,8 @@ export class WebGridRuntime {
     this.scheduler.cancel('renderer:flush')
     this.scheduler.cancel(HOST_RESIZE_KEY)
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
+    for (const fs of this.frameSyncs) fs.destroy()
+    this.frameSyncs = []
     this.renderer.destroy()
     this.host.destroy()
   }
@@ -1755,6 +1766,7 @@ export class WebGridRuntime {
       this.syncHideToggleHandles()
       this.syncHideColToggleHandles()
       this.syncCellEditorPosition()
+      this.syncFrameSyncs(frame)
     })
   }
 
@@ -1768,6 +1780,22 @@ export class WebGridRuntime {
     this.syncHideToggleHandles()
     this.syncHideColToggleHandles()
     this.syncCellEditorPosition()
+    this.syncFrameSyncs(frame)
+  }
+
+  /** 公开同步绘制一帧（测试/即时刷新用）。 */
+  paintNow(): void {
+    this.paintSync()
+  }
+
+  /** 驱动所有 frame-sync overlay（如填充柄）每帧同步；未安装时 no-op。 */
+  private syncFrameSyncs(frame: ReturnType<GridEngine['getFrame']>): void {
+    if (this.frameSyncs.length === 0) return
+    const status: WebInteractionStatus = {
+      interacting: this.resizeDrag?.active === true || this.drags.some((d) => d.active),
+      editing: this.engine.isCellEditing(),
+    }
+    for (const fs of this.frameSyncs) fs.syncFrame(frame, status)
   }
 
   /** 获取当前 render frame，并在 view pipeline 存在时注入视图映射。 */

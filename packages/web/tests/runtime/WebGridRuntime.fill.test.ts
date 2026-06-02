@@ -228,6 +228,7 @@ function makeHost(offset: { left: number; top: number } = { left: 0, top: 0 }): 
     getScrollPosition: () => ({ scrollTop: 0, scrollLeft: 0 }),
     focusScrollHost: mock(() => {}),
     destroy: mock(() => {}),
+    container: document.createElement('div'),
   }
 }
 
