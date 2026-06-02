@@ -428,8 +428,10 @@ After `contributedDrags` creation, assign:
 
 ```ts
 this.resizeDrag = contributedDrags.find(isWebResizeDrag) ?? null
-this.drags = contributedDrags.filter((drag) => drag !== this.resizeDrag)
-this.drags.push(this.selectionDrag)
+this.drags = [
+  ...contributedDrags.filter((drag) => drag !== this.resizeDrag),
+  this.selectionDrag,
+]
 ```
 
 Add helper:
@@ -474,7 +476,7 @@ For all other `this.resizeDrag.active` checks, use:
 this.resizeDrag?.active === true
 ```
 
-- [ ] **Step 3: Move runtime resize behavior tests to feature package**
+- [ ] **Step 3: Move resize behavior tests to feature package**
 
 Create `packages/feature-resize/tests/WebGridRuntime.resize.test.ts` with the two pointer resize tests from `packages/web/tests/runtime/WebGridRuntime.test.ts`, but add:
 
@@ -503,12 +505,47 @@ Remove the two pointer resize behavior tests from `packages/web/tests/runtime/We
 - `拖拽中只更新预览，松手才 commitColumnResize`
 - `无位移松手不提交`
 
+Move the direct unit test in the same atomic change:
+
+```bash
+git mv packages/web/tests/interaction/drag/ResizeDrag.test.ts packages/feature-resize/tests/ResizeDrag.test.ts
+```
+
+Update `packages/feature-resize/tests/ResizeDrag.test.ts` imports:
+
+```ts
+import { ResizeDrag } from '../src'
+import type { DomHandleLayer } from '@novasheet/web'
+import type { ResizeHandleRect } from '@novasheet/core'
+import { makeMockGridEngine } from './helpers/mock-grid-engine'
+```
+
+Create `packages/feature-resize/tests/helpers/mock-grid-engine.ts` with the minimal engine double needed by `ResizeDrag.test.ts`:
+
+```ts
+import { mock } from 'bun:test'
+import type { GridEngine } from '@novasheet/core'
+
+export function makeMockGridEngine(options: { colWidth?: number; rowHeight?: number } = {}): GridEngine {
+  const colWidth = options.colWidth ?? 100
+  const rowHeight = options.rowHeight ?? 28
+  return {
+    getColumnIndex: mock((fieldId: string) => (fieldId === 'field-0' ? 0 : -1)),
+    getColsAxis: mock(() => ({ getSize: () => colWidth }) as never),
+    getRowsAxis: mock(() => ({ getCount: () => 10, getSize: () => rowHeight }) as never),
+    commitColumnResize: mock(() => {}),
+    commitRowResize: mock(() => {}),
+  } as unknown as GridEngine
+}
+```
+
 - [ ] **Step 4: Verify runtime wiring**
 
 Run:
 
 ```bash
 bun test packages/feature-resize/tests
+bun test packages/web/tests/interaction/drag
 bun test packages/web/tests/runtime/WebGridRuntime.test.ts
 bun run --filter @novasheet/feature-resize typecheck
 bun run --filter @novasheet/web typecheck
@@ -522,7 +559,7 @@ Expected: all exit 0.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add bun.lock tsconfig.base.json packages/feature-resize packages/web/src/runtime/WebGridRuntime.ts packages/web/src/interaction/drag/ResizeDrag.ts packages/web/tests/runtime/WebGridRuntime.test.ts
+git add bun.lock tsconfig.base.json packages/feature-resize packages/web/src/runtime/WebGridRuntime.ts packages/web/src/interaction/drag/ResizeDrag.ts packages/web/tests/runtime/WebGridRuntime.test.ts packages/web/tests/interaction/drag
 git commit -m "feat(resize): 新增 resize 能力包并接入 runtime"
 ```
 
@@ -628,53 +665,24 @@ git commit -m "feat(sheet): 默认安装 resize 能力"
 
 ---
 
-## Task 5: Migrate Direct ResizeDrag Unit Test
+## Task 5: Confirm ResizeDrag Test Ownership
 
 **Files:**
 
-- Move: `packages/web/tests/interaction/drag/ResizeDrag.test.ts` -> `packages/feature-resize/tests/ResizeDrag.test.ts`
-- Modify: moved test imports
-- Create: `packages/feature-resize/tests/helpers/mock-grid-engine.ts`
+- Verify: `packages/feature-resize/tests/ResizeDrag.test.ts`
+- Verify: `packages/web/tests/interaction/drag`
 
-- [ ] **Step 1: Move test with git**
+- [ ] **Step 1: Confirm old direct test is gone**
 
 Run:
 
 ```bash
-git mv packages/web/tests/interaction/drag/ResizeDrag.test.ts packages/feature-resize/tests/ResizeDrag.test.ts
+rg -n "ResizeDrag" packages/web/tests/interaction/drag packages/web/src/interaction/drag
 ```
 
-- [ ] **Step 2: Update imports**
+Expected: no output.
 
-In `packages/feature-resize/tests/ResizeDrag.test.ts`, replace imports:
-
-```ts
-import { ResizeDrag } from '../src'
-import type { DomHandleLayer } from '@novasheet/web'
-import type { ResizeHandleRect } from '@novasheet/core'
-import { makeMockGridEngine } from './helpers/mock-grid-engine'
-```
-
-Create `packages/feature-resize/tests/helpers/mock-grid-engine.ts` with the minimal engine double needed by `ResizeDrag.test.ts`:
-
-```ts
-import { mock } from 'bun:test'
-import type { GridEngine } from '@novasheet/core'
-
-export function makeMockGridEngine(options: { colWidth?: number; rowHeight?: number } = {}): GridEngine {
-  const colWidth = options.colWidth ?? 100
-  const rowHeight = options.rowHeight ?? 28
-  return {
-    getColumnIndex: mock((fieldId: string) => (fieldId === 'field-0' ? 0 : -1)),
-    getColsAxis: mock(() => ({ getSize: () => colWidth }) as never),
-    getRowsAxis: mock(() => ({ getCount: () => 10, getSize: () => rowHeight }) as never),
-    commitColumnResize: mock(() => {}),
-    commitRowResize: mock(() => {}),
-  } as unknown as GridEngine
-}
-```
-
-- [ ] **Step 3: Verify ownership**
+- [ ] **Step 2: Verify ownership**
 
 Run:
 
@@ -688,12 +696,10 @@ bun run lint
 
 Expected: all exit 0.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Continue to final docs**
 
-```bash
-git add packages/feature-resize/tests packages/web/tests/interaction/drag
-git commit -m "test(resize): 迁移 resize 拖拽单元测试"
-```
+No commit is expected in this task. The ownership move is committed in Task 3 because it must be
+atomic with moving `ResizeDrag.ts`.
 
 ---
 
