@@ -41,6 +41,7 @@ describe('Grid column reorder — Phase 4.7', () => {
     })
 
     expect(getWebDragContributions(ctx).map((contribution) => contribution.id)).toEqual([
+      'resize',
       'column-header-reorder',
       'row-header-reorder',
     ])

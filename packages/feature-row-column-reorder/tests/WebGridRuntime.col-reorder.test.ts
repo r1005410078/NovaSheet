@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { DefaultGridEngine, createSheetContext, denseGridTheme, InMemoryDataSource } from '@novasheet/core'
 import type { GridEngine, ResizeHandleRect, Schema } from '@novasheet/core'
-import { WebGridRuntime } from '@novasheet/web'
+import { WebGridRuntime, registerWebDrag } from '@novasheet/web'
 import type { ColumnReorderOverlay, WebHost, WebRenderer } from '@novasheet/web'
 import { installRowColumnReorder } from '../src'
 
@@ -63,8 +63,43 @@ function makeOverlay(): ColumnReorderOverlay {
 
 function makeContext() {
   const ctx = createSheetContext()
+  installBlockingResizeDrag(ctx)
   installRowColumnReorder(ctx)
   return ctx
+}
+
+function installBlockingResizeDrag(ctx: ReturnType<typeof createSheetContext>): void {
+  registerWebDrag(ctx, {
+    id: 'test-resize',
+    order: 10,
+    create: () => {
+      let active = false
+      return {
+        autoScrollAxis: null,
+        get active() {
+          return active
+        },
+        tryStart: () => false,
+        move: () => active,
+        reevaluate: () => {},
+        commit: () => {
+          active = false
+        },
+        cancel: () => {
+          active = false
+        },
+        start: () => {
+          active = true
+          return true
+        },
+        movePointer: () => active,
+        commitPointer: () => {
+          active = false
+          return true
+        },
+      }
+    },
+  })
 }
 
 function selectCols(engine: GridEngine, startCol: number, endCol: number): void {
