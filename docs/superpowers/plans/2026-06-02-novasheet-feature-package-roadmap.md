@@ -23,10 +23,12 @@ Feature package 的目标不是引入复杂插件系统，而是把“能力声�
 
 | 层 | 包 | 负责 | 不负责 |
 |---|---|---|---|
-| Kernel | `@novasheet/core` | `createSheetContext()`、extension registry、engine contracts、DOM-free 状态内核 | 浏览器 DOM、Canvas、具体产品能力 |
-| Platform contracts | `@novasheet/web` / `@novasheet/canvas2d` | browser/canvas 运行时契约，例如 `WebDragContribution`、renderer contract、DOM host | 默认安装哪些能力 |
-| Feature packages | `@novasheet/feature-*` | 一个用户可感知能力的实现与 `installXxx(ctx)` 注册函数 | 创建 `Grid`、默认装配、跨 feature 总控 |
-| Product assembly | `@novasheet/sheet` | 对外 `Grid` 门面、默认 `installDefaultExtensions(ctx)` 组合 | 具体 feature 内部状态机 |
+| Kernel | `@novasheet/core` | `createSheetContext()`、extension registry、engine contracts、DOM-free 状态内核、**所有 mutation/语义状态**（不变量 #2） | 浏览器 DOM、Canvas、交互层实现 |
+| Platform contracts | `@novasheet/web` / `@novasheet/canvas2d` | browser/canvas 运行时契约（contribution 词汇表：drag / frame-sync / menu / keyboard / command / cell-type）、renderer contract、DOM host、runtime kernel（orchestrator + scroll + 基线选区） | 默认安装哪些能力、具体 feature 实现 |
+| Feature packages | `@novasheet/feature-*` | 一个用户可感知能力的**交互层竖切片**（drag + DOM layer/overlay + popover + style + menu/keyboard/command 贡献 + 测试）与 `installXxx(ctx)` 注册函数 | 创建 `Grid`、默认装配、跨 feature 总控、**引擎语义 mutation（留在 core engine）** |
+| Product assembly | `@novasheet/sheet` | 对外 `Grid` 门面、默认 `installDefaultExtensions(ctx)` 组合（功能清单 BOM） | 具体 feature 内部实现 |
+
+> **关键约束（2026-06-02 厘清）：** 受不变量 #2「所有 mutation 走 `DefaultGridEngine`」约束，每个能力天然被切成两半——**交互半边**（drag/overlay/popover/menu/keyboard）可进 feature 包，**语义半边**（mutation/持久状态）锁在 `@novasheet/core` engine。feature 包是「交互-only 包」，不拥有自己的 engine mutation。要让语义也进包，必须另起一轮 brainstorm 做 **engine 可扩展**（feature 向 engine 注册 mutation/command/state）——这碰锁定 ADR，目前**显式推迟**，不在本路线图范围内。
 
 ### 注册与组合方式
 
@@ -104,14 +106,60 @@ export function installResizeFeature(ctx: SheetContext): void {
 
 ---
 
+## 隔离目标与拆包策略（2026-06-02 修订）
+
+**北极星目标：** 扩展一个已有能力，只动它自己的包。加一个新能力，触点收敛到最小且可预测。
+
+### 加一个功能要动哪块（终局，已排除「扩展共享契约」——那按设计不算动代码）
+
+| 功能类型 | feature 包 | `sheet`（装配 BOM） | `core`（engine） | `web`（契约） |
+|---|---|---|---|---|
+| opt-in，复用现有 mutation（外部自组 ctx） | ✏️ 只这里 | — | — | 排除 |
+| 默认开，复用现有 mutation | ✏️ | 1 行 `installX(ctx)` + 1 条 dep | — | 排除 |
+| 引入新语义/新持久状态 | ✏️ | 1 行 install + dep | ✏️ 新 mutation/store | 排除 |
+
+两个残留触点，各自不可消除的理由：
+
+- **`sheet` 一行装配 = BOM 登记，不算实现改动。** 默认产品必须声明自己装了什么（同 DI 容器登记）。opt-in 功能（用户自组 ctx）连这行都不需要。
+- **`core` 新 mutation = 不变量 #2 的硬地板。** 带新语义的功能其写操作必须落 core engine。这块随 engine mutation 词汇表成熟而**渐近归零**：功能若只是用新方式触发已有 mutation（`setCell`/`setTextWrap`/`mergeCells`/`setFillColor`…）就不碰 core；只有引入全新状态种类才落 core。
+
+### 完成定义（每个 feature 对着这把尺子拆）
+
+> - 加一个**纯交互**功能（复用现有引擎语义）= 只动它自己的包（+ 默认产品一行 BOM 登记）。
+> - 加一个**带新语义**的功能 = 额外只在 `core` engine 放那条新 mutation。
+> - 二者都**不**需要动 `web`——前提是它需要的交互契约已在词汇表里；新契约按规则不算动代码。
+
+### 竖切片拆包策略（取代「只搬状态机」）
+
+每个 feature 拆**整条交互竖切片**，不是只搬 drag state machine：drag + DOM layer/overlay + popover + style + menu/keyboard/command 贡献 + 测试，一次搬齐。
+
+> **历史债务：** phase 1（reorder）/ phase 2（resize）只搬了 drag state machine，overlay/popover/menu/keyboard/style 仍赖在 `@novasheet/web`，属**半拆**状态。需在对应契约就绪后**回补**为整竖切片，否则「改 resize 只动 resize 包」仍不成立。见 phase 14 回补项。
+
+### 契约词汇表先行（决定 phase 顺序）
+
+「只动自己的包」要求 feature 需要的交互契约已存在。词汇表建设状态：
+
+| 契约 | 状态 / 由谁建 | 解锁谁的完整隔离 |
+|---|---|---|
+| drag | ✅ phase 0 | reorder / resize / fill / selection |
+| cell-type | ✅ 已有 | basic-cells |
+| frame-sync（overlay 每帧同步生命周期） | ⏳ phase 3（fill 这轮造，作为可选能力探测，非独立 contribution point） | fill / resize handle / reorder overlay |
+| menu-item | ❌ phase 6（context-menu 造） | resize 菜单 / structure / sort-filter / merge / format |
+| keyboard | ❌ 待建（建议并入 context-menu 或独立小 task） | 键盘 resize / 编辑快捷键 |
+| command | ❌ 待建 | undo/redo 决策、跨 feature 动作 |
+
+排序原则升级为：**先建契约词汇表，再让消费它的 feature 整竖切片落地。** menu/keyboard 契约就绪前，resize/structure/sort-filter 无法真正隔离，只能维持半拆。
+
+---
+
 ## 总进度
 
 | 状态 | 阶段 | Feature | 目标包 | 实施计划 | 验收口径 |
 |---|---:|---|---|---|---|
 | [x] | 0 | Feature contribution 基座 | `@novasheet/core` / `@novasheet/web` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` Task 1-2 | `SheetContext` 支持 generic contributions；`web` 支持 typed drag contributions |
-| [x] | 1 | 行列拖拽排序 | `@novasheet/feature-row-column-reorder` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` | `RowHeaderDrag` / `ColumnHeaderDrag` 通过 feature 安装，默认行为不变 |
-| [x] | 2 | 行高列宽 resize | `@novasheet/feature-resize` | `2026-06-02-novasheet-resize-feature-package.md` | `ResizeDrag` 从 runtime 固定创建改为 feature 安装 |
-| [ ] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | 未开始：实施前单独写计划 | `FillHandleDrag` 和填充 preview/commit 通过 feature 安装 |
+| [~] | 1 | 行列拖拽排序 | `@novasheet/feature-row-column-reorder` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` | **半拆**：drag 已进包；`ColumnReorderOverlay`/`RowReorderOverlay` 仍在 web，待 phase 14 回补 |
+| [~] | 2 | 行高列宽 resize | `@novasheet/feature-resize` | `2026-06-02-novasheet-resize-feature-package.md` | **半拆**：`ResizeDrag` 已进包；`DomHandleLayer`/popover/style/键盘/菜单仍在 web，待 phase 14 回补 |
+| [ ] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | 未开始：实施前单独写计划 | 首个**整竖切片**：`FillHandleDrag` + `DomFillHandleLayer` 一起进包；web 新增 `WebFrameSync` 可选能力（每帧 overlay 同步）；`computeFillTarget`/`commitFill` 等语义留 core |
 | [ ] | 4 | 单元格编辑 | `@novasheet/feature-editing` | 未开始：实施前单独写计划 | `DomCellEditor` / edit lifecycle 通过 feature 安装，自定义 editor 仍可用 |
 | [ ] | 5 | 剪贴板 | `@novasheet/feature-clipboard` | 未开始：实施前单独写计划 | copy/paste adapter 与 paste commit 通过 feature 安装 |
 | [ ] | 6 | 右键菜单 | `@novasheet/feature-context-menu` | 未开始：实施前单独写计划 | 菜单项通过 contribution 汇聚，DOM menu layer 不硬编码产品菜单 |
@@ -121,7 +169,8 @@ export function installResizeFeature(ctx: SheetContext): void {
 | [ ] | 10 | 格式化 | `@novasheet/feature-formatting` | 未开始：实施前单独写计划 | fill/border/textWrap 等格式 API 与 UI action 成为可安装能力 |
 | [ ] | 11 | undo/redo | `@novasheet/feature-undo-redo` 或保留 kernel | 未开始：阶段 11 前先做架构决策 | 明确 undo 是 feature 还是 engine transaction kernel |
 | [ ] | 12 | 默认 cell types | `@novasheet/feature-basic-cells` | 未开始：实施前单独写计划 | `installBasicCells` 从 `sheet/defaults` 迁为 feature |
-| [ ] | 13 | 默认组装收口 | `@novasheet/sheet` | 未开始：实施前单独写计划 | `installDefaultExtensions(ctx)` 只组合 feature installers |
+| [ ] | 13 | 默认组装收口 | `@novasheet/sheet` | 未开始：实施前单独写计划 | `installDefaultExtensions(ctx)` 只组合 feature installers；评估 web 改名 `@novasheet/runtime-web`（runtime kernel） |
+| [ ] | 14 | 半拆回补 | `feature-resize` / `feature-row-column-reorder` | 未开始：menu/keyboard 契约就绪后写计划 | 把 phase 1/2 残留在 web 的 overlay/popover/style/menu/keyboard 整竖切片回补进各自包 |
 
 ## 当前执行焦点
 
@@ -151,11 +200,13 @@ export function installResizeFeature(ctx: SheetContext): void {
 12. `undo-redo` 决策
 13. `sheet` 默认组装收口
 
-排序依据：
+排序依据（2026-06-02 升级为契约词汇表先行）：
 
+- **契约先行**：先让某个 feature 把它需要的新交互契约建进 `@novasheet/web` 词汇表（fill→frame-sync、context-menu→menu-item、待建 keyboard/command），后续消费该契约的 feature 才能整竖切片落地。
 - 先拆边界清晰、已有独立 drag state machine 的能力。
 - 再拆依赖 runtime lifecycle 的能力。
 - 最后拆 `undo/redo`、format/merge 这类跨 feature 状态能力。
+- phase 14 回补 phase 1/2 的半拆债务，须等 menu/keyboard 契约就绪。
 
 ## 每个 feature 拆包的固定验收清单
 
