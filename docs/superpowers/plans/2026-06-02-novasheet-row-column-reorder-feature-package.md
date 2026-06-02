@@ -327,6 +327,7 @@ git commit -m "feat(web): 增加拖拽贡献点契约"
 - 新增：`packages/feature-row-column-reorder/src/installRowColumnReorder.ts`
 - 新增：`packages/feature-row-column-reorder/src/index.ts`
 - 新增：package config / build files，沿用 `packages/web` 模式
+- 修改：`tsconfig.base.json`
 - 修改：`packages/web/src/runtime/WebGridRuntime.ts`
 - 修改：`packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts`
 - 修改：`packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts`
@@ -378,6 +379,14 @@ git commit -m "feat(web): 增加拖拽贡献点契约"
 
 ```ts
 const EXTERNALS = ['@novasheet/core', '@novasheet/web'] as const
+```
+
+更新 `tsconfig.base.json` paths：
+
+```json
+"@novasheet/feature-row-column-reorder": [
+  "packages/feature-row-column-reorder/src/index.ts"
+]
 ```
 
 - [ ] **Step 2: 用 `git mv` 移动旧实现**
