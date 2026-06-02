@@ -8,6 +8,13 @@ export type { WebHost, WebHostOptions, WebHostFactory } from './host/WebHost'
 export { DomGridHost } from './host/DomGridHost'
 export { WebGridRuntime } from './runtime/WebGridRuntime'
 export type { FillEvent, RedoEvent, UndoEvent, WebGridRuntimeOptions } from './runtime/WebGridRuntime'
+export type { AutoScrollAxis, Drag } from './interaction/drag/Drag'
+export {
+  WEB_DRAG_CONTRIBUTION,
+  getWebDragContributions,
+  registerWebDrag,
+} from './interaction/drag/WebDragContribution'
+export type { WebDragContribution, WebDragRuntimeDeps } from './interaction/drag/WebDragContribution'
 export { DomCellEditor } from './interaction/DomCellEditor'
 export { DomContextMenuLayer } from './interaction/DomContextMenuLayer'
 export { DomFillHandleLayer } from './interaction/DomFillHandleLayer'
