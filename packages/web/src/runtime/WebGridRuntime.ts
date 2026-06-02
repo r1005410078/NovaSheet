@@ -40,7 +40,7 @@ import {
   createSheetContext,
   computeCellRect,
   computePasteTarget,
-  unionRange,
+  mergeVisualRange,
   computeResizeHandles,
   computeScrollReveal,
   FrameScheduler,
@@ -59,7 +59,6 @@ import {
   type TextWrapMode,
   type CellAddress,
   type CellRange,
-  type MergeRegion,
   type ContextMenuAction,
   type ContextMenuContext,
   type ContextMenuItem,
@@ -189,21 +188,6 @@ const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
 
 /** 可驱动边缘自动滚动的拖拽种类。 */
 type AutoScrollDragKind = 'active-drag'
-
-/**
- * 把选区**并入** active cell 所在的合并区（VIEW 坐标），供选区边框与填充柄共用锚定。
- * 取并集而非直接替换：单格选中合并时并集=整个合并区（展开）；从合并源填充后 selectedRange
- * 已是更大的 result，并集仍是 result（不塌回源合并区，否则边框/填充柄会缩回去）。无命中返回原 range。
- */
-function mergeVisualRange(
-  mergeRegions: readonly MergeRegion[] | undefined,
-  range: CellRange,
-  activeCell: CellAddress | null | undefined,
-): CellRange {
-  if (!activeCell || !mergeRegions) return range
-  const merge = mergeRegions.find((m) => cellInRange(activeCell, m.range))?.range
-  return merge ? unionRange(range, merge) : range
-}
 
 function isWebFrameSync(drag: Drag): drag is Drag & WebFrameSync {
   const c = drag as Partial<WebFrameSync>

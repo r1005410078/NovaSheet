@@ -1,4 +1,5 @@
 import type { CellAddress, CellRange } from '../interaction/SelectionModel'
+import type { MergeRegion } from '../merge/MergeStore'
 
 /**
  * 共享 range 几何工具（平台无关）。
@@ -41,6 +42,21 @@ export function unionRange(a: CellRange, b: CellRange): CellRange {
     startCol: Math.min(a.startCol, b.startCol),
     endCol: Math.max(a.endCol, b.endCol),
   }
+}
+
+/**
+ * active cell 落在某合并区时，把选区扩成与该合并区的 union；否则原样返回。
+ *
+ * 选区边框/填充柄锚点需与合并区对齐：active cell 进入合并区时视觉选区应覆盖整个合并区。
+ */
+export function mergeVisualRange(
+  mergeRegions: readonly MergeRegion[] | undefined,
+  range: CellRange,
+  activeCell: CellAddress | null | undefined,
+): CellRange {
+  if (!activeCell || !mergeRegions) return range
+  const merge = mergeRegions.find((m) => cellInRange(activeCell, m.range))?.range
+  return merge ? unionRange(range, merge) : range
 }
 
 /** 将数值限制在闭区间 `[min, max]` 内。 */

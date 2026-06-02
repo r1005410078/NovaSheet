@@ -4,6 +4,7 @@ import {
   clamp,
   clampRange,
   isCellInRange,
+  mergeVisualRange,
   normalizeRange,
   rangesIntersect,
   unionRange,
@@ -62,6 +63,30 @@ describe('geometry/range', () => {
       endRow: 3,
       startCol: 3,
       endCol: 6,
+    })
+  })
+
+  describe('mergeVisualRange', () => {
+    const single = { startRow: 1, endRow: 1, startCol: 1, endCol: 1 }
+
+    it('无 activeCell 或无 mergeRegions 时原样返回', () => {
+      expect(mergeVisualRange(undefined, single, { rowIndex: 1, colIndex: 1 })).toEqual(single)
+      expect(mergeVisualRange([], single, null)).toEqual(single)
+    })
+
+    it('activeCell 落在合并区时返回与合并区的 union', () => {
+      const regions = [{ range: { startRow: 1, endRow: 3, startCol: 1, endCol: 2 } }] as never
+      expect(mergeVisualRange(regions, single, { rowIndex: 1, colIndex: 1 })).toEqual({
+        startRow: 1,
+        endRow: 3,
+        startCol: 1,
+        endCol: 2,
+      })
+    })
+
+    it('activeCell 不在任何合并区时原样返回', () => {
+      const regions = [{ range: { startRow: 5, endRow: 6, startCol: 5, endCol: 6 } }] as never
+      expect(mergeVisualRange(regions, single, { rowIndex: 1, colIndex: 1 })).toEqual(single)
     })
   })
 })

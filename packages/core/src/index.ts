@@ -160,6 +160,7 @@ export {
   clamp,
   clampRange,
   isCellInRange,
+  mergeVisualRange,
   normalizeRange,
   rangesIntersect,
   unionRange,
