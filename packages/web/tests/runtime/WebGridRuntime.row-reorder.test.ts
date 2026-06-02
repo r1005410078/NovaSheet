@@ -1,6 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { DefaultGridEngine, InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { DefaultGridEngine, InMemoryDataSource, createSheetContext, denseGridTheme } from '@novasheet/core'
 import type { GridEngine, ResizeHandleRect, Row, Schema } from '@novasheet/core'
+import { installRowColumnReorder } from '@novasheet/feature-row-column-reorder'
 import type { RowReorderOverlay } from '../../src/overlay/RowReorderOverlay'
 import type { WebHost } from '../../src/host/WebHost'
 import type { WebRenderer } from '../../src/render/WebRenderer'
@@ -55,6 +56,12 @@ function makeOverlay(): RowReorderOverlay {
   } as unknown as RowReorderOverlay
 }
 
+function makeContext() {
+  const ctx = createSheetContext()
+  installRowColumnReorder(ctx)
+  return ctx
+}
+
 function selectRows(engine: GridEngine, startRow: number, endRow: number): void {
   const colCount = engine.getData().getSchema().fields.length
   engine.setSelection({
@@ -77,6 +84,7 @@ describe('WebGridRuntime row reorder drag', () => {
     const overlay = makeOverlay()
     const runtime = new WebGridRuntime({
       engine,
+      context: makeContext(),
       host,
       renderer: makeRenderer(),
       rowReorderOverlay: overlay,
@@ -103,6 +111,7 @@ describe('WebGridRuntime row reorder drag', () => {
     const overlay = makeOverlay()
     const runtime = new WebGridRuntime({
       engine,
+      context: makeContext(),
       host: makeHost(),
       renderer: makeRenderer(),
       rowReorderOverlay: overlay,
@@ -123,6 +132,7 @@ describe('WebGridRuntime row reorder drag', () => {
     selectRows(engine, 2, 3) // C,D；row2 起于 y≈88
     const runtime = new WebGridRuntime({
       engine,
+      context: makeContext(),
       host: makeHost(),
       renderer: makeRenderer(),
       rowReorderOverlay: makeOverlay(),
@@ -140,6 +150,7 @@ describe('WebGridRuntime row reorder drag', () => {
     const overlay = makeOverlay()
     const runtime = new WebGridRuntime({
       engine,
+      context: makeContext(),
       host: makeHost(),
       renderer: makeRenderer(),
       rowReorderOverlay: overlay,
@@ -165,6 +176,7 @@ describe('WebGridRuntime row reorder drag', () => {
     const overlay = makeOverlay()
     const runtime = new WebGridRuntime({
       engine,
+      context: makeContext(),
       host: makeHost(),
       renderer: makeRenderer(),
       rowReorderOverlay: overlay,
@@ -219,6 +231,7 @@ describe('WebGridRuntime row reorder drag auto-scroll', () => {
     } satisfies WebHost
     const runtime = new WebGridRuntime({
       engine,
+      context: makeContext(),
       host,
       renderer: makeRenderer(),
       rowReorderOverlay: makeOverlay(),

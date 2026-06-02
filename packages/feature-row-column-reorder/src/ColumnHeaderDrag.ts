@@ -1,7 +1,12 @@
 import type { CellRange, GridEngine } from '@novasheet/core'
-import type { WebHost, WebPointerEvent } from '../../host/WebHost'
-import type { ColumnReorderOverlay, ColumnReorderPreview } from '../../overlay/ColumnReorderOverlay'
-import type { AutoScrollAxis, Drag } from './Drag'
+import type {
+  AutoScrollAxis,
+  ColumnReorderOverlay,
+  ColumnReorderPreview,
+  Drag,
+  WebHost,
+  WebPointerEvent,
+} from '@novasheet/web'
 
 const COLUMN_REORDER_DRAG_THRESHOLD_PX = 6
 

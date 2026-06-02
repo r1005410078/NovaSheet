@@ -25,6 +25,7 @@ import type {
   Field,
   FrozenConfig,
   GridEngine,
+  SheetContext,
   SetViewDataOptions,
   SortLayer,
   TextMeasurer,
@@ -36,6 +37,7 @@ import {
   autofitRowHeights,
   cellInRange,
   clamp,
+  createSheetContext,
   computeCellRect,
   computePasteTarget,
   unionRange,
@@ -81,11 +83,13 @@ import type { RowReorderOverlay } from '../overlay/RowReorderOverlay'
 import type { SelectionOverlay } from '../overlay/SelectionOverlay'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { Drag } from '../interaction/drag/Drag'
-import { ColumnHeaderDrag } from '../interaction/drag/ColumnHeaderDrag'
 import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
 import { ResizeDrag } from '../interaction/drag/ResizeDrag'
-import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
 import { SelectionDrag } from '../interaction/drag/SelectionDrag'
+import {
+  getWebDragContributions,
+  type WebDragRuntimeDeps,
+} from '../interaction/drag/WebDragContribution'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
 import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
@@ -115,6 +119,8 @@ export interface AutofitRowsRuntimeOptions {
 export interface WebGridRuntimeOptions {
   /** 核心表格状态与 mutation 引擎。 */
   engine: GridEngine
+  /** Extension context used to read web runtime feature contributions. */
+  context?: SheetContext
   /** Web 平台 host adapter，封装 DOM 生命周期、尺寸与滚动。 */
   host: WebHost
   /** 当前渲染器实现，负责消费 render frame。 */
@@ -213,6 +219,8 @@ function mergeVisualRange(
 export class WebGridRuntime {
   /** 核心表格状态与 mutation 引擎。 */
   private engine: GridEngine
+  /** Runtime extension context used for feature contributions. */
+  private readonly context: SheetContext
   /** Web 平台 host adapter，负责 DOM 生命周期、尺寸、滚动与事件入口。 */
   private host: WebHost
   /** 当前渲染器实现。 */
@@ -300,10 +308,6 @@ export class WebGridRuntime {
   private activeDrag: Drag | null = null
   /** 行高/列宽 resize 拖拽。 */
   private resizeDrag!: ResizeDrag
-  /** 列表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
-  private columnHeaderDrag!: ColumnHeaderDrag
-  /** 行表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
-  private rowHeaderDrag!: RowHeaderDrag
   /** 填充柄拖拽。 */
   private fillHandleDrag!: FillHandleDrag
   /** 普通单元格拖选。 */
@@ -314,6 +318,7 @@ export class WebGridRuntime {
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: WebGridRuntimeOptions) {
     this.engine = opts.engine
+    this.context = opts.context ?? createSheetContext()
     this.host = opts.host
     this.renderer = opts.renderer
     this.scheduler = opts.scheduler ?? new FrameScheduler()
@@ -336,36 +341,6 @@ export class WebGridRuntime {
       handleLayer: this.handleLayer,
       afterEngineMutation: () => this.afterEngineMutation(),
     })
-    this.columnHeaderDrag = new ColumnHeaderDrag({
-      engine: this.engine,
-      host: this.host,
-      overlay: this.columnReorderOverlay,
-      refresh: () => this.refresh(),
-      afterEngineMutation: () => this.afterEngineMutation(),
-      closeContextMenu: () => this.closeContextMenu(),
-      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
-      stopAutoScroll: () => this.stopDragAutoScroll(),
-      isBlocked: () => this.isDragBlocked(),
-      hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
-      isWholeColumnSelection: (range) => this.isWholeColumnSelection(range),
-      selectWholeColumn: (col) => this.selectWholeColumn(col),
-      selectWholeColumnRange: (anchor, extent) => this.selectWholeColumnRange(anchor, extent),
-      getColsTotalSize: () => this.getColsTotalSizeForFrame(this.engine.getFrame()),
-    })
-    this.rowHeaderDrag = new RowHeaderDrag({
-      engine: this.engine,
-      host: this.host,
-      overlay: this.rowReorderOverlay,
-      refresh: () => this.refresh(),
-      afterEngineMutation: () => this.afterEngineMutation(),
-      closeContextMenu: () => this.closeContextMenu(),
-      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
-      stopAutoScroll: () => this.stopDragAutoScroll(),
-      isBlocked: () => this.isDragBlocked(),
-      hitTestRowHeader: (event) => this.hitTestRowHeader(event),
-      isWholeRowSelection: (range) => this.isWholeRowSelection(range),
-      selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
-    })
     this.fillHandleDrag = new FillHandleDrag({
       engine: this.engine,
       host: this.host,
@@ -387,7 +362,33 @@ export class WebGridRuntime {
       syncFillHandle: () => this.syncFillHandle(),
       isBlocked: () => this.isDragBlocked(),
     })
-    this.drags = [this.columnHeaderDrag, this.rowHeaderDrag, this.selectionDrag]
+    const contributedDrags = getWebDragContributions(this.context)
+      .map((contribution) => contribution.create(this.createWebDragRuntimeDeps()))
+      .filter((drag): drag is Drag => drag !== null)
+    this.drags = [...contributedDrags, this.selectionDrag]
+  }
+
+  private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
+    return {
+      engine: this.engine,
+      host: this.host,
+      columnReorderOverlay: this.columnReorderOverlay,
+      rowReorderOverlay: this.rowReorderOverlay,
+      refresh: () => this.refresh(),
+      afterEngineMutation: () => this.afterEngineMutation(),
+      closeContextMenu: () => this.closeContextMenu(),
+      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
+      stopAutoScroll: () => this.stopDragAutoScroll(),
+      isBlocked: () => this.isDragBlocked(),
+      hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
+      hitTestRowHeader: (event) => this.hitTestRowHeader(event),
+      isWholeColumnSelection: (range) => this.isWholeColumnSelection(range),
+      isWholeRowSelection: (range) => this.isWholeRowSelection(range),
+      selectWholeColumn: (col) => this.selectWholeColumn(col),
+      selectWholeColumnRange: (anchor, extent) => this.selectWholeColumnRange(anchor, extent),
+      selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
+      getColsTotalSize: () => this.getColsTotalSizeForFrame(this.engine.getFrame()),
+    }
   }
 
   private isDragBlocked(): boolean {
