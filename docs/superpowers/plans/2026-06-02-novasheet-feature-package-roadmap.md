@@ -19,8 +19,8 @@
 
 | 状态 | 阶段 | Feature | 目标包 | 实施计划 | 验收口径 |
 |---|---:|---|---|---|---|
-| [ ] | 0 | Feature contribution 基座 | `@novasheet/core` / `@novasheet/web` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` Task 1-2 | `SheetContext` 支持 generic contributions；`web` 支持 typed drag contributions |
-| [ ] | 1 | 行列拖拽排序 | `@novasheet/feature-row-column-reorder` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` | `RowHeaderDrag` / `ColumnHeaderDrag` 通过 feature 安装，默认行为不变 |
+| [x] | 0 | Feature contribution 基座 | `@novasheet/core` / `@novasheet/web` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` Task 1-2 | `SheetContext` 支持 generic contributions；`web` 支持 typed drag contributions |
+| [x] | 1 | 行列拖拽排序 | `@novasheet/feature-row-column-reorder` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` | `RowHeaderDrag` / `ColumnHeaderDrag` 通过 feature 安装，默认行为不变 |
 | [ ] | 2 | 行高列宽 resize | `@novasheet/feature-resize` | 未开始：实施前单独写计划 | `ResizeDrag` 从 runtime 固定创建改为 feature 安装 |
 | [ ] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | 未开始：实施前单独写计划 | `FillHandleDrag` 和填充 preview/commit 通过 feature 安装 |
 | [ ] | 4 | 单元格编辑 | `@novasheet/feature-editing` | 未开始：实施前单独写计划 | `DomCellEditor` / edit lifecycle 通过 feature 安装，自定义 editor 仍可用 |

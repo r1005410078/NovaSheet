@@ -10,6 +10,8 @@
 
 **技术栈：** Bun workspaces、TypeScript strict mode、`verbatimModuleSyntax`、`bun:test`、现有 `WebGridRuntime` drag state machine、现有 `SheetContext`。
 
+**执行状态（2026-06-02）：** 已完成 Task 1-6。全量 gates 已通过：`bun run lint`、`bun run --filter '*' typecheck`、`bun test`、`@novasheet/core` / `@novasheet/web` / `@novasheet/feature-row-column-reorder` / `@novasheet/canvas2d` / `@novasheet/sheet` build。
+
 ---
 
 ## 范围
