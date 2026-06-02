@@ -638,9 +638,9 @@ private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
 bun test packages/feature-row-column-reorder/tests/installRowColumnReorder.test.ts
 bun test packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts
 bun run --filter @novasheet/feature-row-column-reorder typecheck
-bun run --filter @novasheet/feature-row-column-reorder build
 bun run --filter @novasheet/web typecheck
 bun run --filter @novasheet/web build
+bun run --filter @novasheet/feature-row-column-reorder build
 bun run lint
 ```
 
