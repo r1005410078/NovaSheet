@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
+import { DomFillHandleLayer } from '../src/DomFillHandleLayer'
 
 describe('DomFillHandleLayer', () => {
   it('attaches, syncs handle, and destroys', () => {

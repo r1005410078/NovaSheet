@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import {
-  computeFillHandleRect,
-  computeRangeOverlayRects,
-} from '../../src/interaction/RangeOverlayRects'
+import { computeRangeOverlayRects } from '../../src/interaction/RangeOverlayRects'
 import type { RenderFrame } from '@novasheet/core'
 
 describe('RangeOverlayRects', () => {
@@ -41,16 +38,6 @@ describe('RangeOverlayRects', () => {
     ).toEqual([{ x: 40, y: 32, width: 85, height: 20 }])
   })
 
-  it('anchors fill handle at bottom-right of the visible source range', () => {
-    expect(
-      computeFillHandleRect(makeFrame(), { startRow: 1, endRow: 2, startCol: 1, endCol: 2 }),
-    ).toEqual({
-      x: 296,
-      y: 116,
-      width: 8,
-      height: 8,
-    })
-  })
 })
 
 function makeFrame(overrides: Partial<RenderFrame['viewport']> = {}): RenderFrame {

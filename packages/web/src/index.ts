@@ -22,7 +22,6 @@ export type {
 } from './interaction/drag/WebDragContribution'
 export { DomCellEditor } from './interaction/DomCellEditor'
 export { DomContextMenuLayer } from './interaction/DomContextMenuLayer'
-export { DomFillHandleLayer } from './interaction/DomFillHandleLayer'
 export { DomHandleLayer } from './interaction/DomHandleLayer'
 export { FilterPopover } from './interaction/FilterPopover'
 export { HideColToggleHandle } from './handle/HideColToggleHandle'
@@ -35,6 +34,7 @@ export { RowReorderOverlay } from './overlay/RowReorderOverlay'
 export type { RowReorderPreview } from './overlay/RowReorderOverlay'
 export { SelectionOverlay } from './overlay/SelectionOverlay'
 export type { SelectionOverlayState } from './overlay/SelectionOverlay'
+export { computeRangeOverlayRects } from './interaction/RangeOverlayRects'
 export type { OverlayRect } from './interaction/RangeOverlayRects'
 
 export type {

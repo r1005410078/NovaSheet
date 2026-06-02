@@ -69,7 +69,6 @@ import {
 } from '@novasheet/core'
 import type { DomCellEditor } from '../interaction/DomCellEditor'
 import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
-import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
 import type { HideToggleHandle } from '../handle/HideToggleHandle'
 import type { HideColToggleHandle } from '../handle/HideColToggleHandle'
@@ -79,9 +78,8 @@ import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import type { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
 import type { RowReorderOverlay } from '../overlay/RowReorderOverlay'
 import type { SelectionOverlay } from '../overlay/SelectionOverlay'
-import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
+import { computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { Drag } from '../interaction/drag/Drag'
-import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
 import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import {
   getWebDragContributions,
@@ -143,8 +141,6 @@ export interface WebGridRuntimeOptions {
   measurer?: TextMeasurer
   /** Phase 3.4 — DOM resize handles；每帧 render 后 sync 位置。 */
   handleLayer?: DomHandleLayer
-  /** Phase 4.3 — DOM fill handle + drag preview layer. */
-  fillLayer?: DomFillHandleLayer
   /** Phase 4.4 — optional view pipeline/layers for column header context menu dispatch. */
   viewPipeline?: ViewPipeline
   /** Phase 4.4 — sort 状态层。 */
@@ -239,8 +235,6 @@ export class WebGridRuntime {
   private lastDragPointer: WebPointerEvent | null = null
   /** DOM resize handle layer。 */
   private handleLayer?: DomHandleLayer
-  /** DOM fill handle 与填充预览 layer。 */
-  private fillLayer?: DomFillHandleLayer
   /** 当前 view pipeline，注入到 render frame 并供列头菜单读取。 */
   private viewPipeline?: ViewPipeline
   /** 当前 sort 状态层。 */
@@ -308,8 +302,6 @@ export class WebGridRuntime {
   private activeDrag: Drag | null = null
   /** 行高/列宽 resize 拖拽。 */
   private resizeDrag: WebResizeDrag | null = null
-  /** 填充柄拖拽。 */
-  private fillHandleDrag!: FillHandleDrag
   /** 普通单元格拖选。 */
   private selectionDrag!: SelectionDrag
   /** pointerdown 按序尝试起拖的 Drag 列表；加新拖拽 = 实现 Drag + 入此数组。 */
@@ -327,7 +319,6 @@ export class WebGridRuntime {
     this.onSurfaceResize = opts.onSurfaceResize
     this.measurer = opts.measurer
     this.handleLayer = opts.handleLayer
-    this.fillLayer = opts.fillLayer
     this.viewPipeline = opts.viewPipeline
     this.sortLayer = opts.sortLayer
     this.filterLayer = opts.filterLayer
@@ -338,25 +329,13 @@ export class WebGridRuntime {
     this.selectionOverlay = opts.selectionOverlay
     this.openCustomCellEditor = opts.openCustomCellEditor
     this.scrollMapper = new ScrollMapper()
-    this.fillHandleDrag = new FillHandleDrag({
-      engine: this.engine,
-      host: this.host,
-      fillLayer: this.fillLayer,
-      afterEngineMutation: () => this.afterEngineMutation(),
-      autofitRows: (options) => this.autofitRows(options),
-      onFill: (event) => this.onFill?.(event),
-      closeContextMenu: () => this.closeContextMenu(),
-      commitCellEdit: (moveSelection) => this.commitCellEdit(moveSelection),
-      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
-      stopAutoScroll: () => this.stopDragAutoScroll(),
-      isBlocked: () => this.isDragBlocked(),
-    })
     this.selectionDrag = new SelectionDrag({
       engine: this.engine,
       refresh: () => this.refresh(),
       requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
       stopAutoScroll: () => this.stopDragAutoScroll(),
-      syncFillHandle: () => this.syncFillHandle(),
+      // 选区拖拽结束后触发一帧 flush，让 frame-sync overlay（填充柄）按新选区重显。
+      syncFillHandle: () => this.invalidate(),
       isBlocked: () => this.isDragBlocked(),
     })
     const contributedDrags = getWebDragContributions(this.context)
@@ -1146,7 +1125,6 @@ export class WebGridRuntime {
     const currentSpec = this.filterLayer?.getSpec()
     this.filterPopoverFieldId = ctx.field.id
     this.contextMenuLayer?.close()
-    this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.filterPopover.open(point, {
       field: ctx.field,
@@ -1314,7 +1292,6 @@ export class WebGridRuntime {
     this.remapScroll()
     this.refresh()
     this.contextMenuLayer?.close()
-    this.fillLayer?.hidePreview()
     this.activeDrag = null
   }
 
@@ -1376,28 +1353,6 @@ export class WebGridRuntime {
     this.activeDrag = null
   }
 
-  /** 开始 fill handle 拖拽。 */
-  handleFillPointerDown(pointerId: number, clientX: number, clientY: number): void {
-    if (this.destroyed) return
-    if (this.fillHandleDrag.tryStartFromClient(pointerId, clientX, clientY)) {
-      this.activeDrag = this.fillHandleDrag
-    }
-  }
-
-  /** 更新 fill handle 拖拽目标与预览 overlay。 */
-  handleFillPointerMove(pointerId: number, clientX: number, clientY: number): void {
-    if (this.destroyed) return
-    this.fillHandleDrag.moveFromClient(pointerId, clientX, clientY)
-  }
-
-  /** 结束 fill handle 拖拽并提交填充结果。 */
-  handleFillPointerUp(pointerId: number): void {
-    if (!this.fillHandleDrag.commitPointer(pointerId)) return
-    this.activeDrag = null
-    this.columnReorderOverlay?.hide()
-    this.rowReorderOverlay?.hide()
-  }
-
   /** 同步编辑器 draft 到 engine 的 cell edit session。 */
   handleCellEditDraft(draft: string): void {
     if (this.destroyed) return
@@ -1446,7 +1401,6 @@ export class WebGridRuntime {
     this.cancelCellEdit()
     this.activeDrag?.cancel()
     this.activeDrag = null
-    this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.rowReorderOverlay?.hide()
     this.scheduler.cancel('renderer:flush')
@@ -1746,7 +1700,6 @@ export class WebGridRuntime {
       this.renderer.render(frame)
       this.syncSelectionOverlay(frame)
       this.syncResizeHandles()
-      this.syncFillHandle()
       this.syncHideToggleHandles()
       this.syncHideColToggleHandles()
       this.syncCellEditorPosition()
@@ -1760,7 +1713,6 @@ export class WebGridRuntime {
     this.renderer.render(frame)
     this.syncSelectionOverlay(frame)
     this.syncResizeHandles()
-    this.syncFillHandle()
     this.syncHideToggleHandles()
     this.syncHideColToggleHandles()
     this.syncCellEditorPosition()
@@ -1814,24 +1766,6 @@ export class WebGridRuntime {
     })
   }
 
-  /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。 */
-  private syncFillHandle(): void {
-    if (!this.fillLayer) return
-    if (this.resizeDrag?.active === true || this.activeDrag?.active || this.engine.isCellEditing()) {
-      this.fillLayer.sync(null)
-      return
-    }
-    const frame = this.engine.getFrame()
-    const range = frame.selection?.selectedRange
-    if (!range) {
-      this.fillLayer.sync(null)
-      return
-    }
-    // 与选区边框一致：active cell 落在合并区内时锚定整个合并区，填充柄才在合并区右下角。
-    const visualRange = mergeVisualRange(frame.mergeRegions, range, frame.selection?.activeCell)
-    this.fillLayer.sync(computeFillHandleRect(frame, visualRange))
-  }
-
   /** 根据 renderer 同一份 frame 同步 DOM body selection overlay。 */
   private syncSelectionOverlay(frame = this.getRenderFrame()): void {
     if (!this.selectionOverlay) return
@@ -1864,10 +1798,19 @@ export class WebGridRuntime {
     })
   }
 
+  /**
+   * 当前驱动边缘自动滚动的拖拽实例。
+   * 选区/resize 经 host pointer 路由设入 `activeDrag`；填充柄由自有 DOM 层捕获 pointer，
+   * 不进 `activeDrag`，故回退到 contributed drags 里 active 的那个。
+   */
+  private autoScrollTarget(): Drag | null {
+    if (this.activeDrag?.active) return this.activeDrag
+    return this.drags.find((d) => d.active) ?? null
+  }
+
   /** 当前驱动边缘自动滚动的拖拽种类；活跃拖拽 / 填充柄优先于普通选区。 */
   private activeAutoScrollDrag(): AutoScrollDragKind | null {
-    if (this.activeDrag?.active) return 'active-drag'
-    return null
+    return this.autoScrollTarget() ? 'active-drag' : null
   }
 
   /** 根据 pointer 位置启动或取消当前拖拽的边缘自动滚动。 */
@@ -1908,7 +1851,7 @@ export class WebGridRuntime {
   private reevaluateDragAfterAutoScroll(kind: AutoScrollDragKind, pointer: WebPointerEvent): void {
     switch (kind) {
       case 'active-drag':
-        this.activeDrag?.reevaluate(pointer)
+        this.autoScrollTarget()?.reevaluate(pointer)
         return
     }
   }
@@ -1925,7 +1868,7 @@ export class WebGridRuntime {
     let horizontal: boolean
     let vertical: boolean
     if (kind === 'active-drag') {
-      const axis = this.activeDrag?.autoScrollAxis ?? null
+      const axis = this.autoScrollTarget()?.autoScrollAxis ?? null
       horizontal = axis === 'both' || axis === 'horizontal'
       vertical = axis === 'both' || axis === 'vertical'
     } else {

@@ -1,0 +1,5 @@
+export { installFillHandleFeature } from './installFillHandleFeature'
+export { FillHandleController } from './FillHandleController'
+export type { FillHandleControllerDeps } from './FillHandleController'
+export { DomFillHandleLayer } from './DomFillHandleLayer'
+export { computeFillHandleRect } from './computeFillHandleRect'

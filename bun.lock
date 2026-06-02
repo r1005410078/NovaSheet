@@ -53,6 +53,20 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/feature-fill-handle": {
+      "name": "@novasheet/feature-fill-handle",
+      "version": "0.1.0",
+      "dependencies": {
+        "@novasheet/core": "^0.1.0",
+        "@novasheet/web": "^0.1.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.9.0",
+        "@types/bun": "latest",
+        "happy-dom": "^20.9.0",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/feature-resize": {
       "name": "@novasheet/feature-resize",
       "version": "0.1.0",
@@ -241,6 +255,8 @@
     "@novasheet/canvas2d": ["@novasheet/canvas2d@workspace:packages/canvas2d"],
 
     "@novasheet/core": ["@novasheet/core@workspace:packages/core"],
+
+    "@novasheet/feature-fill-handle": ["@novasheet/feature-fill-handle@workspace:packages/feature-fill-handle"],
 
     "@novasheet/feature-resize": ["@novasheet/feature-resize@workspace:packages/feature-resize"],
 

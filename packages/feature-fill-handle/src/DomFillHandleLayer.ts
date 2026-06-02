@@ -1,4 +1,4 @@
-import type { OverlayRect } from './RangeOverlayRects'
+import type { OverlayRect } from '@novasheet/web'
 
 /** DOM 层只转发原始 client 坐标；runtime 负责转换成 container-local 坐标。 */
 export interface DomFillHandleLayerCallbacks {
