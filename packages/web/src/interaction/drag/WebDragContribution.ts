@@ -2,6 +2,7 @@ import type { CellRange, GridEngine, SheetContext } from '@novasheet/core'
 import type { WebHost, WebPointerEvent } from '../../host/WebHost'
 import type { ColumnReorderOverlay } from '../../overlay/ColumnReorderOverlay'
 import type { RowReorderOverlay } from '../../overlay/RowReorderOverlay'
+import type { DomHandleLayer } from '../DomHandleLayer'
 import type { Drag } from './Drag'
 
 /** Contribution point id used by web runtime drag features. */
@@ -11,6 +12,7 @@ export const WEB_DRAG_CONTRIBUTION = 'web.drag'
 export interface WebDragRuntimeDeps {
   readonly engine: GridEngine
   readonly host: WebHost
+  readonly handleLayer?: DomHandleLayer
   readonly columnReorderOverlay?: ColumnReorderOverlay
   readonly rowReorderOverlay?: RowReorderOverlay
   refresh(): void

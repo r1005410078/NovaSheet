@@ -30,4 +30,21 @@ describe('web drag contributions', () => {
 
     expect(getWebDragContributions(ctx).map((item) => item.id)).toEqual(['early', 'late'])
   })
+
+  it('accepts runtime deps with a handle layer for resize features', () => {
+    const ctx = createSheetContext()
+    const contribution: WebDragContribution = {
+      id: 'probe-resize',
+      order: 5,
+      create: (deps) => {
+        expect(deps.handleLayer).toBeDefined()
+        return null
+      },
+    }
+
+    registerWebDrag(ctx, contribution)
+
+    const [registered] = getWebDragContributions(ctx)
+    expect(registered?.id).toBe('probe-resize')
+  })
 })

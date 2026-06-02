@@ -372,6 +372,7 @@ export class WebGridRuntime {
     return {
       engine: this.engine,
       host: this.host,
+      handleLayer: this.handleLayer,
       columnReorderOverlay: this.columnReorderOverlay,
       rowReorderOverlay: this.rowReorderOverlay,
       refresh: () => this.refresh(),
