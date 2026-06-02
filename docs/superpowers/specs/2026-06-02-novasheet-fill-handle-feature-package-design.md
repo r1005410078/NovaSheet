@@ -40,8 +40,8 @@
 
 | 包 | 职责 |
 |---|---|
-| `@novasheet/core` | 填充语义 mutation；新增 `mergeVisualRange`；新增填充 applied 事件（见 onFill） |
-| `@novasheet/web` | `WebFrameSync` 契约、runtime flush 派发、通用 kernel services、共享 overlay util |
+| `@novasheet/core` | 填充语义 mutation；新增 `mergeVisualRange`（纯几何提升） |
+| `@novasheet/web` | `WebFrameSync` 契约、runtime flush 派发、通用 kernel services、共享 overlay util、`FillEvent` 类型 + `onFill` 派发（**决策 B：暂留 web 当债务**） |
 | `@novasheet/feature-fill-handle` | `FillHandleDrag` + `DomFillHandleLayer` + `installFillHandleFeature(ctx)` |
 | `@novasheet/sheet` | 默认安装 fill feature；移除 backend 里的 fill 层构造 |
 
@@ -97,7 +97,7 @@ runtime 不引入新 registry、新 contribution id——只是在已有的 cont
 
 > 不能注册两个 contribution（drag + overlay）共享 layer——contribution 各自 `create`，会产出两个 layer 实例；ctx 跨 Grid 共享、layer 必须 per-instance。一个对象双能力是唯一正确形态。
 
-**feature 自定义 deps（用户决策 B）。** `@novasheet/web` 的 contribution deps 只暴露**通用 kernel services**，绝不出现 fill-named 成员（无 `fillLayer`、无 `onFill`）。fill feature 在包内定义自己的 `FillHandleDeps`，从通用 services 组装：
+**feature 自定义 deps（用户 Q2 决策：feature 自定义 deps 注入）。** `@novasheet/web` 的 contribution deps 主要暴露**通用 kernel services**，fill feature 在包内定义自己的 `FillHandleDeps`、从通用 services 组装。例外：`fillLayer` 进包、消失；`onFill` 因下文决策 B **暂留**为 web deps 上唯一的 fill-named 成员（记债）。
 
 web 通用 services（在现有 `WebDragRuntimeDeps` 基础上补两项通用项）：
 
@@ -108,15 +108,14 @@ web 通用 services（在现有 `WebDragRuntimeDeps` 基础上补两项通用项
 | `autofitRows(options)` | **新增（通用）** | runtime autofit 服务，任何写值 drag 都可能需要；非 fill 专用命名 |
 | `commitActiveEdit(moveSelection)` | **新增（通用）** | 「提交进行中的编辑」，任何 drag 起手都可能需要；非 fill 专用 |
 
-> 这与被否决的方案 A 的区别：A 往共享 deps 塞 `fillLayer` / `onFill` 这类 fill 专名成员；这里只补**通用 kernel 能力**，fill 专属状态（layer）进包、fill 专属事件（onFill）进 engine。
+> 与被否决方案 A 的区别：A 往共享 deps 塞 `fillLayer`（fill 专属状态）；这里 layer 进包、deps 只补**通用 kernel 能力**。`onFill` 是唯一保留的 fill-named deps 成员（决策 B 债务）。
 
-**`onFill` → engine 填充事件（语义归 core）。** 当前 `grid.onFill` 经 `runtime.setOnFill` → drag 回调 `deps.onFill(event)`。填充被应用是**数据语义事件**，按切分规则归 `@novasheet/core`：
+**`onFill` 暂留 web（决策 B）。** 调研发现 `@novasheet/core` engine **没有任何事件基础设施**，把 onFill 改成 engine 填充事件等于从零发明一套 engine 事件系统——这是后续一长串事件的模式样板，应单独 brainstorm（类比 phase 11 undo/redo 架构决策），不塞进 fill 拆包。phase 3 维持现状：
 
-- `engine.commitFill` 应用后发出 fill-applied 事件；`Grid.onFill` 订阅引擎。
-- `FillEvent` 类型移到 `@novasheet/core`（语义形状）。
-- web 移除 `setOnFill` / `onFill` 字段；feature 的 drag 只调 `engine.commitFill`，不持有用户回调。
-
-这同时解决「onFill 是 per-Grid、ctx 跨 Grid 共享」的注入难题——引擎本就 per-Grid。
+- `WebGridRuntime` 保留 `setOnFill` / `this.onFill`，并在 contribution deps 上提供 `onFill?: (event: FillEvent) => void`（懒读 `this.onFill`）。
+- `FillEvent` 类型**留在 `@novasheet/web`** 并导出（不进 feature，否则 web→feature 反向依赖）；feature 从 `@novasheet/web` import `FillEvent`。
+- `Grid.onFill` 公共 API 与 `setOnFill` 链路**完全不变**，sheet 侧零改动。
+- 记为债务：待「engine 事件系统」专项落地后，再把 onFill 迁到引擎、清除 web 上这个 fill-named 成员。
 
 ## Runtime 行为
 
@@ -153,8 +152,8 @@ web 通用 services（在现有 `WebDragRuntimeDeps` 基础上补两项通用项
 复刻 phase 0→1 的「先基座后 feature」节奏，避免在一个 feature task 里改穿中央 flush：
 
 1. **frame-sync 基座（独立 commit）**：在 `@novasheet/web` 加 `WebFrameSync` / `WebInteractionStatus` 契约 + runtime flush/teardown 探测派发 + 通用 services（`autofitRows` / `commitActiveEdit`）。此时无 contribution 实现它 → 全 no-op，现有 drag 不回归。
-2. **core 语义事件 + util 提升（独立 commit）**：`mergeVisualRange` 提升到 core；engine 新增 fill-applied 事件 + `FillEvent` 移到 core；`Grid.onFill` 改订阅引擎。
-3. **fill feature 整竖切片**：建包，`git mv` `FillHandleDrag` + `DomFillHandleLayer` + `computeFillHandleRect` 进包，合成 `FillHandleController`，注册 `web.drag`；runtime 删除 fill 专用方法；测试迁移。
+2. **util 提升（独立 commit）**：`mergeVisualRange` 提升到 core 并导出；runtime `syncSelectionOverlay` 改 import core 版本。（决策 B：不动 engine 事件，`onFill` 维持现状。）
+3. **fill feature 整竖切片**：建包，`git mv` `FillHandleDrag` + `DomFillHandleLayer` + `computeFillHandleRect` 进包，合成 `FillHandleController`，注册 `web.drag`；`FillEvent` 留 web 导出；runtime 删除 fill 专用方法（`fillHandleDrag` 字段 / `handleFillPointer*` / `syncFillHandle` / `fillLayer`）；测试迁移。
 4. **默认安装**：`@novasheet/sheet` 装 `installFillHandleFeature`，backend 删除 `DomFillHandleLayer` 构造。
 
 ## 测试策略
@@ -163,8 +162,8 @@ web 通用 services（在现有 `WebDragRuntimeDeps` 基础上补两项通用项
 - `FillHandleDrag` / `DomFillHandleLayer` / `computeFillHandleRect` 单测从 web 迁到 feature，保留旧断言。
 - runtime frame-sync 基座 test（留 web）：未安装时 flush 不 crash、无手柄同步；安装一个假 `WebFrameSync` drag 时 `attach` / `syncFrame` / `destroy` 被按生命周期调用。
 - fill 行为 test（迁 feature）：显式 `installFillHandleFeature(ctx)`，验证拖拽只预览、松手 commit、编辑/拖拽时隐藏。
-- core test：`mergeVisualRange` 行为；engine fill-applied 事件在 `commitFill` 后触发、未 commit 不触发。
-- sheet test：默认 `Grid` 的 context 含 fill drag contribution；`Grid.onFill` 仍能收到事件。
+- core test：`mergeVisualRange` 行为（active cell 落合并区时 union，否则原样）。
+- sheet test：默认 `Grid` 的 context 含 fill drag contribution；`Grid.onFill` 仍能收到事件（沿用 `setOnFill` 链路）。
 
 `@novasheet/web` 保留：`computeRangeOverlayRects` / `OverlayRect` 测试、selection overlay 测试、host/scroll 测试。
 
@@ -172,10 +171,10 @@ web 通用 services（在现有 `WebDragRuntimeDeps` 基础上补两项通用项
 
 - `@novasheet/feature-fill-handle` 有独立 `package.json` / `build.ts` / `tsconfig.json` / `tsconfig.build.json` / `src/index.ts` / `installFillHandleFeature`。
 - `FillHandleDrag` / `DomFillHandleLayer` 用 `git mv` 迁移，不重写填充语义。
-- `@novasheet/web` 不出现任何 fill 专名成员；新增的是通用 `WebFrameSync` + 通用 services。
+- `@novasheet/web` 除 `FillEvent` 类型 + `onFill` deps 成员（决策 B 债务）外不出现 fill 专名成员；新增的是通用 `WebFrameSync` + 通用 services。
 - `@novasheet/sheet` 默认安装 fill feature，backend 不再构造 fill 层；默认行为不变。
 - 不安装 fill feature 时 runtime flush / pointer 路径不 crash。
-- `Grid.onFill` 经引擎事件仍可用。
+- `Grid.onFill` 沿用 `setOnFill` 链路仍可用。
 - `Grid.destroy()` 幂等，frame-sync overlay 被 destroy。
 - `bun run lint` / `bun run --filter '*' typecheck` / `bun test` 通过。
 - `@novasheet/core` / `@novasheet/web` / `@novasheet/feature-fill-handle` / `@novasheet/canvas2d` / `@novasheet/sheet` build 通过。
@@ -186,11 +185,12 @@ web 通用 services（在现有 `WebDragRuntimeDeps` 基础上补两项通用项
 - **跨 feature 依赖**：`commitActiveEdit` 实为 editing（phase 4）能力、`closeContextMenu` 实为 context-menu（phase 6）能力，目前作为通用 runtime services 暴露；phase 4/6 拆包时 fill 对它们的依赖需重新指向（届时可能改为 command/contract）。spec 标注，不阻塞 phase 3。
 - phase 14 用同款 `WebFrameSync` 回补 resize handle layer / reorder overlay 的半拆债务。
 - keyboard / menu / command 契约词汇表建设（phase 6 及之后）。
+- **onFill→engine 事件（决策 B 债务）**：待专项「engine 事件系统」brainstorm 落地后，把 `onFill` 迁到引擎、清除 web 上 `FillEvent` + `onFill` deps 成员。
 
 ## 自检
 
 - 没有重写填充语义；core fill kernel 完全不动。
-- 没有让 `@novasheet/web` 依赖具体 feature，也没在共享 deps 留 fill 专名成员。
-- DOM 层、几何、事件按交互/语义切分各归其位（layer→feature、mergeVisualRange→core、onFill→engine）。
+- 没有让 `@novasheet/web` 依赖具体 feature；deps 上仅保留 `onFill`（决策 B 债务，已显式记录）这一 fill-named 成员。
+- DOM 层、几何按交互/语义切分各归其位（layer→feature、mergeVisualRange→core）；onFill 暂留 web 记债。
 - 中央 flush 改动隔离在「frame-sync 基座」独立 commit，fill task 回归搬运本质。
 - 未安装 feature 的 no-op 与 destroy 幂等有显式测试。
