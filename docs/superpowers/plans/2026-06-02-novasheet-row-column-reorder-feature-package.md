@@ -732,6 +732,8 @@ git commit -m "feat(sheet): 默认安装行列拖拽排序能力"
 - 移动：`packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts` → `packages/feature-row-column-reorder/tests/WebGridRuntime.col-reorder.test.ts`
 - 移动：`packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts` → `packages/feature-row-column-reorder/tests/WebGridRuntime.row-reorder.test.ts`
 - 修改 moved tests 的 imports
+- 移动/补齐：`packages/web/tests/runtime/WebGridRuntime.test.ts` 中残留的行表头选择用例 → `packages/feature-row-column-reorder/tests/WebGridRuntime.row-reorder.test.ts`
+- 精简：`packages/web/tests/runtime/WebGridRuntime.drag-auto-scroll.test.ts` 中的表头拖选 auto-scroll 用例（feature 测试已覆盖），保留填充柄 auto-scroll 用例
 
 - [ ] **Step 1: 用 `git mv` 移动测试**
 
@@ -773,7 +775,21 @@ export type { RowReorderOverlay } from './overlay/RowReorderOverlay'
 
 不要删除已有 value exports。
 
-- [ ] **Step 4: 验证 feature-owned tests**
+- [ ] **Step 4: 迁移残留的 header 行为测试**
+
+`WebGridRuntime` 不再内建行/列表头 drag，`web` runtime 测试不能继续断言行/列表头选择或表头拖选 auto-scroll。
+
+- 把 `packages/web/tests/runtime/WebGridRuntime.test.ts` 里的以下用例迁到 `packages/feature-row-column-reorder/tests/WebGridRuntime.row-reorder.test.ts`：
+  - `Excel 行头左键选中整行`
+  - `Excel 行头拖动扩展为连续整行选区`
+  - `Excel 行头 Shift 点击从既有整行锚点扩展`
+- 从 `packages/web/tests/runtime/WebGridRuntime.drag-auto-scroll.test.ts` 删除以下用例：
+  - `列表头拖选到右边缘时横向滚动`
+  - `行表头拖选到下边缘时纵向滚动`
+
+原因：对应行为已由 `@novasheet/feature-row-column-reorder` 通过 `SheetContext` contribution 接管；web 包只保留 runtime 派发、普通选区、resize、fill handle 等平台行为测试。
+
+- [ ] **Step 5: 验证 feature-owned tests**
 
 ```bash
 bun test packages/feature-row-column-reorder/tests
@@ -784,7 +800,7 @@ bun run --filter @novasheet/web typecheck
 
 预期：全部 exit 0。`web` runtime tests 不再直接拥有 row/column reorder 行为。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
 git add packages/feature-row-column-reorder/tests packages/web/tests/runtime packages/web/src/index.ts
