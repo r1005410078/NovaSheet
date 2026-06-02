@@ -1,7 +1,7 @@
 # NovaSheet 当前架构设计图
 
 - **范围**：当前仓库源码状态（`refactor/cross-platform` 分支）
-- **包**：`@novasheet/core` · `@novasheet/web` · `@novasheet/canvas2d` · `@novasheet/sheet`
+- **包**：`@novasheet/core` · `@novasheet/web` · `@novasheet/canvas2d` · `@novasheet/feature-*` · `@novasheet/sheet`
 - **对外入口**：`import { Grid } from '@novasheet/sheet'`（默认 `renderer: 'canvas2d'`）
 - **能力状态**：M2 虚拟滚动 + 原生滚动映射已实现；M3 冻结象限 / 动态行高 / 交互 resize 仍为 planned
 
@@ -65,12 +65,14 @@ flowchart TB
 ```
 
 **依赖方向（无环）**：`core` ← (`web`, `canvas2d`) ← `sheet` ← Storybook / 应用。
+Feature package 依赖 `core` + 对应平台契约包，并由 `sheet` 默认安装。
 
 | 包                        | 职责                                                                                                                  | 不含                        |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------- |
 | `@novasheet/core`         | 数据、Schema、Theme、ChunkedAxis、Viewport、FrozenRegions、`DefaultGridEngine`、`RenderFrame`、`FrameScheduler`       | DOM、Canvas、滚动容器       |
 | `@novasheet/canvas2d` | `Canvas2DRenderer`、三个 painter、`HighDPI`                                                                           | Grid 门面、scrollHost、编排 |
 | `@novasheet/web`          | `WebGridRuntime`、`DomGridHost`、`ScrollMapper`、`NativeScroller`、DOM 交互层、`WebRenderer` 契约                    | Grid 门面、Canvas2D 绘制    |
+| `@novasheet/feature-*`    | 可安装到 `SheetContext` 的用户可见能力；复用平台契约并调用 runtime 注入的 engine/API                                | 默认产品装配、底层 host     |
 | `@novasheet/sheet`        | 对外 `Grid`、`Canvas2DBackend`、默认扩展安装与默认产品装配                                                           | 引擎算法、低层宿主实现      |
 
 核心关系：
@@ -80,6 +82,12 @@ flowchart TB
 - **`WebGridRuntime`** 连接 engine + host + renderer：滚动映射、spacer 尺寸、RAF 调度；**不**直接操作 canvas DOM。
 - **`Canvas2DRenderer.render(frame)`** 只读 `RenderFrame` 绘制（spec 不变量 #1）；DOM 滚动值经 `ScrollMapper` 转成逻辑坐标后写入 engine。
 - 每个 `Grid` 实例共享一个 **`FrameScheduler`**（`scroll:read` / `host:resize` / `renderer:flush` 等同帧合并）。
+
+### Feature Packages
+
+Feature package 拥有用户可见表格能力，并通过 `SheetContext` 安装。`@novasheet/feature-row-column-reorder`
+拥有行/列表头拖拽排序：它复用 `@novasheet/web` 的 drag contribution 契约，由 `WebGridRuntime`
+提供运行时依赖并调用 engine API。`@novasheet/sheet` 默认安装该能力包，默认 `Grid` 保持原有行列拖拽行为。
 
 ---
 

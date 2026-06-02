@@ -1272,6 +1272,12 @@ bun run --filter @novasheet/core build
 
 ## Known Follow-Ups
 
+### Feature package extraction
+
+Row/column header reorder is the first user-visible capability moved from `@novasheet/web`
+fixed runtime construction into a default-installed feature package:
+`@novasheet/feature-row-column-reorder`.
+
 These are intentionally not in this plan:
 
 | Follow-up | Reason |
