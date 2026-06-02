@@ -154,6 +154,8 @@ export function installResizeFeature(ctx: SheetContext): void {
 
 ## 总进度
 
+状态图例：`[x]` 完成（满足下方「打勾规则」） · `[~]` 半拆（仅搬部分竖切片，余下待回补） · `[ ]` 未开始。
+
 | 状态 | 阶段 | Feature | 目标包 | 实施计划 | 验收口径 |
 |---|---:|---|---|---|---|
 | [x] | 0 | Feature contribution 基座 | `@novasheet/core` / `@novasheet/web` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` Task 1-2 | `SheetContext` 支持 generic contributions；`web` 支持 typed drag contributions |
@@ -174,31 +176,39 @@ export function installResizeFeature(ctx: SheetContext): void {
 
 ## 当前执行焦点
 
-阶段 0-2 已完成：
+进度（注意 phase 1/2 是**半拆**，不是完成）：
 
-- 基座：`SheetContext` generic contributions + `@novasheet/web` typed drag contributions。
-- 第一包：`@novasheet/feature-row-column-reorder`。
-- 第二包：`@novasheet/feature-resize`。
+- phase 0 ✅ 完成：`SheetContext` generic contributions + `@novasheet/web` typed drag contributions。
+- phase 1 `[~]` 半拆：`feature-row-column-reorder` 只搬了 drag；reorder overlay 仍在 web。
+- phase 2 `[~]` 半拆：`feature-resize` 只搬了 `ResizeDrag`；handle layer / popover / style / 键盘 / 菜单仍在 web。
 
-下一个执行焦点是阶段 3：`@novasheet/feature-fill-handle`。不要在阶段 3 中顺手拆 editing、clipboard、context menu。每个 feature 都需要单独计划，避免一次性改穿 runtime。
+下一个执行焦点是 phase 3：`@novasheet/feature-fill-handle`（首个整竖切片）。它内部分四步交付（设计见 `docs/superpowers/specs/2026-06-02-novasheet-fill-handle-feature-package-design.md`）：
+
+1. **frame-sync 基座**（独立 commit，可复用，phase 14 回补 resize/reorder overlay 时复用）：`@novasheet/web` 新增 `WebFrameSync` 可选能力 + runtime flush/teardown 探测派发 + 通用 kernel services。
+2. **core 语义事件 + util 提升**：`mergeVisualRange` → core；engine 新增 fill-applied 事件，`onFill` 改订阅引擎。
+3. **fill 整竖切片**：`FillHandleDrag` + `DomFillHandleLayer` + `computeFillHandleRect` 进包。
+4. **默认安装**：`@novasheet/sheet` 装 `installFillHandleFeature`，backend 删除 fill 层构造。
+
+不要在 phase 3 顺手拆 editing、clipboard、context menu。frame-sync 基座虽是可复用契约，但仍随 fill-handle plan 一并交付（同 reorder plan 当年同时交付 phase 0 基座 + phase 1 feature）。
 
 ## 大能力拆包顺序
 
 推荐顺序：
 
-1. `row-column-reorder`
-2. `resize`
-3. `fill-handle`
+1. `row-column-reorder`（半拆，待 phase 14 回补）
+2. `resize`（半拆，待 phase 14 回补）
+3. `fill-handle`（含 frame-sync 基座，整竖切片）
 4. `editing`
 5. `clipboard`
-6. `context-menu`
+6. `context-menu`（建 menu 契约）
 7. `sort-filter`
 8. `structure`
 9. `merge-cells`
 10. `formatting`
 11. `basic-cells`
 12. `undo-redo` 决策
-13. `sheet` 默认组装收口
+13. `sheet` 默认组装收口（+ 评估 web 改名 runtime kernel）
+14. `半拆回补`：用 frame-sync / menu / keyboard 契约把 reorder、resize 补成整竖切片
 
 排序依据（2026-06-02 升级为契约词汇表先行）：
 
