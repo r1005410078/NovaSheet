@@ -317,7 +317,7 @@ git add packages/web/src/interaction/drag/WebDragContribution.ts packages/web/sr
 git commit -m "feat(web): 增加拖拽贡献点契约"
 ```
 
-## Task 3: 新建 `@novasheet/feature-row-column-reorder`
+## Task 3: 新建 `@novasheet/feature-row-column-reorder` 并接入 runtime
 
 **文件：**
 
@@ -327,6 +327,11 @@ git commit -m "feat(web): 增加拖拽贡献点契约"
 - 新增：`packages/feature-row-column-reorder/src/installRowColumnReorder.ts`
 - 新增：`packages/feature-row-column-reorder/src/index.ts`
 - 新增：package config / build files，沿用 `packages/web` 模式
+- 修改：`packages/web/src/runtime/WebGridRuntime.ts`
+- 修改：`packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts`
+- 修改：`packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts`
+
+> 计划修正：`RowHeaderDrag` / `ColumnHeaderDrag` 一旦 `git mv` 出 `@novasheet/web`，`WebGridRuntime` 继续 import 旧路径会让 `@novasheet/web` barrel 无法加载。因此 package 搬迁与 runtime contribution 消费必须在同一个任务内完成，不能在中间要求 feature package 独立通过测试。
 
 - [ ] **Step 1: 新建 package 文件**
 
@@ -532,33 +537,7 @@ describe('installRowColumnReorder', () => {
 })
 ```
 
-- [ ] **Step 6: 验证 feature package**
-
-```bash
-bun test packages/feature-row-column-reorder/tests/installRowColumnReorder.test.ts
-bun run --filter @novasheet/feature-row-column-reorder typecheck
-bun run --filter @novasheet/feature-row-column-reorder build
-bun run lint
-```
-
-预期：全部 exit 0。
-
-- [ ] **Step 7: 提交**
-
-```bash
-git add packages/feature-row-column-reorder packages/web/src/interaction/drag/ColumnHeaderDrag.ts packages/web/src/interaction/drag/RowHeaderDrag.ts
-git commit -m "feat(row-column-reorder): 新增行列拖拽排序能力包"
-```
-
-## Task 4: 让 `WebGridRuntime` 消费 drag contributions
-
-**文件：**
-
-- 修改：`packages/web/src/runtime/WebGridRuntime.ts`
-- 修改：`packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts`
-- 修改：`packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts`
-
-- [ ] **Step 1: runtime reorder 测试显式安装 feature**
+- [ ] **Step 6: 更新 runtime reorder 测试显式安装 feature**
 
 在两个 reorder runtime 测试中导入：
 
@@ -579,15 +558,7 @@ function makeContext() {
 
 把 `context: makeContext()` 传给两个测试文件里所有 `new WebGridRuntime({ ... })`。
 
-- [ ] **Step 2: 运行测试确认 runtime 还没消费 contributions**
-
-```bash
-bun test packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts
-```
-
-预期：失败，因为 `WebGridRuntime` 仍直接 import 已移动的 drag 文件，或还没有读取 registered drags。
-
-- [ ] **Step 3: 给 runtime options 增加 context**
+- [ ] **Step 7: 让 `WebGridRuntime` 消费 drag contributions**
 
 在 `packages/web/src/runtime/WebGridRuntime.ts` 导入：
 
@@ -615,20 +586,7 @@ private readonly context: SheetContext
 this.context = opts.context ?? createSheetContext()
 ```
 
-- [ ] **Step 4: 移除 hard-coded row/column drag 创建**
-
-从 `WebGridRuntime.ts` 移除 `ColumnHeaderDrag` 与 `RowHeaderDrag` import。
-
-移除字段：
-
-```ts
-private columnHeaderDrag!: ColumnHeaderDrag
-private rowHeaderDrag!: RowHeaderDrag
-```
-
-移除 constructor 里直接 `new ColumnHeaderDrag(...)` 和 `new RowHeaderDrag(...)` 的代码块。
-
-改为：
+从 `WebGridRuntime.ts` 移除 `ColumnHeaderDrag` 与 `RowHeaderDrag` import，移除对应字段和直接 `new` 的 constructor 代码块，改为：
 
 ```ts
 const contributedDrags = getWebDragContributions(this.context)
@@ -638,9 +596,7 @@ const contributedDrags = getWebDragContributions(this.context)
 this.drags = [...contributedDrags, this.selectionDrag]
 ```
 
-- [ ] **Step 5: 增加 runtime deps factory**
-
-在 `WebGridRuntime` 中增加：
+新增 runtime deps factory：
 
 ```ts
 private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
@@ -667,24 +623,28 @@ private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
 }
 ```
 
-- [ ] **Step 6: 验证 runtime 行为**
+- [ ] **Step 8: 验证 feature package 与 runtime**
 
 ```bash
+bun test packages/feature-row-column-reorder/tests/installRowColumnReorder.test.ts
 bun test packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts
+bun run --filter @novasheet/feature-row-column-reorder typecheck
+bun run --filter @novasheet/feature-row-column-reorder build
 bun run --filter @novasheet/web typecheck
 bun run --filter @novasheet/web build
+bun run lint
 ```
 
 预期：全部 exit 0。
 
-- [ ] **Step 7: 提交**
+- [ ] **Step 9: 提交**
 
 ```bash
-git add packages/web/src/runtime/WebGridRuntime.ts packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts
-git commit -m "refactor(web): 通过扩展贡献装配行列拖拽"
+git add packages/feature-row-column-reorder packages/web/src/runtime/WebGridRuntime.ts packages/web/src/index.ts packages/web/tests/runtime/WebGridRuntime.col-reorder.test.ts packages/web/tests/runtime/WebGridRuntime.row-reorder.test.ts packages/web/src/interaction/drag/ColumnHeaderDrag.ts packages/web/src/interaction/drag/RowHeaderDrag.ts
+git commit -m "feat(row-column-reorder): 新增行列拖拽排序能力包"
 ```
 
-## Task 5: 在默认 sheet assembly 中安装行列拖拽排序
+## Task 4: 保留默认 sheet assembly 行为
 
 **文件：**
 
@@ -756,7 +716,7 @@ git add packages/sheet/package.json packages/sheet/build.ts packages/sheet/src/b
 git commit -m "feat(sheet): 默认安装行列拖拽排序能力"
 ```
 
-## Task 6: 把 ownership 测试迁移到 feature package
+## Task 5: 把 ownership 测试迁移到 feature package
 
 **文件：**
 
@@ -822,7 +782,7 @@ git add packages/feature-row-column-reorder/tests packages/web/tests/runtime pac
 git commit -m "test(row-column-reorder): 迁移拖拽排序运行时测试"
 ```
 
-## Task 7: 全量验证与架构文档
+## Task 6: 全量验证与架构文档
 
 **文件：**
 
