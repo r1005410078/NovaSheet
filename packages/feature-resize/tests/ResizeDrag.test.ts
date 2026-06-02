@@ -1,8 +1,8 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { ResizeDrag } from '../../../src/interaction/drag/ResizeDrag'
-import type { DomHandleLayer } from '../../../src/interaction/DomHandleLayer'
 import type { ResizeHandleRect } from '@novasheet/core'
-import { makeMockGridEngine } from '../../helpers/mock-grid-engine'
+import type { DomHandleLayer } from '@novasheet/web'
+import { ResizeDrag } from '../src'
+import { makeMockGridEngine } from './helpers/mock-grid-engine'
 
 describe('ResizeDrag', () => {
   it('previews column resize and commits on matching pointerup', () => {

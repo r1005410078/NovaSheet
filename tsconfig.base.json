@@ -10,6 +10,7 @@
       "@novasheet/feature-row-column-reorder": [
         "packages/feature-row-column-reorder/src/index.ts"
       ],
+      "@novasheet/feature-resize": ["packages/feature-resize/src/index.ts"],
       "@novasheet/sheet": ["packages/sheet/src/index.ts"],
       "@novasheet/web": ["packages/web/src/index.ts"]
     },

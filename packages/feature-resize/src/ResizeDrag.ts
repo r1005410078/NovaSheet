@@ -1,7 +1,5 @@
 import { MIN_RESIZE_SIZE, type GridEngine, type ResizeHandleRect } from '@novasheet/core'
-import type { DomHandleLayer } from '../DomHandleLayer'
-import type { WebPointerEvent } from '../../host/WebHost'
-import type { AutoScrollAxis, Drag } from './Drag'
+import type { AutoScrollAxis, DomHandleLayer, Drag, WebPointerEvent } from '@novasheet/web'
 
 /** ResizeDrag 所需的 runtime 交互服务。 */
 export interface ResizeDragDeps {

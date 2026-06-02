@@ -84,7 +84,6 @@ import type { SelectionOverlay } from '../overlay/SelectionOverlay'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
 import type { Drag } from '../interaction/drag/Drag'
 import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
-import { ResizeDrag } from '../interaction/drag/ResizeDrag'
 import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import {
   getWebDragContributions,
@@ -113,6 +112,12 @@ export interface AutofitRowsRuntimeOptions {
   minHeight?: number
   /** 自动行高允许写回的最大高度。 */
   maxHeight?: number
+}
+
+interface WebResizeDrag extends Drag {
+  start(handle: ResizeHandleRect, pointerId: number, clientX: number, clientY: number): boolean
+  movePointer(pointerId: number, clientX: number, clientY: number): boolean
+  commitPointer(pointerId: number): boolean
 }
 
 /** WebGridRuntime 的依赖注入参数，由 backend 装配阶段提供。 */
@@ -205,6 +210,15 @@ function mergeVisualRange(
   if (!activeCell || !mergeRegions) return range
   const merge = mergeRegions.find((m) => cellInRange(activeCell, m.range))?.range
   return merge ? unionRange(range, merge) : range
+}
+
+function isWebResizeDrag(drag: Drag): drag is WebResizeDrag {
+  const candidate = drag as Partial<WebResizeDrag>
+  return (
+    typeof candidate.start === 'function' &&
+    typeof candidate.movePointer === 'function' &&
+    typeof candidate.commitPointer === 'function'
+  )
 }
 
 /**
@@ -307,7 +321,7 @@ export class WebGridRuntime {
   /** 当前活跃的 Drag（R1 DragController）；pointerdown 起拖时设置。 */
   private activeDrag: Drag | null = null
   /** 行高/列宽 resize 拖拽。 */
-  private resizeDrag!: ResizeDrag
+  private resizeDrag: WebResizeDrag | null = null
   /** 填充柄拖拽。 */
   private fillHandleDrag!: FillHandleDrag
   /** 普通单元格拖选。 */
@@ -336,11 +350,6 @@ export class WebGridRuntime {
     this.selectionOverlay = opts.selectionOverlay
     this.openCustomCellEditor = opts.openCustomCellEditor
     this.scrollMapper = new ScrollMapper()
-    this.resizeDrag = new ResizeDrag({
-      engine: this.engine,
-      handleLayer: this.handleLayer,
-      afterEngineMutation: () => this.afterEngineMutation(),
-    })
     this.fillHandleDrag = new FillHandleDrag({
       engine: this.engine,
       host: this.host,
@@ -365,7 +374,11 @@ export class WebGridRuntime {
     const contributedDrags = getWebDragContributions(this.context)
       .map((contribution) => contribution.create(this.createWebDragRuntimeDeps()))
       .filter((drag): drag is Drag => drag !== null)
-    this.drags = [...contributedDrags, this.selectionDrag]
+    this.resizeDrag = contributedDrags.find(isWebResizeDrag) ?? null
+    this.drags = [
+      ...contributedDrags.filter((drag) => drag !== this.resizeDrag),
+      this.selectionDrag,
+    ]
   }
 
   private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
@@ -393,7 +406,7 @@ export class WebGridRuntime {
   }
 
   private isDragBlocked(): boolean {
-    return this.resizeDrag.active || !!this.activeDrag
+    return this.resizeDrag?.active === true || !!this.activeDrag
   }
 
   /** 起拖期间记录 pointer 并按边缘热区驱动自动滚动（供 Drag 经 deps 调用）。 */
@@ -927,7 +940,7 @@ export class WebGridRuntime {
   handleHostContextMenu(event: WebPointerEvent): void {
     if (this.destroyed) return
     if (!this.contextMenuLayer) return
-    if (this.resizeDrag.active || this.activeDrag?.active) return
+    if (this.resizeDrag?.active === true || this.activeDrag?.active) return
 
     if (this.engine.isCellEditing()) {
       this.commitCellEdit(false)
@@ -1353,7 +1366,7 @@ export class WebGridRuntime {
     clientY: number,
   ): void {
     if (this.destroyed) return
-    if (this.resizeDrag.start(handle, pointerId, clientX, clientY)) {
+    if (this.resizeDrag?.start(handle, pointerId, clientX, clientY)) {
       this.activeDrag = this.resizeDrag
     }
   }
@@ -1361,12 +1374,12 @@ export class WebGridRuntime {
   /** 更新 resize 拖拽预览尺寸。 */
   handleResizePointerMove(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed) return
-    this.resizeDrag.movePointer(pointerId, clientX, clientY)
+    this.resizeDrag?.movePointer(pointerId, clientX, clientY)
   }
 
   /** 结束 resize 拖拽并一次性提交行高/列宽变更。 */
   handleResizePointerUp(pointerId: number): void {
-    if (!this.resizeDrag.commitPointer(pointerId)) return
+    if (!this.resizeDrag?.commitPointer(pointerId)) return
     this.activeDrag = null
   }
 
@@ -1507,7 +1520,7 @@ export class WebGridRuntime {
 
   /** 处理双击单元格，进入编辑模式。 */
   handleHostDoubleClick(event: WebPointerEvent): void {
-    if (this.destroyed || this.resizeDrag.active || this.activeDrag?.active) return
+    if (this.destroyed || this.resizeDrag?.active === true || this.activeDrag?.active) return
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return
     this.engine.selectCell(hit)
@@ -1592,7 +1605,7 @@ export class WebGridRuntime {
   }
 
   private updateHeaderCursor(event: WebPointerEvent): void {
-    if (this.resizeDrag.active || this.activeDrag?.active) {
+    if (this.resizeDrag?.active === true || this.activeDrag?.active) {
       this.host.setCursor(null)
       return
     }
@@ -1766,7 +1779,7 @@ export class WebGridRuntime {
 
   /** 根据当前 frame 同步 resize handle layer。 */
   private syncResizeHandles(): void {
-    if (!this.handleLayer || this.resizeDrag.active) return
+    if (!this.handleLayer || this.resizeDrag?.active === true) return
     const frame = this.engine.getFrame()
     this.handleLayer.sync(computeResizeHandles(frame))
   }
@@ -1792,7 +1805,7 @@ export class WebGridRuntime {
   /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。 */
   private syncFillHandle(): void {
     if (!this.fillLayer) return
-    if (this.resizeDrag.active || this.activeDrag?.active || this.engine.isCellEditing()) {
+    if (this.resizeDrag?.active === true || this.activeDrag?.active || this.engine.isCellEditing()) {
       this.fillLayer.sync(null)
       return
     }
@@ -2002,7 +2015,7 @@ export class WebGridRuntime {
     cell: CellAddress,
     invoke: (rect: { x: number; y: number; width: number; height: number }) => boolean,
   ): boolean {
-    if (this.destroyed || this.resizeDrag.active) return false
+    if (this.destroyed || this.resizeDrag?.active === true) return false
     const rect = computeCellRect(this.engine.getFrame(), cell)
     if (!rect) return false
     return invoke(rect)
@@ -2020,7 +2033,7 @@ export class WebGridRuntime {
 
   /** 打开指定单元格编辑器，并按需全选原内容。 */
   private openCellEditor(cell: CellAddress, options: { selectAll?: boolean } = {}): boolean {
-    if (!this.cellEditor || this.resizeDrag.active) return false
+    if (!this.cellEditor || this.resizeDrag?.active === true) return false
     if (this.openCustomCellEditor?.(cell)) return true
     if (!this.engine.beginCellEdit(cell)) return false
     return this.showCellEditor(options)
@@ -2028,7 +2041,7 @@ export class WebGridRuntime {
 
   /** 用首个键入字符作为 draft 打开编辑器。 */
   private beginCellEditWithDraft(cell: CellAddress, draft: string): boolean {
-    if (!this.cellEditor || this.resizeDrag.active) return false
+    if (!this.cellEditor || this.resizeDrag?.active === true) return false
     if (this.openCustomCellEditor?.(cell)) return true
     if (!this.engine.beginCellEdit(cell)) return false
     this.engine.updateCellEditDraft(draft)

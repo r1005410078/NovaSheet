@@ -1035,7 +1035,7 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
     height: 32,
   }
 
-  it('拖拽中只更新预览，松手才 commitColumnResize', () => {
+  it('resize pointer methods no-op when resize feature is not installed', () => {
     const engine = makeEngine()
     engine.getColumnIndex = () => 0
     engine.getColsAxis = () =>
@@ -1053,41 +1053,12 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
     })
 
     runtime.handleResizePointerDown(columnHandle, 1, 100, 0)
-    expect(engine.commitColumnResize).not.toHaveBeenCalled()
-    expect(showIndicator).toHaveBeenCalled()
-
     runtime.handleResizePointerMove(1, 130, 0)
-    expect(engine.commitColumnResize).not.toHaveBeenCalled()
-    expect(showIndicator).toHaveBeenCalledTimes(2)
-
-    runtime.handleResizePointerUp(1)
-    expect(engine.commitColumnResize).toHaveBeenCalledTimes(1)
-    expect(engine.commitColumnResize).toHaveBeenCalledWith(0, 100, 130)
-    expect(hideIndicator).toHaveBeenCalled()
-  })
-
-  it('无位移松手不提交', () => {
-    const engine = makeEngine()
-    engine.getColumnIndex = () => 0
-    engine.getColsAxis = () =>
-      ({
-        getSize: () => 100,
-      }) as never
-
-    const runtime = new WebGridRuntime({
-      engine,
-      host: makeHost(),
-      renderer: makeRenderer(),
-      handleLayer: {
-        showIndicator: mock(() => {}),
-        hideIndicator: mock(() => {}),
-      } as never,
-    })
-
-    runtime.handleResizePointerDown(columnHandle, 1, 100, 0)
     runtime.handleResizePointerUp(1)
 
     expect(engine.commitColumnResize).not.toHaveBeenCalled()
+    expect(showIndicator).not.toHaveBeenCalled()
+    expect(hideIndicator).not.toHaveBeenCalled()
   })
 
   it('attach 时 resize handle 主题使用 viewport rowHeaderWidth', () => {
