@@ -151,67 +151,6 @@ function makeRenderer(): WebRenderer {
   }
 }
 
-function makeExcelHeaderRuntime(options: { rowHeaderWidth?: number; columnWidth?: number } = {}) {
-  const rowHeaderWidth = options.rowHeaderWidth ?? 48
-  const columnWidth = options.columnWidth ?? 100
-  const schema: Schema = {
-    fields: [
-      { id: 'name', name: 'Name', type: 'text', width: columnWidth },
-      { id: 'score', name: 'Score', type: 'number', width: columnWidth },
-    ],
-  }
-  const data = new InMemoryDataSource({
-    rows: [
-      { name: 'Ada', score: 2 },
-      { name: 'Grace', score: 1 },
-    ],
-    schema,
-  })
-  const engine = makeEngine()
-  engine.getData = mock(() => data as never)
-  engine.getFrame = mock(() => ({
-    data,
-    theme: { metrics: { headerHeight: 32 } } as Theme,
-    rowsAxis: {
-      getCount: () => data.getRowCount(),
-      positionToIndex: (pos: number) => Math.floor(pos / 28),
-      indexToPosition: (i: number) => i * 28,
-      getSize: () => 28,
-    } as never,
-    colsAxis: {
-      getCount: () => schema.fields.length,
-      getTotalSize: () => schema.fields.length * columnWidth,
-      positionToIndex: (pos: number) =>
-        Math.max(0, Math.min(schema.fields.length - 1, Math.floor(pos / columnWidth))),
-      indexToPosition: (i: number) => i * columnWidth,
-      getSize: () => columnWidth,
-    } as never,
-    viewport: {
-      contentRect: { width: 400, height: 300 },
-      rowHeaderWidth,
-      scrollX: 0,
-      scrollY: 0,
-      regions: [
-        {
-          id: 'main',
-          rowBand: 'middle',
-          colBand: 'center',
-          rowRange: [0, data.getRowCount() - 1],
-          colRange: [0, schema.fields.length - 1],
-          rect: { x: rowHeaderWidth, y: 32, width: schema.fields.length * columnWidth, height: 268 },
-          scrollOffsetX: 0,
-          scrollOffsetY: 0,
-          zIndex: 10,
-        },
-      ],
-    } as never,
-    collapsedRowGaps: [],
-    collapsedColGaps: [],
-  }))
-  const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-  return { engine, runtime }
-}
-
 describe('WebGridRuntime.replaceRenderer — 更换渲染器', () => {
   it('销毁旧 renderer 并安装 factory 产物', () => {
     const engine = makeEngine()
@@ -329,60 +268,6 @@ describe('WebGridRuntime.handleHostPointerDown — 点击选择', () => {
     )
   })
 
-  it('Excel 行头左键选中整行', () => {
-    const { engine, runtime } = makeExcelHeaderRuntime({ rowHeaderWidth: 48 })
-
-    runtime.handleHostPointerDown({ x: 24, y: 72, shiftKey: false })
-
-    expect(engine.setSelection).toHaveBeenCalledWith({
-      activeCell: { rowIndex: 1, colIndex: 0 },
-      anchorCell: { rowIndex: 1, colIndex: 0 },
-      extentCell: { rowIndex: 1, colIndex: 1 },
-      selectedRange: { startRow: 1, endRow: 1, startCol: 0, endCol: 1 },
-    } satisfies GridSelection)
-    expect(engine.selectCell).not.toHaveBeenCalled()
-  })
-
-  it('Excel 行头拖动扩展为连续整行选区', () => {
-    const { engine, runtime } = makeExcelHeaderRuntime({ rowHeaderWidth: 48 })
-
-    runtime.handleHostPointerDown({ x: 24, y: 44, shiftKey: false })
-    runtime.handleHostPointerMove({ x: 24, y: 72, shiftKey: false })
-    runtime.handleHostPointerUp()
-
-    expect(engine.setSelection).toHaveBeenNthCalledWith(1, {
-      activeCell: { rowIndex: 0, colIndex: 0 },
-      anchorCell: { rowIndex: 0, colIndex: 0 },
-      extentCell: { rowIndex: 0, colIndex: 1 },
-      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 1 },
-    } satisfies GridSelection)
-    expect(engine.setSelection).toHaveBeenNthCalledWith(2, {
-      activeCell: { rowIndex: 1, colIndex: 0 },
-      anchorCell: { rowIndex: 0, colIndex: 0 },
-      extentCell: { rowIndex: 1, colIndex: 1 },
-      selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
-    } satisfies GridSelection)
-    expect(engine.selectCell).not.toHaveBeenCalled()
-  })
-
-  it('Excel 行头 Shift 点击从既有整行锚点扩展', () => {
-    const { engine, runtime } = makeExcelHeaderRuntime({ rowHeaderWidth: 48 })
-    engine.getSelection = mock(() => ({
-      activeCell: { rowIndex: 0, colIndex: 0 },
-      anchorCell: { rowIndex: 0, colIndex: 0 },
-      extentCell: { rowIndex: 0, colIndex: 1 },
-      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 1 },
-    }))
-
-    runtime.handleHostPointerDown({ x: 24, y: 72, shiftKey: true })
-
-    expect(engine.setSelection).toHaveBeenCalledWith({
-      activeCell: { rowIndex: 1, colIndex: 0 },
-      anchorCell: { rowIndex: 0, colIndex: 0 },
-      extentCell: { rowIndex: 1, colIndex: 1 },
-      selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
-    } satisfies GridSelection)
-  })
 })
 
 describe('WebGridRuntime drag selection — 拖拽框选', () => {

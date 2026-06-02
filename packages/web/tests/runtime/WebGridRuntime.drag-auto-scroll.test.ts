@@ -70,39 +70,7 @@ function withRaf(run: (flush: () => void) => void): void {
   }
 }
 
-describe('WebGridRuntime drag auto-scroll — 表头拖选 + 填充柄', () => {
-  it('列表头拖选到右边缘时横向滚动', () => {
-    const engine = bigEngine()
-    const { host, pos } = trackingHost()
-    const runtime = new WebGridRuntime({ engine, host, renderer: makeRenderer() })
-
-    withRaf((flush) => {
-      runtime.handleHostPointerDown({ x: 50, y: 10, shiftKey: false, button: 0 }) // 列表头 → 起拖
-      runtime.handleHostPointerMove({ x: 292, y: 10, shiftKey: false }) // 右边缘热区
-      flush()
-    })
-
-    expect(host.scrollTo).toHaveBeenCalled()
-    expect(pos.left).toBeGreaterThan(0)
-    expect(pos.top).toBe(0) // 列方向只横向滚
-  })
-
-  it('行表头拖选到下边缘时纵向滚动', () => {
-    const engine = bigEngine()
-    const { host, pos } = trackingHost()
-    const runtime = new WebGridRuntime({ engine, host, renderer: makeRenderer() })
-
-    withRaf((flush) => {
-      runtime.handleHostPointerDown({ x: 20, y: 60, shiftKey: false, button: 0 }) // 行表头 → 起拖
-      runtime.handleHostPointerMove({ x: 20, y: 192, shiftKey: false }) // 下边缘热区
-      flush()
-    })
-
-    expect(host.scrollTo).toHaveBeenCalled()
-    expect(pos.top).toBeGreaterThan(0)
-    expect(pos.left).toBe(0) // 行方向只纵向滚
-  })
-
+describe('WebGridRuntime drag auto-scroll — 填充柄', () => {
   it('填充柄拖到右下角时双向滚动', () => {
     const engine = bigEngine()
     engine.setSelection({

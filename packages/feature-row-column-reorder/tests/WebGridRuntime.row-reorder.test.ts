@@ -1,11 +1,9 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { DefaultGridEngine, InMemoryDataSource, createSheetContext, denseGridTheme } from '@novasheet/core'
 import type { GridEngine, ResizeHandleRect, Row, Schema } from '@novasheet/core'
-import { installRowColumnReorder } from '@novasheet/feature-row-column-reorder'
-import type { RowReorderOverlay } from '../../src/overlay/RowReorderOverlay'
-import type { WebHost } from '../../src/host/WebHost'
-import type { WebRenderer } from '../../src/render/WebRenderer'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { WebGridRuntime } from '@novasheet/web'
+import type { RowReorderOverlay, WebHost, WebRenderer } from '@novasheet/web'
+import { installRowColumnReorder } from '../src'
 
 function makeEngine(): DefaultGridEngine {
   const schema: Schema = {
@@ -168,6 +166,47 @@ describe('WebGridRuntime row reorder drag', () => {
     })
     expect(rowNames(engine)).toEqual(['A', 'B', 'C', 'D'])
     expect(overlay.show).not.toHaveBeenCalled()
+  })
+
+  it('clicking an unselected row header selects the whole row', () => {
+    const engine = makeEngine()
+    const runtime = new WebGridRuntime({
+      engine,
+      context: makeContext(),
+      host: makeHost(),
+      renderer: makeRenderer(),
+      rowReorderOverlay: makeOverlay(),
+    })
+
+    runtime.handleHostPointerDown({ x: 20, y: 70, shiftKey: false, button: 0 })
+
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 1,
+      endRow: 1,
+      startCol: 0,
+      endCol: 0,
+    })
+  })
+
+  it('shift-clicking a row header extends from the existing whole-row anchor', () => {
+    const engine = makeEngine()
+    selectRows(engine, 0, 0)
+    const runtime = new WebGridRuntime({
+      engine,
+      context: makeContext(),
+      host: makeHost(),
+      renderer: makeRenderer(),
+      rowReorderOverlay: makeOverlay(),
+    })
+
+    runtime.handleHostPointerDown({ x: 20, y: 70, shiftKey: true, button: 0 })
+
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 1,
+      startCol: 0,
+      endCol: 0,
+    })
   })
 
   it('resize drag blocks row reorder', () => {

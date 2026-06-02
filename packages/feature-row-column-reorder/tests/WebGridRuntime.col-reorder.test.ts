@@ -1,11 +1,9 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { DefaultGridEngine, createSheetContext, denseGridTheme, InMemoryDataSource } from '@novasheet/core'
 import type { GridEngine, ResizeHandleRect, Schema } from '@novasheet/core'
-import { installRowColumnReorder } from '@novasheet/feature-row-column-reorder'
-import type { ColumnReorderOverlay } from '../../src/overlay/ColumnReorderOverlay'
-import type { WebHost } from '../../src/host/WebHost'
-import type { WebRenderer } from '../../src/render/WebRenderer'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { WebGridRuntime } from '@novasheet/web'
+import type { ColumnReorderOverlay, WebHost, WebRenderer } from '@novasheet/web'
+import { installRowColumnReorder } from '../src'
 
 function makeEngine(): DefaultGridEngine {
   const schema: Schema = {
