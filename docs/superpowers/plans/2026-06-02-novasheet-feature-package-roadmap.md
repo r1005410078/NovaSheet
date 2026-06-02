@@ -15,6 +15,95 @@
 
 ---
 
+## Feature Package 架构模型
+
+Feature package 的目标不是引入复杂插件系统，而是把“能力声明”和“默认产品装配”分开。拆出的包通过 `SheetContext` 注册能力，runtime 只消费 contribution，不反向依赖具体 feature。
+
+### 分层职责
+
+| 层 | 包 | 负责 | 不负责 |
+|---|---|---|---|
+| Kernel | `@novasheet/core` | `createSheetContext()`、extension registry、engine contracts、DOM-free 状态内核 | 浏览器 DOM、Canvas、具体产品能力 |
+| Platform contracts | `@novasheet/web` / `@novasheet/canvas2d` | browser/canvas 运行时契约，例如 `WebDragContribution`、renderer contract、DOM host | 默认安装哪些能力 |
+| Feature packages | `@novasheet/feature-*` | 一个用户可感知能力的实现与 `installXxx(ctx)` 注册函数 | 创建 `Grid`、默认装配、跨 feature 总控 |
+| Product assembly | `@novasheet/sheet` | 对外 `Grid` 门面、默认 `installDefaultExtensions(ctx)` 组合 | 具体 feature 内部状态机 |
+
+### 注册与组合方式
+
+外部用户可以创建自己的 `SheetContext`，选择安装哪些能力：
+
+```ts
+import { createSheetContext } from '@novasheet/core'
+import { installResizeFeature } from '@novasheet/feature-resize'
+import { installRowColumnReorder } from '@novasheet/feature-row-column-reorder'
+import { Grid } from '@novasheet/sheet'
+
+const ctx = createSheetContext()
+
+installResizeFeature(ctx)
+installRowColumnReorder(ctx)
+
+new Grid(container, {
+  data,
+  context: ctx,
+})
+```
+
+默认产品包则集中组合内置能力：
+
+```ts
+export function installDefaultExtensions(ctx: SheetContext): void {
+  installBasicCells(ctx)
+  installResizeFeature(ctx)
+  installRowColumnReorder(ctx)
+}
+```
+
+### Feature 包内部形态
+
+每个 feature 包导出一个明确的安装函数。安装函数只做注册，不主动创建 `Grid`，不直接寻找全局实例：
+
+```ts
+export function installResizeFeature(ctx: SheetContext): void {
+  registerWebDrag(ctx, {
+    id: 'resize',
+    order: 10,
+    create: (deps) => new ResizeDrag({
+      engine: deps.engine,
+      host: deps.host,
+      handleLayer: deps.handleLayer,
+    }),
+  })
+}
+```
+
+同一个 feature 里可以注册多个 contribution，例如 cell type、command、web drag、menu item。共享逻辑放在 feature 包内部模块里，避免把私有 helper 暴露给 `core`。
+
+### Runtime 衔接规则
+
+- `@novasheet/web` 不 import `@novasheet/feature-*`。
+- `WebGridRuntime` 从 `ctx` 读取已注册 contribution，并在合适生命周期调用它们。
+- runtime 通过 deps 注入当前实例对象，例如 `engine`、`host`、`overlay`、`handleLayer`。
+- feature 不保存全局 current grid；需要实例能力时，通过 deps 或 `ctx.run(scope, fn)` 提供的 scope handle 获取。
+- 未安装 feature 时，runtime 必须 no-op，不 crash。
+
+### 默认组合与按需组合
+
+- 用户不传 `context` 时，`@novasheet/sheet` 创建内部 ctx 并执行 `installDefaultExtensions(ctx)`，保持默认 `Grid` 行为不变。
+- 用户传入自定义 `context` 时，由用户决定安装哪些 feature；这用于精简包体、禁用能力、替换能力或做实验。
+- 多个 `Grid` 可以共享同一个 ctx，共享同一组 extension registry；每个 `Grid` 的运行时实例仍由 runtime deps 区分，不靠全局单例。
+
+### 拆包边界判断
+
+一个模块适合成为 feature package，需要同时满足：
+
+- 用户可感知：例如拖拽排序、resize、填充柄、编辑、剪贴板、右键菜单。
+- 可以通过注册点接入：例如 drag contribution、cell extension、command、menu contribution。
+- 禁用后 runtime 能合理降级：没有该 contribution 时不报错。
+- 内部 helper 不单独拆包：例如 normalizer、index map builder、overlay rect calculator，优先跟随所属 feature 或 engine。
+
+---
+
 ## 总进度
 
 | 状态 | 阶段 | Feature | 目标包 | 实施计划 | 验收口径 |
