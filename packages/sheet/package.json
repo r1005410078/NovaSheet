@@ -44,6 +44,8 @@
     "@novasheet/canvas2d": "^0.1.0",
     "@novasheet/core": "^0.1.0",
     "@novasheet/feature-clipboard": "^0.1.0",
+    "@novasheet/feature-context-menu": "^0.1.0",
+    "@novasheet/feature-sort-filter": "^0.1.0",
     "@novasheet/feature-editing": "^0.1.0",
     "@novasheet/feature-fill-handle": "^0.1.0",
     "@novasheet/feature-row-column-reorder": "^0.1.0",

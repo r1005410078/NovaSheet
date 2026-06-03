@@ -100,6 +100,16 @@ keyboard/menu 契约）；`onCopy`/`onCut`/`onPaste`/`onPasteSkipped` 经 web de
 贡献点安装。runtime 保留键盘/双击起编入口并委托 controller，`commitActiveEdit` 重指向它；编辑语义
 （`beginCellEdit`/`commitCellEdit`）留 `@novasheet/core`。已知债务：编辑键入口仍在 kernel（待 keyboard
 契约）、自定义 editor 经 web `tryCustomEditor`（待 command 契约）。
+`@novasheet/feature-context-menu` 拥有右键菜单交互（第四个「整竖切片」拆包）：`ContextMenuController`
+通过 `web.context-menu` 安装，自持 `DomContextMenuLayer`（portal-to-body）；菜单项由 `web.menu-item`
+provider 按 order 汇聚（cell/row 默认 provider 调用 core `get*ContextMenuItems`；列头结构项
+`column-default`）。列头 sort/filter 项与动作由 `@novasheet/feature-sort-filter` 提供（默认 BOM 须同时安装）。
+structure 动作仍经 runtime deps 派发（phase 8）。已知债务：键盘 Cmd+C/X/V 仍在 kernel；剪贴板 cell 菜单
+默认 provider 与 `feature-clipboard` 协同。
+`@novasheet/feature-sort-filter` 拥有排序/筛选交互（第五个「整竖切片」拆包）：`SortFilterController`
+通过 `web.sort-filter` 安装，自持 `FilterPopover`；列头 sort/filter 菜单项经 `web.menu-item`
+provider `sort-filter-default`（调用 `ViewPipeline.collectColumnHeaderMenuItems`）。`SortLayer` /
+`FilterLayer` / `ViewPipeline` 仍由 `Canvas2DBackend` 创建并注入 runtime deps。已知债务：键盘入口仍在 kernel。
 `@novasheet/feature-fill-handle` 拥有填充柄交互（首个「整竖切片」拆包）：`FillHandleController`
 同时实现 `Drag` 与 `WebFrameSync`，独占持有 `DomFillHandleLayer`，通过 `web.drag` contribution 安装。
 `@novasheet/web` 为此新增 feature-agnostic 的 `WebFrameSync` 每帧同步契约（runtime 在 flush/teardown

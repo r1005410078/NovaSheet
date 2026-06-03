@@ -1,6 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { createSheetContext, type DataSource, type Row, type Schema } from '@novasheet/core'
 import { WebGridRuntime, type WebHost, type WebRenderer } from '@novasheet/web'
+import { installContextMenuFeature } from '@novasheet/feature-context-menu'
 import { installClipboardFeature } from '../src'
 import { makeMockGridEngine } from './helpers/mock-grid-engine'
 
@@ -74,7 +75,12 @@ function makeRenderer(): WebRenderer {
 function makeRuntime(engine = makeEngine()) {
   const ctx = createSheetContext()
   installClipboardFeature(ctx)
+  installContextMenuFeature(ctx)
   return new WebGridRuntime({ engine, context: ctx, host: makeHost(), renderer: makeRenderer() })
+}
+
+function openCellMenu(runtime: WebGridRuntime): void {
+  runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
 }
 
 const key = (k: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }> = {}) => ({
@@ -152,6 +158,7 @@ describe('WebGridRuntime × clipboard feature — 右键菜单入口', () => {
   it('菜单 copy 走 grid copy（写 TSV）', async () => {
     const { store } = stubClipboard()
     const runtime = makeRuntime()
+    openCellMenu(runtime)
     runtime.handleContextMenuSelected('copy')
     await Promise.resolve()
     await Promise.resolve()
@@ -163,6 +170,7 @@ describe('WebGridRuntime × clipboard feature — 右键菜单入口', () => {
     stubClipboard()
     const engine = makeEngine()
     const runtime = makeRuntime(engine)
+    openCellMenu(runtime)
     runtime.handleContextMenuSelected('cut')
     await Promise.resolve()
     await Promise.resolve()

@@ -1,5 +1,7 @@
-import { describe, expect, it, mock, spyOn } from 'bun:test'
-import { FilterLayer, InMemoryDataSource, SortLayer, ViewPipeline } from '@novasheet/core'
+import { afterEach, describe, expect, it, mock, spyOn } from 'bun:test'
+import { createSheetContext, FilterLayer, InMemoryDataSource, SortLayer, ViewPipeline } from '@novasheet/core'
+import { installContextMenuFeature } from '@novasheet/feature-context-menu'
+import { installSortFilterFeature } from '@novasheet/feature-sort-filter'
 import type {
   CellAddress,
   CellValue,
@@ -483,26 +485,24 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
 })
 
 describe('WebGridRuntime contextmenu — Phase 4.0', () => {
-  function makeContextMenu() {
-    return {
-      open: mock((_options: unknown) => {}),
-      close: mock(() => {}),
-      isOpen: mock(() => false),
-      applyTheme: mock(() => {}),
-      destroy: mock(() => {}),
-      attach: mock(() => {}),
-    }
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  function openMenuItemIds(doc: Document = document): string[] {
+    const menu = doc.querySelector('[data-novasheet-context-menu][data-open]')
+    if (!menu) return []
+    return Array.from(menu.querySelectorAll('[data-ns-action]')).map(
+      (el) => el.getAttribute('data-ns-action')!,
+    )
   }
 
-  function makeFilterPopover() {
-    return {
-      open: mock((_anchor: unknown, _options: unknown) => {}),
-      close: mock(() => {}),
-      isOpen: mock(() => false),
-      applyTheme: mock(() => {}),
-      destroy: mock(() => {}),
-      attach: mock(() => {}),
-    }
+  function isContextMenuOpen(doc: Document = document): boolean {
+    return doc.querySelector('[data-novasheet-context-menu][data-open]') !== null
+  }
+
+  function filterPopoverOpen(): boolean {
+    return document.querySelector('[data-novasheet-filter-popover][data-open]') !== null
   }
 
   const headerSchema: Schema = {
@@ -569,28 +569,29 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       collapsedRowGaps: [],
       collapsedColGaps: [],
     }))
+    const ctx = createSheetContext()
+    installSortFilterFeature(ctx)
+    installContextMenuFeature(ctx)
     const runtime = new WebGridRuntime({
       engine,
+      context: ctx,
       host: makeHost(),
       renderer: makeRenderer(),
       viewPipeline: pipeline,
       sortLayer,
       filterLayer,
     })
-    const menu = makeContextMenu()
-    runtime.setContextMenuLayer(menu as never)
-    return { engine, runtime, menu, sortLayer, filterLayer }
+    return { engine, runtime, sortLayer, filterLayer }
   }
 
   it('drag-select 进行中不开菜单', () => {
     const engine = makeEngine()
     const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-    const menu = makeContextMenu()
-    runtime.setContextMenuLayer(menu as never)
     runtime.handleHostPointerDown({ x: 50, y: 60, shiftKey: false, button: 0 })
     runtime.handleHostPointerMove({ x: 120, y: 120, shiftKey: false, button: 0 })
     runtime.handleHostContextMenu({ x: 100, y: 100, shiftKey: false, clientX: 100, clientY: 100 })
-    expect(menu.open).not.toHaveBeenCalled()
+    expect(isContextMenuOpen()).toBe(false)
+    runtime.destroy()
   })
 
   it('右键 pointerdown（button=2）不进入 drag-select 模式', () => {
@@ -631,23 +632,22 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
   })
 
   it('right-click within header opens column header menu', () => {
-    const { runtime, menu } = makeHeaderRuntime()
+    const { runtime } = makeHeaderRuntime()
 
     runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 150, clientY: 10 })
 
-    expect(menu.open).toHaveBeenCalledTimes(1)
-    const options = menu.open.mock.calls[0]![0] as { items: readonly { id: string }[] }
-    expect(options.items.slice(0, 5).map((item) => item.id)).toEqual([
+    expect(openMenuItemIds().slice(0, 5)).toEqual([
       'filter-open',
       'filter-clear',
       'sort-asc',
       'sort-desc',
       'sort-none',
     ])
+    runtime.destroy()
   })
 
   it('keeps sort actions enabled for sortable columns when selection spans columns', () => {
-    const { engine, runtime, menu } = makeHeaderRuntime()
+    const { engine, runtime } = makeHeaderRuntime()
     engine.getSelection = mock(() => ({
       activeCell: { rowIndex: 0, colIndex: 0 },
       anchorCell: { rowIndex: 0, colIndex: 0 },
@@ -657,37 +657,38 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
 
     runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 150, clientY: 10 })
 
-    const options = menu.open.mock.calls[0]![0] as {
-      items: readonly { id: string; disabled: boolean }[]
-    }
-    expect(options.items.find((item) => item.id === 'sort-asc')!.disabled).toBe(false)
-    expect(options.items.find((item) => item.id === 'sort-desc')!.disabled).toBe(false)
+    const sortAsc = document.querySelector('[data-ns-action="sort-asc"]')
+    const sortDesc = document.querySelector('[data-ns-action="sort-desc"]')
+    expect(sortAsc?.getAttribute('aria-disabled')).not.toBe('true')
+    expect(sortDesc?.getAttribute('aria-disabled')).not.toBe('true')
+    runtime.destroy()
   })
 
   it('right-click in row-header gutter does not open column header menu', () => {
-    const { runtime, menu } = makeHeaderRuntime({ rowHeaderWidth: 48 })
+    const { runtime } = makeHeaderRuntime({ rowHeaderWidth: 48 })
 
     runtime.handleHostContextMenu({ x: 24, y: 10, shiftKey: false, clientX: 24, clientY: 10 })
 
-    expect(menu.open).not.toHaveBeenCalled()
+    expect(isContextMenuOpen()).toBe(false)
+    runtime.destroy()
   })
 
   it('right-click in blank header space right of columns does not open menu', () => {
-    const { runtime, menu } = makeHeaderRuntime({ rowHeaderWidth: 48, columnWidth: 100 })
+    const { runtime } = makeHeaderRuntime({ rowHeaderWidth: 48, columnWidth: 100 })
 
     runtime.handleHostContextMenu({ x: 260, y: 10, shiftKey: false, clientX: 260, clientY: 10 })
 
-    expect(menu.open).not.toHaveBeenCalled()
+    expect(isContextMenuOpen()).toBe(false)
+    runtime.destroy()
   })
 
   it('right-click in body still opens cell menu', () => {
-    const { runtime, menu } = makeHeaderRuntime()
+    const { runtime } = makeHeaderRuntime()
 
     runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
 
-    expect(menu.open).toHaveBeenCalledTimes(1)
-    const options = menu.open.mock.calls[0]![0] as { items: readonly { id: string }[] }
-    expect(options.items.map((item) => item.id)).toEqual(['cut', 'copy', 'paste'])
+    expect(openMenuItemIds()).toEqual(['cut', 'copy', 'paste'])
+    runtime.destroy()
   })
 
   it('column header menu actions update sort and filter layers', () => {
@@ -707,34 +708,36 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     expect(filterLayer.getSpec()).not.toBeNull()
     runtime.handleContextMenuSelected('filter-clear')
     expect(filterLayer.getSpec()).toBeNull()
+    runtime.destroy()
   })
 
   it('filter-open closes context menu and opens filter popover for the header field', () => {
-    const { runtime, menu, filterLayer } = makeHeaderRuntime()
-    const popover = makeFilterPopover()
-    runtime.setFilterPopover(popover as never)
+    const { runtime, filterLayer } = makeHeaderRuntime()
     filterLayer.setSpec({ fieldId: 'score', op: { kind: 'number-between', min: 1, max: null } })
 
     runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 160, clientY: 20 })
     runtime.handleContextMenuSelected('filter-open')
 
-    expect(menu.close).toHaveBeenCalled()
-    expect(popover.open).toHaveBeenCalledWith(
-      { clientX: 160, clientY: 20 },
-      {
-        field: headerSchema.fields[1],
-        op: { kind: 'number-between', min: 1, max: null },
-      },
-    )
+    expect(isContextMenuOpen()).toBe(false)
+    expect(filterPopoverOpen()).toBe(true)
+    const popover = document.querySelector('[data-novasheet-filter-popover][data-open]') as HTMLElement
+    expect(popover.style.left).toBe('160px')
+    expect(popover.style.top).toBe('20px')
+    runtime.destroy()
   })
 
   it('filter popover Apply updates and clears the active field filter', () => {
     const { runtime, filterLayer } = makeHeaderRuntime()
-    runtime.setFilterPopover(makeFilterPopover() as never)
 
     runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 160, clientY: 20 })
     runtime.handleContextMenuSelected('filter-open')
-    runtime.handleFilterPopoverApply({ kind: 'number-between', min: 1, max: 3 })
+    const min = document.body.querySelector('[data-ns-filter-min]') as HTMLInputElement
+    const max = document.body.querySelector('[data-ns-filter-max]') as HTMLInputElement
+    min.value = '1'
+    min.dispatchEvent(new Event('input', { bubbles: true }))
+    max.value = '3'
+    max.dispatchEvent(new Event('input', { bubbles: true }))
+    ;(document.body.querySelector('[data-ns-filter-apply]') as HTMLButtonElement).click()
     expect(filterLayer.getSpec()).toEqual({
       fieldId: 'score',
       op: { kind: 'number-between', min: 1, max: 3 },
@@ -742,15 +745,17 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
 
     runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 160, clientY: 20 })
     runtime.handleContextMenuSelected('filter-open')
-    runtime.handleFilterPopoverApply(null)
+    ;(document.body.querySelector('[data-ns-filter-clear]') as HTMLButtonElement).click()
     expect(filterLayer.getSpec()).toBeNull()
+    runtime.destroy()
   })
 
   it('filter popover open gates grid keyboard handling', () => {
     const { runtime, engine } = makeHeaderRuntime()
-    const popover = makeFilterPopover()
-    popover.isOpen = mock(() => true)
-    runtime.setFilterPopover(popover as never)
+
+    runtime.handleHostContextMenu({ x: 150, y: 10, shiftKey: false, clientX: 160, clientY: 20 })
+    runtime.handleContextMenuSelected('filter-open')
+    expect(filterPopoverOpen()).toBe(true)
 
     expect(
       runtime.handleHostKeyDown({
@@ -762,6 +767,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       }),
     ).toBe(false)
     expect(engine.navigateSelection).not.toHaveBeenCalled()
+    runtime.destroy()
   })
 
   it('range 外右键调 selectCell；range 内不动 selection', () => {
@@ -804,8 +810,15 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       collapsedRowGaps: [],
       collapsedColGaps: [],
     }))
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-    runtime.setContextMenuLayer(makeContextMenu() as never)
+    const ctx = createSheetContext()
+    installSortFilterFeature(ctx)
+    installContextMenuFeature(ctx)
+    const runtime = new WebGridRuntime({
+      engine,
+      context: ctx,
+      host: makeHost(),
+      renderer: makeRenderer(),
+    })
 
     // 命中 (rowIndex=2, colIndex=1) — 在 range (0,0,0,0) 外
     runtime.handleHostContextMenu({ x: 150, y: 100, shiftKey: false, clientX: 150, clientY: 100 })
@@ -815,21 +828,31 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     // 命中 (0, 0) — 在 range 内
     runtime.handleHostContextMenu({ x: 50, y: 40, shiftKey: false, clientX: 50, clientY: 40 })
     expect(selectCell).not.toHaveBeenCalled()
+    runtime.destroy()
   })
 
   it('setData / scroll 自动关闭菜单（via afterEngineMutation）', () => {
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-    const menu = makeContextMenu()
-    menu.isOpen = mock(() => true)
-    runtime.setContextMenuLayer(menu as never)
+    const ctx = createSheetContext()
+    installSortFilterFeature(ctx)
+    installContextMenuFeature(ctx)
+    const runtime = new WebGridRuntime({
+      engine,
+      context: ctx,
+      host: makeHost(),
+      renderer: makeRenderer(),
+    })
+    runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
+    expect(isContextMenuOpen()).toBe(true)
 
     runtime.setData({} as never, () => makeRenderer())
-    expect(menu.close).toHaveBeenCalled()
+    expect(isContextMenuOpen()).toBe(false)
 
-    menu.close.mockClear()
+    runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
+    expect(isContextMenuOpen()).toBe(true)
     runtime.handleHostScroll(100, 0)
-    expect(menu.close).toHaveBeenCalled()
+    expect(isContextMenuOpen()).toBe(false)
+    runtime.destroy()
   })
 })
 

@@ -43,11 +43,9 @@ import {
   computeResizeHandles,
   computeScrollReveal,
   FrameScheduler,
-  getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
   getRowHeaderContextMenuItems,
   hitTestCell,
-  isMutableDataSource,
   MIN_RESIZE_SIZE,
   isTypableEditKey,
   type BorderPreset,
@@ -67,11 +65,9 @@ import {
   type WebCellEditor,
   type WebCellEditorRuntimeDeps,
 } from '../interaction/cell-editor/WebCellEditor'
-import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
 import type { HideToggleHandle } from '../handle/HideToggleHandle'
 import type { HideColToggleHandle } from '../handle/HideColToggleHandle'
-import type { FilterPopover } from '../interaction/FilterPopover'
 import type { RowHeightPopover } from '../overlay/RowHeightPopover'
 import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import type { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
@@ -94,6 +90,16 @@ import {
   type WebClipboard,
   type WebClipboardRuntimeDeps,
 } from '../clipboard/WebClipboard'
+import {
+  getWebContextMenuContributions,
+  type WebContextMenu,
+  type WebContextMenuRuntimeDeps,
+} from '../menu/WebContextMenu'
+import {
+  getWebSortFilterContributions,
+  type WebSortFilter,
+  type WebSortFilterRuntimeDeps,
+} from '../sort-filter/WebSortFilter'
 import { ScrollMapper } from '../scroll/ScrollMapper'
 
 /** WebGridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
@@ -248,10 +254,10 @@ export class WebGridRuntime {
   private openCustomCellEditor?: WebGridRuntimeOptions['openCustomCellEditor']
   /** 编辑器 controller（来自 web.cell-editor 贡献）；命令与定位委托给它。 */
   private cellEditController: (WebCellEditor & WebFrameSync) | null = null
-  /** DOM 右键菜单 layer。 */
-  private contextMenuLayer?: DomContextMenuLayer
-  /** DOM filter popover。 */
-  private filterPopover?: FilterPopover
+  /** 右键菜单 controller（来自 web.context-menu 贡献）。 */
+  private contextMenuController: WebContextMenu | null = null
+  /** 排序/筛选 controller（来自 web.sort-filter 贡献）。 */
+  private sortFilterController: WebSortFilter | null = null
   /** Phase 4.5 行高调整弹层。 */
   private rowHeightPopover?: RowHeightPopover
   /** Phase 4.6 列宽调整弹层。 */
@@ -266,8 +272,6 @@ export class WebGridRuntime {
   private lastContextMenuContext: ContextMenuContext | null = null
   /** 最近一次打开菜单时的屏幕坐标，用于 filter popover 锚点。 */
   private lastContextMenuPoint: { clientX: number; clientY: number } | null = null
-  /** 当前打开 filter popover 绑定的 field id。 */
-  private filterPopoverFieldId: string | null = null
   /** 剪贴板 controller（来自 web.clipboard 贡献）；copy/cut/paste 委托给它。 */
   private clipboardController: WebClipboard | null = null
   /** copy 成功后的通知回调。 */
@@ -343,6 +347,73 @@ export class WebGridRuntime {
       getWebClipboardContributions(this.context)
         .map((c) => c.create(this.createWebClipboardDeps()))
         .find((c): c is WebClipboard => c !== null) ?? null
+    this.contextMenuController =
+      getWebContextMenuContributions(this.context)
+        .map((c) => c.create(this.createWebContextMenuDeps()))
+        .find((c): c is WebContextMenu => c !== null) ?? null
+    if (this.contextMenuController) {
+      this.contextMenuController.attach(this.host.container)
+    }
+    this.sortFilterController =
+      getWebSortFilterContributions(this.context)
+        .map((c) => c.create(this.createWebSortFilterDeps()))
+        .find((c): c is WebSortFilter => c !== null) ?? null
+    if (this.sortFilterController) {
+      this.sortFilterController.attach(this.host.container)
+    }
+  }
+
+  private createWebSortFilterDeps(): WebSortFilterRuntimeDeps {
+    return {
+      sortLayer: this.sortLayer,
+      filterLayer: this.filterLayer,
+      viewPipeline: this.viewPipeline,
+      closeContextMenu: () => this.contextMenuController?.close(),
+      hideColumnReorderOverlay: () => this.columnReorderOverlay?.hide(),
+      getLastMenuPoint: () => this.lastContextMenuPoint,
+      focusScrollHost: () => this.host.focusScrollHost(),
+      onFilterPopoverFallback: (action, ctx) => this.onContextMenuAction?.(action, ctx),
+    }
+  }
+
+  private createWebContextMenuDeps(): WebContextMenuRuntimeDeps {
+    return {
+      context: this.context,
+      engine: this.engine,
+      host: this.host,
+      viewPipeline: this.viewPipeline,
+      refresh: () => this.refresh(),
+      afterEngineMutation: () => this.afterEngineMutation(),
+      commitActiveEdit: (moveSelection) => this.commitCellEdit(moveSelection),
+      isContextMenuBlocked: () =>
+        this.resizeDrag?.active === true || this.activeDrag?.active === true,
+      collectHiddenInViewColRange: (startCol, endCol) =>
+        this.collectHiddenInViewColRange(startCol, endCol),
+      recordMenuOpen: (ctx, point) => {
+        this.lastContextMenuContext = ctx
+        this.lastContextMenuPoint = point
+      },
+      getLastMenuContext: () => this.lastContextMenuContext,
+      clearMenuContext: () => {
+        this.lastContextMenuContext = null
+        this.lastContextMenuPoint = null
+      },
+      hasContextMenuConsumer: () => this.onContextMenuAction !== undefined,
+      notifyContextMenuAction: (action, ctx) => {
+        if (!this.onContextMenuAction) return false
+        this.onContextMenuAction(action, ctx)
+        return true
+      },
+      clipboardCopy: () => this.handleClipboardCopy(),
+      clipboardCut: () => this.handleClipboardCut(),
+      clipboardPaste: () => this.handleClipboardPaste(),
+      invokeRowHeaderContextMenuAction: (id, ctx) => this.invokeRowHeaderContextMenuAction(id, ctx),
+      invokeColumnHeaderContextMenuAction: (id, ctx) =>
+        this.invokeColumnHeaderContextMenuAction(id, ctx),
+      handleColumnMenuAction: (id, ctx) =>
+        this.sortFilterController?.handleColumnMenuAction(id, ctx) ?? false,
+      focusScrollHost: () => this.host.focusScrollHost(),
+    }
   }
 
   private createWebClipboardDeps(): WebClipboardRuntimeDeps {
@@ -411,18 +482,6 @@ export class WebGridRuntime {
   }
 
 
-  /** Phase 4.0 — 注入右键菜单层。 */
-  setContextMenuLayer(layer: DomContextMenuLayer): void {
-    this.contextMenuLayer = layer
-    this.syncContextMenuTheme()
-  }
-
-  /** 注入 filter popover 并同步当前主题。 */
-  setFilterPopover(popover: FilterPopover): void {
-    this.filterPopover = popover
-    this.syncFilterPopoverTheme()
-  }
-
   /** 注入 row-height popover（Phase 4.5）。 */
   setRowHeightPopover(popover: RowHeightPopover): void {
     this.rowHeightPopover = popover
@@ -466,8 +525,7 @@ export class WebGridRuntime {
 
   /** 关闭右键菜单并清理最近菜单上下文。 */
   closeContextMenu(): void {
-    this.contextMenuLayer?.close()
-    this.lastContextMenuContext = null
+    this.contextMenuController?.close()
   }
 
   /** 注册 copy 成功通知回调。 */
@@ -840,233 +898,25 @@ export class WebGridRuntime {
     return this.clipboardController?.paste() ?? Promise.resolve(false)
   }
 
-  /** 处理 host contextmenu 事件，并根据列头/单元格命中打开对应菜单。 */
+  /** 处理 host contextmenu 事件（委托 context-menu feature；未安装则 no-op）。 */
   handleHostContextMenu(event: WebPointerEvent): void {
     if (this.destroyed) return
-    if (!this.contextMenuLayer) return
-    if (this.resizeDrag?.active === true || this.activeDrag?.active) return
-
-    if (this.engine.isCellEditing()) {
-      this.commitCellEdit(false)
-    }
-
-    const frame = this.engine.getFrame()
-    const headerHeight = frame.theme.metrics.headerHeight
-    if (event.y < headerHeight) {
-      if (!this.viewPipeline) return
-      const fields = frame.data.getSchema().fields
-      const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-      if (event.x < rowHeaderWidth) return
-      const scrollX = frame.viewport.scrollX ?? 0
-      const logicalX = event.x - rowHeaderWidth + scrollX
-      if (logicalX < 0 || logicalX >= frame.colsAxis.getTotalSize()) return
-      const colIndex = frame.colsAxis.positionToIndex(logicalX)
-      if (colIndex < 0 || colIndex >= fields.length) return
-      const field = fields[colIndex]
-      if (!field) return
-      const sel = this.engine.getSelection().selectedRange
-      const startCol = sel?.startCol ?? colIndex
-      const endCol = sel?.endCol ?? colIndex
-      const ctx: ContextMenuContext = {
-        targetKind: 'columnHeader',
-        field,
-        colIndex,
-        multiSelect: field.type === 'multiSelect',
-        selectedColCount: endCol - startCol + 1,
-        hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
-      }
-      this.lastContextMenuContext = ctx
-      this.lastContextMenuPoint = {
-        clientX: event.clientX ?? event.x,
-        clientY: event.clientY ?? event.y,
-      }
-      const items = getColumnHeaderContextMenuItems(ctx, this.viewPipeline)
-      this.contextMenuLayer.open({
-        clientX: event.clientX ?? event.x,
-        clientY: event.clientY ?? event.y,
-        items,
-      })
-      return
-    }
-
-    // Phase 4.5 — 行头区域（x < rowHeaderWidth，y >= headerHeight）右键：选中整行并打开行头菜单
-    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    if (rowHeaderWidth > 0 && event.x < rowHeaderWidth) {
-      const scrollY = frame.viewport.scrollY ?? 0
-      const logicalY = event.y - headerHeight + scrollY
-      if (logicalY >= 0) {
-        const rowIndex = frame.rowsAxis.positionToIndex(logicalY)
-        const colCount = frame.data.getSchema().fields.length
-        if (rowIndex >= 0 && rowIndex < frame.rowsAxis.getCount() && colCount > 0) {
-          // 选中整行
-          this.engine.setSelection({
-            activeCell: { rowIndex, colIndex: 0 },
-            anchorCell: { rowIndex, colIndex: 0 },
-            extentCell: { rowIndex, colIndex: colCount - 1 },
-            selectedRange: {
-              startRow: rowIndex,
-              endRow: rowIndex,
-              startCol: 0,
-              endCol: colCount - 1,
-            },
-          })
-          this.afterEngineMutation()
-          const ctx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: rowIndex }
-          this.lastContextMenuContext = ctx
-          this.lastContextMenuPoint = {
-            clientX: event.clientX ?? event.x,
-            clientY: event.clientY ?? event.y,
-          }
-          const hiddenSet = new Set(this.engine.getHiddenRows())
-          const sel = this.engine.getSelection().selectedRange!
-          let hasHidden = false
-          for (let r = sel.startRow; r <= sel.endRow && !hasHidden; r++) {
-            const underlying = this.engine.getData().resolveUnderlyingRow?.(r) ?? r
-            if (hiddenSet.has(underlying)) hasHidden = true
-          }
-          const n = sel.endRow - sel.startRow + 1
-          const items = getRowHeaderContextMenuItems(n, hasHidden)
-          this.contextMenuLayer.open({
-            clientX: event.clientX ?? event.x,
-            clientY: event.clientY ?? event.y,
-            items,
-          })
-        }
-      }
-      return
-    }
-
-    const hit = hitTestCell(frame, event)
-    if (!hit) return
-    if (hit.colIndex < 0 || hit.rowIndex < 0) return
-
-    const selection = this.engine.getSelection()
-    const range = selection.selectedRange
-    const inRange =
-      range !== null &&
-      hit.rowIndex >= range.startRow &&
-      hit.rowIndex <= range.endRow &&
-      hit.colIndex >= range.startCol &&
-      hit.colIndex <= range.endCol
-    if (!inRange) {
-      this.engine.selectCell(hit)
-      this.afterEngineMutation()
-    }
-
-    const newSelection = this.engine.getSelection()
-    // Phase 4.1：Paste 项 enabled 与否取决于 DataSource 是否可写。
-    // 外部剪贴板有没有内容需要异步 readText 才能确定，菜单同步阶段不读取。
-    const dataMutable = isMutableDataSource(this.engine.getData())
-    const ctx: ContextMenuContext = {
-      targetKind: 'cell',
-      cell: hit,
-      selectedRange: newSelection.selectedRange,
-      hasSelection: newSelection.activeCell !== null,
-      clipboardReady: dataMutable,
-    }
-    this.lastContextMenuContext = ctx
-    this.lastContextMenuPoint = {
-      clientX: event.clientX ?? event.x,
-      clientY: event.clientY ?? event.y,
-    }
-    const items = getCellContextMenuItems(ctx)
-    this.contextMenuLayer.open({
-      clientX: event.clientX ?? event.x,
-      clientY: event.clientY ?? event.y,
-      items,
-    })
+    this.contextMenuController?.handleHostContextMenu(event)
   }
 
-  /** 处理右键菜单项选择，优先执行内置 sort/filter/clipboard 行为。 */
+  /** 处理右键菜单项选择（委托 context-menu feature）。 */
   handleContextMenuSelected(id: ContextMenuAction): void {
-    const ctx = this.lastContextMenuContext
-    if (ctx?.targetKind === 'rowHeader') {
-      this.invokeRowHeaderContextMenuAction(id, { targetRowIndex: ctx.targetRowIndex })
-      return
-    }
-    if (ctx?.targetKind === 'columnHeader') {
-      if (id === 'sort-asc') {
-        this.sortLayer?.setSpec({ fieldId: ctx.field.id, direction: 'asc' })
-        return
-      }
-      if (id === 'sort-desc') {
-        this.sortLayer?.setSpec({ fieldId: ctx.field.id, direction: 'desc' })
-        return
-      }
-      if (id === 'sort-none') {
-        if (this.sortLayer?.getSpec()?.fieldId === ctx.field.id) this.sortLayer.setSpec(null)
-        return
-      }
-      if (id === 'filter-clear') {
-        this.filterLayer?.clear(ctx.field.id)
-        return
-      }
-      if (id === 'filter-open') {
-        this.openFilterPopover(ctx)
-        return
-      }
-      if (
-        id === 'insert-col-left' ||
-        id === 'insert-col-right' ||
-        id === 'delete-cols' ||
-        id === 'hide-cols' ||
-        id === 'unhide-cols' ||
-        id === 'resize-column-width'
-      ) {
-        this.invokeColumnHeaderContextMenuAction(id, { targetColIndex: ctx.colIndex })
-        return
-      }
-    }
-
-    // Phase 4.1：consumer 传了 callback 完全接管；没传走默认引擎
-    if (this.onContextMenuAction) {
-      if (ctx) this.onContextMenuAction(id, ctx)
-      return
-    }
-    if (id === 'copy') {
-      void this.handleClipboardCopy()
-      return
-    }
-    if (id === 'cut') {
-      void this.handleClipboardCut()
-      return
-    }
-    if (id === 'paste') {
-      void this.handleClipboardPaste()
-    }
+    this.contextMenuController?.handleAction(id)
   }
 
   /** 应用 filter popover 返回的条件；null 表示清除当前列筛选。 */
   handleFilterPopoverApply(op: FilterOp | null): void {
-    const fieldId = this.filterPopoverFieldId
-    if (!fieldId) return
-    if (op) this.filterLayer?.setSpec({ fieldId, op })
-    else this.filterLayer?.clear(fieldId)
-    this.filterPopoverFieldId = null
-  }
-
-  /** 打开列头 filter popover；未注入 popover 时回退到外部 action 回调。 */
-  private openFilterPopover(
-    ctx: Extract<ContextMenuContext, { targetKind: 'columnHeader' }>,
-  ): void {
-    if (!this.filterPopover) {
-      this.onContextMenuAction?.('filter-open', ctx)
-      return
-    }
-    const point = this.lastContextMenuPoint ?? { clientX: 0, clientY: 0 }
-    const currentSpec = this.filterLayer?.getSpec()
-    this.filterPopoverFieldId = ctx.field.id
-    this.contextMenuLayer?.close()
-    this.columnReorderOverlay?.hide()
-    this.filterPopover.open(point, {
-      field: ctx.field,
-      op: currentSpec?.fieldId === ctx.field.id ? currentSpec.op : null,
-    })
+    this.sortFilterController?.handleFilterPopoverApply(op)
   }
 
   /** 按单元格坐标程序化打开右键菜单，锚点位于单元格右下角。 */
   openContextMenuAt(rowIndex: number, fieldId: string): void {
-    if (this.destroyed || !this.contextMenuLayer) return
+    if (this.destroyed || !this.contextMenuController) return
     const colIndex = this.engine.getColumnIndex(fieldId)
     if (colIndex < 0) return
     const frame = this.engine.getFrame()
@@ -1221,7 +1071,7 @@ export class WebGridRuntime {
     this.resizeSpacer()
     this.remapScroll()
     this.refresh()
-    this.contextMenuLayer?.close()
+    this.contextMenuController?.close()
     this.activeDrag = null
   }
 
@@ -1315,6 +1165,10 @@ export class WebGridRuntime {
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
     for (const fs of this.frameSyncs) fs.destroy()
     this.frameSyncs = []
+    this.contextMenuController?.destroy()
+    this.contextMenuController = null
+    this.sortFilterController?.destroy()
+    this.sortFilterController = null
     this.renderer.destroy()
     this.host.destroy()
   }
@@ -1323,7 +1177,7 @@ export class WebGridRuntime {
   handleHostScroll(scrollTop: number, scrollLeft: number): void {
     const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
     this.engine.setScroll(logicalX, logicalY)
-    this.contextMenuLayer?.close()
+    this.contextMenuController?.close()
     this.invalidate()
   }
 
@@ -1390,7 +1244,7 @@ export class WebGridRuntime {
       this.activeDrag = null
       return true
     }
-    if (this.filterPopover?.isOpen()) return false
+    if (this.sortFilterController?.isPopoverOpen()) return false
     if (this.engine.isCellEditing()) return false
 
     // Phase 4.1 — Ctrl+X / C / V（Mac 上 Cmd）剪贴板快捷键；Shift / Alt 组合不抢
@@ -1877,12 +1731,12 @@ export class WebGridRuntime {
 
   /** 同步 context menu layer 主题。 */
   private syncContextMenuTheme(): void {
-    this.contextMenuLayer?.applyTheme(this.engine.getTheme())
+    this.contextMenuController?.applyTheme(this.engine.getTheme())
   }
 
   /** 同步 filter popover 主题。 */
   private syncFilterPopoverTheme(): void {
-    this.filterPopover?.applyTheme(this.engine.getTheme())
+    this.sortFilterController?.applyTheme(this.engine.getTheme())
   }
 
   /** 打开指定单元格编辑器（委托编辑能力包；未安装则 no-op）。 */

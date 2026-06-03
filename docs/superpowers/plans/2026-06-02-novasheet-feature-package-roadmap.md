@@ -164,8 +164,8 @@ export function installResizeFeature(ctx: SheetContext): void {
 | [x] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | `2026-06-02-novasheet-fill-handle-feature-package.md` | 首个**整竖切片**：`FillHandleController`(Drag+WebFrameSync) + `DomFillHandleLayer` 进包；web 新增 `WebFrameSync` 可选能力；`computeFillTarget`/`commitFill` 等语义留 core；onFill 暂留 web（决策 B 债务） |
 | [x] | 4 | 单元格编辑 | `@novasheet/feature-editing` | `2026-06-03-novasheet-editing-feature-package.md` | 第二个**整竖切片**：`EditingController`(WebCellEditor+WebFrameSync) + `DomCellEditor` 进包；新增 `web.cell-editor` 贡献点；定位复用 `WebFrameSync`；`commitActiveEdit` 重指向 editing。键盘入口/自定义 editor 暂留 web（债务） |
 | [x] | 5 | 剪贴板 | `@novasheet/feature-clipboard` | `2026-06-03-novasheet-clipboard-feature-package.md` | 第三个**整竖切片**：`ClipboardController`(WebClipboard，纯命令、无 WebFrameSync) + `WebClipboardAdapter` 进包；新增 `web.clipboard` 贡献点；commitPaste/TSV 语义留 core。键盘/菜单入口 + 4 个事件回调暂留 web（债务） |
-| [ ] | 6 | 右键菜单 | `@novasheet/feature-context-menu` | 未开始：实施前单独写计划 | 菜单项通过 contribution 汇聚，DOM menu layer 不硬编码产品菜单 |
-| [ ] | 7 | 排序筛选 | `@novasheet/feature-sort-filter` | 未开始：实施前单独写计划 | `SortLayer` / `FilterLayer` / popover 通过 feature 安装 |
+| [x] | 6 | 右键菜单 | `@novasheet/feature-context-menu` | `2026-06-03-novasheet-context-menu-feature-package.md` | 菜单项通过 contribution 汇聚，DOM menu layer 不硬编码产品菜单 |
+| [x] | 7 | 排序筛选 | `@novasheet/feature-sort-filter` | 已完成：`web.sort-filter` + `sort-filter-default` menu provider；`FilterPopover` 迁包；列头结构项留在 `feature-context-menu` | `SortLayer` / `FilterLayer` 仍 core + backend；默认 BOM 须 context-menu + sort-filter |
 | [ ] | 8 | 行列结构操作 | `@novasheet/feature-structure` | 未开始：实施前单独写计划 | 插入、删除、隐藏、取消隐藏行列从默认菜单动作中拆包 |
 | [ ] | 9 | 合并单元格 | `@novasheet/feature-merge-cells` | 未开始：实施前单独写计划 | merge/unmerge API 和菜单动作成为可安装能力 |
 | [ ] | 10 | 格式化 | `@novasheet/feature-formatting` | 未开始：实施前单独写计划 | fill/border/textWrap 等格式 API 与 UI action 成为可安装能力 |
@@ -183,9 +183,10 @@ export function installResizeFeature(ctx: SheetContext): void {
 - phase 2 `[~]` 半拆：`feature-resize` 只搬了 `ResizeDrag`；handle layer / popover / style / 键盘 / 菜单仍在 web。
 - phase 3 ✅ 完成：`@novasheet/feature-fill-handle`（首个整竖切片）。`FillHandleController`(Drag+WebFrameSync) + `DomFillHandleLayer` 进包；`@novasheet/web` 新增可复用 `WebFrameSync` 每帧同步基座（phase 14 回补 resize/reorder overlay 时复用）；`mergeVisualRange` 提升 core。决策 B 债务：`onFill` 暂留 web `setOnFill`，待 engine 事件系统专项再迁。
 - phase 4 ✅ 完成：`@novasheet/feature-editing`（第二个整竖切片）。`EditingController`(WebCellEditor+WebFrameSync) + `DomCellEditor` 进包；新增 `web.cell-editor` 贡献点；定位复用 `WebFrameSync`；`commitActiveEdit` 重指向 editing controller（兑现 fill 的 follow-up）。债务：编辑键入口仍在 kernel（待 keyboard 契约）、自定义 editor 经 web `tryCustomEditor`（待 command 契约）。
-- phase 5 ✅ 完成：`@novasheet/feature-clipboard`（第三个整竖切片）。`ClipboardController`(WebClipboard 纯命令) + `WebClipboardAdapter` + typed 缓存进包；新增 `web.clipboard` 贡献点（无 WebFrameSync）；`setData`/`updateViewData` 改 `onDataReplaced` 失效缓存。债务：键盘 Cmd+C/X/V 与右键菜单入口仍在 kernel；`onCopy`/`onCut`/`onPaste`/`onPasteSkipped` 经 web deps 转发（待 engine 事件）。
+- phase 5 ✅ 完成：`@novasheet/feature-clipboard`（第三个整竖切片）。`ClipboardController`(WebClipboard 纯命令) + `WebClipboardAdapter` + typed 缓存进包；新增 `web.clipboard` 贡献点（无 WebFrameSync）；`setData`/`updateViewData` 改 `onDataReplaced` 失效缓存。债务：键盘 Cmd+C/X/V 仍在 kernel；`onCopy`/`onCut`/`onPaste`/`onPasteSkipped` 经 web deps 转发（待 engine 事件）。
+- phase 6 ✅ 完成：`@novasheet/feature-context-menu`（第四个整竖切片）。`web.menu-item` + `web.context-menu`；`ContextMenuController` + `DomContextMenuLayer`。债务：键盘剪贴板快捷键仍在 kernel；sort/filter/structure 动作仍经 runtime deps。
 
-下一个执行焦点是 phase 6：`@novasheet/feature-context-menu`（菜单项经 contribution 汇聚，DOM menu layer 不硬编码产品菜单）——这一包将**建立 menu 契约词汇表**，解锁 resize/structure/sort-filter 以及 editing/clipboard 的菜单/键盘入口回收。每个 feature 仍需单独计划。
+下一个执行焦点是 phase 8：`@novasheet/feature-structure`（实施前单独写计划）——列头/行头 insert/delete/hide/resize 菜单项与结构动作。phase 7 已完成：`web.sort-filter` + `feature-sort-filter`（`FilterPopover` + 列头 sort/filter）；phase 6 已完成 `feature-context-menu`（列 provider 收窄为结构项 only）。键盘入口与 clipboard 专用 menu provider 仍为可选 follow-up（context-menu 计划 Task 5）。
 
 ## 大能力拆包顺序
 

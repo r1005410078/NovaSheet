@@ -111,10 +111,12 @@ export type { CellEditSession } from './interaction/CellEditModel'
 export {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
+  getColumnHeaderStructuralMenuItems,
   getRowHeaderContextMenuItems,
 } from './interaction/ContextMenuModel'
 export type {
   CellMenuContext,
+  ColumnHeaderMenuContext,
   ContextMenuAction,
   ContextMenuContext,
   ContextMenuItem,
@@ -180,7 +182,6 @@ export type { SortDirection, SortSpec } from './view/SortLayer'
 export { ViewPipeline } from './view/ViewPipeline'
 export type {
   ColumnHeaderMenuAction,
-  ColumnHeaderMenuContext,
   ColumnHeaderMenuItem,
   HeaderDecoration,
   ViewLayer,

@@ -40,9 +40,34 @@ export type {
   WebClipboardContribution,
   WebClipboardRuntimeDeps,
 } from './clipboard/WebClipboard'
-export { DomContextMenuLayer } from './interaction/DomContextMenuLayer'
+export {
+  WEB_MENU_ITEM_CONTRIBUTION,
+  registerWebMenuItem,
+  getWebMenuItemContributions,
+  mergeMenuItems,
+} from './menu/WebMenuItem'
+export type { WebMenuItemProvider, WebMenuItemRuntimeDeps } from './menu/WebMenuItem'
+export {
+  WEB_CONTEXT_MENU_CONTRIBUTION,
+  registerWebContextMenu,
+  getWebContextMenuContributions,
+} from './menu/WebContextMenu'
+export type {
+  WebContextMenu,
+  WebContextMenuContribution,
+  WebContextMenuRuntimeDeps,
+} from './menu/WebContextMenu'
+export {
+  WEB_SORT_FILTER_CONTRIBUTION,
+  registerWebSortFilter,
+  getWebSortFilterContributions,
+} from './sort-filter/WebSortFilter'
+export type {
+  WebSortFilter,
+  WebSortFilterContribution,
+  WebSortFilterRuntimeDeps,
+} from './sort-filter/WebSortFilter'
 export { DomHandleLayer } from './interaction/DomHandleLayer'
-export { FilterPopover } from './interaction/FilterPopover'
 export { HideColToggleHandle } from './handle/HideColToggleHandle'
 export { HideToggleHandle } from './handle/HideToggleHandle'
 export { ColumnReorderOverlay } from './overlay/ColumnReorderOverlay'

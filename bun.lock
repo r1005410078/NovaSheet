@@ -67,6 +67,20 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/feature-context-menu": {
+      "name": "@novasheet/feature-context-menu",
+      "version": "0.1.0",
+      "dependencies": {
+        "@novasheet/core": "^0.1.0",
+        "@novasheet/web": "^0.1.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.9.0",
+        "@types/bun": "latest",
+        "happy-dom": "^20.9.0",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/feature-editing": {
       "name": "@novasheet/feature-editing",
       "version": "0.1.0",
@@ -76,6 +90,7 @@
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.9.0",
+        "@novasheet/feature-context-menu": "^0.1.0",
         "@types/bun": "latest",
         "happy-dom": "^20.9.0",
         "typescript": "^6.0.3",
@@ -123,6 +138,20 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/feature-sort-filter": {
+      "name": "@novasheet/feature-sort-filter",
+      "version": "0.1.0",
+      "dependencies": {
+        "@novasheet/core": "^0.1.0",
+        "@novasheet/web": "^0.1.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.9.0",
+        "@types/bun": "latest",
+        "happy-dom": "^20.9.0",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/sheet": {
       "name": "@novasheet/sheet",
       "version": "0.1.0",
@@ -130,10 +159,12 @@
         "@novasheet/canvas2d": "^0.1.0",
         "@novasheet/core": "^0.1.0",
         "@novasheet/feature-clipboard": "^0.1.0",
+        "@novasheet/feature-context-menu": "^0.1.0",
         "@novasheet/feature-editing": "^0.1.0",
         "@novasheet/feature-fill-handle": "^0.1.0",
         "@novasheet/feature-resize": "^0.1.0",
         "@novasheet/feature-row-column-reorder": "^0.1.0",
+        "@novasheet/feature-sort-filter": "^0.1.0",
         "@novasheet/web": "^0.1.0",
       },
       "devDependencies": {
@@ -289,6 +320,8 @@
 
     "@novasheet/feature-clipboard": ["@novasheet/feature-clipboard@workspace:packages/feature-clipboard"],
 
+    "@novasheet/feature-context-menu": ["@novasheet/feature-context-menu@workspace:packages/feature-context-menu"],
+
     "@novasheet/feature-editing": ["@novasheet/feature-editing@workspace:packages/feature-editing"],
 
     "@novasheet/feature-fill-handle": ["@novasheet/feature-fill-handle@workspace:packages/feature-fill-handle"],
@@ -296,6 +329,8 @@
     "@novasheet/feature-resize": ["@novasheet/feature-resize@workspace:packages/feature-resize"],
 
     "@novasheet/feature-row-column-reorder": ["@novasheet/feature-row-column-reorder@workspace:packages/feature-row-column-reorder"],
+
+    "@novasheet/feature-sort-filter": ["@novasheet/feature-sort-filter@workspace:packages/feature-sort-filter"],
 
     "@novasheet/sheet": ["@novasheet/sheet@workspace:packages/sheet"],
 

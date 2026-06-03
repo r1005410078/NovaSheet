@@ -10,7 +10,7 @@
  */
 
 import type { ContextMenuAction, ContextMenuItem, Theme } from '@novasheet/core'
-import { applyContextMenuTheme, ensureContextMenuStylesheet } from '../host/context-menu-style'
+import { applyContextMenuTheme, ensureContextMenuStylesheet } from './context-menu-style'
 
 export interface DomContextMenuLayerCallbacks {
   onSelect: (id: ContextMenuAction) => void

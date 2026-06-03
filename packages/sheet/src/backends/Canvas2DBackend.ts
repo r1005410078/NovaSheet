@@ -53,10 +53,8 @@ import type {
 import {
   ColumnReorderOverlay,
   ColumnWidthPopover,
-  DomContextMenuLayer,
   DomGridHost,
   DomHandleLayer,
-  FilterPopover,
   HideColToggleHandle,
   HideToggleHandle,
   RowHeightPopover,
@@ -90,8 +88,6 @@ export class Canvas2DBackend implements GridController {
   private handleLayer: DomHandleLayer
   private hideToggleHandle: HideToggleHandle
   private hideColToggleHandle: HideColToggleHandle
-  private contextMenuLayer!: DomContextMenuLayer
-  private filterPopover!: FilterPopover
   private rowHeightPopover!: RowHeightPopover
   private columnWidthPopover!: ColumnWidthPopover
   private columnReorderOverlay: ColumnReorderOverlay
@@ -208,18 +204,6 @@ export class Canvas2DBackend implements GridController {
       openCustomCellEditor: (cell) => this.openCustomCellEditor(cell),
     })
 
-    this.contextMenuLayer = new DomContextMenuLayer(this.container, {
-      onSelect: (id) => this.runtime.handleContextMenuSelected(id),
-      onClose: () => this.host.focusScrollHost(),
-    })
-    this.contextMenuLayer.attach()
-    this.runtime.setContextMenuLayer(this.contextMenuLayer)
-    this.filterPopover = new FilterPopover(this.container, {
-      onApply: (op) => this.runtime.handleFilterPopoverApply(op),
-      onCancel: () => this.host.focusScrollHost(),
-    })
-    this.filterPopover.attach()
-    this.runtime.setFilterPopover(this.filterPopover)
     this.rowHeightPopover = new RowHeightPopover({
       onSubmit: (px) => {
         const ids = this.runtime.getPendingRowHeightIds()
@@ -329,8 +313,6 @@ export class Canvas2DBackend implements GridController {
     this.unsubscribePipeline()
     this.pipeline.dispose()
     this.closeExtensionPopover()
-    this.contextMenuLayer.destroy()
-    this.filterPopover.destroy()
     this.rowHeightPopover.destroy()
     this.columnWidthPopover.destroy()
     this.columnReorderOverlay.destroy()

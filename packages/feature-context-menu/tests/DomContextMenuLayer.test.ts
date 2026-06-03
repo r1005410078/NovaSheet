@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { DomContextMenuLayer } from '../../src/interaction/DomContextMenuLayer'
+import { DomContextMenuLayer } from '../src/DomContextMenuLayer'
 import { denseGridTheme } from '@novasheet/core'
 
 function makeContainer(): HTMLElement {

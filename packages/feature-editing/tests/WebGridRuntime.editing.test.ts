@@ -1,12 +1,14 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { createSheetContext } from '@novasheet/core'
 import { WebGridRuntime, type WebHost, type WebRenderer } from '@novasheet/web'
+import { installContextMenuFeature } from '@novasheet/feature-context-menu'
 import { installEditingFeature } from '../src'
 import { makeMockGridEngine } from './helpers/mock-grid-engine'
 
 function makeContext() {
   const ctx = createSheetContext()
   installEditingFeature(ctx)
+  installContextMenuFeature(ctx)
   return ctx
 }
 
@@ -149,13 +151,10 @@ describe('WebGridRuntime × editing feature', () => {
     engine.commitCellEdit = mock(() => true)
     const container = document.createElement('div')
     const runtime = new WebGridRuntime({ engine, context: makeContext(), host: makeHost(container), renderer: makeRenderer() })
-    const menu = { open: mock(() => {}), close: mock(() => {}), applyTheme: mock(() => {}), destroy: mock(() => {}) }
-    runtime.setContextMenuLayer(menu as never)
-
     runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
 
     expect(engine.commitCellEdit).toHaveBeenCalled()
-    expect(menu.open).toHaveBeenCalled()
+    expect(document.querySelector('[data-novasheet-context-menu][data-open]')).not.toBeNull()
     runtime.destroy()
   })
 })
