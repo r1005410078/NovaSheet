@@ -30,6 +30,16 @@ export type {
   WebCellEditorContribution,
   WebCellEditorRuntimeDeps,
 } from './interaction/cell-editor/WebCellEditor'
+export {
+  WEB_CLIPBOARD_CONTRIBUTION,
+  registerWebClipboard,
+  getWebClipboardContributions,
+} from './clipboard/WebClipboard'
+export type {
+  WebClipboard,
+  WebClipboardContribution,
+  WebClipboardRuntimeDeps,
+} from './clipboard/WebClipboard'
 export { DomContextMenuLayer } from './interaction/DomContextMenuLayer'
 export { DomHandleLayer } from './interaction/DomHandleLayer'
 export { FilterPopover } from './interaction/FilterPopover'
