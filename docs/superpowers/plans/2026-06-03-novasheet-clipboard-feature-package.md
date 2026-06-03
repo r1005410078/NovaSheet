@@ -6,6 +6,8 @@
 
 **Architecture:** 新增 `WebClipboard` 纯命令 capability + `web.clipboard` 贡献点（无 `WebFrameSync`/无 DOM 生命周期）。`ClipboardController` 自持 `WebClipboardAdapter` 与 typed 缓存，实现 copy/cut/paste 与 `onDataReplaced` 缓存失效。runtime 键盘/菜单/Grid 公共入口经薄壳委托。剪贴板语义（commitPaste/TSV）留 `@novasheet/core`。
 
+**Execution Status (2026-06-03, inline 执行):** 完成 Task 1-3。全量 gates 通过（lint / typecheck --filter '*' / bun test 904 pass / 全包 build）。原 web 三块剪贴板测试（behavior / keyboard / menu）迁入 feature-clipboard：行为/typed/parse/skipped/non-mutable → `ClipboardController.test.ts`，键盘/菜单入口 → `WebGridRuntime.clipboard.test.ts`。
+
 **Tech Stack:** Bun workspaces、TypeScript strict + `verbatimModuleSyntax`、`bun:test`。
 
 **设计依据：** `docs/superpowers/specs/2026-06-03-novasheet-clipboard-feature-package-design.md`。

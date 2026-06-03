@@ -163,7 +163,7 @@ export function installResizeFeature(ctx: SheetContext): void {
 | [~] | 2 | 行高列宽 resize | `@novasheet/feature-resize` | `2026-06-02-novasheet-resize-feature-package.md` | **半拆**：`ResizeDrag` 已进包；`DomHandleLayer`/popover/style/键盘/菜单仍在 web，待 phase 14 回补 |
 | [x] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | `2026-06-02-novasheet-fill-handle-feature-package.md` | 首个**整竖切片**：`FillHandleController`(Drag+WebFrameSync) + `DomFillHandleLayer` 进包；web 新增 `WebFrameSync` 可选能力；`computeFillTarget`/`commitFill` 等语义留 core；onFill 暂留 web（决策 B 债务） |
 | [x] | 4 | 单元格编辑 | `@novasheet/feature-editing` | `2026-06-03-novasheet-editing-feature-package.md` | 第二个**整竖切片**：`EditingController`(WebCellEditor+WebFrameSync) + `DomCellEditor` 进包；新增 `web.cell-editor` 贡献点；定位复用 `WebFrameSync`；`commitActiveEdit` 重指向 editing。键盘入口/自定义 editor 暂留 web（债务） |
-| [ ] | 5 | 剪贴板 | `@novasheet/feature-clipboard` | 未开始：实施前单独写计划 | copy/paste adapter 与 paste commit 通过 feature 安装 |
+| [x] | 5 | 剪贴板 | `@novasheet/feature-clipboard` | `2026-06-03-novasheet-clipboard-feature-package.md` | 第三个**整竖切片**：`ClipboardController`(WebClipboard，纯命令、无 WebFrameSync) + `WebClipboardAdapter` 进包；新增 `web.clipboard` 贡献点；commitPaste/TSV 语义留 core。键盘/菜单入口 + 4 个事件回调暂留 web（债务） |
 | [ ] | 6 | 右键菜单 | `@novasheet/feature-context-menu` | 未开始：实施前单独写计划 | 菜单项通过 contribution 汇聚，DOM menu layer 不硬编码产品菜单 |
 | [ ] | 7 | 排序筛选 | `@novasheet/feature-sort-filter` | 未开始：实施前单独写计划 | `SortLayer` / `FilterLayer` / popover 通过 feature 安装 |
 | [ ] | 8 | 行列结构操作 | `@novasheet/feature-structure` | 未开始：实施前单独写计划 | 插入、删除、隐藏、取消隐藏行列从默认菜单动作中拆包 |
@@ -183,8 +183,9 @@ export function installResizeFeature(ctx: SheetContext): void {
 - phase 2 `[~]` 半拆：`feature-resize` 只搬了 `ResizeDrag`；handle layer / popover / style / 键盘 / 菜单仍在 web。
 - phase 3 ✅ 完成：`@novasheet/feature-fill-handle`（首个整竖切片）。`FillHandleController`(Drag+WebFrameSync) + `DomFillHandleLayer` 进包；`@novasheet/web` 新增可复用 `WebFrameSync` 每帧同步基座（phase 14 回补 resize/reorder overlay 时复用）；`mergeVisualRange` 提升 core。决策 B 债务：`onFill` 暂留 web `setOnFill`，待 engine 事件系统专项再迁。
 - phase 4 ✅ 完成：`@novasheet/feature-editing`（第二个整竖切片）。`EditingController`(WebCellEditor+WebFrameSync) + `DomCellEditor` 进包；新增 `web.cell-editor` 贡献点；定位复用 `WebFrameSync`；`commitActiveEdit` 重指向 editing controller（兑现 fill 的 follow-up）。债务：编辑键入口仍在 kernel（待 keyboard 契约）、自定义 editor 经 web `tryCustomEditor`（待 command 契约）。
+- phase 5 ✅ 完成：`@novasheet/feature-clipboard`（第三个整竖切片）。`ClipboardController`(WebClipboard 纯命令) + `WebClipboardAdapter` + typed 缓存进包；新增 `web.clipboard` 贡献点（无 WebFrameSync）；`setData`/`updateViewData` 改 `onDataReplaced` 失效缓存。债务：键盘 Cmd+C/X/V 与右键菜单入口仍在 kernel；`onCopy`/`onCut`/`onPaste`/`onPasteSkipped` 经 web deps 转发（待 engine 事件）。
 
-下一个执行焦点是 phase 5：`@novasheet/feature-clipboard`（copy/paste adapter 与 paste commit）。每个 feature 仍需单独计划，避免一次性改穿 runtime。
+下一个执行焦点是 phase 6：`@novasheet/feature-context-menu`（菜单项经 contribution 汇聚，DOM menu layer 不硬编码产品菜单）——这一包将**建立 menu 契约词汇表**，解锁 resize/structure/sort-filter 以及 editing/clipboard 的菜单/键盘入口回收。每个 feature 仍需单独计划。
 
 ## 大能力拆包顺序
 

@@ -90,6 +90,11 @@ Feature package 拥有用户可见表格能力，并通过 `SheetContext` 安装
 提供运行时依赖并调用 engine API。`@novasheet/sheet` 默认安装该能力包，默认 `Grid` 保持原有行列拖拽行为。
 `@novasheet/feature-resize` 拥有行高/列宽 resize 拖拽状态机：它通过 web drag runtime deps
 消费 `DomHandleLayer`，而 DOM handle layer 与 resize handle 样式仍属于 `@novasheet/web`。
+`@novasheet/feature-clipboard` 拥有剪贴板交互（第三个「整竖切片」拆包）：`ClipboardController` 实现纯命令
+`WebClipboard`（copy/cut/paste + onDataReplaced 缓存失效），自持 `WebClipboardAdapter`（navigator 包装）与
+typed-paste 缓存，通过 `web.clipboard` 贡献点安装，无 DOM overlay / 无 `WebFrameSync`。剪贴板语义
+（`commitPaste`/TSV 解析）留 `@novasheet/core`。已知债务：键盘 Cmd+C/X/V 与右键菜单入口仍在 kernel（待
+keyboard/menu 契约）；`onCopy`/`onCut`/`onPaste`/`onPasteSkipped` 经 web deps 转发（待 engine 事件）。
 `@novasheet/feature-editing` 拥有单元格编辑交互（第二个「整竖切片」拆包）：`EditingController`
 同时实现 `WebCellEditor`(命令) 与 `WebFrameSync`(定位)，自持 `DomCellEditor`，通过 `web.cell-editor`
 贡献点安装。runtime 保留键盘/双击起编入口并委托 controller，`commitActiveEdit` 重指向它；编辑语义
