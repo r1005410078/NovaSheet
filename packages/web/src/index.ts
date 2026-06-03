@@ -20,6 +20,16 @@ export type {
   WebFrameSync,
   WebInteractionStatus,
 } from './interaction/drag/WebDragContribution'
+export {
+  WEB_CELL_EDITOR_CONTRIBUTION,
+  registerWebCellEditor,
+  getWebCellEditorContributions,
+} from './interaction/cell-editor/WebCellEditor'
+export type {
+  WebCellEditor,
+  WebCellEditorContribution,
+  WebCellEditorRuntimeDeps,
+} from './interaction/cell-editor/WebCellEditor'
 export { DomCellEditor } from './interaction/DomCellEditor'
 export { DomContextMenuLayer } from './interaction/DomContextMenuLayer'
 export { DomHandleLayer } from './interaction/DomHandleLayer'
