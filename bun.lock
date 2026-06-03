@@ -110,6 +110,20 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/feature-merge-cells": {
+      "name": "@novasheet/feature-merge-cells",
+      "version": "0.1.0",
+      "dependencies": {
+        "@novasheet/core": "^0.1.0",
+        "@novasheet/web": "^0.1.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.9.0",
+        "@types/bun": "latest",
+        "happy-dom": "^20.9.0",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/feature-resize": {
       "name": "@novasheet/feature-resize",
       "version": "0.1.0",
@@ -152,6 +166,20 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/feature-structure": {
+      "name": "@novasheet/feature-structure",
+      "version": "0.1.0",
+      "dependencies": {
+        "@novasheet/core": "^0.1.0",
+        "@novasheet/web": "^0.1.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.9.0",
+        "@types/bun": "latest",
+        "happy-dom": "^20.9.0",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/sheet": {
       "name": "@novasheet/sheet",
       "version": "0.1.0",
@@ -162,9 +190,11 @@
         "@novasheet/feature-context-menu": "^0.1.0",
         "@novasheet/feature-editing": "^0.1.0",
         "@novasheet/feature-fill-handle": "^0.1.0",
+        "@novasheet/feature-merge-cells": "^0.1.0",
         "@novasheet/feature-resize": "^0.1.0",
         "@novasheet/feature-row-column-reorder": "^0.1.0",
         "@novasheet/feature-sort-filter": "^0.1.0",
+        "@novasheet/feature-structure": "^0.1.0",
         "@novasheet/web": "^0.1.0",
       },
       "devDependencies": {
@@ -326,11 +356,15 @@
 
     "@novasheet/feature-fill-handle": ["@novasheet/feature-fill-handle@workspace:packages/feature-fill-handle"],
 
+    "@novasheet/feature-merge-cells": ["@novasheet/feature-merge-cells@workspace:packages/feature-merge-cells"],
+
     "@novasheet/feature-resize": ["@novasheet/feature-resize@workspace:packages/feature-resize"],
 
     "@novasheet/feature-row-column-reorder": ["@novasheet/feature-row-column-reorder@workspace:packages/feature-row-column-reorder"],
 
     "@novasheet/feature-sort-filter": ["@novasheet/feature-sort-filter@workspace:packages/feature-sort-filter"],
+
+    "@novasheet/feature-structure": ["@novasheet/feature-structure@workspace:packages/feature-structure"],
 
     "@novasheet/sheet": ["@novasheet/sheet@workspace:packages/sheet"],
 

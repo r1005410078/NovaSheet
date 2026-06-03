@@ -67,6 +67,26 @@ export type {
   WebSortFilterContribution,
   WebSortFilterRuntimeDeps,
 } from './sort-filter/WebSortFilter'
+export {
+  WEB_STRUCTURE_CONTRIBUTION,
+  registerWebStructure,
+  getWebStructureContributions,
+} from './structure/WebStructure'
+export type {
+  WebStructure,
+  WebStructureContribution,
+  WebStructureRuntimeDeps,
+} from './structure/WebStructure'
+export {
+  WEB_MERGE_CELLS_CONTRIBUTION,
+  registerWebMergeCells,
+  getWebMergeCellsContributions,
+} from './merge-cells/WebMergeCells'
+export type {
+  WebMergeCells,
+  WebMergeCellsContribution,
+  WebMergeCellsRuntimeDeps,
+} from './merge-cells/WebMergeCells'
 export { DomHandleLayer } from './interaction/DomHandleLayer'
 export { HideColToggleHandle } from './handle/HideColToggleHandle'
 export { HideToggleHandle } from './handle/HideToggleHandle'

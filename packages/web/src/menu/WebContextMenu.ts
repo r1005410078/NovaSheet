@@ -1,8 +1,10 @@
 import type {
+  CellMenuContext,
   ColumnHeaderMenuContext,
   ContextMenuAction,
   ContextMenuContext,
   GridEngine,
+  RowHeaderMenuContext,
   SheetContext,
   Theme,
   ViewPipeline,
@@ -38,12 +40,14 @@ export interface WebContextMenuRuntimeDeps {
   hasContextMenuConsumer(): boolean
   /** 若 consumer 注册了 onContextMenuAction 则派发并返回 true。 */
   notifyContextMenuAction(action: ContextMenuAction, ctx: ContextMenuContext): boolean
+  /** 单元格 merge/unmerge 动作；返回 true 表示已消费。 */
+  handleCellMenuAction(id: ContextMenuAction, ctx: CellMenuContext): boolean
   clipboardCopy(): Promise<boolean>
   clipboardCut(): Promise<boolean>
   clipboardPaste(): Promise<boolean>
-  invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void
-  invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void
-  /** sort/filter 列头动作；返回 true 表示已消费。 */
+  /** 行头结构动作；返回 true 表示已消费。 */
+  handleRowHeaderMenuAction(id: ContextMenuAction, ctx: RowHeaderMenuContext): boolean
+  /** 列头 sort/filter/structure 动作；返回 true 表示已消费。 */
   handleColumnMenuAction(id: ContextMenuAction, ctx: ColumnHeaderMenuContext): boolean
   focusScrollHost(): void
 }

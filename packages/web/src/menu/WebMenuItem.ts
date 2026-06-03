@@ -1,13 +1,20 @@
-import type { ContextMenuAction, ContextMenuContext, ContextMenuItem, SheetContext } from '@novasheet/core'
+import type {
+  ContextMenuAction,
+  ContextMenuContext,
+  ContextMenuItem,
+  GridEngine,
+  SheetContext,
+  ViewPipeline,
+} from '@novasheet/core'
 
 /** Contribution point id for context menu item providers. */
 export const WEB_MENU_ITEM_CONTRIBUTION = 'web.menu-item'
 
-import type { ViewPipeline } from '@novasheet/core'
-
 /** Runtime services passed to menu item providers when building items. */
 export interface WebMenuItemRuntimeDeps {
   readonly viewPipeline?: ViewPipeline
+  readonly engine?: GridEngine
+  collectHiddenInViewColRange?(startCol: number, endCol: number): readonly string[]
 }
 
 /** @deprecated Use WebMenuItemRuntimeDeps — alias for feature packages. */

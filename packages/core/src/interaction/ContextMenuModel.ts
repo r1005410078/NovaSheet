@@ -5,6 +5,8 @@
  * 根据选择状态和剪贴板可用性决定菜单项的启用/禁用状态。
  */
 
+import { rangesIntersect } from '../geometry/range'
+import type { MergeRegion } from '../merge/MergeStore'
 import type { CellAddress, CellRange } from './SelectionModel'
 import type { ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext } from '../view/ViewLayer'
 import type { ViewPipeline } from '../view/ViewPipeline'
@@ -32,6 +34,8 @@ export type ContextMenuAction =
   | 'hide-rows'
   | 'unhide-rows'
   | 'resize-row-height'
+  | 'merge-cells'
+  | 'unmerge-cells'
 
 export interface CellMenuContext {
   readonly targetKind: 'cell'
@@ -66,7 +70,38 @@ export function getCellContextMenuItems(ctx: CellMenuContext): readonly ContextM
   return [
     { id: 'cut', label: '剪切', disabled: !ctx.hasSelection },
     { id: 'copy', label: '复制', disabled: !ctx.hasSelection, separatorAfter: true },
-    { id: 'paste', label: '粘贴', disabled: !ctx.clipboardReady },
+    { id: 'paste', label: '粘贴', disabled: !ctx.clipboardReady, separatorAfter: true },
+  ]
+}
+
+/** 根据选区与可见合并区域计算 merge/unmerge 菜单启用状态。 */
+export function cellMergeMenuState(
+  range: CellRange | null,
+  mergeRegions: readonly MergeRegion[] | undefined,
+): { canMerge: boolean; canUnmerge: boolean } {
+  if (!range) return { canMerge: false, canUnmerge: false }
+  const area = (range.endRow - range.startRow + 1) * (range.endCol - range.startCol + 1)
+  if (area <= 1) return { canMerge: false, canUnmerge: false }
+  const regions = mergeRegions ?? []
+  let touchesMerge = false
+  let overlapsMerge = false
+  for (const region of regions) {
+    if (rangesIntersect(region.range, range)) {
+      touchesMerge = true
+      overlapsMerge = true
+    }
+  }
+  return { canMerge: !overlapsMerge, canUnmerge: touchesMerge }
+}
+
+/** Phase 5-A — 单元格右键菜单中的合并/取消合并项。 */
+export function getCellMergeMenuItems(
+  canMerge: boolean,
+  canUnmerge: boolean,
+): readonly ContextMenuItem[] {
+  return [
+    { id: 'merge-cells', label: '合并单元格', disabled: !canMerge, separatorAfter: false },
+    { id: 'unmerge-cells', label: '取消合并', disabled: !canUnmerge, separatorAfter: false },
   ]
 }
 

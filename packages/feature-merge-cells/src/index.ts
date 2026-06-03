@@ -1,0 +1,1 @@
+export { installMergeCellsFeature } from './installMergeCellsFeature'

@@ -1,12 +1,5 @@
 import type { SheetContext } from '@novasheet/core'
-import {
-  getCellContextMenuItems,
-  getColumnHeaderStructuralMenuItems,
-  getRowHeaderContextMenuItems,
-  type CellMenuContext,
-  type ColumnHeaderMenuContext,
-  type RowHeaderMenuContext,
-} from '@novasheet/core'
+import { getCellContextMenuItems, type CellMenuContext } from '@novasheet/core'
 import {
   registerWebMenuItem,
   type WebMenuItemProvider,
@@ -20,12 +13,9 @@ export interface ClipboardMenuDeps {
   clipboardPaste(): Promise<boolean>
 }
 
-export type ContextMenuMenuItemDeps = WebMenuItemRuntimeDeps &
-  ClipboardMenuDeps & {
-    getRowMenuArgs?(ctx: RowHeaderMenuContext): { n: number; hasHidden: boolean }
-  }
+export type ContextMenuMenuItemDeps = WebMenuItemRuntimeDeps & ClipboardMenuDeps
 
-/** 安装单元格 / 列头 / 行头默认菜单项 provider。 */
+/** 安装单元格默认菜单项 provider（列/行结构项由 feature-structure 提供）。 */
 export function registerDefaultMenuProviders(ctx: SheetContext): void {
   const cellProvider: WebMenuItemProvider = {
     id: 'cell-default',
@@ -54,31 +44,5 @@ export function registerDefaultMenuProviders(ctx: SheetContext): void {
     },
   }
 
-  const columnProvider: WebMenuItemProvider = {
-    id: 'column-default',
-    order: 20,
-    getItems(menuCtx) {
-      if (menuCtx.targetKind !== 'columnHeader') return []
-      const colCtx = menuCtx as ColumnHeaderMenuContext
-      const n = colCtx.selectedColCount ?? 1
-      const hasHidden = colCtx.hasHiddenInSelection ?? false
-      return getColumnHeaderStructuralMenuItems(n, hasHidden)
-    },
-  }
-
-  const rowProvider: WebMenuItemProvider = {
-    id: 'row-default',
-    order: 30,
-    getItems(menuCtx, deps) {
-      if (menuCtx.targetKind !== 'rowHeader') return []
-      const d = deps as ContextMenuMenuItemDeps
-      const args = d.getRowMenuArgs?.(menuCtx as RowHeaderMenuContext)
-      if (!args) return []
-      return getRowHeaderContextMenuItems(args.n, args.hasHidden)
-    },
-  }
-
   registerWebMenuItem(ctx, cellProvider)
-  registerWebMenuItem(ctx, columnProvider)
-  registerWebMenuItem(ctx, rowProvider)
 }

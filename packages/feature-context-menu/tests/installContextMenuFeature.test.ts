@@ -8,10 +8,6 @@ describe('installContextMenuFeature', () => {
     const ctx = createSheetContext()
     installContextMenuFeature(ctx)
     expect(getWebContextMenuContributions(ctx).map((c) => c.id)).toEqual(['context-menu'])
-    expect(getWebMenuItemContributions(ctx).map((p) => p.id)).toEqual([
-      'cell-default',
-      'column-default',
-      'row-default',
-    ])
+    expect(getWebMenuItemContributions(ctx).map((p) => p.id)).toEqual(['cell-default'])
   })
 })

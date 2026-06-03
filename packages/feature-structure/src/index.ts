@@ -1,0 +1,1 @@
+export { installStructureFeature } from './installStructureFeature'

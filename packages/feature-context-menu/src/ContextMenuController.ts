@@ -4,7 +4,6 @@ import {
   type ContextMenuAction,
   type ContextMenuContext,
   type ContextMenuItem,
-  type RowHeaderMenuContext,
   type Theme,
 } from '@novasheet/core'
 import {
@@ -159,27 +158,19 @@ export class ContextMenuController implements WebContextMenu {
   handleAction(id: ContextMenuAction): void {
     const ctx = this.deps.getLastMenuContext()
     if (ctx?.targetKind === 'rowHeader') {
-      this.deps.invokeRowHeaderContextMenuAction(id, { targetRowIndex: ctx.targetRowIndex })
+      if (this.deps.handleRowHeaderMenuAction(id, ctx)) return
       return
     }
     if (ctx?.targetKind === 'columnHeader') {
       if (this.deps.handleColumnMenuAction(id, ctx)) return
-      if (
-        id === 'insert-col-left' ||
-        id === 'insert-col-right' ||
-        id === 'delete-cols' ||
-        id === 'hide-cols' ||
-        id === 'unhide-cols' ||
-        id === 'resize-column-width'
-      ) {
-        this.deps.invokeColumnHeaderContextMenuAction(id, { targetColIndex: ctx.colIndex })
-        return
-      }
+      return
     }
 
     if (!ctx || ctx.targetKind !== 'cell') return
 
     if (this.deps.notifyContextMenuAction(id, ctx)) return
+
+    if (this.deps.handleCellMenuAction(id, ctx)) return
 
     const menuDeps = this.createMenuItemDeps()
     for (const provider of getWebMenuItemContributions(this.deps.context)) {
@@ -204,26 +195,13 @@ export class ContextMenuController implements WebContextMenu {
   private createMenuItemDeps(viewPipeline?: import('@novasheet/core').ViewPipeline): ContextMenuMenuItemDeps {
     return {
       viewPipeline,
+      engine: this.deps.engine,
+      collectHiddenInViewColRange: (startCol, endCol) =>
+        this.deps.collectHiddenInViewColRange(startCol, endCol),
       hasContextMenuConsumer: () => this.deps.hasContextMenuConsumer(),
       clipboardCopy: () => this.deps.clipboardCopy(),
       clipboardCut: () => this.deps.clipboardCut(),
       clipboardPaste: () => this.deps.clipboardPaste(),
-      getRowMenuArgs: (rowCtx: RowHeaderMenuContext) => this.computeRowMenuArgs(rowCtx),
     }
-  }
-
-  private computeRowMenuArgs(rowCtx: RowHeaderMenuContext): { n: number; hasHidden: boolean } {
-    const sel = this.deps.engine.getSelection().selectedRange
-    const startRow = sel?.startRow ?? rowCtx.targetRowIndex
-    const endRow = sel?.endRow ?? rowCtx.targetRowIndex
-    const hiddenSet = new Set(this.deps.engine.getHiddenRows())
-    let hasHidden = false
-    if (sel) {
-      for (let r = sel.startRow; r <= sel.endRow && !hasHidden; r++) {
-        const underlying = this.deps.engine.getData().resolveUnderlyingRow?.(r) ?? r
-        if (hiddenSet.has(underlying)) hasHidden = true
-      }
-    }
-    return { n: endRow - startRow + 1, hasHidden }
   }
 }

@@ -102,14 +102,20 @@ keyboard/menu 契约）；`onCopy`/`onCut`/`onPaste`/`onPasteSkipped` 经 web de
 契约）、自定义 editor 经 web `tryCustomEditor`（待 command 契约）。
 `@novasheet/feature-context-menu` 拥有右键菜单交互（第四个「整竖切片」拆包）：`ContextMenuController`
 通过 `web.context-menu` 安装，自持 `DomContextMenuLayer`（portal-to-body）；菜单项由 `web.menu-item`
-provider 按 order 汇聚（cell/row 默认 provider 调用 core `get*ContextMenuItems`；列头结构项
-`column-default`）。列头 sort/filter 项与动作由 `@novasheet/feature-sort-filter` 提供（默认 BOM 须同时安装）。
-structure 动作仍经 runtime deps 派发（phase 8）。已知债务：键盘 Cmd+C/X/V 仍在 kernel；剪贴板 cell 菜单
-默认 provider 与 `feature-clipboard` 协同。
+provider 按 order 汇聚（仅 `cell-default` cut/copy/paste）。列头 sort/filter 与行列结构项分别由
+`feature-sort-filter` / `feature-structure` / `feature-merge-cells` 提供（默认 BOM 须四 feature + context-menu）。已知债务：
+键盘 Cmd+C/X/V 仍在 kernel；剪贴板 cell 菜单默认 provider 与 `feature-clipboard` 协同。
 `@novasheet/feature-sort-filter` 拥有排序/筛选交互（第五个「整竖切片」拆包）：`SortFilterController`
 通过 `web.sort-filter` 安装，自持 `FilterPopover`；列头 sort/filter 菜单项经 `web.menu-item`
 provider `sort-filter-default`（调用 `ViewPipeline.collectColumnHeaderMenuItems`）。`SortLayer` /
 `FilterLayer` / `ViewPipeline` 仍由 `Canvas2DBackend` 创建并注入 runtime deps。已知债务：键盘入口仍在 kernel。
+`@novasheet/feature-structure` 拥有行列结构操作（第六个「整竖切片」拆包）：`StructureController`
+通过 `web.structure` 安装（无 DOM）；列/行头结构菜单项经 `structure-column-default` /
+`structure-row-default`；`insertRows`/`hideCols` 等 engine API 仍 core。行高/列宽 popover DOM 仍 web
+（phase 14 与 resize 回补）。默认 BOM 须 context-menu + sort-filter + structure。
+`@novasheet/feature-merge-cells` 拥有合并单元格交互（第七个「整竖切片」拆包）：`MergeCellsController`
+通过 `web.merge-cells` 安装；单元格 merge/unmerge 菜单项经 `merge-cells-default` provider。
+`MergeStore` / `engine.mergeCells` 仍 core；`Grid.mergeCells` 仍 runtime 转发。
 `@novasheet/feature-fill-handle` 拥有填充柄交互（首个「整竖切片」拆包）：`FillHandleController`
 同时实现 `Drag` 与 `WebFrameSync`，独占持有 `DomFillHandleLayer`，通过 `web.drag` contribution 安装。
 `@novasheet/web` 为此新增 feature-agnostic 的 `WebFrameSync` 每帧同步契约（runtime 在 flush/teardown

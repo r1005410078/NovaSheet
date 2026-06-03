@@ -1,6 +1,5 @@
 /**
- * Build script for @novasheet/sheet. Same pattern as packages/core/build.ts:
- * Bun.build for ESM + CJS, tsc --emitDeclarationOnly for .d.ts.
+ * Build script for @novasheet/feature-structure.
  */
 
 import { rm, copyFile } from 'node:fs/promises'
@@ -9,20 +8,7 @@ const ROOT = new URL('.', import.meta.url).pathname
 
 await rm(`${ROOT}dist`, { recursive: true, force: true })
 
-const EXTERNALS = [
-  '@novasheet/core',
-  '@novasheet/web',
-  '@novasheet/canvas2d',
-  '@novasheet/feature-clipboard',
-  '@novasheet/feature-context-menu',
-  '@novasheet/feature-sort-filter',
-  '@novasheet/feature-structure',
-  '@novasheet/feature-merge-cells',
-  '@novasheet/feature-editing',
-  '@novasheet/feature-fill-handle',
-  '@novasheet/feature-row-column-reorder',
-  '@novasheet/feature-resize',
-] as const
+const EXTERNALS = ['@novasheet/core', '@novasheet/web'] as const
 
 const common = {
   entrypoints: [`${ROOT}src/index.ts`],
@@ -72,6 +58,3 @@ if (dtsExitCode !== 0) {
 await copyFile(`${ROOT}dist/index.d.ts`, `${ROOT}dist/index.d.cts`)
 
 console.log('Build complete')
-console.log('  ESM:', esmResult.outputs.map((o) => o.path).join(', '))
-console.log('  CJS:', cjsResult.outputs.map((o) => o.path).join(', '))
-console.log('  DTS: index.d.ts, index.d.cts')

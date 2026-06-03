@@ -23,11 +23,11 @@ describe('getCellContextMenuItems — Phase 4.0', () => {
     expect(getCellContextMenuItems(baseCtx).map((i) => i.id)).toEqual(['cut', 'copy', 'paste'])
   })
 
-  it('separator after Copy only', () => {
+  it('separator after Copy and Paste', () => {
     const items = getCellContextMenuItems(baseCtx)
     expect(items[0]!.separatorAfter).toBeFalsy()
     expect(items[1]!.separatorAfter).toBe(true)
-    expect(items[2]!.separatorAfter).toBeFalsy()
+    expect(items[2]!.separatorAfter).toBe(true)
   })
 
   it('Cut / Copy enabled when hasSelection', () => {

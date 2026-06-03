@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, mock, spyOn } from 'bun:test'
 import { createSheetContext, FilterLayer, InMemoryDataSource, SortLayer, ViewPipeline } from '@novasheet/core'
 import { installContextMenuFeature } from '@novasheet/feature-context-menu'
 import { installSortFilterFeature } from '@novasheet/feature-sort-filter'
+import { installStructureFeature } from '@novasheet/feature-structure'
+import { installMergeCellsFeature } from '@novasheet/feature-merge-cells'
 import type {
   CellAddress,
   CellValue,
@@ -571,6 +573,8 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     }))
     const ctx = createSheetContext()
     installSortFilterFeature(ctx)
+    installStructureFeature(ctx)
+    installMergeCellsFeature(ctx)
     installContextMenuFeature(ctx)
     const runtime = new WebGridRuntime({
       engine,
@@ -687,7 +691,76 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
 
     runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
 
-    expect(openMenuItemIds()).toEqual(['cut', 'copy', 'paste'])
+    expect(openMenuItemIds()).toEqual([
+      'cut',
+      'copy',
+      'paste',
+      'merge-cells',
+      'unmerge-cells',
+    ])
+    runtime.destroy()
+  })
+
+  it('merge-cells menu action calls engine.mergeCells on selection', () => {
+    const engine = makeEngine()
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: 1 },
+      selectedRange: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
+    }))
+    engine.getFrame = mock(() => ({
+      data: {} as never,
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: {
+        getCount: () => 2,
+        positionToIndex: (p: number) => Math.floor(p / 28),
+        indexToPosition: (i: number) => i * 28,
+        getSize: () => 28,
+      } as never,
+      colsAxis: {
+        getCount: () => 2,
+        positionToIndex: (p: number) => Math.floor(p / 100),
+        indexToPosition: (i: number) => i * 100,
+        getSize: () => 100,
+      } as never,
+      viewport: {
+        contentRect: { width: 400, height: 300 },
+        rowHeaderWidth: 0,
+        scrollX: 0,
+        scrollY: 0,
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            colBand: 'center',
+            rowRange: [0, 1],
+            colRange: [0, 1],
+            rect: { x: 0, y: 32, width: 200, height: 268 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      mergeRegions: [],
+    }))
+    const ctx = createSheetContext()
+    installMergeCellsFeature(ctx)
+    installContextMenuFeature(ctx)
+    const runtime = new WebGridRuntime({ engine, context: ctx, host: makeHost(), renderer: makeRenderer() })
+
+    runtime.handleHostContextMenu({ x: 50, y: 60, shiftKey: false, clientX: 50, clientY: 60 })
+    runtime.handleContextMenuSelected('merge-cells')
+
+    expect(engine.mergeCells).toHaveBeenCalledWith({
+      startRow: 0,
+      endRow: 1,
+      startCol: 0,
+      endCol: 1,
+    })
     runtime.destroy()
   })
 
@@ -812,6 +885,8 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     }))
     const ctx = createSheetContext()
     installSortFilterFeature(ctx)
+    installStructureFeature(ctx)
+    installMergeCellsFeature(ctx)
     installContextMenuFeature(ctx)
     const runtime = new WebGridRuntime({
       engine,
@@ -835,6 +910,8 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
     const engine = makeEngine()
     const ctx = createSheetContext()
     installSortFilterFeature(ctx)
+    installStructureFeature(ctx)
+    installMergeCellsFeature(ctx)
     installContextMenuFeature(ctx)
     const runtime = new WebGridRuntime({
       engine,

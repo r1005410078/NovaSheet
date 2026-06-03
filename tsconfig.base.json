@@ -10,6 +10,8 @@
       "@novasheet/feature-clipboard": ["packages/feature-clipboard/src/index.ts"],
       "@novasheet/feature-context-menu": ["packages/feature-context-menu/src/index.ts"],
       "@novasheet/feature-sort-filter": ["packages/feature-sort-filter/src/index.ts"],
+      "@novasheet/feature-structure": ["packages/feature-structure/src/index.ts"],
+      "@novasheet/feature-merge-cells": ["packages/feature-merge-cells/src/index.ts"],
       "@novasheet/feature-editing": ["packages/feature-editing/src/index.ts"],
       "@novasheet/feature-fill-handle": ["packages/feature-fill-handle/src/index.ts"],
       "@novasheet/feature-row-column-reorder": [

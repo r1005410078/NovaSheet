@@ -109,7 +109,9 @@ export {
 export { CellEditModel } from './interaction/CellEditModel'
 export type { CellEditSession } from './interaction/CellEditModel'
 export {
+  cellMergeMenuState,
   getCellContextMenuItems,
+  getCellMergeMenuItems,
   getColumnHeaderContextMenuItems,
   getColumnHeaderStructuralMenuItems,
   getRowHeaderContextMenuItems,

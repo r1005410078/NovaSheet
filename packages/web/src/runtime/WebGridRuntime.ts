@@ -53,10 +53,12 @@ import {
   type TextWrapMode,
   type CellAddress,
   type CellRange,
+  type ColumnHeaderMenuContext,
   type ContextMenuAction,
   type ContextMenuContext,
   type ContextMenuItem,
   type GridSelection,
+  type RowHeaderMenuContext,
   type PasteSkippedCell,
   type ResizeHandleRect,
 } from '@novasheet/core'
@@ -100,6 +102,16 @@ import {
   type WebSortFilter,
   type WebSortFilterRuntimeDeps,
 } from '../sort-filter/WebSortFilter'
+import {
+  getWebStructureContributions,
+  type WebStructure,
+  type WebStructureRuntimeDeps,
+} from '../structure/WebStructure'
+import {
+  getWebMergeCellsContributions,
+  type WebMergeCells,
+  type WebMergeCellsRuntimeDeps,
+} from '../merge-cells/WebMergeCells'
 import { ScrollMapper } from '../scroll/ScrollMapper'
 
 /** WebGridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
@@ -258,6 +270,10 @@ export class WebGridRuntime {
   private contextMenuController: WebContextMenu | null = null
   /** 排序/筛选 controller（来自 web.sort-filter 贡献）。 */
   private sortFilterController: WebSortFilter | null = null
+  /** 行列结构 controller（来自 web.structure 贡献）。 */
+  private structureController: WebStructure | null = null
+  /** 合并单元格 controller（来自 web.merge-cells 贡献）。 */
+  private mergeCellsController: WebMergeCells | null = null
   /** Phase 4.5 行高调整弹层。 */
   private rowHeightPopover?: RowHeightPopover
   /** Phase 4.6 列宽调整弹层。 */
@@ -361,6 +377,57 @@ export class WebGridRuntime {
     if (this.sortFilterController) {
       this.sortFilterController.attach(this.host.container)
     }
+    this.structureController =
+      getWebStructureContributions(this.context)
+        .map((c) => c.create(this.createWebStructureDeps()))
+        .find((c): c is WebStructure => c !== null) ?? null
+    this.mergeCellsController =
+      getWebMergeCellsContributions(this.context)
+        .map((c) => c.create(this.createWebMergeCellsDeps()))
+        .find((c): c is WebMergeCells => c !== null) ?? null
+  }
+
+  private createWebMergeCellsDeps(): WebMergeCellsRuntimeDeps {
+    return {
+      getSelectedRange: () => this.engine.getSelection().selectedRange,
+      getVisibleMergeRegions: () => this.engine.getFrame().mergeRegions ?? [],
+      mergeCells: (range) => this.mergeCells(range),
+      unmergeCells: (range) => this.unmergeCells(range),
+    }
+  }
+
+  private createWebStructureDeps(): WebStructureRuntimeDeps {
+    return {
+      engine: this.engine,
+      afterEngineMutation: () => this.afterEngineMutation(),
+      getLastMenuPoint: () => this.lastContextMenuPoint,
+      collectHiddenInViewColRange: (startCol, endCol) =>
+        this.collectHiddenInViewColRange(startCol, endCol),
+      viewColToFieldId: (viewCol) => this.viewColToFieldId(viewCol),
+      rawSchemaIndexBeforeViewCol: (viewCol) => this.rawSchemaIndexBeforeViewCol(viewCol),
+      rawSchemaIndexAfterViewCol: (viewCol) => this.rawSchemaIndexAfterViewCol(viewCol),
+      insertRows: (before, count) => this.insertRows(before, count),
+      deleteRows: (ids) => this.deleteRows(ids),
+      hideRows: (ids) => this.hideRows(ids),
+      unhideRows: (ids) => this.unhideRows(ids),
+      getRowHeight: (rowId) => this.engine.getRowHeight(rowId),
+      openRowHeightPopover: (sortedIds, triggerRect, currentHeight) => {
+        if (!this.rowHeightPopover) return
+        this.pendingRowHeightIds = [...sortedIds]
+        this.rowHeightPopover.open(triggerRect, currentHeight)
+      },
+      hasRowHeightPopover: () => this.rowHeightPopover !== undefined,
+      insertCols: (before, count) => this.insertCols(before, count),
+      deleteCols: (ids) => this.deleteCols(ids),
+      hideCols: (ids) => this.hideCols(ids),
+      unhideCols: (ids) => this.unhideCols(ids),
+      openColumnWidthPopover: (fieldIds, triggerRect, currentWidth) => {
+        if (!this.columnWidthPopover) return
+        this.pendingColumnWidthFieldIds = [...fieldIds]
+        this.columnWidthPopover.open(triggerRect, currentWidth)
+      },
+      hasColumnWidthPopover: () => this.columnWidthPopover !== undefined,
+    }
   }
 
   private createWebSortFilterDeps(): WebSortFilterRuntimeDeps {
@@ -404,14 +471,17 @@ export class WebGridRuntime {
         this.onContextMenuAction(action, ctx)
         return true
       },
+      handleCellMenuAction: (id, ctx) =>
+        this.mergeCellsController?.handleCellMenuAction(id, ctx) ?? false,
       clipboardCopy: () => this.handleClipboardCopy(),
       clipboardCut: () => this.handleClipboardCut(),
       clipboardPaste: () => this.handleClipboardPaste(),
-      invokeRowHeaderContextMenuAction: (id, ctx) => this.invokeRowHeaderContextMenuAction(id, ctx),
-      invokeColumnHeaderContextMenuAction: (id, ctx) =>
-        this.invokeColumnHeaderContextMenuAction(id, ctx),
+      handleRowHeaderMenuAction: (id, ctx) =>
+        this.structureController?.handleRowHeaderMenuAction(id, ctx) ?? false,
       handleColumnMenuAction: (id, ctx) =>
-        this.sortFilterController?.handleColumnMenuAction(id, ctx) ?? false,
+        (this.sortFilterController?.handleColumnMenuAction(id, ctx) ||
+          this.structureController?.handleColumnMenuAction(id, ctx)) ??
+        false,
       focusScrollHost: () => this.host.focusScrollHost(),
     }
   }
@@ -740,40 +810,14 @@ export class WebGridRuntime {
     return getRowHeaderContextMenuItems(n, hasHidden)
   }
 
-  /** Phase 4.5 — 执行行头右键菜单动作。 */
+  /** Phase 4.5 — 执行行头右键菜单动作（委托 structure feature）。 */
   invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void {
-    const sel = this.engine.getSelection().selectedRange
-    const startRow = sel?.startRow ?? ctx.targetRowIndex
-    const endRow = sel?.endRow ?? ctx.targetRowIndex
-    const underlying: number[] = []
-    for (let r = startRow; r <= endRow; r++) {
-      underlying.push(this.engine.getData().resolveUnderlyingRow?.(r) ?? r)
+    if (this.destroyed) return
+    const menuCtx: RowHeaderMenuContext = {
+      targetKind: 'rowHeader',
+      targetRowIndex: ctx.targetRowIndex,
     }
-    const sortedIds = [...new Set(underlying)].sort((a, b) => a - b)
-    if (id === 'insert-above') {
-      const at = this.engine.getData().resolveUnderlyingRow?.(startRow) ?? startRow
-      this.insertRows(at, endRow - startRow + 1)
-    } else if (id === 'insert-below') {
-      const at = (this.engine.getData().resolveUnderlyingRow?.(endRow) ?? endRow) + 1
-      this.insertRows(at, endRow - startRow + 1)
-    } else if (id === 'delete-rows') {
-      this.deleteRows(sortedIds)
-    } else if (id === 'hide-rows') {
-      this.hideRows(sortedIds)
-    } else if (id === 'unhide-rows') {
-      const hiddenSet = new Set(this.engine.getHiddenRows())
-      const toUnhide = sortedIds.filter((id) => hiddenSet.has(id))
-      this.unhideRows(toUnhide)
-    } else if (id === 'resize-row-height') {
-      if (!this.rowHeightPopover || sortedIds.length === 0) return
-      this.pendingRowHeightIds = sortedIds
-      const currentHeight = this.engine.getRowHeight(sortedIds[0]!)
-      const pt = this.lastContextMenuPoint
-      const triggerRect = pt
-        ? { x: pt.clientX, y: pt.clientY, width: 0, height: 0 }
-        : { x: 100, y: 100, width: 0, height: 0 }
-      this.rowHeightPopover.open(triggerRect, currentHeight)
-    }
+    this.structureController?.handleRowHeaderMenuAction(id as ContextMenuAction, menuCtx)
   }
 
   /** Phase 4.6 — 生成列头右键菜单项列表（含结构项与条件 unhide 项）。 */
@@ -798,38 +842,27 @@ export class WebGridRuntime {
     )
   }
 
-  /** Phase 4.6 — 执行列头右键菜单动作。 */
+  /** Phase 4.6 — 执行列头右键菜单动作（sort/filter 与 structure 委托各 feature）。 */
   invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void {
+    if (this.destroyed) return
+    const frame = this.engine.getFrame()
+    const fields = frame.data.getSchema().fields
+    const field = fields[ctx.targetColIndex]
+    if (!field) return
     const sel = this.engine.getSelection().selectedRange
     const startCol = sel?.startCol ?? ctx.targetColIndex
     const endCol = sel?.endCol ?? ctx.targetColIndex
-    const fieldIds: string[] = []
-    for (let viewCol = startCol; viewCol <= endCol; viewCol += 1) {
-      const fieldId = this.viewColToFieldId(viewCol)
-      if (fieldId) fieldIds.push(fieldId)
+    const menuCtx: ColumnHeaderMenuContext = {
+      targetKind: 'columnHeader',
+      field,
+      colIndex: ctx.targetColIndex,
+      multiSelect: field.type === 'multiSelect',
+      selectedColCount: endCol - startCol + 1,
+      hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
     }
-    const count = endCol - startCol + 1
-    if (id === 'insert-col-left') {
-      this.insertCols(this.rawSchemaIndexBeforeViewCol(startCol), count)
-    } else if (id === 'insert-col-right') {
-      this.insertCols(this.rawSchemaIndexAfterViewCol(endCol), count)
-    } else if (id === 'delete-cols') {
-      this.deleteCols(fieldIds)
-    } else if (id === 'hide-cols') {
-      this.hideCols(fieldIds)
-    } else if (id === 'unhide-cols') {
-      this.unhideCols(this.collectHiddenInViewColRange(startCol, endCol))
-    } else if (id === 'resize-column-width') {
-      if (!this.columnWidthPopover || fieldIds.length === 0) return
-      this.pendingColumnWidthFieldIds = fieldIds
-      const fields = this.engine.getData().getSchema().fields
-      const currentWidth = fields.find((field) => field.id === fieldIds[0])?.width ?? 100
-      const point = this.lastContextMenuPoint
-      const triggerRect = point
-        ? { x: point.clientX, y: point.clientY, width: 0, height: 0 }
-        : { x: 100, y: 100, width: 0, height: 0 }
-      this.columnWidthPopover.open(triggerRect, currentWidth)
-    }
+    const action = id as ContextMenuAction
+    if (this.sortFilterController?.handleColumnMenuAction(action, menuCtx)) return
+    this.structureController?.handleColumnMenuAction(action, menuCtx)
   }
 
   private viewColToFieldId(viewCol: number): string | null {

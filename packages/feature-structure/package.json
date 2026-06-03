@@ -1,0 +1,34 @@
+{
+  "name": "@novasheet/feature-structure",
+  "version": "0.1.0",
+  "description": "Structure feature for NovaSheet.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "bun run build.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@novasheet/core": "^0.1.0",
+    "@novasheet/web": "^0.1.0"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^20.9.0",
+    "@types/bun": "latest",
+    "happy-dom": "^20.9.0",
+    "typescript": "^6.0.3"
+  }
+}
