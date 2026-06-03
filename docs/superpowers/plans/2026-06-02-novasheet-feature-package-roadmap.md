@@ -162,7 +162,7 @@ export function installResizeFeature(ctx: SheetContext): void {
 | [~] | 1 | 行列拖拽排序 | `@novasheet/feature-row-column-reorder` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` | **半拆**：drag 已进包；`ColumnReorderOverlay`/`RowReorderOverlay` 仍在 web，待 phase 14 回补 |
 | [~] | 2 | 行高列宽 resize | `@novasheet/feature-resize` | `2026-06-02-novasheet-resize-feature-package.md` | **半拆**：`ResizeDrag` 已进包；`DomHandleLayer`/popover/style/键盘/菜单仍在 web，待 phase 14 回补 |
 | [x] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | `2026-06-02-novasheet-fill-handle-feature-package.md` | 首个**整竖切片**：`FillHandleController`(Drag+WebFrameSync) + `DomFillHandleLayer` 进包；web 新增 `WebFrameSync` 可选能力；`computeFillTarget`/`commitFill` 等语义留 core；onFill 暂留 web（决策 B 债务） |
-| [ ] | 4 | 单元格编辑 | `@novasheet/feature-editing` | 未开始：实施前单独写计划 | `DomCellEditor` / edit lifecycle 通过 feature 安装，自定义 editor 仍可用 |
+| [x] | 4 | 单元格编辑 | `@novasheet/feature-editing` | `2026-06-03-novasheet-editing-feature-package.md` | 第二个**整竖切片**：`EditingController`(WebCellEditor+WebFrameSync) + `DomCellEditor` 进包；新增 `web.cell-editor` 贡献点；定位复用 `WebFrameSync`；`commitActiveEdit` 重指向 editing。键盘入口/自定义 editor 暂留 web（债务） |
 | [ ] | 5 | 剪贴板 | `@novasheet/feature-clipboard` | 未开始：实施前单独写计划 | copy/paste adapter 与 paste commit 通过 feature 安装 |
 | [ ] | 6 | 右键菜单 | `@novasheet/feature-context-menu` | 未开始：实施前单独写计划 | 菜单项通过 contribution 汇聚，DOM menu layer 不硬编码产品菜单 |
 | [ ] | 7 | 排序筛选 | `@novasheet/feature-sort-filter` | 未开始：实施前单独写计划 | `SortLayer` / `FilterLayer` / popover 通过 feature 安装 |
@@ -182,8 +182,9 @@ export function installResizeFeature(ctx: SheetContext): void {
 - phase 1 `[~]` 半拆：`feature-row-column-reorder` 只搬了 drag；reorder overlay 仍在 web。
 - phase 2 `[~]` 半拆：`feature-resize` 只搬了 `ResizeDrag`；handle layer / popover / style / 键盘 / 菜单仍在 web。
 - phase 3 ✅ 完成：`@novasheet/feature-fill-handle`（首个整竖切片）。`FillHandleController`(Drag+WebFrameSync) + `DomFillHandleLayer` 进包；`@novasheet/web` 新增可复用 `WebFrameSync` 每帧同步基座（phase 14 回补 resize/reorder overlay 时复用）；`mergeVisualRange` 提升 core。决策 B 债务：`onFill` 暂留 web `setOnFill`，待 engine 事件系统专项再迁。
+- phase 4 ✅ 完成：`@novasheet/feature-editing`（第二个整竖切片）。`EditingController`(WebCellEditor+WebFrameSync) + `DomCellEditor` 进包；新增 `web.cell-editor` 贡献点；定位复用 `WebFrameSync`；`commitActiveEdit` 重指向 editing controller（兑现 fill 的 follow-up）。债务：编辑键入口仍在 kernel（待 keyboard 契约）、自定义 editor 经 web `tryCustomEditor`（待 command 契约）。
 
-下一个执行焦点是 phase 4：`@novasheet/feature-editing`（`DomCellEditor` / edit lifecycle）。注意 fill 当前经通用 `commitActiveEdit` service 依赖 editing；phase 4 拆包后需重新指向。每个 feature 仍需单独计划，避免一次性改穿 runtime。
+下一个执行焦点是 phase 5：`@novasheet/feature-clipboard`（copy/paste adapter 与 paste commit）。每个 feature 仍需单独计划，避免一次性改穿 runtime。
 
 ## 大能力拆包顺序
 

@@ -6,6 +6,8 @@
 
 **Architecture:** 新增 `WebCellEditor` capability + `web.cell-editor` 贡献点（editing 非 drag）。`EditingController` 同时实现 `WebCellEditor`(命令) + `WebFrameSync`(定位)，自持 `DomCellEditor`。runtime 保留键盘/双击起编入口但委托 `cellEditController`；`commitActiveEdit` 重指向它（兑现 fill 的 follow-up）。编辑语义留 `@novasheet/core`。
 
+**Execution Status (2026-06-03, inline 执行):** 完成 Task 1-3。全量 gates 通过（lint / typecheck --filter '*' / bun test 901 pass / 全包 build）。3 个原 web 编辑测试（键入起编、合并区编辑器矩形、右键先提交）迁入 `packages/feature-editing/tests/WebGridRuntime.editing.test.ts`（安装 feature + 真实 controller 驱动）。
+
 **Tech Stack:** Bun workspaces、TypeScript strict + `verbatimModuleSyntax`、`bun:test`、phase 3 的 `WebFrameSync`。
 
 **设计依据：** `docs/superpowers/specs/2026-06-03-novasheet-editing-feature-package-design.md`。
