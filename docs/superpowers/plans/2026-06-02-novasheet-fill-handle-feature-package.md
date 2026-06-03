@@ -6,6 +6,8 @@
 
 **Architecture:** `@novasheet/web` 保留 runtime kernel + 新增 feature-agnostic 的 `WebFrameSync` 可选能力（按能力探测，非新 contribution point）。`@novasheet/feature-fill-handle` 用一个 `FillHandleController`（同时 `implements Drag + WebFrameSync`，独占持有 `DomFillHandleLayer`）通过 `web.drag` contribution 注册。`@novasheet/sheet` 默认安装。填充语义留 `@novasheet/core`。
 
+**Execution Status (2026-06-02, inline 执行):** 完成 Task 1-5。决策 B：`onFill` 暂留 web。两处计划外修正（执行中发现并已落实）：① `WebHost` 接口需新增 `container`（runtime `fs.attach(this.host.container)` 所需，原 plan 漏列）；② 自动滚动目标从 `activeDrag` 泛化为「任一 active drag」，否则 fill 不进 `activeDrag` 会导致填充自动滚动回归。`fill-handle` contribution order 用 15（避开 reorder 的 20）。全量 gates 通过。
+
 **Tech Stack:** Bun workspaces、TypeScript strict + `verbatimModuleSyntax`、`bun:test`、现有 `WebDragContribution` / `getWebDragContributions`。
 
 **设计依据：** `docs/superpowers/specs/2026-06-02-novasheet-fill-handle-feature-package-design.md`（含决策 B：onFill 暂留 web 记债，core 不建事件系统）。

@@ -34,6 +34,7 @@ function makeHost(): WebHost {
     getContainerBoundingRect: () => ({ left: 0, top: 0 }),
     focusScrollHost: mock(() => {}),
     destroy: mock(() => {}),
+    container: document.createElement('div'),
   }
 }
 

@@ -161,7 +161,7 @@ export function installResizeFeature(ctx: SheetContext): void {
 | [x] | 0 | Feature contribution 基座 | `@novasheet/core` / `@novasheet/web` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` Task 1-2 | `SheetContext` 支持 generic contributions；`web` 支持 typed drag contributions |
 | [~] | 1 | 行列拖拽排序 | `@novasheet/feature-row-column-reorder` | `2026-06-02-novasheet-row-column-reorder-feature-package.md` | **半拆**：drag 已进包；`ColumnReorderOverlay`/`RowReorderOverlay` 仍在 web，待 phase 14 回补 |
 | [~] | 2 | 行高列宽 resize | `@novasheet/feature-resize` | `2026-06-02-novasheet-resize-feature-package.md` | **半拆**：`ResizeDrag` 已进包；`DomHandleLayer`/popover/style/键盘/菜单仍在 web，待 phase 14 回补 |
-| [ ] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | 未开始：实施前单独写计划 | 首个**整竖切片**：`FillHandleDrag` + `DomFillHandleLayer` 一起进包；web 新增 `WebFrameSync` 可选能力（每帧 overlay 同步）；`computeFillTarget`/`commitFill` 等语义留 core |
+| [x] | 3 | 填充柄 | `@novasheet/feature-fill-handle` | `2026-06-02-novasheet-fill-handle-feature-package.md` | 首个**整竖切片**：`FillHandleController`(Drag+WebFrameSync) + `DomFillHandleLayer` 进包；web 新增 `WebFrameSync` 可选能力；`computeFillTarget`/`commitFill` 等语义留 core；onFill 暂留 web（决策 B 债务） |
 | [ ] | 4 | 单元格编辑 | `@novasheet/feature-editing` | 未开始：实施前单独写计划 | `DomCellEditor` / edit lifecycle 通过 feature 安装，自定义 editor 仍可用 |
 | [ ] | 5 | 剪贴板 | `@novasheet/feature-clipboard` | 未开始：实施前单独写计划 | copy/paste adapter 与 paste commit 通过 feature 安装 |
 | [ ] | 6 | 右键菜单 | `@novasheet/feature-context-menu` | 未开始：实施前单独写计划 | 菜单项通过 contribution 汇聚，DOM menu layer 不硬编码产品菜单 |
@@ -181,15 +181,9 @@ export function installResizeFeature(ctx: SheetContext): void {
 - phase 0 ✅ 完成：`SheetContext` generic contributions + `@novasheet/web` typed drag contributions。
 - phase 1 `[~]` 半拆：`feature-row-column-reorder` 只搬了 drag；reorder overlay 仍在 web。
 - phase 2 `[~]` 半拆：`feature-resize` 只搬了 `ResizeDrag`；handle layer / popover / style / 键盘 / 菜单仍在 web。
+- phase 3 ✅ 完成：`@novasheet/feature-fill-handle`（首个整竖切片）。`FillHandleController`(Drag+WebFrameSync) + `DomFillHandleLayer` 进包；`@novasheet/web` 新增可复用 `WebFrameSync` 每帧同步基座（phase 14 回补 resize/reorder overlay 时复用）；`mergeVisualRange` 提升 core。决策 B 债务：`onFill` 暂留 web `setOnFill`，待 engine 事件系统专项再迁。
 
-下一个执行焦点是 phase 3：`@novasheet/feature-fill-handle`（首个整竖切片）。它内部分四步交付（设计见 `docs/superpowers/specs/2026-06-02-novasheet-fill-handle-feature-package-design.md`）：
-
-1. **frame-sync 基座**（独立 commit，可复用，phase 14 回补 resize/reorder overlay 时复用）：`@novasheet/web` 新增 `WebFrameSync` 可选能力 + runtime flush/teardown 探测派发 + 通用 kernel services。
-2. **core 语义事件 + util 提升**：`mergeVisualRange` → core；engine 新增 fill-applied 事件，`onFill` 改订阅引擎。
-3. **fill 整竖切片**：`FillHandleDrag` + `DomFillHandleLayer` + `computeFillHandleRect` 进包。
-4. **默认安装**：`@novasheet/sheet` 装 `installFillHandleFeature`，backend 删除 fill 层构造。
-
-不要在 phase 3 顺手拆 editing、clipboard、context menu。frame-sync 基座虽是可复用契约，但仍随 fill-handle plan 一并交付（同 reorder plan 当年同时交付 phase 0 基座 + phase 1 feature）。
+下一个执行焦点是 phase 4：`@novasheet/feature-editing`（`DomCellEditor` / edit lifecycle）。注意 fill 当前经通用 `commitActiveEdit` service 依赖 editing；phase 4 拆包后需重新指向。每个 feature 仍需单独计划，避免一次性改穿 runtime。
 
 ## 大能力拆包顺序
 
