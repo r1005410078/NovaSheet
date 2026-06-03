@@ -1,0 +1,5 @@
+export { installEditingFeature } from './installEditingFeature'
+export { EditingController } from './EditingController'
+export type { EditingControllerDeps } from './EditingController'
+export { DomCellEditor } from './DomCellEditor'
+export { computeCellEditorRect } from './computeCellEditorRect'

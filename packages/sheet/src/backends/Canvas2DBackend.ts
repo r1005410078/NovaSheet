@@ -53,7 +53,6 @@ import type {
 import {
   ColumnReorderOverlay,
   ColumnWidthPopover,
-  DomCellEditor,
   DomContextMenuLayer,
   DomGridHost,
   DomHandleLayer,
@@ -92,7 +91,6 @@ export class Canvas2DBackend implements GridController {
   private handleLayer: DomHandleLayer
   private hideToggleHandle: HideToggleHandle
   private hideColToggleHandle: HideColToggleHandle
-  private cellEditor: DomCellEditor
   private contextMenuLayer!: DomContextMenuLayer
   private filterPopover!: FilterPopover
   private rowHeightPopover!: RowHeightPopover
@@ -211,15 +209,6 @@ export class Canvas2DBackend implements GridController {
       onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
       openCustomCellEditor: (cell) => this.openCustomCellEditor(cell),
     })
-
-    this.cellEditor = new DomCellEditor(this.container, {
-      onDraftChange: (draft) => this.runtime.handleCellEditDraft(draft),
-      onCommitEnter: () => this.runtime.handleCellEditCommitEnter(),
-      onCommitBlur: () => this.runtime.handleCellEditCommitBlur(),
-      onCancel: () => this.runtime.handleCellEditCancel(),
-    })
-    this.cellEditor.attach()
-    this.runtime.setCellEditor(this.cellEditor)
 
     this.contextMenuLayer = new DomContextMenuLayer(this.container, {
       onSelect: (id) => this.runtime.handleContextMenuSelected(id),
@@ -354,7 +343,6 @@ export class Canvas2DBackend implements GridController {
     this.hideToggleHandle.destroy()
     this.hideColToggleHandle.destroy()
     this.handleLayer.destroy()
-    this.cellEditor.destroy()
     if (this.canvas.parentNode === this.container) {
       this.container.removeChild(this.canvas)
     }

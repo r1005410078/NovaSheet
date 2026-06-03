@@ -67,7 +67,11 @@ import {
   type ResizeHandleRect,
   type Row,
 } from '@novasheet/core'
-import type { DomCellEditor } from '../interaction/DomCellEditor'
+import {
+  getWebCellEditorContributions,
+  type WebCellEditor,
+  type WebCellEditorRuntimeDeps,
+} from '../interaction/cell-editor/WebCellEditor'
 import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import type { DomHandleLayer } from '../interaction/DomHandleLayer'
 import type { HideToggleHandle } from '../handle/HideToggleHandle'
@@ -253,8 +257,8 @@ export class WebGridRuntime {
   private selectionOverlay?: SelectionOverlay
   /** Product-layer custom editor hook. */
   private openCustomCellEditor?: WebGridRuntimeOptions['openCustomCellEditor']
-  /** DOM 单元格编辑器。 */
-  private cellEditor?: DomCellEditor
+  /** 编辑器 controller（来自 web.cell-editor 贡献）；命令与定位委托给它。 */
+  private cellEditController: (WebCellEditor & WebFrameSync) | null = null
   /** DOM 右键菜单 layer。 */
   private contextMenuLayer?: DomContextMenuLayer
   /** DOM filter popover。 */
@@ -293,11 +297,6 @@ export class WebGridRuntime {
   private onRedo?: (event: RedoEvent) => void
   /** fill handle 提交成功后的通知回调。 */
   private onFill?: (event: FillEvent) => void
-  /**
-   * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
-   * 非 multiline 编辑置 null。
-   */
-  private editingMultilineOriginalRowHeight: number | null = null
   /** 当前活跃的 Drag（R1 DragController）；pointerdown 起拖时设置。 */
   private activeDrag: Drag | null = null
   /** 行高/列宽 resize 拖拽。 */
@@ -347,7 +346,29 @@ export class WebGridRuntime {
       this.selectionDrag,
     ]
     this.frameSyncs = this.drags.filter(isWebFrameSync)
+    this.cellEditController =
+      getWebCellEditorContributions(this.context)
+        .map((c) => c.create(this.createWebCellEditorDeps()))
+        .find((e): e is WebCellEditor & WebFrameSync => e !== null) ?? null
+    if (this.cellEditController) this.frameSyncs = [...this.frameSyncs, this.cellEditController]
     for (const fs of this.frameSyncs) fs.attach(this.host.container)
+  }
+
+  private createWebCellEditorDeps(): WebCellEditorRuntimeDeps {
+    return {
+      engine: this.engine,
+      host: this.host,
+      autofitRows: (options) => this.autofitRows(options),
+      afterEngineMutation: () => this.afterEngineMutation(),
+      refresh: () => this.refresh(),
+      revealActiveCell: () => {
+        const target = this.getSelectionScrollTarget()
+        if (target) this.ensureCellVisible(target)
+      },
+      requestSyncPaint: () => this.paintSync(),
+      isBlocked: () => this.resizeDrag?.active === true || !!this.activeDrag,
+      tryCustomEditor: (cell) => this.openCustomCellEditor?.(cell) ?? false,
+    }
   }
 
   private createWebDragRuntimeDeps(): WebDragRuntimeDeps {
@@ -387,11 +408,6 @@ export class WebGridRuntime {
     this.updateDragAutoScroll(pointer)
   }
 
-  /** Phase 3.5 — backend 在 runtime 创建后注入编辑器。 */
-  setCellEditor(editor: DomCellEditor): void {
-    this.cellEditor = editor
-    this.syncCellEditorTheme()
-  }
 
   /** Phase 4.0 — 注入右键菜单层。 */
   setContextMenuLayer(layer: DomContextMenuLayer): void {
@@ -1166,7 +1182,6 @@ export class WebGridRuntime {
     this.resizeSpacer()
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
-    this.syncCellEditorTheme()
     this.paintSync()
   }
 
@@ -1207,7 +1222,6 @@ export class WebGridRuntime {
     patchRenderer?.(this.renderer)
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
-    this.syncCellEditorTheme()
     this.syncContextMenuTheme()
     this.syncFilterPopoverTheme()
     this.selectionOverlay?.applyTheme(theme)
@@ -1353,29 +1367,6 @@ export class WebGridRuntime {
     this.activeDrag = null
   }
 
-  /** 同步编辑器 draft 到 engine 的 cell edit session。 */
-  handleCellEditDraft(draft: string): void {
-    if (this.destroyed) return
-    this.engine.updateCellEditDraft(draft)
-  }
-
-  /** 处理 Enter 提交编辑，并在成功后移动到下一行。 */
-  handleCellEditCommitEnter(): void {
-    this.commitCellEdit(true)
-  }
-
-  /** 处理 blur 提交编辑，保持当前选区不移动。 */
-  handleCellEditCommitBlur(): void {
-    this.commitCellEdit(false)
-  }
-
-  /** 取消当前编辑并刷新编辑器/选区显示。 */
-  handleCellEditCancel(): void {
-    if (this.destroyed) return
-    this.cancelCellEdit()
-    this.refresh()
-  }
-
   /** 处理键盘 resize，按 delta 调整行高或列宽。 */
   handleResizeKeyboard(handle: ResizeHandleRect, delta: number): void {
     if (this.destroyed) return
@@ -1416,7 +1407,6 @@ export class WebGridRuntime {
   handleHostScroll(scrollTop: number, scrollLeft: number): void {
     const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
     this.engine.setScroll(logicalX, logicalY)
-    this.syncCellEditorPosition()
     this.contextMenuLayer?.close()
     this.invalidate()
   }
@@ -1702,7 +1692,6 @@ export class WebGridRuntime {
       this.syncResizeHandles()
       this.syncHideToggleHandles()
       this.syncHideColToggleHandles()
-      this.syncCellEditorPosition()
       this.syncFrameSyncs(frame)
     })
   }
@@ -1715,7 +1704,6 @@ export class WebGridRuntime {
     this.syncResizeHandles()
     this.syncHideToggleHandles()
     this.syncHideColToggleHandles()
-    this.syncCellEditorPosition()
     this.syncFrameSyncs(frame)
   }
 
@@ -1961,11 +1949,6 @@ export class WebGridRuntime {
     })
   }
 
-  /** 同步 cell editor 主题。 */
-  private syncCellEditorTheme(): void {
-    this.cellEditor?.applyTheme(this.engine.getTheme())
-  }
-
   tryOpenCustomCellEditor(
     cell: CellAddress,
     invoke: (rect: { x: number; y: number; width: number; height: number }) => boolean,
@@ -1986,118 +1969,24 @@ export class WebGridRuntime {
     this.filterPopover?.applyTheme(this.engine.getTheme())
   }
 
-  /** 打开指定单元格编辑器，并按需全选原内容。 */
+  /** 打开指定单元格编辑器（委托编辑能力包；未安装则 no-op）。 */
   private openCellEditor(cell: CellAddress, options: { selectAll?: boolean } = {}): boolean {
-    if (!this.cellEditor || this.resizeDrag?.active === true) return false
-    if (this.openCustomCellEditor?.(cell)) return true
-    if (!this.engine.beginCellEdit(cell)) return false
-    return this.showCellEditor(options)
+    return this.cellEditController?.open(cell, options) ?? false
   }
 
-  /** 用首个键入字符作为 draft 打开编辑器。 */
+  /** 用首个键入字符作为 draft 打开编辑器（委托编辑能力包）。 */
   private beginCellEditWithDraft(cell: CellAddress, draft: string): boolean {
-    if (!this.cellEditor || this.resizeDrag?.active === true) return false
-    if (this.openCustomCellEditor?.(cell)) return true
-    if (!this.engine.beginCellEdit(cell)) return false
-    this.engine.updateCellEditDraft(draft)
-    return this.showCellEditor({ selectAll: false })
+    return this.cellEditController?.beginWithDraft(cell, draft) ?? false
   }
 
-  /** 根据当前 engine edit session 定位并展示 DOM cell editor。 */
-  private showCellEditor(options: { selectAll?: boolean }): boolean {
-    const frame = this.engine.getFrame()
-    const session = frame.cellEdit
-    const rect = session ? this.computeCellEditorRect(frame, session.cell) : null
-    if (!session || !rect || !this.cellEditor) {
-      this.engine.cancelCellEdit()
-      return false
-    }
-
-    const field = this.engine.getData().getSchema?.().fields[session.cell.colIndex]
-    // 任意非 number 格都用多行编辑器：支持 Alt+Enter 硬换行（与 Google 表格一致），
-    // 提交时按内容 autofit 行高。number 仍单行。
-    const multiline = field ? field.type !== 'number' : true
-
-    this.editingMultilineOriginalRowHeight = multiline
-      ? this.engine.getRowsAxis().getSize(session.cell.rowIndex)
-      : null
-
-    this.paintSync()
-    this.cellEditor.open(rect, session.draft, { ...options, multiline })
-    return true
-  }
-
-  /** 提交当前编辑；可选在提交后移动到下一行。 */
+  /** 提交当前编辑（委托编辑能力包）。 */
   private commitCellEdit(moveAfter: boolean): void {
-    if (!this.engine.isCellEditing()) return
-    const session = this.engine.getFrame().cellEdit
-    const wasMultiline = this.editingMultilineOriginalRowHeight !== null
-    const editedRow = session?.cell.rowIndex
-    if (!this.engine.commitCellEdit()) return
-
-    this.editingMultilineOriginalRowHeight = null
-    this.cellEditor?.close()
-    // 失去焦点（Enter 或 blur 提交）才重算行高——交互成本从 N 键 × autofit 降到 1 次
-    if (wasMultiline && editedRow !== undefined) {
-      this.autofitRows({ rows: [editedRow] })
-    }
-    if (moveAfter) {
-      this.engine.navigateSelection('ArrowDown', false)
-      const focus = this.getSelectionScrollTarget()
-      if (focus) this.ensureCellVisible(focus)
-    }
-    this.refresh()
+    this.cellEditController?.commitActive(moveAfter)
   }
 
-  /** 取消当前编辑，并在 multiline 编辑时恢复原始行高。 */
+  /** 取消当前编辑（委托编辑能力包）。 */
   private cancelCellEdit(): void {
-    if (!this.engine.isCellEditing()) {
-      this.cellEditor?.close()
-      this.editingMultilineOriginalRowHeight = null
-      return
-    }
-    const session = this.engine.getFrame().cellEdit
-    const restoreHeight = this.editingMultilineOriginalRowHeight
-    const restoreRow = session?.cell.rowIndex
-    this.engine.cancelCellEdit()
-    this.cellEditor?.close()
-    if (restoreHeight !== null && restoreRow !== undefined) {
-      const currentHeight = this.engine.getRowsAxis().getSize(restoreRow)
-      if (currentHeight !== restoreHeight) {
-        this.engine.setRowHeight(restoreRow, restoreHeight)
-        this.afterEngineMutation()
-      }
-    }
-    this.editingMultilineOriginalRowHeight = null
-  }
-
-  /** 根据当前单元格 rect 同步编辑器位置；不可见时取消编辑。 */
-  private syncCellEditorPosition(): void {
-    if (!this.cellEditor?.isOpen()) return
-    const frame = this.engine.getFrame()
-    const session = frame.cellEdit
-    if (!session) {
-      this.cellEditor.close()
-      return
-    }
-    const rect = this.computeCellEditorRect(frame, session.cell)
-    if (!rect) {
-      this.cancelCellEdit()
-      return
-    }
-    this.cellEditor.syncRect(rect)
-  }
-
-  private computeCellEditorRect(frame: ReturnType<GridEngine['getFrame']>, cell: CellAddress) {
-    const mergeRange = (frame.mergeRegions ?? []).find(
-      (merge) =>
-        cell.rowIndex >= merge.range.startRow &&
-        cell.rowIndex <= merge.range.endRow &&
-        cell.colIndex >= merge.range.startCol &&
-        cell.colIndex <= merge.range.endCol,
-    )?.range
-    if (mergeRange) return computeRangeOverlayRects(frame, mergeRange).at(-1) ?? null
-    return computeCellRect(frame, cell)
+    this.cellEditController?.cancelActive()
   }
 
   /** 返回导航后需要滚动到可见区域的选区目标。 */

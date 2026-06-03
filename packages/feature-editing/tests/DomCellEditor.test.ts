@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { DomCellEditor } from '../../src/interaction/DomCellEditor'
+import { DomCellEditor } from '../src/DomCellEditor'
 
 describe('DomCellEditor — Phase 3.5', () => {
   it('open 后 focus input，Esc 触发 onCancel', () => {

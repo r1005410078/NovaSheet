@@ -1,4 +1,5 @@
 import type { SheetContext } from '@novasheet/core'
+import { installEditingFeature } from '@novasheet/feature-editing'
 import { installFillHandleFeature } from '@novasheet/feature-fill-handle'
 import { installRowColumnReorder } from '@novasheet/feature-row-column-reorder'
 import { installResizeFeature } from '@novasheet/feature-resize'
@@ -8,6 +9,7 @@ import { installBasicCells } from './installBasicCells'
 export function installDefaultExtensions(ctx: SheetContext): void {
   installBasicCells(ctx)
   installResizeFeature(ctx)
+  installEditingFeature(ctx)
   installFillHandleFeature(ctx)
   installRowColumnReorder(ctx)
 }

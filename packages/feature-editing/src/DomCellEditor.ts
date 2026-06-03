@@ -8,7 +8,7 @@
  */
 
 import type { CellRect, Theme } from '@novasheet/core'
-import { applyCellEditorTheme, ensureCellEditorStylesheet } from '../host/cell-editor-style'
+import { applyCellEditorTheme, ensureCellEditorStylesheet } from './cell-editor-style'
 
 export interface DomCellEditorCallbacks {
   onDraftChange: (draft: string) => void

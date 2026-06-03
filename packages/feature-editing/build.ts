@@ -1,6 +1,5 @@
 /**
- * Build script for @novasheet/sheet. Same pattern as packages/core/build.ts:
- * Bun.build for ESM + CJS, tsc --emitDeclarationOnly for .d.ts.
+ * Build script for @novasheet/feature-editing.
  */
 
 import { rm, copyFile } from 'node:fs/promises'
@@ -9,15 +8,7 @@ const ROOT = new URL('.', import.meta.url).pathname
 
 await rm(`${ROOT}dist`, { recursive: true, force: true })
 
-const EXTERNALS = [
-  '@novasheet/core',
-  '@novasheet/web',
-  '@novasheet/canvas2d',
-  '@novasheet/feature-editing',
-  '@novasheet/feature-fill-handle',
-  '@novasheet/feature-row-column-reorder',
-  '@novasheet/feature-resize',
-] as const
+const EXTERNALS = ['@novasheet/core', '@novasheet/web'] as const
 
 const common = {
   entrypoints: [`${ROOT}src/index.ts`],

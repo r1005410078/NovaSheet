@@ -7,6 +7,7 @@
     "paths": {
       "@novasheet/core": ["packages/core/src/index.ts"],
       "@novasheet/canvas2d": ["packages/canvas2d/src/index.ts"],
+      "@novasheet/feature-editing": ["packages/feature-editing/src/index.ts"],
       "@novasheet/feature-fill-handle": ["packages/feature-fill-handle/src/index.ts"],
       "@novasheet/feature-row-column-reorder": [
         "packages/feature-row-column-reorder/src/index.ts"
