@@ -65,6 +65,5 @@ export type {
   ContextMenuTargetKind,
 } from '@novasheet/core'
 export type { ClipboardAction, PasteSkippedCell } from '@novasheet/core'
-export { WebClipboardAdapter } from './clipboard/WebClipboardAdapter'
 
 export type { UndoCommand } from '@novasheet/core'

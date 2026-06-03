@@ -62,7 +62,6 @@ import {
   RowHeightPopover,
   RowReorderOverlay,
   SelectionOverlay,
-  WebClipboardAdapter,
   WebGridRuntime,
   type FillEvent,
   type RedoEvent,
@@ -98,7 +97,6 @@ export class Canvas2DBackend implements GridController {
   private columnReorderOverlay: ColumnReorderOverlay
   private rowReorderOverlay: RowReorderOverlay
   private selectionOverlay: SelectionOverlay
-  private clipboardAdapter = new WebClipboardAdapter()
   private runtime!: WebGridRuntime
   private scheduler = new FrameScheduler()
   private rawSource: DataSource
@@ -236,7 +234,6 @@ export class Canvas2DBackend implements GridController {
       },
     })
     this.runtime.setColumnWidthPopover(this.columnWidthPopover)
-    this.runtime.setClipboardAdapter(this.clipboardAdapter)
     if (gridOptions?.onContextMenuAction) {
       this.runtime.setOnContextMenuAction(gridOptions.onContextMenuAction)
     }

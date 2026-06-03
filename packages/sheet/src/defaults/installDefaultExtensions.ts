@@ -1,4 +1,5 @@
 import type { SheetContext } from '@novasheet/core'
+import { installClipboardFeature } from '@novasheet/feature-clipboard'
 import { installEditingFeature } from '@novasheet/feature-editing'
 import { installFillHandleFeature } from '@novasheet/feature-fill-handle'
 import { installRowColumnReorder } from '@novasheet/feature-row-column-reorder'
@@ -10,6 +11,7 @@ export function installDefaultExtensions(ctx: SheetContext): void {
   installBasicCells(ctx)
   installResizeFeature(ctx)
   installEditingFeature(ctx)
+  installClipboardFeature(ctx)
   installFillHandleFeature(ctx)
   installRowColumnReorder(ctx)
 }

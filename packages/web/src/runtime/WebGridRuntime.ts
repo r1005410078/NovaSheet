@@ -39,7 +39,6 @@ import {
   clamp,
   createSheetContext,
   computeCellRect,
-  computePasteTarget,
   mergeVisualRange,
   computeResizeHandles,
   computeScrollReveal,
@@ -51,9 +50,6 @@ import {
   isMutableDataSource,
   MIN_RESIZE_SIZE,
   isTypableEditKey,
-  parseTsvToCells,
-  serializeRowsToTsv,
-  type ApplyPasteSource,
   type BorderPreset,
   type BorderStyle,
   type TextWrapMode,
@@ -65,7 +61,6 @@ import {
   type GridSelection,
   type PasteSkippedCell,
   type ResizeHandleRect,
-  type Row,
 } from '@novasheet/core'
 import {
   getWebCellEditorContributions,
@@ -94,18 +89,12 @@ import {
 } from '../interaction/drag/WebDragContribution'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
 import type { WebRenderer } from '../render/WebRenderer'
-import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
+import {
+  getWebClipboardContributions,
+  type WebClipboard,
+  type WebClipboardRuntimeDeps,
+} from '../clipboard/WebClipboard'
 import { ScrollMapper } from '../scroll/ScrollMapper'
-
-/** Phase 4.1 — TSV FNV-1a 32-bit hash；用于验证 paste 时剪贴板内容是否仍是 grid 自己刚写出去的，决定 typed 缓存命中。 */
-function fnv1aHash(s: string): number {
-  let h = 0x811c9dc5
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 0x01000193) >>> 0
-  }
-  return h
-}
 
 /** WebGridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
 export interface AutofitRowsRuntimeOptions {
@@ -279,10 +268,8 @@ export class WebGridRuntime {
   private lastContextMenuPoint: { clientX: number; clientY: number } | null = null
   /** 当前打开 filter popover 绑定的 field id。 */
   private filterPopoverFieldId: string | null = null
-  /** Phase 4.1 — 剪贴板读写 adapter。 */
-  private clipboardAdapter?: WebClipboardAdapter
-  /** 最近一次从 grid 写出的剪贴板缓存，用于 typed paste 保留值类型。 */
-  private clipboardCache: { range: CellRange; rows: readonly Row[]; tsvHash: number } | null = null
+  /** 剪贴板 controller（来自 web.clipboard 贡献）；copy/cut/paste 委托给它。 */
+  private clipboardController: WebClipboard | null = null
   /** copy 成功后的通知回调。 */
   private onCopy?: (range: CellRange) => void
   /** cut 成功后的通知回调。 */
@@ -352,6 +339,21 @@ export class WebGridRuntime {
         .find((e): e is WebCellEditor & WebFrameSync => e !== null) ?? null
     if (this.cellEditController) this.frameSyncs = [...this.frameSyncs, this.cellEditController]
     for (const fs of this.frameSyncs) fs.attach(this.host.container)
+    this.clipboardController =
+      getWebClipboardContributions(this.context)
+        .map((c) => c.create(this.createWebClipboardDeps()))
+        .find((c): c is WebClipboard => c !== null) ?? null
+  }
+
+  private createWebClipboardDeps(): WebClipboardRuntimeDeps {
+    return {
+      engine: this.engine,
+      afterEngineMutation: () => this.afterEngineMutation(),
+      onCopy: (range) => this.onCopy?.(range),
+      onCut: (range) => this.onCut?.(range),
+      onPaste: (target) => this.onPaste?.(target),
+      onPasteSkipped: (cells) => this.onPasteSkipped?.(cells),
+    }
   }
 
   private createWebCellEditorDeps(): WebCellEditorRuntimeDeps {
@@ -466,11 +468,6 @@ export class WebGridRuntime {
   closeContextMenu(): void {
     this.contextMenuLayer?.close()
     this.lastContextMenuContext = null
-  }
-
-  /** Phase 4.1 — 注入 clipboard adapter；未注入时 copy/cut/paste 全 silent no-op。 */
-  setClipboardAdapter(adapter: WebClipboardAdapter): void {
-    this.clipboardAdapter = adapter
   }
 
   /** 注册 copy 成功通知回调。 */
@@ -825,103 +822,22 @@ export class WebGridRuntime {
     this.onRedo?.({ command: cmd })
   }
 
-  /** snapshot 当前 selectedRange 的值 + TSV；selection 空返回 null。 */
-  private snapshotSelection(): { range: CellRange; rows: Row[]; tsv: string } | null {
-    const sel = this.engine.getSelection()
-    const range = sel.selectedRange
-    if (!range) return null
-    const data = this.engine.getData()
-    const fields = data.getSchema().fields
-    const fieldIds = fields.slice(range.startCol, range.endCol + 1).map((f) => f.id)
-    const rows: Row[] = []
-    for (let r = range.startRow; r <= range.endRow; r++) {
-      const row: Row = {}
-      for (const fid of fieldIds) row[fid] = data.getCell(r, fid) ?? null
-      rows.push(row)
-    }
-    return { range, rows, tsv: serializeRowsToTsv(rows, fieldIds) }
+  /** 处理 copy（委托剪贴板能力包；未安装则 no-op）。 */
+  handleClipboardCopy(): Promise<boolean> {
+    if (this.destroyed) return Promise.resolve(false)
+    return this.clipboardController?.copy() ?? Promise.resolve(false)
   }
 
-  /** 处理 copy：序列化当前选区、写入剪贴板并更新 typed paste 缓存。 */
-  async handleClipboardCopy(): Promise<boolean> {
-    if (this.destroyed) return false
-    const snap = this.snapshotSelection()
-    if (!snap) return false
-    this.clipboardCache = { range: snap.range, rows: snap.rows, tsvHash: fnv1aHash(snap.tsv) }
-    await this.clipboardAdapter?.writeText(snap.tsv)
-    this.onCopy?.(snap.range)
-    return true
+  /** 处理 cut（委托剪贴板能力包）。 */
+  handleClipboardCut(): Promise<boolean> {
+    if (this.destroyed) return Promise.resolve(false)
+    return this.clipboardController?.cut() ?? Promise.resolve(false)
   }
 
-  /** 处理 cut：复制当前选区后清空源区域。 */
-  async handleClipboardCut(): Promise<boolean> {
-    if (this.destroyed) return false
-    if (!isMutableDataSource(this.engine.getData())) return false
-    const snap = this.snapshotSelection()
-    if (!snap) return false
-    this.clipboardCache = { range: snap.range, rows: snap.rows, tsvHash: fnv1aHash(snap.tsv) }
-    await this.clipboardAdapter?.writeText(snap.tsv)
-    this.engine.clearRange(snap.range)
-    this.afterEngineMutation()
-    this.onCut?.(snap.range)
-    return true
-  }
-
-  /** 处理 paste：读取剪贴板、推导目标区域并提交到 engine。 */
-  async handleClipboardPaste(): Promise<boolean> {
-    if (this.destroyed) return false
-    const data = this.engine.getData()
-    if (!isMutableDataSource(data)) return false
-    const sel = this.engine.getSelection()
-    const active = sel.activeCell
-    const range = sel.selectedRange
-    if (!active || !range) return false
-
-    const tsv = (await this.clipboardAdapter?.readText()) ?? ''
-    if (tsv === '') return false
-
-    const schema = data.getSchema()
-    const fields = schema.fields
-    const fieldIdsAtCols = fields.map((f) => f.id)
-    const tsvHash = fnv1aHash(tsv)
-    let source: ApplyPasteSource
-
-    if (this.clipboardCache && this.clipboardCache.tsvHash === tsvHash) {
-      const cachedRange = this.clipboardCache.range
-      const cachedFieldIds = fields
-        .slice(cachedRange.startCol, cachedRange.endCol + 1)
-        .map((f) => f.id)
-      const cells = this.clipboardCache.rows.map((row) =>
-        cachedFieldIds.map((fid) => row[fid] ?? null),
-      )
-      source = { cells, sourceFieldIds: cachedFieldIds, typed: true }
-    } else {
-      const anchorFieldIds = fieldIdsAtCols.slice(active.colIndex)
-      const cells = parseTsvToCells(tsv, anchorFieldIds, schema)
-      source = { cells, sourceFieldIds: anchorFieldIds, typed: false }
-    }
-
-    const sourceRows = source.cells.length
-    const sourceCols = source.cells[0]?.length ?? 0
-    if (sourceRows === 0 || sourceCols === 0) return false
-
-    const target = computePasteTarget(active, range, sourceRows, sourceCols, {
-      rowCount: data.getRowCount(),
-      colCount: fields.length,
-    })
-
-    this.engine.commitPaste(source, target, fieldIdsAtCols, (skipped) =>
-      this.onPasteSkipped?.(skipped),
-    )
-    this.afterEngineMutation()
-    const targetRange: CellRange = {
-      startRow: target.startRow,
-      endRow: target.endRow,
-      startCol: target.startCol,
-      endCol: target.endCol,
-    }
-    this.onPaste?.(targetRange)
-    return true
+  /** 处理 paste（委托剪贴板能力包）。 */
+  handleClipboardPaste(): Promise<boolean> {
+    if (this.destroyed) return Promise.resolve(false)
+    return this.clipboardController?.paste() ?? Promise.resolve(false)
   }
 
   /** 处理 host contextmenu 事件，并根据列头/单元格命中打开对应菜单。 */
@@ -1199,7 +1115,7 @@ export class WebGridRuntime {
   setData(data: DataSource, factory: () => WebRenderer): WebRenderer {
     this.engine.setData(data)
     this.replaceRenderer(factory)
-    this.clipboardCache = null
+    this.clipboardController?.onDataReplaced()
     this.afterEngineMutation()
     return this.renderer
   }
@@ -1212,7 +1128,7 @@ export class WebGridRuntime {
   ): void {
     this.engine.setViewData(data, options)
     patchRenderer?.(this.renderer)
-    this.clipboardCache = null
+    this.clipboardController?.onDataReplaced()
     this.afterEngineMutation()
   }
 

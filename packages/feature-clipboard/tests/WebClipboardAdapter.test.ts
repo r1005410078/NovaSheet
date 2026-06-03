@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test'
-import { WebClipboardAdapter } from '../../src/clipboard/WebClipboardAdapter'
+import { WebClipboardAdapter } from '../src/WebClipboardAdapter'
 
 /** happy-dom 的 navigator 是只读全局，但 navigator.clipboard 子属性可通过 defineProperty 覆盖。 */
 function setClipboard(clipboard: unknown): void {
