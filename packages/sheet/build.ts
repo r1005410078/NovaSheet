@@ -13,6 +13,7 @@ const EXTERNALS = [
   '@novasheet/core',
   '@novasheet/web',
   '@novasheet/canvas2d',
+  '@novasheet/feature-fill-handle',
   '@novasheet/feature-row-column-reorder',
   '@novasheet/feature-resize',
 ] as const

@@ -40,4 +40,15 @@ describe('Grid SheetContext options', () => {
     expect(getWebDragContributions(ctx).map((contribution) => contribution.id)).toContain('resize')
     grid.destroy()
   })
+
+  it('installs fill-handle drag in the default context', () => {
+    const ctx = createSheetContext<CanvasRenderingContext2D, HTMLElement>()
+
+    const grid = new Grid(document.createElement('div'), { data, context: ctx })
+
+    expect(getWebDragContributions(ctx).map((contribution) => contribution.id)).toContain(
+      'fill-handle',
+    )
+    grid.destroy()
+  })
 })

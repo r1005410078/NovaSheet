@@ -9,23 +9,12 @@ import {
 import { Grid } from '../../src/Grid'
 import {
   WebGridRuntime,
-  type DomFillHandleLayer,
-  type OverlayRect,
   type SelectionOverlay,
   type SelectionOverlayState,
   type WebHost,
   type WebRenderer,
 } from '@novasheet/web'
 import { makeMockGridEngine } from '../../../web/tests/helpers/mock-grid-engine'
-
-function makeFillLayer(): DomFillHandleLayer {
-  return {
-    sync: mock((_rect: OverlayRect | null) => {}),
-    showPreview: mock(() => {}),
-    hidePreview: mock(() => {}),
-    destroy: mock(() => {}),
-  } as unknown as DomFillHandleLayer
-}
 
 describe('WebGridRuntime selection overlay', () => {
   it('syncs DOM selection overlay after setSelection render flush', () => {
@@ -246,38 +235,6 @@ describe('WebGridRuntime selection overlay', () => {
     })
   })
 
-  it('合并格的填充柄锚定到合并区右下角（不随内部 active cell 跳中间）', () => {
-    const fillLayer = makeFillLayer()
-    const frame = makeFrame({
-      selection: {
-        // active cell 在合并内部、selectedRange 是单格（Enter 导航后的状态）
-        activeCell: { rowIndex: 1, colIndex: 0 },
-        anchorCell: { rowIndex: 1, colIndex: 0 },
-        extentCell: { rowIndex: 1, colIndex: 0 },
-        selectedRange: { startRow: 1, endRow: 1, startCol: 0, endCol: 0 },
-      },
-      mergeRegions: [
-        {
-          id: 'merge-1',
-          range: { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
-          anchor: { rowIndex: 0, colIndex: 0 },
-        },
-      ],
-      columnWidth: 80,
-    })
-    const runtime = new WebGridRuntime({
-      engine: makeEngine(frame),
-      host: makeHost(),
-      renderer: makeRenderer(),
-      fillLayer,
-    })
-
-    ;(runtime as unknown as { paintSync(): void }).paintSync()
-
-    // 合并区 rows0-1×cols0-1：右下角 = (160, 90)，手柄 8px 居中偏移 4 → (156, 86)
-    expect(fillLayer.sync).toHaveBeenLastCalledWith({ x: 156, y: 86, width: 8, height: 8 })
-  })
-
   it('clears selection overlay while cell editing', () => {
     const selectionOverlay = makeSelectionOverlay()
     const engine = makeEngine(
@@ -407,6 +364,7 @@ function makeHost(): WebHost {
     getScrollPosition: () => ({ scrollTop: 0, scrollLeft: 0 }),
     focusScrollHost: mock(() => {}),
     destroy: mock(() => {}),
+    container: document.createElement('div'),
   }
 }
 

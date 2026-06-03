@@ -6,7 +6,8 @@ import { FillHandleController } from './FillHandleController'
 export function installFillHandleFeature(ctx: SheetContext): void {
   registerWebDrag(ctx, {
     id: 'fill-handle',
-    order: 20,
+    // resize(10) < fill(15) < reorder(20/30)：避免与 column-header-reorder 的 order 撞值。
+    order: 15,
     create: (deps) =>
       new FillHandleController({
         engine: deps.engine,

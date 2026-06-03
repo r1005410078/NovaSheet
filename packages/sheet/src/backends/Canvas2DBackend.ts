@@ -55,7 +55,6 @@ import {
   ColumnWidthPopover,
   DomCellEditor,
   DomContextMenuLayer,
-  DomFillHandleLayer,
   DomGridHost,
   DomHandleLayer,
   FilterPopover,
@@ -91,7 +90,6 @@ export class Canvas2DBackend implements GridController {
   private renderer: Canvas2DRenderer
   private host: DomGridHost
   private handleLayer: DomHandleLayer
-  private fillHandleLayer: DomFillHandleLayer
   private hideToggleHandle: HideToggleHandle
   private hideColToggleHandle: HideColToggleHandle
   private cellEditor: DomCellEditor
@@ -169,13 +167,6 @@ export class Canvas2DBackend implements GridController {
     })
     this.handleLayer.attach()
 
-    this.fillHandleLayer = new DomFillHandleLayer(this.container, {
-      onFillPointerDown: (pointerId, x, y) => this.runtime.handleFillPointerDown(pointerId, x, y),
-      onFillPointerMove: (pointerId, x, y) => this.runtime.handleFillPointerMove(pointerId, x, y),
-      onFillPointerUp: (pointerId) => this.runtime.handleFillPointerUp(pointerId),
-    })
-    this.fillHandleLayer.attach()
-
     this.hideToggleHandle = new HideToggleHandle(this.container, {
       onUnhide: (ids) => this.runtime.unhideRows(ids),
     })
@@ -209,7 +200,6 @@ export class Canvas2DBackend implements GridController {
       scheduler: this.scheduler,
       measurer: this.measurer,
       handleLayer: this.handleLayer,
-      fillLayer: this.fillHandleLayer,
       hideToggleHandle: this.hideToggleHandle,
       hideColToggleHandle: this.hideColToggleHandle,
       columnReorderOverlay: this.columnReorderOverlay,
@@ -363,7 +353,6 @@ export class Canvas2DBackend implements GridController {
     this.runtime.destroy()
     this.hideToggleHandle.destroy()
     this.hideColToggleHandle.destroy()
-    this.fillHandleLayer.destroy()
     this.handleLayer.destroy()
     this.cellEditor.destroy()
     if (this.canvas.parentNode === this.container) {
