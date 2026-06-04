@@ -17,6 +17,22 @@ Grid / runtime
   -> DefaultGridEngine 收尾 undo / selection / rebuild
 ```
 
+## 重构总进度
+
+对照下方「迁移顺序」7 步路线（✅ 完成 / 🟡 进行中 / ⬜ 骨架待接线）：
+
+| # | 步骤 | 状态 | 说明 |
+| --- | --- | --- | --- |
+| 1 | `row/` 作为领域模板 | ✅ | operation / handler / structure / rules / event 齐全。 |
+| 2 | 收窄 `RowStructureContext` | ✅ | 已**彻底删除** context：`DefaultRowStructure` 自持 `rawRowsAxis` + `HideRowsLayer`，仅依赖 raw `MutableDataSource` 引用与 `resolveDefaultRowHeight` 两项（2026-06-04，超额完成，见 `row/README.md`）。 |
+| 3 | 按 row 模板迁移 `column/` | 🟡 | `ColumnStructure` 经 `GridEngine` 能力接口接线，但仍走 `ColumnStructureContext` 端口，尚未像 row 那样内化状态。 |
+| 4 | 抽离 selection remap | ⬜ | `selection/SelectionRemap.ts` 骨架已建，engine 未接线。 |
+| 5 | 抽离 undo replay | ⬜ | `undo/UndoReplay.ts` 骨架已建；`applyUndo/applyRedo` 仍在 `DefaultGridEngine`。 |
+| 6 | 抽离 layout state | ⬜ | `layout/LayoutState.ts` 骨架已建（当前孤儿、引用已与 row 内化后的架构脱节），engine 未接线。 |
+| 7 | 抽离 format/merge 协调 | 🟡 | `format/FormatEventHandler` 已接入 `GridEventPipeline`；`format/FormatState.ts` 未接线。 |
+
+下一步候选：将 column 按 row 模板内化（去除 `ColumnStructureContext`），或接线 undo replay 以收缩 `DefaultGridEngine.applyUndo/applyRedo` 体积。
+
 ## 当前原则
 
 - `DefaultGridEngine` 暂时保留 composer 职责：组装领域对象、事件管线、undo、selection、viewport rebuild。
@@ -60,7 +76,7 @@ Grid / runtime
 ```txt
 row/
   README.md
-  RowStructure.ts              # 领域接口与 context 端口
+  RowStructure.ts              # 领域富接口 + RowCommands 窄接口（已去除 context 端口）
   DefaultRowStructure.ts       # 领域实现
   RowRules.ts                  # 纯规则/算法
   RowOperation.ts              # 领域 operation 协议
@@ -108,8 +124,10 @@ interface BadContext {
 }
 ```
 
-后续应继续收窄 context。比如 row 领域当前仍能拿到 `ChunkedAxis`，这是中间态；
-稳定后应改成更窄的 row height 端口。
+后续应继续收窄 context。column 领域当前仍走 `ColumnStructureContext`，是中间态。
+
+> 注：row 领域已走完这条路线的终点——不再有 `RowStructureContext`，聚合根
+> 自持状态、仅注入 raw 数据源引用与默认行高解析。column 可参照 row 内化。
 
 ## Event 约束
 
