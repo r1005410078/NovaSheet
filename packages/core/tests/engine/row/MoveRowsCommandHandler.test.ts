@@ -2,9 +2,9 @@ import { describe, expect, it } from 'bun:test'
 import type { RowsMoved } from '../../../src/engine/row/RowEvent'
 import { MoveRowsCommandHandler } from '../../../src/engine/row/MoveRowsCommandHandler'
 import type { MoveRowsOperation } from '../../../src/engine/row/RowOperation'
-import type { RowStructure } from '../../../src/engine/row/RowStructure'
+import type { RowCommands } from '../../../src/engine/row/RowStructure'
 
-function makeRows(overrides: Partial<RowStructure>): RowStructure {
+function makeRows(overrides: Partial<RowCommands>): RowCommands {
   return {
     insertRows: () => null,
     deleteRows: () => null,

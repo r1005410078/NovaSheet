@@ -1,12 +1,12 @@
 import type { GridEventPipeline } from '../event/GridEventPipeline'
 import type { RowsInserted } from './RowEvent'
 import type { InsertRowsOperation } from './RowOperation'
-import type { RowStructure } from './RowStructure'
+import type { RowCommands } from './RowStructure'
 
 /** 执行 insertRows operation，并把 row 领域产出的事件交给内部事件管线。 */
 export class InsertRowsCommandHandler {
   constructor(
-    private readonly rows: RowStructure,
+    private readonly rows: RowCommands,
     private readonly events: Pick<GridEventPipeline, 'dispatch'>,
   ) {}
 

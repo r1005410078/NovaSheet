@@ -11,21 +11,24 @@ import type {
   UnhideRowsOperation,
 } from './RowOperation'
 
-/**
- * 行结构领域接口（聚合根）：自持行高轴与隐藏层，执行正向结构变迁、行高读写、
- * 派生视图行轴/视图数据源，并提供 undo/redo 用的逆变迁。
- */
-export interface RowStructure {
-  /** 重绑 raw 数据源与默认行高解析，重建行高轴并重置视图包装（隐藏集保留，由 clearHidden 单独清空）。 */
-  rebuild(rawData: DataSource, resolveDefaultRowHeight: () => number): void
-  /** 清空隐藏集（setData 语义）。 */
-  clearHidden(): void
-
+/** 行领域命令面：命令处理器只需要的正向变迁方法子集。 */
+export interface RowCommands {
   insertRows(operation: InsertRowsOperation): RowsInserted | null
   deleteRows(operation: DeleteRowsOperation): RowsDeleted | null
   hideRows(operation: HideRowsOperation): RowsHidden | null
   unhideRows(operation: UnhideRowsOperation): RowsUnhidden | null
   moveRows(operation: MoveRowsOperation): RowsMoved | null
+}
+
+/**
+ * 行结构领域接口（聚合根）：自持行高轴与隐藏层，执行正向结构变迁、行高读写、
+ * 派生视图行轴/视图数据源，并提供 undo/redo 用的逆变迁。
+ */
+export interface RowStructure extends RowCommands {
+  /** 重绑 raw 数据源与默认行高解析，重建行高轴并重置视图包装（隐藏集保留，由 clearHidden 单独清空）。 */
+  rebuild(rawData: DataSource, resolveDefaultRowHeight: () => number): void
+  /** 清空隐藏集（setData 语义）。 */
+  clearHidden(): void
 
   getRowHeight(underlyingRow: number): number
   setRowHeight(underlyingRow: number, height: number): void

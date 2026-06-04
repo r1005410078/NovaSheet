@@ -4,9 +4,9 @@ import { HideRowsCommandHandler } from '../../../src/engine/row/HideRowsCommandH
 import { InsertRowsCommandHandler } from '../../../src/engine/row/InsertRowsCommandHandler'
 import { UnhideRowsCommandHandler } from '../../../src/engine/row/UnhideRowsCommandHandler'
 import type { RowDomainEvent } from '../../../src/engine/row/RowEvent'
-import type { RowStructure } from '../../../src/engine/row/RowStructure'
+import type { RowCommands } from '../../../src/engine/row/RowStructure'
 
-function makeRows(overrides: Partial<RowStructure>): RowStructure {
+function makeRows(overrides: Partial<RowCommands>): RowCommands {
   return {
     insertRows: () => null,
     deleteRows: () => null,
