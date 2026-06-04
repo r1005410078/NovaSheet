@@ -5,7 +5,11 @@ import {
   type AutofitRowsResult,
   type CellRange,
   type FillDirection,
-  type GridEngine,
+  type GridCellEditing,
+  type GridDataAccess,
+  type GridFillMutation,
+  type GridFrameReader,
+  type GridSelectionAccess,
 } from '@novasheet/core'
 import type { DomFillHandleLayer } from '../DomFillHandleLayer'
 import { computeRangeOverlayRects } from '../RangeOverlayRects'
@@ -19,9 +23,15 @@ export interface FillEvent {
   readonly direction: FillDirection
 }
 
+type FillHandleDragEngine = GridFrameReader &
+  GridFillMutation &
+  Pick<GridCellEditing, 'isCellEditing'> &
+  Pick<GridSelectionAccess, 'getSelection'> &
+  Pick<GridDataAccess, 'getData'>
+
 /** FillHandleDrag 所需的 runtime 交互服务。 */
 export interface FillHandleDragDeps {
-  readonly engine: GridEngine
+  readonly engine: FillHandleDragEngine
   readonly host: WebHost
   readonly fillLayer?: DomFillHandleLayer
   afterEngineMutation(): void

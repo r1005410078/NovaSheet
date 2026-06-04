@@ -1,13 +1,22 @@
-import type { CellRange, GridEngine } from '@novasheet/core'
+import type {
+  CellRange,
+  GridFrameReader,
+  GridRowStructure,
+  GridSelectionAccess,
+} from '@novasheet/core'
 import type { WebHost, WebPointerEvent } from '../../host/WebHost'
 import type { RowReorderOverlay, RowReorderPreview } from '../../overlay/RowReorderOverlay'
 import type { AutoScrollAxis, Drag } from './Drag'
 
 const ROW_REORDER_DRAG_THRESHOLD_PX = 6
 
+type RowHeaderDragEngine = GridFrameReader &
+  Pick<GridSelectionAccess, 'getSelection'> &
+  Pick<GridRowStructure, 'moveRows'>
+
 /** RowHeaderDrag 所需的 runtime 交互服务（共享能力 + 行专用 helper）。 */
 export interface RowHeaderDragDeps {
-  readonly engine: GridEngine
+  readonly engine: RowHeaderDragEngine
   readonly host: WebHost
   readonly overlay?: RowReorderOverlay
   refresh(): void

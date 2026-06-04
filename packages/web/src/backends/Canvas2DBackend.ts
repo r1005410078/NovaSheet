@@ -74,36 +74,67 @@ import { WebGridRuntime } from '../runtime/WebGridRuntime'
  * Host 回调在 `attach()` 之后才触发，故可在 `this.runtime` 赋值后安全闭包引用。
  */
 export class Canvas2DBackend implements GridController {
+  /** Grid 挂载容器；所有 DOM 层与 canvas 都以它为根。 */
   private container: HTMLElement
+  /** backend 拥有的唯一绘制 surface。 */
   private canvas: HTMLCanvasElement
+  /** Canvas2D renderer 与 HighDPI 共享的原生绘图上下文。 */
   private ctx: CanvasRenderingContext2D
+  /** 平台无关状态引擎；runtime 的所有 mutation 都落到这里。 */
   private engine: DefaultGridEngine
+  /** 负责 DPR 缩放与 surface 尺寸同步。 */
   private highDpi: HighDPI
+  /** 当前 canvas2d renderer；`setData` 后会随 engine/frame 关系重建。 */
   private renderer: Canvas2DRenderer
+  /** DOM 宿主层：scrollHost、spacer、尺寸与输入事件入口。 */
   private host: DomGridHost
+  /** 行列 resize 的 DOM hit-zone 层。 */
   private handleLayer: DomHandleLayer
+  /** 填充柄 DOM hit-zone 层。 */
   private fillHandleLayer: DomFillHandleLayer
+  /** 隐藏行的展开入口。 */
   private hideToggleHandle: HideToggleHandle
+  /** 隐藏列的展开入口。 */
   private hideColToggleHandle: HideColToggleHandle
+  /** 单元格编辑器 DOM 层。 */
   private cellEditor: DomCellEditor
+  /** 右键菜单层；constructor 后段 attach，故延迟赋值。 */
   private contextMenuLayer!: DomContextMenuLayer
+  /** 筛选弹层；由 runtime 打开并回写筛选条件。 */
   private filterPopover!: FilterPopover
+  /** 行高输入弹层；提交后批量写入 pending rows。 */
   private rowHeightPopover!: RowHeightPopover
+  /** 列宽输入弹层；提交后批量写入 pending columns。 */
   private columnWidthPopover!: ColumnWidthPopover
+  /** 列拖拽重排时的 DOM 预览层。 */
   private columnReorderOverlay: ColumnReorderOverlay
+  /** 行拖拽重排时的 DOM 预览层。 */
   private rowReorderOverlay: RowReorderOverlay
+  /** 选区高亮与拖拽辅助 DOM 层。 */
   private selectionOverlay: SelectionOverlay
+  /** Web 剪贴板适配器；runtime 只依赖抽象能力。 */
   private clipboardAdapter = new WebClipboardAdapter()
+  /** web 交互编排器；attach 前由 backend 完成全部依赖注入。 */
   private runtime!: WebGridRuntime
+  /** 单 Grid 共享 scheduler，host / renderer / runtime 的 RAF 统一合并。 */
   private scheduler = new FrameScheduler()
+  /** 用户传入的原始数据源；sort/filter pipeline 会基于它重建 view data。 */
   private rawSource: DataSource
+  /** 当前筛选层状态。 */
   private filterLayer = new FilterLayer()
+  /** 当前排序层状态。 */
   private sortLayer = new SortLayer()
+  /** rawSource + sort/filter 组合后的视图数据管线。 */
   private pipeline: ViewPipeline
+  /** pipeline 订阅释放函数，`setData` / `destroy` 时调用。 */
   private unsubscribePipeline: () => void = () => {}
+  /** 批量重置 sort/filter 时避免向外发出中间态事件。 */
   private suppressPipelineEvents = false
+  /** view data 变更监听器集合。 */
   private viewChangeListeners = new Set<(event: ViewChangeEvent) => void>()
+  /** 排序变更监听器集合。 */
   private sortChangeListeners = new Set<(event: SortChangeEvent) => void>()
+  /** 筛选变更监听器集合。 */
   private filterChangeListeners = new Set<(event: FilterChangeEvent) => void>()
   /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
    *  让 LRU 缓存跨绘制 / 度量复用。 */

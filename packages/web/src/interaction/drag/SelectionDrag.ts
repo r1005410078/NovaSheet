@@ -1,10 +1,16 @@
-import { hitTestCell, type GridEngine } from '@novasheet/core'
+import {
+  hitTestCell,
+  type GridFrameReader,
+  type GridSelectionAccess,
+} from '@novasheet/core'
 import type { WebPointerEvent } from '../../host/WebHost'
 import type { AutoScrollAxis, Drag } from './Drag'
 
+type SelectionDragEngine = GridFrameReader & Pick<GridSelectionAccess, 'selectCell'>
+
 /** SelectionDrag 所需的 runtime 交互服务。 */
 export interface SelectionDragDeps {
-  readonly engine: GridEngine
+  readonly engine: SelectionDragEngine
   refresh(): void
   requestAutoScroll(pointer: WebPointerEvent): void
   stopAutoScroll(): void

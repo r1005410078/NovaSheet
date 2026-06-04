@@ -43,8 +43,20 @@ export type {
 export { DefaultGridEngine } from './engine/DefaultGridEngine'
 export type {
   FillCommitResult,
+  GridCellEditing,
+  GridClipboardMutation,
+  GridColumnStructure,
+  GridDataAccess,
   GridEngine,
   GridEngineOptions,
+  GridFillMutation,
+  GridFormatting,
+  GridFrameReader,
+  GridHistory,
+  GridLayout,
+  GridMerging,
+  GridRowStructure,
+  GridSelectionAccess,
   SetViewDataOptions,
 } from './engine/GridEngine'
 export type {

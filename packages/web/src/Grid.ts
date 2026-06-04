@@ -71,46 +71,6 @@ export function withExcelHeaders<T extends GridOptions>(options: T): T {
   return { ...options, excelHeaders: true }
 }
 
-/** 从门面选项中剥离非引擎字段，只把引擎参数传给 `DefaultGridEngine`。 */
-function engineOptionsFrom(options: GridOptions): GridEngineOptions {
-  const {
-    renderer: _r,
-    onContextMenuAction: _a,
-    onCopy: _c,
-    onCut: _x,
-    onPaste: _v,
-    onPasteSkipped: _s,
-    onUndo: _u,
-    onRedo: _y,
-    onFill: _f,
-    onRowsInserted: _ri,
-    onRowsDeleted: _rd,
-    onHideChange: _hc,
-    onColumnsInserted: _ci,
-    onColumnsDeleted: _cd,
-    onHideColsChange: _hcc,
-    onColumnsMoved: _cm,
-    ...engineOptions
-  } = options
-  void _r
-  void _a
-  void _c
-  void _x
-  void _v
-  void _s
-  void _u
-  void _y
-  void _f
-  void _ri
-  void _rd
-  void _hc
-  void _ci
-  void _cd
-  void _hcc
-  void _cm
-  return engineOptions
-}
-
 /**
  * 浏览器端对外 Grid 门面（spec §7）。
  *
@@ -125,7 +85,13 @@ export class Grid {
   constructor(container: HTMLElement, options: GridOptions) {
     this.options = options
     const backend = options.renderer ?? 'canvas2d'
-    const engineOptions = engineOptionsFrom(options)
+    const engineOptions: GridEngineOptions = {
+      data: options.data, // 数据源：由 engine 持有并驱动 frame。
+      theme: options.theme, // 主题 token：engine 负责下发给 renderer。
+      frozen: options.frozen, // 冻结配置：engine 计算冻结区域与 viewport。
+      defaultRowHeight: options.defaultRowHeight, // 默认行高：初始化 row axis。
+      excelHeaders: options.excelHeaders, // 表头模式：A/B/... 列标 + 1-based 行号。
+    }
 
     switch (backend) {
       case 'canvas2d':

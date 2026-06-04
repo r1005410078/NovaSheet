@@ -1,11 +1,22 @@
-import { MIN_RESIZE_SIZE, type GridEngine, type ResizeHandleRect } from '@novasheet/core'
+import {
+  MIN_RESIZE_SIZE,
+  type GridHistory,
+  type GridLayout,
+  type ResizeHandleRect,
+} from '@novasheet/core'
 import type { DomHandleLayer } from '../DomHandleLayer'
 import type { WebPointerEvent } from '../../host/WebHost'
 import type { AutoScrollAxis, Drag } from './Drag'
 
+type ResizeDragEngine = Pick<
+  GridLayout,
+  'getColumnIndex' | 'getColsAxis' | 'getRowsAxis'
+> &
+  Pick<GridHistory, 'commitColumnResize' | 'commitRowResize'>
+
 /** ResizeDrag 所需的 runtime 交互服务。 */
 export interface ResizeDragDeps {
-  readonly engine: GridEngine
+  readonly engine: ResizeDragEngine
   readonly handleLayer?: DomHandleLayer
   afterEngineMutation(): void
 }
