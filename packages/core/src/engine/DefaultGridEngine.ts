@@ -1283,6 +1283,9 @@ export class DefaultGridEngine implements GridEngine {
     selection: GridSelection,
   ): void {
     if (!isMutableDataSource(this.rawData) || !this.rawData.moveFields) return
+    // undo/redo 路径：command.execute 经管线 dispatch 的 columnsMoved 会触发 format/merge
+    // remap，但调用方随后用 formatStore/mergeStore.restore(快照) 覆盖它——故此处 remap 被丢弃，
+    // 不要因此移除调用方的 restore（否则 store 会被 double-remap）。
     const event = this.moveColsCommand.execute({ kind: 'moveCols', fieldIds, beforeFieldId })
     if (!event) return
     this.rebuildViewColsAxis()
@@ -1295,6 +1298,9 @@ export class DefaultGridEngine implements GridEngine {
     selection: GridSelection,
   ): void {
     if (!isMutableDataSource(this.rawData) || !this.rawData.moveRows) return
+    // undo/redo 路径：command.execute 经管线 dispatch 的 rowsMoved 会触发 format/merge remap，
+    // 但调用方随后用 formatStore/mergeStore.restore(快照) 覆盖它——故此处 remap 被丢弃，
+    // 不要因此移除调用方的 restore（否则 store 会被 double-remap）。
     const event = this.moveRowsCommand.execute({ kind: 'moveRows', rowIds, beforeRowId })
     if (!event) return
     this.rebuildViewAxis()
