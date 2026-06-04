@@ -76,3 +76,30 @@ describe('Bug 2: setData 清空 HideRowsLayer', () => {
     expect(frame.rowsAxis.getCount()).toBe(2)
   })
 })
+
+describe('Row structure operation boundaries', () => {
+  it('insertRows 越界时按实际 append 位置记录 undo', () => {
+    const engine = mkEngine(2)
+
+    expect(engine.insertRows(999, 1)).toEqual([2])
+    expect(engine.getData().getRowCount()).toBe(3)
+    expect(engine.getRowsAxis().getCount()).toBe(3)
+
+    engine.undo()
+
+    expect(engine.getData().getRowCount()).toBe(2)
+    expect(engine.getRowsAxis().getCount()).toBe(2)
+  })
+
+  it('deleteRows 拒绝越界 row id，避免 data 和 rowsAxis 数量错位', () => {
+    const engine = mkEngine(3)
+
+    engine.deleteRows([-1])
+    engine.deleteRows([3])
+    engine.deleteRows([1, 1])
+
+    expect(engine.getData().getRowCount()).toBe(3)
+    expect(engine.getRowsAxis().getCount()).toBe(3)
+    expect(engine.canUndo()).toBe(false)
+  })
+})

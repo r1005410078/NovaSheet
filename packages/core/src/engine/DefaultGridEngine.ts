@@ -41,12 +41,20 @@ import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
 import { FillStylePropagator } from './FillStylePropagator'
+import { GridEventPipeline } from './event/GridEventPipeline'
+import { FormatEventHandler } from './format/FormatEventHandler'
+import { DeleteRowsCommandHandler } from './row/DeleteRowsCommandHandler'
 import type {
   FillCommitResult,
   GridEngine,
   GridEngineOptions,
   SetViewDataOptions,
 } from './GridEngine'
+import { DefaultRowStructure } from './row/DefaultRowStructure'
+import { HideRowsCommandHandler } from './row/HideRowsCommandHandler'
+import { InsertRowsCommandHandler } from './row/InsertRowsCommandHandler'
+import { MoveRowsCommandHandler } from './row/MoveRowsCommandHandler'
+import { UnhideRowsCommandHandler } from './row/UnhideRowsCommandHandler'
 
 /**
  * `GridEngine` 默认实现。
@@ -109,6 +117,63 @@ export class DefaultGridEngine implements GridEngine {
     this.formatStore,
     this.mergeStore,
     this.coords,
+  )
+  private readonly eventPipeline = new GridEventPipeline([
+    new FormatEventHandler({
+      remapFormatRows: (indexMap) => this.formatStore.remapByRowIndexMap(indexMap),
+      remapMergeRows: (indexMap) => this.mergeStore.remapByRowIndexMap(indexMap),
+      remapFormatAfterRowsInserted: (at, count) =>
+        this.formatStore.remapAfterRowsInserted(at, count),
+      remapMergeAfterRowsInserted: (at, count) =>
+        this.mergeStore.remapAfterRowsInserted(at, count),
+      remapFormatAfterRowsDeleted: (rowIds) =>
+        this.formatStore.remapAfterRowsDeleted([...rowIds].sort((a, b) => a - b)),
+      remapMergeAfterRowsDeleted: (rowIds) =>
+        this.mergeStore.remapAfterRowsDeleted([...rowIds].sort((a, b) => a - b)),
+    }),
+  ])
+  private readonly rowStructure = new DefaultRowStructure({
+    getRowCount: () => this.rawData.getRowCount(),
+    insertRows: (at, count) => {
+      if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return []
+      return this.rawData.insertRows(at, count)
+    },
+    deleteRows: (rowIds) => {
+      if (!isMutableDataSource(this.rawData) || !this.rawData.deleteRows) return []
+      return this.rawData.deleteRows(rowIds)
+    },
+    moveRows: (rowIds, beforeRowId) => {
+      if (!isMutableDataSource(this.rawData) || !this.rawData.moveRows) return false
+      this.rawData.moveRows(rowIds, beforeRowId)
+      return true
+    },
+    getRawRowsAxis: () => this.rawRowsAxis,
+    setRawRowsAxis: (axis) => {
+      this.rawRowsAxis = axis
+    },
+    getHiddenRows: () => this.getHiddenRows(),
+    setHiddenRows: (rowIds) => this.hideRowsLayer.setHidden(rowIds),
+    resolveDefaultRowHeight: () => this.resolveDefaultRowHeight(),
+  })
+  private readonly moveRowsCommand = new MoveRowsCommandHandler(
+    this.rowStructure,
+    this.eventPipeline,
+  )
+  private readonly insertRowsCommand = new InsertRowsCommandHandler(
+    this.rowStructure,
+    this.eventPipeline,
+  )
+  private readonly deleteRowsCommand = new DeleteRowsCommandHandler(
+    this.rowStructure,
+    this.eventPipeline,
+  )
+  private readonly hideRowsCommand = new HideRowsCommandHandler(
+    this.rowStructure,
+    this.eventPipeline,
+  )
+  private readonly unhideRowsCommand = new UnhideRowsCommandHandler(
+    this.rowStructure,
+    this.eventPipeline,
   )
 
   constructor(options: GridEngineOptions) {
@@ -420,22 +485,23 @@ export class DefaultGridEngine implements GridEngine {
    * 触发 UndoStack 并将新行 id 返回。
    */
   insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
-    if (!isMutableDataSource(this.rawData) || !this.rawData.insertRows) return []
     const selectionBefore = this.selection.getSelection()
     const formatBefore = this.formatStore.snapshot()
     const mergeBefore = this.mergeStore.snapshot()
-    const newIds = this.rawData.insertRows(beforeUnderlyingRow, count)
-    this.rawRowsAxis.insertRange(beforeUnderlyingRow, count, this.resolveDefaultRowHeight())
-    this.rebuildViewAxis()
-    this.formatStore.remapAfterRowsInserted(beforeUnderlyingRow, count)
-    this.mergeStore.remapAfterRowsInserted(beforeUnderlyingRow, count)
-    this.selection.remapAfterRowsInserted(beforeUnderlyingRow, count)
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
+    const event = this.insertRowsCommand.execute({
       kind: 'insertRows',
       at: beforeUnderlyingRow,
       count,
-      newIds,
+    })
+    if (!event) return []
+    this.rebuildViewAxis()
+    this.selection.remapAfterRowsInserted(event.at, event.count)
+    const selectionAfter = this.selection.getSelection()
+    this.undoStack.push({
+      kind: 'insertRows',
+      at: event.at,
+      count: event.count,
+      newIds: event.newRowIds,
       selectionBefore,
       selectionAfter,
       formatBefore,
@@ -443,7 +509,7 @@ export class DefaultGridEngine implements GridEngine {
       mergeBefore,
       mergeAfter: this.mergeStore.snapshot(),
     })
-    return newIds
+    return event.newRowIds
   }
 
   /**
@@ -451,24 +517,21 @@ export class DefaultGridEngine implements GridEngine {
    * 返回被删行快照，供上层 UI 反馈。
    */
   deleteRows(underlyingRowIds: readonly number[]): void {
-    if (!isMutableDataSource(this.rawData) || !this.rawData.deleteRows) return
     const selectionBefore = this.selection.getSelection()
     const formatBefore = this.formatStore.snapshot()
     const mergeBefore = this.mergeStore.snapshot()
-    // 捕获删前高度，需在 axis 更新之前读取
-    const deletedHeights = underlyingRowIds.map((id) => this.rawRowsAxis.getSize(id))
-    const snapshots = this.rawData.deleteRows(underlyingRowIds)
-    this.rawRowsAxis.deleteRange(underlyingRowIds)
+    const event = this.deleteRowsCommand.execute({
+      kind: 'deleteRows',
+      rowIds: underlyingRowIds,
+    })
+    if (!event) return
     this.rebuildViewAxis()
-    const removedRowsSorted = [...underlyingRowIds].sort((a, b) => a - b)
-    this.formatStore.remapAfterRowsDeleted(removedRowsSorted)
-    this.mergeStore.remapAfterRowsDeleted(removedRowsSorted)
-    this.selection.remapAfterRowsDeleted(underlyingRowIds)
+    this.selection.remapAfterRowsDeleted(event.rowIds)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({
       kind: 'deleteRows',
-      snapshots,
-      deletedHeights,
+      snapshots: event.snapshots,
+      deletedHeights: event.deletedHeights,
       selectionBefore,
       selectionAfter,
       formatBefore,
@@ -482,16 +545,14 @@ export class DefaultGridEngine implements GridEngine {
    * 隐藏给定 underlying row id 集合（幂等：已隐藏的行不重复计入命令）。
    */
   hideRows(underlyingRowIds: readonly number[]): void {
-    const already = this.hideRowsLayer.getHiddenUnderlyingRows()
-    const newlyHidden = underlyingRowIds.filter((id) => !already.has(id))
-    if (newlyHidden.length === 0) return
     const selectionBefore = this.selection.getSelection()
-    this.hideRowsLayer.addHidden(newlyHidden)
+    const event = this.hideRowsCommand.execute({ kind: 'hideRows', rowIds: underlyingRowIds })
+    if (!event) return
     this.rebuildViewAxis()
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({
       kind: 'hideRows',
-      underlyingRowIds: newlyHidden,
+      underlyingRowIds: event.rowIds,
       selectionBefore,
       selectionAfter,
     })
@@ -501,16 +562,14 @@ export class DefaultGridEngine implements GridEngine {
    * 取消隐藏给定 underlying row id 集合（幂等：未隐藏的行不重复计入命令）。
    */
   unhideRows(underlyingRowIds: readonly number[]): void {
-    const already = this.hideRowsLayer.getHiddenUnderlyingRows()
-    const newlyVisible = underlyingRowIds.filter((id) => already.has(id))
-    if (newlyVisible.length === 0) return
     const selectionBefore = this.selection.getSelection()
-    this.hideRowsLayer.removeHidden(newlyVisible)
+    const event = this.unhideRowsCommand.execute({ kind: 'unhideRows', rowIds: underlyingRowIds })
+    if (!event) return
     this.rebuildViewAxis()
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({
       kind: 'unhideRows',
-      underlyingRowIds: newlyVisible,
+      underlyingRowIds: event.rowIds,
       selectionBefore,
       selectionAfter,
     })
@@ -539,28 +598,22 @@ export class DefaultGridEngine implements GridEngine {
   moveRows(rowIds: readonly number[], beforeRowId: number | null): boolean {
     if (!isMutableDataSource(this.rawData) || !this.rawData.moveRows) return false
     if (this.data.getRowCount() !== this.rawData.getRowCount()) return false
-    const normalized = this.normalizeMoveRows(rowIds, beforeRowId)
-    if (!normalized) return false
 
     this.finishActiveEdit()
     const selectionBefore = this.selection.getSelection()
     const formatBefore = this.formatStore.snapshot()
     const mergeBefore = this.mergeStore.snapshot()
-    const sizesBefore = this.captureRawRowHeights()
-    this.rawData.moveRows(normalized.rowIds, normalized.beforeRowId)
-    this.rebuildRawRowsAxisFromHeights(reorderByIndexMap(sizesBefore, normalized.indexMap))
-    this.remapHiddenRowsByIndexMap(normalized.indexMap)
-    this.formatStore.remapByRowIndexMap(normalized.indexMap)
-    this.mergeStore.remapByRowIndexMap(normalized.indexMap)
+    const event = this.moveRowsCommand.execute({ kind: 'moveRows', rowIds, beforeRowId })
+    if (!event) return false
     this.rebuildViewAxis()
-    this.restoreSelectionByRowIndexMap(selectionBefore, normalized.indexMap)
+    this.restoreSelectionByRowIndexMap(selectionBefore, event.indexMap)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({
       kind: 'moveRows',
-      rowIds: normalized.rowIds,
-      beforeRowId: normalized.beforeRowId,
-      inverseRowIds: normalized.inverseRowIds,
-      inverseBeforeRowId: normalized.inverseBeforeRowId,
+      rowIds: event.rowIds,
+      beforeRowId: event.beforeRowId,
+      inverseRowIds: event.inverseRowIds,
+      inverseBeforeRowId: event.inverseBeforeRowId,
       selectionBefore,
       selectionAfter,
       formatBefore,
@@ -1359,12 +1412,8 @@ export class DefaultGridEngine implements GridEngine {
     selection: GridSelection,
   ): void {
     if (!isMutableDataSource(this.rawData) || !this.rawData.moveRows) return
-    const normalized = this.normalizeMoveRows(rowIds, beforeRowId)
-    if (!normalized) return
-    const sizesBefore = this.captureRawRowHeights()
-    this.rawData.moveRows(normalized.rowIds, normalized.beforeRowId)
-    this.rebuildRawRowsAxisFromHeights(reorderByIndexMap(sizesBefore, normalized.indexMap))
-    this.remapHiddenRowsByIndexMap(normalized.indexMap)
+    const event = this.moveRowsCommand.execute({ kind: 'moveRows', rowIds, beforeRowId })
+    if (!event) return
     this.rebuildViewAxis()
     this.selection.setSelection(selection)
   }
@@ -1736,61 +1785,6 @@ export class DefaultGridEngine implements GridEngine {
     return { fieldIds: moving, beforeFieldId, inverseBeforeFieldId }
   }
 
-  private normalizeMoveRows(
-    rowIds: readonly number[],
-    beforeRowId: number | null,
-  ): {
-    readonly rowIds: readonly number[]
-    readonly beforeRowId: number | null
-    readonly inverseRowIds: readonly number[]
-    readonly inverseBeforeRowId: number | null
-    readonly indexMap: ReadonlyMap<number, number>
-  } | null {
-    const count = this.rawData.getRowCount()
-    if (rowIds.length === 0) return null
-    const moving = [...rowIds].sort((a, b) => a - b)
-    if (!areContiguousRows(moving)) return null
-    const start = moving[0]!
-    const end = moving[moving.length - 1]!
-    if (start < 0 || end >= count) return null
-    if (beforeRowId !== null && (beforeRowId < 0 || beforeRowId > count)) return null
-    if (beforeRowId !== null && beforeRowId >= start && beforeRowId <= end + 1) return null
-
-    const nextOrder = moveIndexBlock(count, start, end, beforeRowId)
-    const currentOrder = Array.from({ length: count }, (_, index) => index)
-    if (sameNumberOrder(currentOrder, nextOrder)) return null
-
-    const indexMap = new Map<number, number>()
-    for (let nextIndex = 0; nextIndex < nextOrder.length; nextIndex += 1) {
-      indexMap.set(nextOrder[nextIndex]!, nextIndex)
-    }
-    const inverseRowIds = moving.map((id) => indexMap.get(id)!).sort((a, b) => a - b)
-    const inverseSourceRow = end + 1 < count ? end + 1 : null
-    const inverseBeforeRowId = inverseSourceRow === null ? null : indexMap.get(inverseSourceRow)!
-    return { rowIds: moving, beforeRowId, inverseRowIds, inverseBeforeRowId, indexMap }
-  }
-
-  private captureRawRowHeights(): number[] {
-    return Array.from({ length: this.rawRowsAxis.getCount() }, (_, index) =>
-      this.rawRowsAxis.getSize(index),
-    )
-  }
-
-  private rebuildRawRowsAxisFromHeights(heights: readonly number[]): void {
-    const defaultHeight = this.resolveDefaultRowHeight()
-    this.rawRowsAxis = new ChunkedAxis({ count: heights.length, defaultSize: defaultHeight })
-    for (let i = 0; i < heights.length; i += 1) {
-      if (heights[i] !== defaultHeight) this.rawRowsAxis.setSize(i, heights[i]!)
-    }
-  }
-
-  private remapHiddenRowsByIndexMap(indexMap: ReadonlyMap<number, number>): void {
-    const remapped = this.getHiddenRows()
-      .map((rowId) => indexMap.get(rowId))
-      .filter((rowId): rowId is number => rowId !== undefined)
-    this.hideRowsLayer.setHidden(remapped)
-  }
-
   private captureRawColWidths(): Map<string, number> {
     const widths = new Map<string, number>()
     const fields = this.rawData.getSchema().fields
@@ -2055,43 +2049,6 @@ function sameStringOrder(a: readonly string[], b: readonly string[]): boolean {
     if (a[i] !== b[i]) return false
   }
   return true
-}
-
-function sameNumberOrder(a: readonly number[], b: readonly number[]): boolean {
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false
-  }
-  return true
-}
-
-function moveIndexBlock(
-  count: number,
-  start: number,
-  end: number,
-  beforeRowId: number | null,
-): number[] {
-  const current = Array.from({ length: count }, (_, index) => index)
-  const moving = current.slice(start, end + 1)
-  const remaining = current.filter((index) => index < start || index > end)
-  const insertAt =
-    beforeRowId === null
-      ? remaining.length
-      : beforeRowId > end
-        ? beforeRowId - moving.length
-        : beforeRowId
-  const next = remaining.slice()
-  next.splice(insertAt, 0, ...moving)
-  return next
-}
-
-function reorderByIndexMap<T>(values: readonly T[], indexMap: ReadonlyMap<number, number>): T[] {
-  const next = values.slice()
-  for (let oldIndex = 0; oldIndex < values.length; oldIndex += 1) {
-    const newIndex = indexMap.get(oldIndex)
-    if (newIndex !== undefined) next[newIndex] = values[oldIndex]!
-  }
-  return next
 }
 
 function normalizeCellRange(a: CellAddress, b: CellAddress): CellRange {
