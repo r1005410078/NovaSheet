@@ -530,9 +530,67 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ## Task 2：`DefaultGridEngine` 接线到聚合根（关闭红窗）
 
 **Files:**
+- Modify: `packages/core/src/engine/row/RowStructure.ts`（拆出 `RowCommands` 子接口）
+- Modify: `packages/core/src/engine/row/MoveRowsCommandHandler.ts` + 其余 4 个 `*RowsCommandHandler.ts`（依赖收窄为 `RowCommands`）
+- Modify: `packages/core/tests/engine/row/MoveRowsCommandHandler.test.ts`、`packages/core/tests/engine/row/RowCommandHandlers.test.ts`（mock 类型改 `RowCommands`）
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 
-> 本任务是原子单元：删除 `rawRowsAxis` / `hideRowsLayer` / `rowViewData` 三字段会一次性打断所有引用，必须在同一提交内全部 rewire 完。各 Step 是有序的局部替换；只在 Step 末（Step 13）跑全量 typecheck + test。
+> 本任务是原子单元：删除 `rawRowsAxis` / `hideRowsLayer` / `rowViewData` 三字段会一次性打断所有引用，必须在同一提交内全部 rewire 完。各 Step 是有序的局部替换；只在最后的全量验证 Step 跑全量 typecheck + test。
+>
+> **Task 1 执行中发现的计划缺口（已修正）**：5 个 `*RowsCommandHandler` 及其单测 mock 把依赖类型标为 `RowStructure`。Task 1 把 `RowStructure` 扩富后，只实现 5 个正向方法的测试 mock 会 typecheck 失败。修正：拆出窄接口 `RowCommands`（仅 5 个正向方法），命令处理器只依赖它，`RowStructure extends RowCommands`。这同时是更干净的设计——命令处理器本就只需要命令面。
+
+- [ ] **Step 0a: 在 `RowStructure.ts` 拆出 `RowCommands` 窄接口**
+
+把 `RowStructure.ts` 中 `RowStructure` 接口的 5 个正向方法（`insertRows`/`deleteRows`/`hideRows`/`unhideRows`/`moveRows`）提取到一个新接口 `RowCommands`，并让 `RowStructure extends RowCommands`。结果形如：
+
+```typescript
+/** 行领域命令面：命令处理器只需要的正向变迁方法子集。 */
+export interface RowCommands {
+  insertRows(operation: InsertRowsOperation): RowsInserted | null
+  deleteRows(operation: DeleteRowsOperation): RowsDeleted | null
+  hideRows(operation: HideRowsOperation): RowsHidden | null
+  unhideRows(operation: UnhideRowsOperation): RowsUnhidden | null
+  moveRows(operation: MoveRowsOperation): RowsMoved | null
+}
+
+/**
+ * 行结构领域接口（聚合根）：自持行高轴与隐藏层，执行正向结构变迁、行高读写、
+ * 派生视图行轴/视图数据源，并提供 undo/redo 用的逆变迁。
+ */
+export interface RowStructure extends RowCommands {
+  rebuild(rawData: DataSource, resolveDefaultRowHeight: () => number): void
+  clearHidden(): void
+  // —— 此处不再重复 5 个正向方法（已由 RowCommands 提供）——
+  getRowHeight(underlyingRow: number): number
+  setRowHeight(underlyingRow: number, height: number): void
+  setRowHeightsMulti(underlyingRows: readonly number[], height: number): void
+  setDefaultRowHeight(height: number): void
+  getViewRowsAxis(): ChunkedAxis
+  getRowViewData(): DataSource
+  getHiddenRows(): readonly number[]
+  getCollapsedGaps(): readonly CollapsedGap[]
+  insertBlankRows(at: number, count: number): void
+  deleteRowsByIds(underlyingRowIds: readonly number[]): void
+  reinsertDeletedRows(snapshots: readonly DeletedRowSnapshot[], heights: readonly number[]): void
+  addHidden(underlyingRowIds: readonly number[]): void
+  removeHidden(underlyingRowIds: readonly number[]): void
+}
+```
+
+保留全部 TSDoc 注释（仅移动 5 个正向方法到 `RowCommands`）。`DefaultRowStructure` 无需改动（它 `implements RowStructure`，仍实现全部方法）。
+
+- [ ] **Step 0b: 命令处理器依赖收窄为 `RowCommands`**
+
+5 个文件 `MoveRowsCommandHandler.ts`、`InsertRowsCommandHandler.ts`、`DeleteRowsCommandHandler.ts`、`HideRowsCommandHandler.ts`、`UnhideRowsCommandHandler.ts`：把构造参数类型 `private readonly rows: RowStructure` 改为 `private readonly rows: RowCommands`，并把 import 从 `import type { RowStructure } from './RowStructure'` 改为 `import type { RowCommands } from './RowStructure'`。
+
+- [ ] **Step 0c: 命令处理器单测 mock 改 `RowCommands`**
+
+`MoveRowsCommandHandler.test.ts` 与 `RowCommandHandlers.test.ts`：把 `makeRows(overrides: Partial<RowStructure>): RowStructure` 改为 `makeRows(overrides: Partial<RowCommands>): RowCommands`，import 改为 `import type { RowCommands } from '../../../src/engine/row/RowStructure'`。mock body（5 个正向方法）不变。
+
+- [ ] **Step 0d: 跑命令处理器单测看绿**
+
+Run（从 `packages/core` 目录跑以命中 bunfig preload）：`bun test tests/engine/row/MoveRowsCommandHandler.test.ts tests/engine/row/RowCommandHandlers.test.ts`
+Expected: PASS。（此刻 engine 仍红，下面继续。）
 
 - [ ] **Step 1: 删除三个行字段，命令处理器改为构造期赋值**
 
