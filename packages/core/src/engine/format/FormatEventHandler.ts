@@ -9,6 +9,12 @@ export interface FormatEventHandlerContext {
   remapMergeAfterRowsInserted(at: number, count: number): void
   remapFormatAfterRowsDeleted(rowIds: readonly number[]): void
   remapMergeAfterRowsDeleted(rowIds: readonly number[]): void
+  remapFormatCols(indexMap: ReadonlyMap<number, number>): void
+  remapMergeCols(indexMap: ReadonlyMap<number, number>): void
+  remapFormatAfterColsInserted(at: number, count: number): void
+  remapMergeAfterColsInserted(at: number, count: number): void
+  remapFormatAfterColsDeleted(colIndices: readonly number[]): void
+  remapMergeAfterColsDeleted(colIndices: readonly number[]): void
 }
 
 /** Format / merge store 对 engine domain event 的同步响应。 */
@@ -31,13 +37,24 @@ export class FormatEventHandler implements GridDomainEventHandler {
         this.context.remapFormatRows(event.indexMap)
         this.context.remapMergeRows(event.indexMap)
         return
+      case 'columnsInserted':
+        this.context.remapFormatAfterColsInserted(event.at, event.count)
+        this.context.remapMergeAfterColsInserted(event.at, event.count)
+        return
+      case 'columnsDeleted':
+        this.context.remapFormatAfterColsDeleted(event.removedIndices)
+        this.context.remapMergeAfterColsDeleted(event.removedIndices)
+        return
+      case 'columnsMoved':
+        // 作用：列移动后让格式和合并区域继续跟随对应的数据列（按 raw 列索引重映射）。
+        this.context.remapFormatCols(event.indexMap)
+        this.context.remapMergeCols(event.indexMap)
+        return
       case 'rowsHidden':
       case 'rowsUnhidden':
-      case 'columnsInserted':
-      case 'columnsDeleted':
-      case 'columnsMoved':
       case 'columnsHidden':
       case 'columnsUnhidden':
+        // 隐藏/取消隐藏不改变 raw 坐标，format/merge 按 raw 键控，无需重映射。
         return
     }
   }

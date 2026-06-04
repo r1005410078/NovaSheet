@@ -21,6 +21,12 @@ describe('FormatEventHandler', () => {
       remapMergeAfterRowsInserted: () => calls.push('merge-insert'),
       remapFormatAfterRowsDeleted: () => calls.push('format-delete'),
       remapMergeAfterRowsDeleted: () => calls.push('merge-delete'),
+      remapFormatCols: () => calls.push('format-cols'),
+      remapMergeCols: () => calls.push('merge-cols'),
+      remapFormatAfterColsInserted: () => calls.push('format-cols-insert'),
+      remapMergeAfterColsInserted: () => calls.push('merge-cols-insert'),
+      remapFormatAfterColsDeleted: () => calls.push('format-cols-delete'),
+      remapMergeAfterColsDeleted: () => calls.push('merge-cols-delete'),
     })
 
     handler.handle({
@@ -44,14 +50,16 @@ describe('FormatEventHandler', () => {
       remapMergeAfterRowsInserted: () => calls.push('merge-insert'),
       remapFormatAfterRowsDeleted: () => calls.push('format-delete'),
       remapMergeAfterRowsDeleted: () => calls.push('merge-delete'),
+      remapFormatCols: () => calls.push('format-cols'),
+      remapMergeCols: () => calls.push('merge-cols'),
+      remapFormatAfterColsInserted: () => calls.push('format-cols-insert'),
+      remapMergeAfterColsInserted: () => calls.push('merge-cols-insert'),
+      remapFormatAfterColsDeleted: () => calls.push('format-cols-delete'),
+      remapMergeAfterColsDeleted: () => calls.push('merge-cols-delete'),
     })
 
-    handler.handle({
-      kind: 'columnsMoved',
-      fieldIds: ['a'],
-      beforeFieldId: null,
-      indexMap: new Map([[0, 0]]),
-    })
+    // 隐藏列不改 raw 坐标，format/merge 按 raw 键控，无需重映射。
+    handler.handle({ kind: 'columnsHidden', fieldIds: ['a'] })
 
     expect(calls).toEqual([])
   })
@@ -65,6 +73,12 @@ describe('FormatEventHandler', () => {
       remapMergeAfterRowsInserted: (at, count) => calls.push(`merge-insert:${at}:${count}`),
       remapFormatAfterRowsDeleted: (rowIds) => calls.push(`format-delete:${rowIds.join(',')}`),
       remapMergeAfterRowsDeleted: (rowIds) => calls.push(`merge-delete:${rowIds.join(',')}`),
+      remapFormatCols: () => calls.push('format-cols'),
+      remapMergeCols: () => calls.push('merge-cols'),
+      remapFormatAfterColsInserted: () => calls.push('format-cols-insert'),
+      remapMergeAfterColsInserted: () => calls.push('merge-cols-insert'),
+      remapFormatAfterColsDeleted: () => calls.push('format-cols-delete'),
+      remapMergeAfterColsDeleted: () => calls.push('merge-cols-delete'),
     })
 
     handler.handle({ kind: 'rowsInserted', at: 1, count: 2, newRowIds: [1, 2] })
