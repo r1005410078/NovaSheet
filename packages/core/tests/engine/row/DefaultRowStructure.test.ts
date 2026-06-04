@@ -1,96 +1,52 @@
 import { describe, expect, it } from 'bun:test'
 import { InMemoryDataSource } from '../../../src/data/InMemoryDataSource'
 import { DefaultRowStructure } from '../../../src/engine/row/DefaultRowStructure'
-import { ChunkedAxis } from '../../../src/layout/ChunkedAxis'
+import type { DataSource } from '../../../src/data/DataSource'
 import type { Row } from '../../../src/data/Schema'
 
-describe('DefaultRowStructure', () => {
-  it('inserts rows, expands raw row heights, then returns rowsInserted event', () => {
-    const data = new InMemoryDataSource({
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 80 }] },
-      rows: [{ name: 'A' }, { name: 'B' }],
-    })
-    let rawRowsAxis = new ChunkedAxis({ count: 2, defaultSize: 24 })
-    rawRowsAxis.setSize(1, 40)
-    const rows = new DefaultRowStructure({
-      getRowCount: () => data.getRowCount(),
-      insertRows: (at, count) => data.insertRows(at, count),
-      deleteRows: () => [],
-      moveRows: (rowIds, beforeRowId) => {
-        data.moveRows(rowIds, beforeRowId)
-        return true
-      },
-      getRawRowsAxis: () => rawRowsAxis,
-      setRawRowsAxis: (axis) => {
-        rawRowsAxis = axis
-      },
-      getHiddenRows: () => [],
-      setHiddenRows: () => undefined,
-      resolveDefaultRowHeight: () => 24,
-    })
+const DEFAULT_HEIGHT = 24
+
+function makeData(names: string[]): InMemoryDataSource {
+  return new InMemoryDataSource({
+    schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 80 }] },
+    rows: names.map((name) => ({ name })),
+  })
+}
+
+function makeRows(data: DataSource): DefaultRowStructure {
+  return new DefaultRowStructure(data, () => DEFAULT_HEIGHT)
+}
+
+describe('DefaultRowStructure（自持状态）', () => {
+  it('inserts rows, expands raw row heights, returns rowsInserted event', () => {
+    const data = makeData(['A', 'B'])
+    const rows = makeRows(data)
+    rows.setRowHeight(1, 40)
 
     const event = rows.insertRows({ kind: 'insertRows', at: 1, count: 2 })
 
     expect(event).toEqual({ kind: 'rowsInserted', at: 1, count: 2, newRowIds: [1, 2] })
     expect(data.getRowCount()).toBe(4)
-    expect(rawRowsAxis.getCount()).toBe(4)
-    expect(rawRowsAxis.getSize(1)).toBe(24)
-    expect(rawRowsAxis.getSize(3)).toBe(40)
+    expect(rows.getRowHeight(1)).toBe(DEFAULT_HEIGHT)
+    expect(rows.getRowHeight(3)).toBe(40)
   })
 
   it('reports the actual clamped insertion position', () => {
-    const data = new InMemoryDataSource({
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 80 }] },
-      rows: [{ name: 'A' }, { name: 'B' }],
-    })
-    let rawRowsAxis = new ChunkedAxis({ count: 2, defaultSize: 24 })
-    const rows = new DefaultRowStructure({
-      getRowCount: () => data.getRowCount(),
-      insertRows: (at, count) => data.insertRows(at, count),
-      deleteRows: () => [],
-      moveRows: (rowIds, beforeRowId) => {
-        data.moveRows(rowIds, beforeRowId)
-        return true
-      },
-      getRawRowsAxis: () => rawRowsAxis,
-      setRawRowsAxis: (axis) => {
-        rawRowsAxis = axis
-      },
-      getHiddenRows: () => [],
-      setHiddenRows: () => undefined,
-      resolveDefaultRowHeight: () => 24,
-    })
-
+    const rows = makeRows(makeData(['A', 'B']))
     const event = rows.insertRows({ kind: 'insertRows', at: 999, count: 1 })
-
     expect(event?.at).toBe(2)
     expect(event?.newRowIds).toEqual([2])
-    expect(rawRowsAxis.getCount()).toBe(3)
   })
 
-  it('deletes rows, captures deleted heights, then returns rowsDeleted event', () => {
-    const data = new InMemoryDataSource({
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 80 }] },
-      rows: [{ name: 'A' }, { name: 'B' }, { name: 'C' }],
-    })
-    let rawRowsAxis = new ChunkedAxis({ count: 3, defaultSize: 24 })
-    rawRowsAxis.setSize(1, 40)
-    const rows = new DefaultRowStructure({
-      getRowCount: () => data.getRowCount(),
-      insertRows: (at, count) => data.insertRows(at, count),
-      deleteRows: (rowIds) => data.deleteRows(rowIds),
-      moveRows: (rowIds, beforeRowId) => {
-        data.moveRows(rowIds, beforeRowId)
-        return true
-      },
-      getRawRowsAxis: () => rawRowsAxis,
-      setRawRowsAxis: (axis) => {
-        rawRowsAxis = axis
-      },
-      getHiddenRows: () => [],
-      setHiddenRows: () => undefined,
-      resolveDefaultRowHeight: () => 24,
-    })
+  it('returns null for non-positive insert count', () => {
+    const rows = makeRows(makeData(['A', 'B']))
+    expect(rows.insertRows({ kind: 'insertRows', at: 0, count: 0 })).toBeNull()
+  })
+
+  it('deletes rows, captures deleted heights and snapshots', () => {
+    const data = makeData(['A', 'B', 'C'])
+    const rows = makeRows(data)
+    rows.setRowHeight(1, 40)
 
     const event = rows.deleteRows({ kind: 'deleteRows', rowIds: [1] })
 
@@ -98,175 +54,131 @@ describe('DefaultRowStructure', () => {
     expect(event?.rowIds).toEqual([1])
     expect(event?.deletedHeights).toEqual([40])
     expect(event?.snapshots).toEqual([{ originalUnderlyingRow: 1, cells: { name: 'B' } }])
-    expect((data.getRows(0, 1) as Row[]).map((row) => row.name)).toEqual(['A', 'C'])
-    expect(rawRowsAxis.getCount()).toBe(2)
+    expect((data.getRows(0, 1) as Row[]).map((r) => r.name)).toEqual(['A', 'C'])
   })
 
-  it('rejects invalid delete row ids before touching data or raw row heights', () => {
-    const data = new InMemoryDataSource({
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 80 }] },
-      rows: [{ name: 'A' }, { name: 'B' }, { name: 'C' }],
-    })
-    const rawRowsAxis = new ChunkedAxis({ count: 3, defaultSize: 24 })
-    const rows = new DefaultRowStructure({
-      getRowCount: () => data.getRowCount(),
-      insertRows: (at, count) => data.insertRows(at, count),
-      deleteRows: (rowIds) => data.deleteRows(rowIds),
-      moveRows: (rowIds, beforeRowId) => {
-        data.moveRows(rowIds, beforeRowId)
-        return true
-      },
-      getRawRowsAxis: () => rawRowsAxis,
-      setRawRowsAxis: () => undefined,
-      getHiddenRows: () => [],
-      setHiddenRows: () => undefined,
-      resolveDefaultRowHeight: () => 24,
-    })
-
+  it('rejects invalid delete row ids before mutating', () => {
+    const data = makeData(['A', 'B', 'C'])
+    const rows = makeRows(data)
     expect(rows.deleteRows({ kind: 'deleteRows', rowIds: [-1] })).toBeNull()
     expect(rows.deleteRows({ kind: 'deleteRows', rowIds: [3] })).toBeNull()
     expect(rows.deleteRows({ kind: 'deleteRows', rowIds: [1, 1] })).toBeNull()
-    expect((data.getRows(0, 2) as Row[]).map((row) => row.name)).toEqual(['A', 'B', 'C'])
-    expect(rawRowsAxis.getCount()).toBe(3)
+    expect((data.getRows(0, 2) as Row[]).map((r) => r.name)).toEqual(['A', 'B', 'C'])
   })
 
-  it('returns null and keeps raw row heights when the data source deletes nothing', () => {
-    const rawRowsAxis = new ChunkedAxis({ count: 3, defaultSize: 24 })
-    const rows = new DefaultRowStructure({
-      getRowCount: () => 3,
-      insertRows: () => [],
-      deleteRows: () => [],
-      moveRows: () => false,
-      getRawRowsAxis: () => rawRowsAxis,
-      setRawRowsAxis: () => undefined,
-      getHiddenRows: () => [],
-      setHiddenRows: () => undefined,
-      resolveDefaultRowHeight: () => 24,
-    })
-
-    expect(rows.deleteRows({ kind: 'deleteRows', rowIds: [1] })).toBeNull()
-    expect(rawRowsAxis.getCount()).toBe(3)
-  })
-
-  it('hides and unhides only effective row ids', () => {
-    let hiddenRows: readonly number[] = [1]
-    const rows = new DefaultRowStructure({
-      getRowCount: () => 4,
-      insertRows: () => [],
-      deleteRows: () => [],
-      moveRows: () => true,
-      getRawRowsAxis: () => new ChunkedAxis({ count: 4, defaultSize: 24 }),
-      setRawRowsAxis: () => undefined,
-      getHiddenRows: () => hiddenRows,
-      setHiddenRows: (rowIds) => {
-        hiddenRows = rowIds
-      },
-      resolveDefaultRowHeight: () => 24,
-    })
+  it('hides and unhides only effective row ids, reflected in hidden + view data', () => {
+    const data = makeData(['A', 'B', 'C', 'D'])
+    const rows = makeRows(data)
+    rows.addHidden([1])
 
     expect(rows.hideRows({ kind: 'hideRows', rowIds: [1, 2, 3] })).toEqual({
       kind: 'rowsHidden',
       rowIds: [2, 3],
     })
-    expect(hiddenRows).toEqual([1, 2, 3])
+    expect(rows.getHiddenRows()).toEqual([1, 2, 3])
+    expect(rows.getRowViewData().getRowCount()).toBe(1)
+
     expect(rows.unhideRows({ kind: 'unhideRows', rowIds: [0, 2] })).toEqual({
       kind: 'rowsUnhidden',
       rowIds: [2],
     })
-    expect(hiddenRows).toEqual([1, 3])
+    expect(rows.getHiddenRows()).toEqual([1, 3])
+    expect(rows.getRowViewData().getRowCount()).toBe(2)
   })
 
-  it('moves rows, remaps row heights and hidden rows, then returns rowsMoved event', () => {
-    const data = new InMemoryDataSource({
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 80 }] },
-      rows: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }],
-    })
-    let rawRowsAxis = new ChunkedAxis({ count: 4, defaultSize: 24 })
-    rawRowsAxis.setSize(1, 40)
-    rawRowsAxis.setSize(2, 48)
-    let hiddenRows: readonly number[] = [3]
-    const rows = new DefaultRowStructure({
-      getRowCount: () => data.getRowCount(),
-      insertRows: (at, count) => data.insertRows(at, count),
-      deleteRows: (rowIds) => data.deleteRows(rowIds),
-      moveRows: (rowIds, beforeRowId) => {
-        data.moveRows(rowIds, beforeRowId)
-        return true
-      },
-      getRawRowsAxis: () => rawRowsAxis,
-      setRawRowsAxis: (axis) => {
-        rawRowsAxis = axis
-      },
-      getHiddenRows: () => hiddenRows,
-      setHiddenRows: (rowIds) => {
-        hiddenRows = rowIds
-      },
-      resolveDefaultRowHeight: () => 24,
-    })
+  it('moves rows, remaps row heights and hidden rows', () => {
+    const data = makeData(['A', 'B', 'C', 'D'])
+    const rows = makeRows(data)
+    rows.setRowHeight(1, 40)
+    rows.setRowHeight(2, 48)
+    rows.addHidden([3])
 
     const event = rows.moveRows({ kind: 'moveRows', rowIds: [1, 2], beforeRowId: null })
 
-    expect(event).not.toBeNull()
     expect(event?.kind).toBe('rowsMoved')
-    expect((data.getRows(0, 3) as Row[]).map((row) => row.name)).toEqual([
-      'A',
-      'D',
-      'B',
-      'C',
-    ])
-    expect(rawRowsAxis.getSize(1)).toBe(24)
-    expect(rawRowsAxis.getSize(2)).toBe(40)
-    expect(rawRowsAxis.getSize(3)).toBe(48)
-    expect(hiddenRows).toEqual([1])
+    expect((data.getRows(0, 3) as Row[]).map((r) => r.name)).toEqual(['A', 'D', 'B', 'C'])
+    expect(rows.getRowHeight(1)).toBe(DEFAULT_HEIGHT)
+    expect(rows.getRowHeight(2)).toBe(40)
+    expect(rows.getRowHeight(3)).toBe(48)
+    expect(rows.getHiddenRows()).toEqual([1])
   })
 
   it('returns null for invalid row move operations', () => {
-    const data = new InMemoryDataSource({
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 80 }] },
-      rows: [{ name: 'A' }, { name: 'B' }, { name: 'C' }],
-    })
-    let moved = false
-    const rows = new DefaultRowStructure({
-      getRowCount: () => data.getRowCount(),
-      insertRows: () => [],
-      deleteRows: () => [],
-      moveRows: () => {
-        moved = true
-        return true
-      },
-      getRawRowsAxis: () => new ChunkedAxis({ count: 3, defaultSize: 24 }),
-      setRawRowsAxis: () => undefined,
-      getHiddenRows: () => [],
-      setHiddenRows: () => undefined,
-      resolveDefaultRowHeight: () => 24,
-    })
-
+    const data = makeData(['A', 'B', 'C'])
+    const rows = makeRows(data)
     expect(rows.moveRows({ kind: 'moveRows', rowIds: [1, 2], beforeRowId: 2 })).toBeNull()
-    expect(moved).toBe(false)
+    expect((data.getRows(0, 2) as Row[]).map((r) => r.name)).toEqual(['A', 'B', 'C'])
   })
 
-  it('returns null and leaves raw state untouched when the data source cannot move rows', () => {
-    let rawRowsAxis = new ChunkedAxis({ count: 3, defaultSize: 24 })
-    rawRowsAxis.setSize(0, 40)
-    let hiddenRows: readonly number[] = [2]
-    const rows = new DefaultRowStructure({
+  it('returns null and leaves state untouched when data source is not mutable', () => {
+    const immutable: DataSource = {
       getRowCount: () => 3,
-      insertRows: () => [],
-      deleteRows: () => [],
-      moveRows: () => false,
-      getRawRowsAxis: () => rawRowsAxis,
-      setRawRowsAxis: (axis) => {
-        rawRowsAxis = axis
-      },
-      getHiddenRows: () => hiddenRows,
-      setHiddenRows: (rowIds) => {
-        hiddenRows = rowIds
-      },
-      resolveDefaultRowHeight: () => 24,
-    })
-
+      getSchema: () => ({ fields: [{ id: 'name', name: 'Name', type: 'text', width: 80 }] }),
+      getRows: () => [],
+      getCell: () => undefined,
+      subscribe: () => () => undefined,
+    }
+    const rows = new DefaultRowStructure(immutable, () => DEFAULT_HEIGHT)
     expect(rows.moveRows({ kind: 'moveRows', rowIds: [0], beforeRowId: null })).toBeNull()
-    expect(rawRowsAxis.getSize(0)).toBe(40)
-    expect(hiddenRows).toEqual([2])
+    expect(rows.insertRows({ kind: 'insertRows', at: 0, count: 1 })).toBeNull()
+    expect(rows.deleteRows({ kind: 'deleteRows', rowIds: [0] })).toBeNull()
+  })
+
+  it('getViewRowsAxis derives view axis from raw heights and hidden rows', () => {
+    const data = makeData(['A', 'B', 'C'])
+    const rows = makeRows(data)
+    rows.setRowHeight(0, 30)
+    rows.setRowHeight(2, 50)
+    rows.addHidden([1])
+
+    const axis = rows.getViewRowsAxis()
+    expect(axis.getCount()).toBe(2)
+    expect(axis.getSize(0)).toBe(30)
+    expect(axis.getSize(1)).toBe(50)
+  })
+
+  it('getCollapsedGaps reports hidden runs', () => {
+    const rows = makeRows(makeData(['A', 'B', 'C', 'D']))
+    rows.addHidden([1, 2])
+    const gaps = rows.getCollapsedGaps()
+    expect(gaps).toEqual([{ atViewRow: 0, hiddenCount: 2, hiddenIds: [1, 2] }])
+  })
+
+  it('reinsertDeletedRows restores rows, cells and heights (delete undo)', () => {
+    const data = makeData(['A', 'B', 'C'])
+    const rows = makeRows(data)
+    rows.setRowHeight(1, 40)
+    const event = rows.deleteRows({ kind: 'deleteRows', rowIds: [1] })!
+
+    rows.reinsertDeletedRows(event.snapshots, event.deletedHeights)
+
+    expect((data.getRows(0, 2) as Row[]).map((r) => r.name)).toEqual(['A', 'B', 'C'])
+    expect(rows.getRowHeight(1)).toBe(40)
+  })
+
+  it('insertBlankRows + deleteRowsByIds are inverse-safe (insert undo/redo)', () => {
+    const data = makeData(['A', 'B'])
+    const rows = makeRows(data)
+    rows.insertBlankRows(1, 2)
+    expect(data.getRowCount()).toBe(4)
+    rows.deleteRowsByIds([1, 2])
+    expect(data.getRowCount()).toBe(2)
+    expect((data.getRows(0, 1) as Row[]).map((r) => r.name)).toEqual(['A', 'B'])
+  })
+
+  it('rebuild rebinds data source and resets raw row axis', () => {
+    const rows = makeRows(makeData(['A', 'B']))
+    rows.setRowHeight(0, 99)
+    const next = makeData(['X', 'Y', 'Z'])
+    rows.rebuild(next, () => DEFAULT_HEIGHT)
+    expect(rows.getRowViewData().getRowCount()).toBe(3)
+    expect(rows.getRowHeight(0)).toBe(DEFAULT_HEIGHT)
+  })
+
+  it('clearHidden empties the hidden set', () => {
+    const rows = makeRows(makeData(['A', 'B', 'C']))
+    rows.addHidden([1])
+    rows.clearHidden()
+    expect(rows.getHiddenRows()).toEqual([])
   })
 })
