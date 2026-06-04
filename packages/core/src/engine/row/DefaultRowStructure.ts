@@ -168,7 +168,8 @@ export class DefaultRowStructure implements RowStructure {
   ): void {
     const mutable = this.mutable
     if (!mutable?.insertRows) return
-    // 按 originalUnderlyingRow 升序回插（与 heights 升序对齐）；从末尾向前以保持索引有效。
+    // 按 originalUnderlyingRow 升序回插；heights 与 sorted 同序对齐，依赖 deleteRows 经
+    // normalizeDeleteRows 产出严格升序 rowIds（故 deletedHeights 亦升序）。从末尾向前回插以保持索引有效。
     const sorted = [...snapshots].sort(
       (a, b) => a.originalUnderlyingRow - b.originalUnderlyingRow,
     )
