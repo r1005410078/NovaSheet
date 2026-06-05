@@ -6,12 +6,15 @@
 - Spec：`docs/superpowers/specs/2026-06-05-novasheet-undo-decomposition-serializable-commands.md`
 - Plan：`docs/superpowers/plans/2026-06-05-novasheet-undo-m1..m4-*.md`
 
-## 现状（未开工，本 README 是路线锚点）
+## 现状（M1 已落地）
 
-**所有 21 个 kind 的 undo/redo 仍在 `DefaultGridEngine.applyUndo`/`applyRedo` 两个中心 switch 里。**
-本目录现仅有通用件：`../../undo/UndoCommand.ts`（数据）、`../../undo/UndoStack.ts`（通用栈），
-以及 `UndoReplay.ts` 里**写好但未接线**的 `UndoReplayContext` 脚手架。即「写侧各 controller push、
-恢复侧 engine 中心 switch」的精神分裂态，待 M1–M4 收口。
+**dispatch 骨架已接线**：`UndoRegistry`/`UndoReplay`/`UndoHandler`/`CellUndoHandler` 就位，
+`DefaultGridEngine.undo()`/`redo()` 委派 `UndoReplay`；`editCell`/`clearRange`/`paste` 三个 kind
+经 registry 路由到 `CellUndoHandler`，其余 18 个 kind 经 dual-track 回退 engine 旧
+`applyUndo`/`applyRedo` switch（M4 待 registry 覆盖全 kind 后统一删）。
+
+旧 `UndoReplayContext` 脚手架仍在 `UndoReplay.ts` 里但已标 `@deprecated`，由各域最小 ctx
+（`CellUndoContext` 等）逐步取代。M2 起按域迁 format/merge → row → column → 复合。
 
 ## 目标设计
 
