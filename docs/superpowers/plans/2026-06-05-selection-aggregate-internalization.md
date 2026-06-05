@@ -147,6 +147,7 @@ git commit -m "refactor(core): 迁移 selection 类型到领域目录"
 - Modify: `packages/core/src/engine/DefaultGridEngine.ts`
 - Modify: `packages/core/src/engine/selection/DefaultSelectionState.ts`
 - Modify: `packages/core/src/engine/selection/SelectionState.ts`
+- Modify: `packages/core/src/interaction/SelectionModel.ts`
 - Modify: `packages/core/src/index.ts`
 
 - [ ] **Step 1: Move source and test files**
@@ -179,6 +180,16 @@ import type {
   GridIndexBounds,
   SelectionNavigationIntent,
 } from './SelectionNavigation'
+```
+
+In `packages/core/src/interaction/SelectionModel.ts`, keep the old model in place but import navigation from the new domain path:
+
+```ts
+import type {
+  GridIndexBounds,
+  SelectionNavigationIntent,
+} from '../engine/selection/SelectionNavigation'
+import { applySelectionNavigation } from '../engine/selection/SelectionNavigation'
 ```
 
 In `packages/core/src/index.ts`, export navigation from the new path:
