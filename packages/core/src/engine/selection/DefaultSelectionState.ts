@@ -31,13 +31,17 @@ const EMPTY_SELECTION: GridSelection = {
 
 /** 默认 selection 聚合根；向 engine 暴露选择状态与结构 remap 能力。 */
 export class DefaultSelectionState implements SelectionState {
+  /** 当前选区快照；空选区四个字段必须同时为 `null`。 */
   private selection: GridSelection = EMPTY_SELECTION
+  /** column move 前的可见 fieldId 顺序，用于 event 后把 view col 选区恢复到同一字段。 */
   private visibleFieldIdsBefore: readonly string[] | null = null
 
+  /** 返回当前不可变选区快照；调用方不得原地修改返回对象。 */
   getSelection(): GridSelection {
     return this.selection
   }
 
+  /** 设置完整选区快照，并校验 active/anchor/extent/range 的一致性。 */
   setSelection(selection: GridSelection): void {
     const cells = [selection.activeCell, selection.anchorCell, selection.extentCell]
     const hasAnyCell = cells.some((cell) => cell !== null)
@@ -68,6 +72,7 @@ export class DefaultSelectionState implements SelectionState {
     this.selection = selection
   }
 
+  /** 选择单元格；`extend=true` 时保留原 anchor/active，只移动 extent。 */
   selectCell(cell: CellAddress, options: SelectCellOptions = {}): void {
     const isExtending = options.extend && this.selection.anchorCell && this.selection.activeCell
     const active = isExtending ? this.selection.activeCell! : cell
@@ -81,10 +86,12 @@ export class DefaultSelectionState implements SelectionState {
     }
   }
 
+  /** 清空选区，恢复为统一的空选区对象。 */
   clear(): void {
     this.selection = EMPTY_SELECTION
   }
 
+  /** 以矩形 range 建立选区；active/anchor 固定为 range 左上角。 */
   setSelectedRange(range: CellRange): void {
     const anchor: CellAddress = { rowIndex: range.startRow, colIndex: range.startCol }
     const extent: CellAddress = { rowIndex: range.endRow, colIndex: range.endCol }
@@ -96,10 +103,12 @@ export class DefaultSelectionState implements SelectionState {
     }
   }
 
+  /** 应用键盘导航 intent，并返回移动后的 active/extent cell 供滚动跟随。 */
   navigate(intent: SelectionNavigationIntent, bounds: GridIndexBounds): CellAddress | null {
     return applySelectionNavigation(this, intent, bounds)
   }
 
+  /** 行插入后平移已有选区；空选区保持不变。 */
   remapAfterRowsInserted(at: number, count: number): void {
     if (this.selection.selectedRange == null) return
     const shift = (rowIndex: number) => remapRowIndexAfterInsert(rowIndex, at, count)
@@ -118,6 +127,7 @@ export class DefaultSelectionState implements SelectionState {
     }
   }
 
+  /** 行删除后收缩已有选区；选区覆盖的行全部删除时清空。 */
   remapAfterRowsDeleted(rowIds: readonly number[]): void {
     if (this.selection.selectedRange == null) return
     const range = this.selection.selectedRange
@@ -145,6 +155,7 @@ export class DefaultSelectionState implements SelectionState {
     }
   }
 
+  /** 列插入后平移已有选区；空选区保持不变。 */
   remapAfterColsInserted(at: number, count: number): void {
     if (this.selection.selectedRange == null) return
     const shift = (colIndex: number) => remapColIndexAfterInsert(colIndex, at, count)
@@ -163,6 +174,7 @@ export class DefaultSelectionState implements SelectionState {
     }
   }
 
+  /** 列删除后收缩已有选区；选区覆盖的列全部删除时清空。 */
   remapAfterColsDeleted(colIndices: readonly number[]): void {
     if (this.selection.selectedRange == null) return
     const range = this.selection.selectedRange
@@ -190,14 +202,17 @@ export class DefaultSelectionState implements SelectionState {
     }
   }
 
+  /** row move 后按 old-row-index → new-row-index 映射恢复同一底层行选区。 */
   restoreByRowIndexMap(indexMap: ReadonlyMap<number, number>): void {
     this.setSelection(remapSelectionByRowIndexMap(this.getSelection(), indexMap))
   }
 
+  /** 捕获结构变化前的可见字段顺序；必须在 column move operation 执行前调用。 */
   captureVisibleFieldIdsBefore(fieldIds: readonly string[]): void {
     this.visibleFieldIdsBefore = [...fieldIds]
   }
 
+  /** 使用捕获的旧字段顺序和当前字段顺序，把列选区恢复到同一字段集合。 */
   restoreByCapturedVisibleFieldIds(currentFieldIds: readonly string[]): void {
     if (!this.visibleFieldIdsBefore) return
     this.setSelection(
@@ -210,6 +225,7 @@ export class DefaultSelectionState implements SelectionState {
     this.visibleFieldIdsBefore = null
   }
 
+  /** sort/filter 等 view-row 映射变化后，按 raw row 身份恢复选区。 */
   remapAfterViewRowsChanged(context: {
     oldViewRowToRaw(viewRow: number): number
     rawRowToView(rawRow: number): number
