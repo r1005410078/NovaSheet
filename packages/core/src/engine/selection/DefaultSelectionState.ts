@@ -145,7 +145,11 @@ export class DefaultSelectionState implements SelectionState {
     const remap = (cell: CellAddress | null) => {
       if (cell == null) return null
       const mapped = remapRowIndexAfterDelete(cell.rowIndex, rowIds)
-      return { ...cell, rowIndex: mapped ?? startRow }
+      // 端点行被删时落到它塌缩后应处的位置并夹入存活范围,保持选区方向，
+      // 避免端点统一塌到 startRow 而与重算的 selectedRange 不一致。
+      const rowIndex =
+        mapped ?? clampToRange(collapsedIndex(cell.rowIndex, rowIds), startRow, endRow)
+      return { ...cell, rowIndex }
     }
     this.selection = {
       activeCell: remap(this.selection.activeCell),
@@ -192,7 +196,9 @@ export class DefaultSelectionState implements SelectionState {
     const remap = (cell: CellAddress | null) => {
       if (cell == null) return null
       const mapped = remapColIndexAfterDelete(cell.colIndex, colIndices)
-      return { ...cell, colIndex: mapped ?? startCol }
+      const colIndex =
+        mapped ?? clampToRange(collapsedIndex(cell.colIndex, colIndices), startCol, endCol)
+      return { ...cell, colIndex }
     }
     this.selection = {
       activeCell: remap(this.selection.activeCell),
@@ -232,6 +238,20 @@ export class DefaultSelectionState implements SelectionState {
   }): void {
     this.setSelection(remapSelectionAfterViewRowsChanged(this.getSelection(), context))
   }
+}
+
+/** 被删索引塌缩后应处的位置：减去严格小于它的删除数量（`removedSorted` 升序）。 */
+function collapsedIndex(index: number, removedSorted: readonly number[]): number {
+  let shift = 0
+  for (const removed of removedSorted) {
+    if (removed < index) shift += 1
+    else break
+  }
+  return index - shift
+}
+
+function clampToRange(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
 }
 
 function normalizeRange(a: CellAddress, b: CellAddress): CellRange {
