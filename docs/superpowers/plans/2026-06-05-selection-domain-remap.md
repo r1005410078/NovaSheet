@@ -8,6 +8,8 @@
 
 **Tech Stack:** TypeScript strict、`bun:test`、现有 `SelectionModel`、`GridEventPipeline`、row/column domain events。
 
+**Spec:** `docs/superpowers/specs/2026-06-05-selection-domain-remap-design.md`
+
 ---
 
 ## Current Gap
