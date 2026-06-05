@@ -60,7 +60,7 @@ import { HideColsCommandHandler } from './column/HideColsCommandHandler'
 import { UnhideColsCommandHandler } from './column/UnhideColsCommandHandler'
 import { MoveColsCommandHandler } from './column/MoveColsCommandHandler'
 import { DefaultSelectionState } from './selection/DefaultSelectionState'
-import { SelectionCommandHandler } from './selection/SelectionCommandHandler'
+import { SelectionController } from './selection/SelectionController'
 import { SelectionEventHandler } from './selection/SelectionEventHandler'
 
 /**
@@ -107,7 +107,7 @@ export class DefaultGridEngine implements GridEngine {
    * Selection 写入入口；engine 经命令处理器写选区，不直连聚合 mutation（invariant #3）。
    * merge lookup 用 view 坐标查 mergeStore（与渲染帧的 view 选区一致），集中合并吸附。
    */
-  private readonly selectionCommand = new SelectionCommandHandler(this.selection, {
+  private readonly selectionController = new SelectionController(this.selection, {
     resolveMergeRegion: (rowIndex, colIndex) =>
       this.mergeStore.getRegionAt(rowIndex, colIndex)?.range ?? null,
   })
@@ -201,13 +201,13 @@ export class DefaultGridEngine implements GridEngine {
     this.finishActiveEdit()
     this.rebuildData(data)
     if (options.oldResolveUnderlyingRow) {
-      this.selectionCommand.remapAfterViewRowsChanged({
+      this.selectionController.remapAfterViewRowsChanged({
         oldViewRowToRaw: options.oldResolveUnderlyingRow,
         rawRowToView: (rawRow) => this.coords.rawRowToView(rawRow),
       })
       return
     }
-    if (options.clearSelection !== false) this.selectionCommand.clear()
+    if (options.clearSelection !== false) this.selectionController.clear()
   }
 
   private rebuildData(data: DataSource): void {
@@ -262,12 +262,12 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   selectCell(cell: CellAddress, options?: SelectCellOptions): void {
-    this.selectionCommand.selectCell(cell, options)
+    this.selectionController.selectCell(cell, options)
   }
 
   clearSelection(): void {
     this.cancelCellEdit()
-    this.selectionCommand.clear()
+    this.selectionController.clear()
   }
 
   beginCellEdit(cell: CellAddress): boolean {
@@ -343,7 +343,7 @@ export class DefaultGridEngine implements GridEngine {
     const colCount = this.data.getSchema().fields.length
     if (rowCount <= 0 || colCount <= 0) return true
 
-    this.selectionCommand.navigate(intent, { rowCount, colCount })
+    this.selectionController.navigate(intent, { rowCount, colCount })
     return true
   }
 
@@ -726,7 +726,7 @@ export class DefaultGridEngine implements GridEngine {
     const selectionBefore = this.selection.getSelection()
     const formatBefore = this.formatStore.snapshot()
     const mergeBefore = this.mergeStore.snapshot()
-    this.selectionCommand.captureVisibleFieldIdsBefore(
+    this.selectionController.captureVisibleFieldIdsBefore(
       this.data.getSchema().fields.map((field) => field.id),
     )
     const event = this.moveColsCommand.execute({ kind: 'moveCols', fieldIds, beforeFieldId })
@@ -750,7 +750,7 @@ export class DefaultGridEngine implements GridEngine {
 
   /** Phase 4.5 — 程序化设置选区（不入 undo 栈）。 */
   setSelection(selection: GridSelection): void {
-    this.selectionCommand.setSelection(selection)
+    this.selectionController.setSelection(selection)
   }
 
   undo(): UndoCommand | undefined {
@@ -884,7 +884,7 @@ export class DefaultGridEngine implements GridEngine {
 
     const result = unionRange(source, fill)
     this.undoStack.push({ kind: 'fill', source, fill, result, before, after, ...styles })
-    this.selectionCommand.setSelectedRange(result)
+    this.selectionController.setSelectedRange(result)
     return { source, fill, result, writes: resultWrites }
   }
 
@@ -973,7 +973,7 @@ export class DefaultGridEngine implements GridEngine {
     const before = this.mergeStore.snapshot()
     const region = this.mergeStore.merge(rawRange)
     if (!region) return false
-    this.selectionCommand.setSelectedRange(range)
+    this.selectionController.setSelectedRange(range)
     const after = this.mergeStore.snapshot()
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({ kind: 'merge', before, after, selectionBefore, selectionAfter })
@@ -1064,7 +1064,7 @@ export class DefaultGridEngine implements GridEngine {
         this.rebuildViewAxis()
         this.formatStore.restore(cmd.formatBefore)
         this.mergeStore.restore(cmd.mergeBefore)
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       }
       case 'deleteRows': {
@@ -1074,20 +1074,20 @@ export class DefaultGridEngine implements GridEngine {
         this.rebuildViewAxis()
         this.formatStore.restore(cmd.formatBefore)
         this.mergeStore.restore(cmd.mergeBefore)
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       }
       case 'hideRows':
         // unapply hideRows = remove from hidden set
         this.rowStructure.removeHidden(cmd.underlyingRowIds)
         this.rebuildViewAxis()
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       case 'unhideRows':
         // unapply unhideRows = add back to hidden set
         this.rowStructure.addHidden(cmd.underlyingRowIds)
         this.rebuildViewAxis()
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       case 'resizeRowsMulti':
         // unapply = restore each row's old height
@@ -1098,7 +1098,7 @@ export class DefaultGridEngine implements GridEngine {
           )
         }
         this.rebuildViewAxis()
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       case 'moveRows':
         this.applyMoveRowsCommand(cmd.inverseRowIds, cmd.inverseBeforeRowId, cmd.selectionBefore)
@@ -1109,7 +1109,7 @@ export class DefaultGridEngine implements GridEngine {
         this.columnStructure.removeFieldsByIds(cmd.newFields.map((f) => f.id))
         this.frozen.setFrozen(cmd.frozenBefore)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         this.formatStore.restore(cmd.formatBefore)
         this.mergeStore.restore(cmd.mergeBefore)
         return
@@ -1117,19 +1117,19 @@ export class DefaultGridEngine implements GridEngine {
         this.columnStructure.reinsertDeletedCols(cmd.snapshots, cmd.deletedWidths)
         this.frozen.setFrozen(cmd.frozenBefore)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         this.formatStore.restore(cmd.formatBefore)
         this.mergeStore.restore(cmd.mergeBefore)
         return
       case 'hideCols':
         this.columnStructure.removeHidden(cmd.fieldIds)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       case 'unhideCols':
         this.columnStructure.addHidden(cmd.fieldIds)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       case 'resizeColumnsMulti':
         for (let i = 0; i < cmd.fieldIds.length; i += 1) {
@@ -1139,7 +1139,7 @@ export class DefaultGridEngine implements GridEngine {
           )
         }
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       case 'moveCols':
         this.applyMoveColsCommand(cmd.fieldIds, cmd.inverseBeforeFieldId, cmd.selectionBefore)
@@ -1148,12 +1148,12 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'format':
         this.formatStore.restore(cmd.before)
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
       case 'merge':
       case 'unmerge':
         this.mergeStore.restore(cmd.before)
-        this.selectionCommand.setSelection(cmd.selectionBefore)
+        this.selectionController.setSelection(cmd.selectionBefore)
         return
     }
   }
@@ -1193,7 +1193,7 @@ export class DefaultGridEngine implements GridEngine {
         this.rowsAxis = this.rowStructure.getViewRowsAxis()
         this.formatStore.restore(cmd.formatAfter)
         this.mergeStore.restore(cmd.mergeAfter)
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       }
       case 'deleteRows': {
@@ -1206,23 +1206,23 @@ export class DefaultGridEngine implements GridEngine {
         this.rowsAxis = this.rowStructure.getViewRowsAxis()
         this.formatStore.restore(cmd.formatAfter)
         this.mergeStore.restore(cmd.mergeAfter)
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       }
       case 'hideRows':
         this.rowStructure.addHidden(cmd.underlyingRowIds)
         this.rowsAxis = this.rowStructure.getViewRowsAxis()
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       case 'unhideRows':
         this.rowStructure.removeHidden(cmd.underlyingRowIds)
         this.rowsAxis = this.rowStructure.getViewRowsAxis()
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       case 'resizeRowsMulti':
         this.rowStructure.setRowHeightsMulti(cmd.rowIds, cmd.newHeight)
         this.rowsAxis = this.rowStructure.getViewRowsAxis()
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       case 'moveRows':
         this.applyMoveRowsCommand(cmd.rowIds, cmd.beforeRowId, cmd.selectionAfter)
@@ -1237,7 +1237,7 @@ export class DefaultGridEngine implements GridEngine {
         )
         this.frozen.setFrozen(cmd.frozenAfter)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         this.formatStore.restore(cmd.formatAfter)
         this.mergeStore.restore(cmd.mergeAfter)
         return
@@ -1245,24 +1245,24 @@ export class DefaultGridEngine implements GridEngine {
         this.columnStructure.removeFieldsByIds(cmd.snapshots.map((s) => s.field.id))
         this.frozen.setFrozen(cmd.frozenAfter)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         this.formatStore.restore(cmd.formatAfter)
         this.mergeStore.restore(cmd.mergeAfter)
         return
       case 'hideCols':
         this.columnStructure.addHidden(cmd.fieldIds)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       case 'unhideCols':
         this.columnStructure.removeHidden(cmd.fieldIds)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       case 'resizeColumnsMulti':
         for (const id of cmd.fieldIds) this.columnStructure.setColWidthById(id, cmd.newWidth)
         this.rebuildViewColsAxis()
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       case 'moveCols':
         this.applyMoveColsCommand(cmd.fieldIds, cmd.beforeFieldId, cmd.selectionAfter)
@@ -1271,12 +1271,12 @@ export class DefaultGridEngine implements GridEngine {
         return
       case 'format':
         this.formatStore.restore(cmd.after)
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
       case 'merge':
       case 'unmerge':
         this.mergeStore.restore(cmd.after)
-        this.selectionCommand.setSelection(cmd.selectionAfter)
+        this.selectionController.setSelection(cmd.selectionAfter)
         return
     }
   }
@@ -1293,7 +1293,7 @@ export class DefaultGridEngine implements GridEngine {
     const event = this.moveColsCommand.execute({ kind: 'moveCols', fieldIds, beforeFieldId })
     if (!event) return
     this.rebuildViewColsAxis()
-    this.selectionCommand.setSelection(selection)
+    this.selectionController.setSelection(selection)
   }
 
   private applyMoveRowsCommand(
@@ -1308,7 +1308,7 @@ export class DefaultGridEngine implements GridEngine {
     const event = this.moveRowsCommand.execute({ kind: 'moveRows', rowIds, beforeRowId })
     if (!event) return
     this.rebuildViewAxis()
-    this.selectionCommand.setSelection(selection)
+    this.selectionController.setSelection(selection)
   }
 
   private restoreSelectionForWrites(writes: readonly CellWrite[], fallbackRange: CellRange): void {
@@ -1318,7 +1318,7 @@ export class DefaultGridEngine implements GridEngine {
       if (viewRow !== -1) visibleRows.push(viewRow)
     }
     if (visibleRows.length === 0) return
-    this.selectionCommand.setSelectedRange({
+    this.selectionController.setSelectedRange({
       startRow: Math.min(...visibleRows),
       endRow: Math.max(...visibleRows),
       startCol: fallbackRange.startCol,
@@ -1343,7 +1343,7 @@ export class DefaultGridEngine implements GridEngine {
     if (colIndex < 0) return
     const viewRow = this.coords.rawRowToView(rowIndex)
     if (viewRow === -1) return
-    this.selectionCommand.selectCell({ rowIndex: viewRow, colIndex })
+    this.selectionController.selectCell({ rowIndex: viewRow, colIndex })
   }
 
   private finishActiveEdit(): void {

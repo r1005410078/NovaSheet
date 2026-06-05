@@ -20,10 +20,17 @@ export interface ViewRowRemapContext {
 }
 
 /**
- * Selection 领域命令处理器：engine/facade 经此写入选区，集中 merge 吸附，
- * 不再直连聚合根 mutation（invariant #3）。读路径仍可经 `SelectionState.getSelection`。
+ * Selection 写入门面 + 跨聚合协调器（**非** CQRS command handler，selection 不产领域事件）。
+ *
+ * 两个职责：
+ * 1. **写入门面**：engine/facade 的选区写入统一经此，不直连聚合 mutation（invariant #3）；
+ *    读路径仍可经 `SelectionState.getSelection`。
+ * 2. **Domain Service**：托管 Selection × Merge 的跨聚合协调（`selectCell` 吸附、`navigate`
+ *    注入 merge lookup）——该逻辑既不能进平台无关、merge-无感的聚合根，也不该散回 engine。
+ *
+ * 与 row/column 的 `*CommandHandler` 区别见 selection/README「为什么没有 execute」。
  */
-export class SelectionCommandHandler {
+export class SelectionController {
   constructor(
     private readonly selection: SelectionState,
     private readonly merge: SelectionMergeLookup = NO_MERGE,
