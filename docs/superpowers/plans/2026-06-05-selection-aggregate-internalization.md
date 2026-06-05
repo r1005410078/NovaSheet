@@ -572,7 +572,7 @@ git commit -m "docs(core): 更新 selection 聚合根终态说明"
 **Files:**
 - No source edits expected unless verification finds a defect.
 
-- [ ] **Step 1: Run lint**
+- [x] **Step 1: Run lint**
 
 Run:
 
@@ -582,7 +582,7 @@ bun run lint
 
 Expected: 0 errors / 0 warnings.
 
-- [ ] **Step 2: Run typecheck**
+- [x] **Step 2: Run typecheck**
 
 Run:
 
@@ -592,7 +592,7 @@ bun run --filter '*' typecheck
 
 Expected: PASS.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run:
 
@@ -602,7 +602,7 @@ bun test
 
 Expected: PASS.
 
-- [ ] **Step 4: Run ordered builds**
+- [x] **Step 4: Run ordered builds**
 
 Run:
 
@@ -612,7 +612,7 @@ bun run --filter @novasheet/web build && bun run --filter @novasheet/web-canvas2
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit verification fixes only if needed**
+- [x] **Step 5: Commit verification fixes only if needed**
 
 If verification required code or docs fixes:
 
