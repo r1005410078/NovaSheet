@@ -1,7 +1,7 @@
 # Selection 聚合根内化设计（删除 SelectionModel 中间状态机）
 
 - 日期：2026-06-05
-- 状态：设计已确认，待 writing-plans
+- 状态：已实施
 - 作者：rongtaosheng + Codex
 - 前置：`docs/superpowers/specs/2026-06-05-selection-domain-remap-design.md`
 - 关联代码：`packages/core/src/engine/selection/`

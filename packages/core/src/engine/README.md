@@ -26,7 +26,7 @@ Grid / runtime
 | 1 | `row/` 作为领域模板 | ✅ | operation / handler / structure / rules / event 齐全。 |
 | 2 | 收窄 `RowStructureContext` | ✅ | 已**彻底删除** context：`DefaultRowStructure` 自持 `rawRowsAxis` + `HideRowsLayer`，仅依赖 raw `MutableDataSource` 引用与 `resolveDefaultRowHeight` 两项（2026-06-04，超额完成，见 `row/README.md`）。 |
 | 3 | 按 row 模板迁移 `column/` | ✅ | 已建 `DefaultColumnStructure` 聚合根（operation/event/rules/命令处理器齐全），内化 `rawColsAxis` + `hiddenColIds` + 列隐藏视图包装，删除死代码 `ColumnStructureContext`（2026-06-05，对称 row，见 `column/README.md`）。format/merge 列 remap 走 `FormatEventHandler`；frozen/selection/undo 留 engine。 |
-| 4 | 抽离 selection remap | ✅ | 已按 row 模板建立 `SelectionState` 聚合根、`SelectionRules` 纯算法与 `SelectionEventHandler`；engine 仅保留 composer / undo snapshot / view-row 映射注入职责（2026-06-05）。 |
+| 4 | 抽离 selection remap | ✅ | 已按 row 模板建立 `SelectionState` 聚合根、`SelectionRules` 纯算法与 `SelectionEventHandler`；已删除旧 `interaction/SelectionModel` / `interaction/SelectionNavigation`，`DefaultSelectionState` 直接持有 `GridSelection` 并接管基础选择、键盘导航、结构 remap 状态机；engine 仅保留 composer / undo snapshot / view-row 映射注入职责（2026-06-05）。 |
 | 5 | 抽离 undo replay | ⬜ | `undo/UndoReplay.ts` 骨架已建；`applyUndo/applyRedo` 仍在 `DefaultGridEngine`。 |
 | 6 | 抽离 layout state | ⬜ | `layout/LayoutState.ts` 骨架已建（当前孤儿、引用已与 row 内化后的架构脱节），engine 未接线。 |
 | 7 | 抽离 format/merge 协调 | 🟡 | `format/FormatEventHandler` 已接入 `GridEventPipeline`；`format/FormatState.ts` 未接线。 |

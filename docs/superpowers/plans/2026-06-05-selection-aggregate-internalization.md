@@ -49,7 +49,7 @@
 - Modify: all `packages/core/src/**` and `packages/core/tests/**` type imports that currently reference `interaction/SelectionModel`
 - Modify: `packages/core/src/index.ts`
 
-- [ ] **Step 1: Write the new type module**
+- [x] **Step 1: Write the new type module**
 
 Create `packages/core/src/engine/selection/SelectionTypes.ts`:
 
@@ -78,7 +78,7 @@ export interface SelectCellOptions {
 }
 ```
 
-- [ ] **Step 2: Update internal type imports**
+- [x] **Step 2: Update internal type imports**
 
 Replace type imports from `../interaction/SelectionModel`, `../../interaction/SelectionModel`, `./SelectionModel`, and `../../../src/interaction/SelectionModel` with the relative path to `engine/selection/SelectionTypes`.
 
@@ -102,7 +102,7 @@ For files already under `packages/core/src/engine/selection/`, use:
 import type { GridSelection } from './SelectionTypes'
 ```
 
-- [ ] **Step 3: Update public type exports**
+- [x] **Step 3: Update public type exports**
 
 In `packages/core/src/index.ts`, replace the selection type export with:
 
@@ -121,7 +121,7 @@ Keep this class export for this task only; it is removed in Task 4:
 export { SelectionModel } from './interaction/SelectionModel'
 ```
 
-- [ ] **Step 4: Run type-focused checks**
+- [x] **Step 4: Run type-focused checks**
 
 Run:
 
@@ -132,7 +132,7 @@ bun test packages/core/tests/engine/selection packages/core/tests/interaction/Se
 
 Expected: PASS. This task only changes type ownership; runtime behavior is unchanged.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src packages/core/tests
@@ -150,7 +150,7 @@ git commit -m "refactor(core): 迁移 selection 类型到领域目录"
 - Modify: `packages/core/src/interaction/SelectionModel.ts`
 - Modify: `packages/core/src/index.ts`
 
-- [ ] **Step 1: Move source and test files**
+- [x] **Step 1: Move source and test files**
 
 Run:
 
@@ -159,7 +159,7 @@ git mv packages/core/src/interaction/SelectionNavigation.ts packages/core/src/en
 git mv packages/core/tests/interaction/SelectionNavigation.test.ts packages/core/tests/engine/selection/SelectionNavigation.test.ts
 ```
 
-- [ ] **Step 2: Update navigation imports**
+- [x] **Step 2: Update navigation imports**
 
 In `packages/core/src/engine/selection/SelectionNavigation.ts`, use:
 
@@ -206,7 +206,7 @@ export type {
 } from './engine/selection/SelectionNavigation'
 ```
 
-- [ ] **Step 3: Update navigation tests but keep old model target**
+- [x] **Step 3: Update navigation tests but keep old model target**
 
 In `packages/core/tests/engine/selection/SelectionNavigation.test.ts`, imports should be:
 
@@ -222,7 +222,7 @@ import { SelectionModel } from '../../../src/interaction/SelectionModel'
 
 Keep `SelectionModel` in this task so the file move is isolated from state-machine deletion.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -233,7 +233,7 @@ bun run --filter @novasheet/core typecheck
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src packages/core/tests
@@ -248,7 +248,7 @@ git commit -m "refactor(core): 迁移 selection navigation 到领域目录"
 - Create: `packages/core/tests/engine/selection/DefaultSelectionState.remap.test.ts`
 - Modify: `packages/core/tests/engine/selection/SelectionNavigation.test.ts`
 
-- [ ] **Step 1: Rename legacy behavior tests to aggregate tests**
+- [x] **Step 1: Rename legacy behavior tests to aggregate tests**
 
 Run:
 
@@ -271,7 +271,7 @@ new DefaultSelectionState()
 
 Change describe labels from `SelectionModel...` to `DefaultSelectionState...`.
 
-- [ ] **Step 2: Extend basic aggregate tests**
+- [x] **Step 2: Extend basic aggregate tests**
 
 Add the legacy basic selection tests from `packages/core/tests/interaction/SelectionModel.test.ts` into `packages/core/tests/engine/selection/DefaultSelectionState.test.ts`, targeting `DefaultSelectionState`.
 
@@ -288,7 +288,7 @@ expect(() =>
 ).toThrow('DefaultSelectionState.setSelection')
 ```
 
-- [ ] **Step 3: Update navigation test target**
+- [x] **Step 3: Update navigation test target**
 
 In `packages/core/tests/engine/selection/SelectionNavigation.test.ts`, replace:
 
@@ -310,7 +310,7 @@ Change describe label:
 describe('DefaultSelectionState.navigate — Phase 3.3', () => {
 ```
 
-- [ ] **Step 4: Verify red if implementation has not changed**
+- [x] **Step 4: Verify red if implementation has not changed**
 
 Run:
 
@@ -320,7 +320,7 @@ bun test packages/core/tests/engine/selection/DefaultSelectionState.test.ts pack
 
 Expected: FAIL because `DefaultSelectionState.setSelection` still throws `SelectionModel.setSelection`, or because direct state ownership is not yet implemented. If everything passes before implementation, stop and inspect whether tests still instantiate or depend on `SelectionModel`.
 
-- [ ] **Step 5: Replace wrapper implementation with direct aggregate state**
+- [x] **Step 5: Replace wrapper implementation with direct aggregate state**
 
 In `packages/core/src/engine/selection/DefaultSelectionState.ts`, remove:
 
@@ -408,7 +408,7 @@ remapAfterViewRowsChanged(context: {
 }
 ```
 
-- [ ] **Step 6: Run focused aggregate tests**
+- [x] **Step 6: Run focused aggregate tests**
 
 Run:
 
@@ -419,7 +419,7 @@ bun run --filter @novasheet/core typecheck
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/core/src/engine/selection packages/core/tests/engine/selection packages/core/tests/interaction
@@ -434,7 +434,7 @@ git commit -m "feat(core): 让 selection 聚合根接管状态机"
 - Modify: `packages/core/src/index.ts`
 - Modify: any remaining source/test imports from `interaction/SelectionModel` or `interaction/SelectionNavigation`
 
-- [ ] **Step 1: Delete old files**
+- [x] **Step 1: Delete old files**
 
 Run:
 
@@ -443,7 +443,7 @@ git rm packages/core/src/interaction/SelectionModel.ts
 git rm packages/core/tests/interaction/SelectionModel.test.ts
 ```
 
-- [ ] **Step 2: Remove public class export**
+- [x] **Step 2: Remove public class export**
 
 In `packages/core/src/index.ts`, remove:
 
@@ -471,7 +471,7 @@ export type {
 } from './engine/selection/SelectionNavigation'
 ```
 
-- [ ] **Step 3: Prove no old selection imports remain**
+- [x] **Step 3: Prove no old selection imports remain**
 
 Run:
 
@@ -483,7 +483,7 @@ rg "interaction/Selection" packages/core/src packages/web/src packages/web-canva
 Expected: both commands print no matches in code/app files. README and spec/plan text is updated in Task 5.
 If code matches remain, update them to `engine/selection/SelectionTypes` or `engine/selection/SelectionNavigation`, or delete the legacy file/export when the match is the old `SelectionModel` class.
 
-- [ ] **Step 4: Run core checks**
+- [x] **Step 4: Run core checks**
 
 Run:
 
@@ -494,7 +494,7 @@ bun run --filter @novasheet/core typecheck
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src packages/core/tests
@@ -509,7 +509,7 @@ git commit -m "refactor(core): 删除 selection 旧交互状态机"
 - Modify: `docs/superpowers/specs/2026-06-05-selection-aggregate-internalization-design.md`
 - Modify: `docs/superpowers/plans/2026-06-05-selection-aggregate-internalization.md`
 
-- [ ] **Step 1: Update selection README**
+- [x] **Step 1: Update selection README**
 
 In `packages/core/src/engine/selection/README.md`, state:
 
@@ -526,7 +526,7 @@ Selection 领域负责选区状态机、键盘导航、结构变化后的 select
 - `SelectionEventHandler.ts`：响应 row/column 领域事件。
 ```
 
-- [ ] **Step 2: Update engine README milestone row**
+- [x] **Step 2: Update engine README milestone row**
 
 In `packages/core/src/engine/README.md`, update item 4 to mention:
 
@@ -534,7 +534,7 @@ In `packages/core/src/engine/README.md`, update item 4 to mention:
 已删除旧 `interaction/SelectionModel` / `interaction/SelectionNavigation`，`DefaultSelectionState` 直接持有 `GridSelection` 并接管基础选择、键盘导航、结构 remap 状态机。
 ```
 
-- [ ] **Step 3: Mark spec/plan status**
+- [x] **Step 3: Mark spec/plan status**
 
 In the spec, change status from:
 
@@ -550,7 +550,7 @@ to:
 
 In this plan, keep completed checkboxes accurate for tasks already run.
 
-- [ ] **Step 4: Run docs-sensitive grep**
+- [x] **Step 4: Run docs-sensitive grep**
 
 Run:
 
@@ -560,7 +560,7 @@ rg "SelectionModel|interaction/Selection" packages/core/src/engine/README.md pac
 
 Expected: docs may mention deleted legacy paths only as historical notes, not as current architecture.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/engine/README.md packages/core/src/engine/selection/README.md docs/superpowers/specs/2026-06-05-selection-aggregate-internalization-design.md docs/superpowers/plans/2026-06-05-selection-aggregate-internalization.md
