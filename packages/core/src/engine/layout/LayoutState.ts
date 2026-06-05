@@ -1,12 +1,12 @@
 import type { ChunkedAxis } from '../../layout/ChunkedAxis'
-
-/** excel 风格 row header 的最小 gutter 宽度（与抽离前 engine 常量一致）。 */
-const DEFAULT_EXCEL_ROW_HEADER_WIDTH = 44
 import { FrozenRegions } from '../../layout/FrozenRegions'
 import type { FrozenConfig } from '../../layout/FrozenRegions'
 import { Viewport } from '../../layout/Viewport'
 import type { Theme } from '../../theme/Theme'
 import type { Schema } from '../../data/Schema'
+
+/** excel 风格 row header 的最小 gutter 宽度（与抽离前 engine 常量一致）。 */
+const DEFAULT_EXCEL_ROW_HEADER_WIDTH = 44
 
 /** 构造 `DefaultLayoutState` 所需输入：theme/schema 派生，不含 axes（两阶段生命周期第一阶段）。 */
 export interface LayoutStateInput {
