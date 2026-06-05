@@ -9,20 +9,21 @@
 
 本领域已经存在的抽离模块：
 
-- `../VisibleFormatResolver.ts`
-- `../FillStylePropagator.ts`
+- `FormatController.ts`：format/merge **写入门面 + 编排器**。拥有 5 个正向 mutation
+  （`setFillColor`/`setTextWrap`/`setBorders`/`mergeCells`/`unmergeCells`）的完整编排：
+  view→raw 翻译、store 写入、快照对比、undo 入栈、mergeCells 选区联动。engine 经此写入，
+  不直连 store mutation。**非** CQRS command handler（format mutation 不产领域事件），
+  定位/依据同 `selection/SelectionController`。
+- `FormatEventHandler.ts`：响应 row/column structural event，做 format/merge remap。
+- `../VisibleFormatResolver.ts`：可见帧 format/merge → VIEW 解析（复用 `../MergeViewResolver.ts`）。
+- `../FillStylePropagator.ts`：填充柄携带格式/合并的平铺。
 
-Internal format context 只应暴露 `RangeStyleStore`、`MergeStore` 和 coordinate translation。
-Structural mutation hooks 应作为来自 row/column 领域的显式输入。
+`FormatControllerContext` 只暴露 `translateRange` / `pushUndo` / `getSelection` / `selectRange`，
+不接收完整 engine。
 
-当前位于 `DefaultGridEngine` 中的候选方法：
+仍留在 `DefaultGridEngine` 的相关方法（**有意**）：
 
-- `viewRangeToRawRange`
-- `commitFormatChange`
-- `setFillColor`
-- `setTextWrap`
-- `setBorders`
-- `getCellFormat`
-- `mergeCells`
-- `unmergeCells`
-- `getMergeRegion`
+- `viewRangeToRawRange`：与 fill 等共享的 coordinate translation。
+- `getCellFormat` / `getMergeRegion`：**raw** 坐标只读 API。
+- undo **restore**（applyUndo/applyRedo 的 `format`/`merge`/`unmerge` 分支）：统一 switch，
+  与 selection 一致，待 undo replay 拆分时再迁移。

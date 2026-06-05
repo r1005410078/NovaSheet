@@ -13,7 +13,6 @@ import type {
   BorderPreset,
   BorderStyle,
   CellFormat,
-  FormatLayer,
   TextWrapMode,
 } from '../format/CellFormat'
 import { MergeStore } from '../merge/MergeStore'
@@ -38,6 +37,7 @@ import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
+import { FormatController } from './format/FormatController'
 import { FillStylePropagator } from './FillStylePropagator'
 import { GridEventPipeline } from './event/GridEventPipeline'
 import { FormatEventHandler } from './format/FormatEventHandler'
@@ -111,6 +111,16 @@ export class DefaultGridEngine implements GridEngine {
   private readonly selectionController = new SelectionController(this.selection, {
     resolveMergeRegion: (rowIndex, colIndex) =>
       resolveViewMergeRegion(this.mergeStore, this.coords, rowIndex, colIndex)?.range ?? null,
+  })
+  /**
+   * Format/Merge 写入门面；engine 经此做 5 个正向 mutation 的编排，不直连 store mutation。
+   * undo restore 仍在 engine 统一 switch（与 selection 一致）。
+   */
+  private readonly formatController = new FormatController(this.formatStore, this.mergeStore, {
+    translateRange: (range) => this.coords.viewRangeToRaw(range),
+    pushUndo: (command) => this.undoStack.push(command),
+    getSelection: () => this.selection.getSelection(),
+    selectRange: (range) => this.selectionController.setSelectedRange(range),
   })
   /** 可见 format/merge → VIEW 帧字段的只读解析器（从 getFrame 抽出，R1）。 */
   private readonly frameFormat = new VisibleFormatResolver(
@@ -905,16 +915,7 @@ export class DefaultGridEngine implements GridEngine {
    */
   setFillColor(range: CellRange, color: string | null): boolean {
     this.finishActiveEdit()
-    const rawRange = this.viewRangeToRawRange(range)
-    if (!rawRange) return false
-    const selectionBefore = this.selection.getSelection()
-    const before = this.formatStore.snapshot()
-    if (color === null) {
-      this.formatStore.clearFill(rawRange)
-    } else {
-      this.formatStore.apply(rawRange, { fillColor: color })
-    }
-    return this.commitFormatChange(before, selectionBefore)
+    return this.formatController.setFillColor(range, color)
   }
 
   /**
@@ -923,12 +924,7 @@ export class DefaultGridEngine implements GridEngine {
    */
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
     this.finishActiveEdit()
-    const rawRange = this.viewRangeToRawRange(range)
-    if (!rawRange) return false
-    const selectionBefore = this.selection.getSelection()
-    const before = this.formatStore.snapshot()
-    this.formatStore.apply(rawRange, { textWrap: mode })
-    return this.commitFormatChange(before, selectionBefore)
+    return this.formatController.setTextWrap(range, mode)
   }
 
   /**
@@ -938,21 +934,7 @@ export class DefaultGridEngine implements GridEngine {
    */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
     this.finishActiveEdit()
-    if (preset === 'clear') {
-      if (border !== null) return false
-    } else {
-      if (border === null) return false
-    }
-    const rawRange = this.viewRangeToRawRange(range)
-    if (!rawRange) return false
-    const selectionBefore = this.selection.getSelection()
-    const before = this.formatStore.snapshot()
-    if (preset === 'clear') {
-      this.formatStore.applyBorders(rawRange, 'clear')
-    } else {
-      this.formatStore.applyBorders(rawRange, preset, border!)
-    }
-    return this.commitFormatChange(before, selectionBefore)
+    return this.formatController.setBorders(range, preset, border)
   }
 
   /** Phase 5-A — 解析单个单元格的格式。坐标为 **raw** 空间（与 store 键控一致）。 */
@@ -969,17 +951,7 @@ export class DefaultGridEngine implements GridEngine {
    */
   mergeCells(range: CellRange): boolean {
     this.finishActiveEdit()
-    const rawRange = this.viewRangeToRawRange(range)
-    if (!rawRange) return false
-    const selectionBefore = this.selection.getSelection()
-    const before = this.mergeStore.snapshot()
-    const region = this.mergeStore.merge(rawRange)
-    if (!region) return false
-    this.selectionController.setSelectedRange(range)
-    const after = this.mergeStore.snapshot()
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'merge', before, after, selectionBefore, selectionAfter })
-    return true
+    return this.formatController.mergeCells(range)
   }
 
   /**
@@ -989,16 +961,7 @@ export class DefaultGridEngine implements GridEngine {
    */
   unmergeCells(range: CellRange): boolean {
     this.finishActiveEdit()
-    const rawRange = this.viewRangeToRawRange(range)
-    if (!rawRange) return false
-    const selectionBefore = this.selection.getSelection()
-    const before = this.mergeStore.snapshot()
-    const removed = this.mergeStore.unmerge(rawRange)
-    if (removed.length === 0) return false
-    const after = this.mergeStore.snapshot()
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'unmerge', before, after, selectionBefore, selectionAfter })
-    return true
+    return this.formatController.unmergeCells(range)
   }
 
   /** Phase 5-A — 返回覆盖单元格的合并区域。坐标为 **raw** 空间（与 `getCellFormat` 一致）。 */
@@ -1013,21 +976,6 @@ export class DefaultGridEngine implements GridEngine {
    */
   private viewRangeToRawRange(range: CellRange): RawRange | null {
     return this.coords.viewRangeToRaw(range)
-  }
-
-  /** 快照前后一致时说明 store 未变动（无副作用），直接返回 false；否则入栈一条 format 命令并返回 true。 */
-  private commitFormatChange(
-    before: readonly FormatLayer[],
-    selectionBefore: GridSelection,
-  ): boolean {
-    const after = this.formatStore.snapshot()
-    if (sameFormatLayers(before, after)) {
-      // Store unchanged: no-op (clearFill/clearBorders already skipped push when no layers intersected).
-      return false
-    }
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({ kind: 'format', before, after, selectionBefore, selectionAfter })
-    return true
   }
 
   private applyUndo(cmd: UndoCommand): void {
@@ -1442,13 +1390,4 @@ export class DefaultGridEngine implements GridEngine {
   private fieldAt(colIndex: number) {
     return this.data.getSchema().fields[colIndex]
   }
-}
-
-/** 比较两个 format 层快照是否引用同一组层（按 order 标识，append-only 故 order 唯一）。 */
-function sameFormatLayers(a: readonly FormatLayer[], b: readonly FormatLayer[]): boolean {
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false
-  }
-  return true
 }
