@@ -1,0 +1,67 @@
+import { describe, expect, it } from 'bun:test'
+
+import { UndoRegistry } from '../../../src/engine/undo/UndoRegistry'
+import { registerCellUndo } from '../../../src/engine/undo/registerCellUndo'
+import { registerFillUndo } from '../../../src/engine/undo/registerFillUndo'
+import { registerFormatUndo } from '../../../src/engine/format/registerFormatUndo'
+import { registerRowUndo } from '../../../src/engine/row/registerRowUndo'
+import { registerRowStructureUndo } from '../../../src/engine/row/registerRowStructureUndo'
+import { registerColumnUndo } from '../../../src/engine/column/registerColumnUndo'
+import { registerColumnStructureUndo } from '../../../src/engine/column/registerColumnStructureUndo'
+import type { UndoCommand } from '../../../src/undo/UndoCommand'
+
+// 全 21 个 kind —— 删除 engine 旧 switch / UndoReplay fallback 前的兜底：
+// 若新增 kind 而未注册 handler，本测试会失败（resolve 漏网 = 运行期无声 no-op）。
+const ALL_KINDS: ReadonlyArray<UndoCommand['kind']> = [
+  'editCell',
+  'clearRange',
+  'paste',
+  'fill',
+  'resizeRow',
+  'resizeColumn',
+  'insertRows',
+  'deleteRows',
+  'hideRows',
+  'unhideRows',
+  'resizeRowsMulti',
+  'moveRows',
+  'insertCols',
+  'deleteCols',
+  'hideCols',
+  'unhideCols',
+  'resizeColumnsMulti',
+  'moveCols',
+  'format',
+  'merge',
+  'unmerge',
+]
+
+// resolve/has 只调 handler.handles(kind)，不触 ctx —— 故用空 ctx 占位即可。
+const noopCtx = {} as never
+
+function buildFullRegistry(): UndoRegistry {
+  const registry = new UndoRegistry()
+  registerCellUndo(registry, noopCtx)
+  registerFormatUndo(registry, noopCtx)
+  registerRowUndo(registry, noopCtx)
+  registerColumnUndo(registry, noopCtx)
+  registerFillUndo(registry, noopCtx)
+  registerRowStructureUndo(registry, noopCtx)
+  registerColumnStructureUndo(registry, noopCtx)
+  return registry
+}
+
+describe('UndoRegistry 完整性（全 21 kind 均有 handler）', () => {
+  it('恰好 21 个 kind', () => {
+    expect(ALL_KINDS.length).toBe(21)
+    expect(new Set(ALL_KINDS).size).toBe(21)
+  })
+
+  it('每个 kind 都能 resolve 到唯一 handler', () => {
+    const registry = buildFullRegistry()
+    for (const kind of ALL_KINDS) {
+      expect(registry.resolve(kind), `kind "${kind}" 未注册 handler`).toBeDefined()
+      expect(registry.has(kind)).toBe(true)
+    }
+  })
+})

@@ -22,7 +22,7 @@ export interface UndoHandler {
 /**
  * cell-write 域 undo 所需的最小 engine 能力面。
  *
- * 由 engine 实现并在注册时注入；不复用单一大 `UndoReplayContext`，避免其退化为 God Object。
+ * 由 engine 实现并在注册时注入；每域一个最小 ctx，不复用单一大 ctx，避免其退化为 God Object。
  */
 export interface CellUndoContext {
   /** 按 raw 行/字段写入单元格值（engine 内部处理 raw→view 映射与隐藏行）。 */
