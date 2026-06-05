@@ -4,7 +4,7 @@ import {
   parseSelectionNavigationKey,
   type GridIndexBounds,
 } from '../../../src/engine/selection/SelectionNavigation'
-import { SelectionModel } from '../../../src/interaction/SelectionModel'
+import { DefaultSelectionState } from '../../../src/engine/selection/DefaultSelectionState'
 
 const bounds: GridIndexBounds = { rowCount: 10, colCount: 5 }
 
@@ -48,15 +48,15 @@ describe('parseSelectionNavigationKey — Phase 3.3', () => {
   })
 })
 
-describe('SelectionModel.navigate — Phase 3.3', () => {
+describe('DefaultSelectionState.navigate — Phase 3.3', () => {
   it('无选区时从 (0,0) 起步', () => {
-    const model = new SelectionModel()
+    const model = new DefaultSelectionState()
     model.navigate({ kind: 'delta', dRow: 0, dCol: 1, extend: false }, bounds)
     expect(model.getSelection().activeCell).toEqual({ rowIndex: 0, colIndex: 1 })
   })
 
   it('方向键移动会折叠为单格选区', () => {
-    const model = new SelectionModel()
+    const model = new DefaultSelectionState()
     model.selectCell({ rowIndex: 1, colIndex: 1 })
     model.selectCell({ rowIndex: 3, colIndex: 3 }, { extend: true })
 
@@ -71,7 +71,7 @@ describe('SelectionModel.navigate — Phase 3.3', () => {
   })
 
   it('Shift + 方向键从 extent 扩展', () => {
-    const model = new SelectionModel()
+    const model = new DefaultSelectionState()
     model.selectCell({ rowIndex: 2, colIndex: 2 })
     model.navigate({ kind: 'delta', dRow: 0, dCol: 1, extend: true }, bounds)
 
@@ -84,14 +84,14 @@ describe('SelectionModel.navigate — Phase 3.3', () => {
   })
 
   it('Tab 在末列换行', () => {
-    const model = new SelectionModel()
+    const model = new DefaultSelectionState()
     model.selectCell({ rowIndex: 0, colIndex: 4 })
     model.navigate({ kind: 'tab', backward: false, extend: false }, bounds)
     expect(model.getSelection().activeCell).toEqual({ rowIndex: 1, colIndex: 0 })
   })
 
   it('边界处不再越界', () => {
-    const model = new SelectionModel()
+    const model = new DefaultSelectionState()
     model.selectCell({ rowIndex: 9, colIndex: 4 })
     model.navigate({ kind: 'delta', dRow: 1, dCol: 0, extend: false }, bounds)
     expect(model.getSelection().activeCell).toEqual({ rowIndex: 9, colIndex: 4 })
@@ -100,7 +100,7 @@ describe('SelectionModel.navigate — Phase 3.3', () => {
 
 describe('applySelectionNavigation', () => {
   it('返回下一格地址供滚动跟随', () => {
-    const model = new SelectionModel()
+    const model = new DefaultSelectionState()
     model.selectCell({ rowIndex: 1, colIndex: 1 })
     const next = applySelectionNavigation(
       model,

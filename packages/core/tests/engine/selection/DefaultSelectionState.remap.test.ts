@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test'
-import { SelectionModel } from '../../src/interaction/SelectionModel'
+import { DefaultSelectionState } from '../../../src/engine/selection/DefaultSelectionState'
 
-describe('SelectionModel.remapAfterRowsInserted', () => {
+describe('DefaultSelectionState.remapAfterRowsInserted', () => {
   it('选区在 at 之后整体下移', () => {
-    const sel = new SelectionModel()
+    const sel = new DefaultSelectionState()
     sel.setSelection({
       activeCell: { rowIndex: 5, colIndex: 0 },
       anchorCell: { rowIndex: 5, colIndex: 0 },
@@ -17,9 +17,9 @@ describe('SelectionModel.remapAfterRowsInserted', () => {
   })
 })
 
-describe('SelectionModel.remapAfterRowsDeleted', () => {
+describe('DefaultSelectionState.remapAfterRowsDeleted', () => {
   it('选区跨越被删行 → 折叠到首个存活行', () => {
-    const sel = new SelectionModel()
+    const sel = new DefaultSelectionState()
     sel.setSelection({
       activeCell: { rowIndex: 3, colIndex: 0 },
       anchorCell: { rowIndex: 3, colIndex: 0 },
@@ -32,7 +32,7 @@ describe('SelectionModel.remapAfterRowsDeleted', () => {
   })
 
   it('选区全部被删 → clear', () => {
-    const sel = new SelectionModel()
+    const sel = new DefaultSelectionState()
     sel.setSelection({
       activeCell: { rowIndex: 2, colIndex: 0 },
       anchorCell: { rowIndex: 2, colIndex: 0 },
@@ -44,9 +44,9 @@ describe('SelectionModel.remapAfterRowsDeleted', () => {
   })
 })
 
-describe('SelectionModel.remapAfterColsInserted', () => {
+describe('DefaultSelectionState.remapAfterColsInserted', () => {
   it('选区在 at 之后整体右移', () => {
-    const sel = new SelectionModel()
+    const sel = new DefaultSelectionState()
     sel.setSelection({
       activeCell: { rowIndex: 0, colIndex: 5 },
       anchorCell: { rowIndex: 0, colIndex: 5 },
@@ -60,9 +60,9 @@ describe('SelectionModel.remapAfterColsInserted', () => {
   })
 })
 
-describe('SelectionModel.remapAfterColsDeleted', () => {
+describe('DefaultSelectionState.remapAfterColsDeleted', () => {
   it('选区跨越被删列 → 折叠到存活列', () => {
-    const sel = new SelectionModel()
+    const sel = new DefaultSelectionState()
     sel.setSelection({
       activeCell: { rowIndex: 0, colIndex: 3 },
       anchorCell: { rowIndex: 0, colIndex: 3 },
@@ -75,7 +75,7 @@ describe('SelectionModel.remapAfterColsDeleted', () => {
   })
 
   it('选区全部被删 → clear', () => {
-    const sel = new SelectionModel()
+    const sel = new DefaultSelectionState()
     sel.setSelection({
       activeCell: { rowIndex: 0, colIndex: 2 },
       anchorCell: { rowIndex: 0, colIndex: 2 },

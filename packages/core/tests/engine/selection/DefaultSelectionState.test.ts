@@ -3,16 +3,40 @@ import { DefaultSelectionState } from '../../../src/engine/selection/DefaultSele
 import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
 
 describe('DefaultSelectionState', () => {
-  it('wraps basic selection model operations', () => {
+  it('点击单元格时同时设置 activeCell、anchorCell 与 selectedRange', () => {
     const selection = new DefaultSelectionState()
 
-    selection.selectCell({ rowIndex: 1, colIndex: 2 })
+    selection.selectCell({ rowIndex: 2, colIndex: 3 })
 
-    expect(selection.getSelection().selectedRange).toEqual({
-      startRow: 1,
-      endRow: 1,
-      startCol: 2,
-      endCol: 2,
+    expect(selection.getSelection()).toEqual({
+      activeCell: { rowIndex: 2, colIndex: 3 },
+      anchorCell: { rowIndex: 2, colIndex: 3 },
+      extentCell: { rowIndex: 2, colIndex: 3 },
+      selectedRange: {
+        startRow: 2,
+        endRow: 2,
+        startCol: 3,
+        endCol: 3,
+      },
+    })
+  })
+
+  it('扩展选择时保留 activeCell/anchorCell，只移动 extentCell 并归一化 range', () => {
+    const selection = new DefaultSelectionState()
+    selection.selectCell({ rowIndex: 5, colIndex: 4 })
+
+    selection.selectCell({ rowIndex: 2, colIndex: 1 }, { extend: true })
+
+    expect(selection.getSelection()).toEqual({
+      activeCell: { rowIndex: 5, colIndex: 4 },
+      anchorCell: { rowIndex: 5, colIndex: 4 },
+      extentCell: { rowIndex: 2, colIndex: 1 },
+      selectedRange: {
+        startRow: 2,
+        endRow: 5,
+        startCol: 1,
+        endCol: 4,
+      },
     })
   })
 
@@ -60,7 +84,20 @@ describe('DefaultSelectionState', () => {
     })
   })
 
-  it('clears invalid incomplete selections through the same contract as SelectionModel', () => {
+  it('setSelection rejects inconsistent empty and non-empty state', () => {
+    const selection = new DefaultSelectionState()
+
+    expect(() =>
+      selection.setSelection({
+        activeCell: null,
+        anchorCell: null,
+        extentCell: null,
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      }),
+    ).toThrow('DefaultSelectionState.setSelection')
+  })
+
+  it('clears invalid incomplete selections through the DefaultSelectionState contract', () => {
     const selection = new DefaultSelectionState()
     const empty: GridSelection = {
       activeCell: null,
