@@ -37,6 +37,7 @@ import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import { UndoRegistry } from './undo/UndoRegistry'
 import { UndoReplay } from './undo/UndoReplay'
 import { registerCellUndo } from './undo/registerCellUndo'
+import { registerFormatUndo } from './format/registerFormatUndo'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
@@ -217,6 +218,11 @@ export class DefaultGridEngine implements GridEngine {
         this.restoreSelectionForEdit(rowIndex, fieldId),
       restoreSelectionForWrites: (writes, fallbackRange) =>
         this.restoreSelectionForWrites(writes, fallbackRange),
+    })
+    registerFormatUndo(this.undoRegistry, {
+      restoreFormat: (layers) => this.formatStore.restore(layers),
+      restoreMerge: (regions) => this.mergeStore.restore(regions),
+      restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
   }
 
