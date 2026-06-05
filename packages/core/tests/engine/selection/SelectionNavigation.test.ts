@@ -23,10 +23,11 @@ describe('parseSelectionNavigationKey — Phase 3.3', () => {
       extend: true,
     })
     expect(parseSelectionNavigationKey('Tab', false)?.kind).toBe('tab')
+    // Shift+Tab 仅反向移动 active cell，不扩展选区（对齐 Excel/Sheets）。
     expect(parseSelectionNavigationKey('Tab', true)).toEqual({
       kind: 'tab',
       backward: true,
-      extend: true,
+      extend: false,
     })
     expect(parseSelectionNavigationKey('Enter', false)).toEqual({
       kind: 'delta',
@@ -34,11 +35,12 @@ describe('parseSelectionNavigationKey — Phase 3.3', () => {
       dCol: 0,
       extend: false,
     })
+    // Shift+Enter 仅反向（向上）移动 active cell，不扩展选区。
     expect(parseSelectionNavigationKey('Enter', true)).toEqual({
       kind: 'delta',
       dRow: -1,
       dCol: 0,
-      extend: true,
+      extend: false,
     })
   })
 

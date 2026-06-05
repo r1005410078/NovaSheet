@@ -36,9 +36,11 @@ export function parseSelectionNavigationKey(
     case 'ArrowRight':
       return { kind: 'delta', dRow: 0, dCol: 1, extend: shiftKey }
     case 'Tab':
-      return { kind: 'tab', backward: shiftKey, extend: shiftKey }
+      // Shift 只决定方向，不扩展选区（对齐 Excel/Sheets：Shift+Tab 反向移动）。
+      return { kind: 'tab', backward: shiftKey, extend: false }
     case 'Enter':
-      return { kind: 'delta', dRow: shiftKey ? -1 : 1, dCol: 0, extend: shiftKey }
+      // Shift+Enter 向上移动 active cell，同样不扩展选区。
+      return { kind: 'delta', dRow: shiftKey ? -1 : 1, dCol: 0, extend: false }
     default:
       return null
   }
