@@ -40,6 +40,9 @@ import { registerCellUndo } from './undo/registerCellUndo'
 import { registerFormatUndo } from './format/registerFormatUndo'
 import { registerRowUndo } from './row/registerRowUndo'
 import { registerColumnUndo } from './column/registerColumnUndo'
+import { registerFillUndo } from './undo/registerFillUndo'
+import { registerRowStructureUndo } from './row/registerRowStructureUndo'
+import { registerColumnStructureUndo } from './column/registerColumnStructureUndo'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
@@ -243,6 +246,38 @@ export class DefaultGridEngine implements GridEngine {
       rebuildCols: () => this.rebuildViewColsAxis(),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
       getDefaultColWidth: () => this.columnStructure.getDefaultColWidth(),
+    })
+    registerFillUndo(this.undoRegistry, {
+      applyCellWrite: (rowIndex, fieldId, value) => this.applyEditCellWrite(rowIndex, fieldId, value),
+      restoreSelectionForWrites: (writes, fallbackRange) =>
+        this.restoreSelectionForWrites(writes, fallbackRange),
+      restoreFormat: (layers) => this.formatStore.restore(layers),
+      restoreMerge: (regions) => this.mergeStore.restore(regions),
+    })
+    registerRowStructureUndo(this.undoRegistry, {
+      canInsertRows: () => !!(isMutableDataSource(this.rawData) && this.rawData.insertRows),
+      canDeleteRows: () => !!(isMutableDataSource(this.rawData) && this.rawData.deleteRows),
+      deleteRowsByIds: (ids) => this.rowStructure.deleteRowsByIds(ids),
+      insertBlankRows: (at, count) => this.rowStructure.insertBlankRows(at, count),
+      reinsertRows: (snapshots, heights) => this.rowStructure.reinsertDeletedRows(snapshots, heights),
+      replayMoveRows: (rowIds, beforeRowId, selection) =>
+        this.applyMoveRowsCommand(rowIds, beforeRowId, selection),
+      rebuildRows: () => this.rebuildViewAxis(),
+      restoreFormat: (layers) => this.formatStore.restore(layers),
+      restoreMerge: (regions) => this.mergeStore.restore(regions),
+      restoreSelection: (selection) => this.selectionController.setSelection(selection),
+    })
+    registerColumnStructureUndo(this.undoRegistry, {
+      reinsertCols: (snapshots, widths) => this.columnStructure.reinsertDeletedCols(snapshots, widths),
+      removeFieldsByIds: (ids) => this.columnStructure.removeFieldsByIds(ids),
+      insertFieldsAt: (at, fields, widths) => this.columnStructure.insertFieldsAt(at, fields, widths),
+      replayMoveCols: (fieldIds, beforeFieldId, selection) =>
+        this.applyMoveColsCommand(fieldIds, beforeFieldId, selection),
+      restoreFrozen: (config) => this.frozen.setFrozen(config),
+      rebuildCols: () => this.rebuildViewColsAxis(),
+      restoreFormat: (layers) => this.formatStore.restore(layers),
+      restoreMerge: (regions) => this.mergeStore.restore(regions),
+      restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
   }
 
