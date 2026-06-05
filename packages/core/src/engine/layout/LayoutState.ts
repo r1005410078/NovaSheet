@@ -1,4 +1,7 @@
 import type { ChunkedAxis } from '../../layout/ChunkedAxis'
+
+/** excel 风格 row header 的最小 gutter 宽度（与抽离前 engine 常量一致）。 */
+const DEFAULT_EXCEL_ROW_HEADER_WIDTH = 44
 import { FrozenRegions } from '../../layout/FrozenRegions'
 import type { FrozenConfig } from '../../layout/FrozenRegions'
 import { Viewport } from '../../layout/Viewport'
@@ -76,44 +79,72 @@ export class DefaultLayoutState implements LayoutState {
     return Math.max(1, Math.round(sum / fields.length))
   }
 
-  // 以下视图方法在 Task 2 / Task 3 实现；本任务先抛错占位以保证类型完整、测试聚焦默认值。
-  // Task 2 前这些字段只赋值不读取，通过此处统一引用确保 TS strict noUnusedLocals 通过。
-  private _scaffoldRef(): never {
-    void this.viewInitialized
-    void this.excelHeaders
-    void this.initialFrozenConfig
-    throw new Error('not implemented')
+  initView(rowsAxis: ChunkedAxis, colsAxis: ChunkedAxis): void {
+    const config = this.viewInitialized ? this.frozen.getFrozenConfig() : this.initialFrozenConfig
+    this.viewInitialized = true
+    this.rowsAxis = rowsAxis
+    this.colsAxis = colsAxis
+    this.frozen = new FrozenRegions(rowsAxis, colsAxis, config)
+    this.viewport = new Viewport(rowsAxis, colsAxis, this.frozen)
+    this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
+    this.applySheetChrome()
   }
 
-  initView(): void {
-    this._scaffoldRef()
+  rebuildRows(rowsAxis: ChunkedAxis): void {
+    this.rowsAxis = rowsAxis
+    this.recreateViewportPreserving()
   }
-  rebuildRows(): void {
-    throw new Error('not implemented')
+
+  rebuildCols(colsAxis: ChunkedAxis): void {
+    this.colsAxis = colsAxis
+    this.recreateViewportPreserving()
   }
-  rebuildCols(): void {
-    throw new Error('not implemented')
-  }
+
   applyTheme(): void {
     throw new Error('not implemented')
   }
+
   remapFrozenAfterColInsert(): void {
     throw new Error('not implemented')
   }
+
   remapFrozenAfterColDelete(): void {
     throw new Error('not implemented')
   }
-  setFrozenConfig(): void {
-    throw new Error('not implemented')
+
+  setFrozenConfig(config: Partial<FrozenConfig>): void {
+    this.frozen.setFrozen(config)
   }
-  setViewportSize(): void {
-    throw new Error('not implemented')
+
+  setViewportSize(width: number, height: number): void {
+    this.viewport.setSize(width, height)
   }
-  setScroll(): void {
-    throw new Error('not implemented')
+
+  setScroll(logicalX: number, logicalY: number): void {
+    this.viewport.setScroll(logicalX, logicalY)
   }
-  setHeaderHeight(): void {
-    throw new Error('not implemented')
+
+  setHeaderHeight(headerHeight: number): void {
+    this.viewport.setHeaderHeight(headerHeight)
+  }
+
+  /** 重建 frozen+viewport，保留当前 viewport 的 header/gutter/尺寸/滚动（mutation 路径用）。 */
+  private recreateViewportPreserving(): void {
+    const snap = this.viewport.snapshot()
+    this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
+    this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
+    this.viewport.setHeaderHeight(snap.headerHeight)
+    this.viewport.setRowHeaderWidth(snap.rowHeaderWidth)
+    this.viewport.setSize(snap.contentRect.width, snap.contentRect.height)
+    this.viewport.setScroll(snap.scrollX, snap.scrollY)
+  }
+
+  /** excel 风格 row header gutter（与抽离前 engine `applySheetChrome` 一致）。 */
+  private applySheetChrome(): void {
+    const gutter = this.excelHeaders
+      ? Math.max(this.theme.metrics.rowHeaderWidth, DEFAULT_EXCEL_ROW_HEADER_WIDTH)
+      : 0
+    this.viewport.setRowHeaderWidth(gutter)
   }
   getRowsAxis(): ChunkedAxis {
     return this.rowsAxis
