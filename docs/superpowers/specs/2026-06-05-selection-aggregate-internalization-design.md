@@ -6,9 +6,9 @@
 - 前置：`docs/superpowers/specs/2026-06-05-selection-domain-remap-design.md`
 - 关联代码：`packages/core/src/engine/selection/`
 
-## 背景与问题
+## 背景与问题（实施前）
 
-第 4 步已经把 selection remap 接入 `engine/selection/`，但当前状态所有权仍分裂：
+第 4 步已经把 selection remap 接入 `engine/selection/`，但实施前状态所有权仍分裂：
 
 ```txt
 DefaultGridEngine
@@ -17,11 +17,11 @@ DefaultGridEngine
        -> engine/selection/SelectionRules
 ```
 
-`DefaultSelectionState` 名义上是 selection 聚合根，但真正的 selection 状态
-`activeCell / anchorCell / extentCell / selectedRange` 仍由 `interaction/SelectionModel`
+实施前的 `DefaultSelectionState` 名义上是 selection 聚合根，但真正的 selection 状态
+`activeCell / anchorCell / extentCell / selectedRange` 由旧 `interaction/SelectionModel`
 持有。这与 row/column 终态不一致：row/column 聚合根都自持本领域状态，而不是包一层旧状态机。
 
-另外，`SelectionNavigation.ts` 与 `SelectionModel.ts` 互相依赖，且都位于 `interaction/`。
+另外，旧 `SelectionNavigation.ts` 与 `SelectionModel.ts` 互相依赖，且都位于 `interaction/`。
 对 selection 而言，`interaction/` 已不再是合适边界；selection 状态与导航规则应收敛到
 `engine/selection/`。
 
@@ -44,12 +44,12 @@ DefaultGridEngine
 - 不改变 selection 外部行为：矩形 selection、active/anchor/extent、键盘导航、结构 remap 语义保持。
 - 不进入 undo replay 第 5 步。
 
-## 现状关键事实（实现约束）
+## 实施前关键事实（实现约束）
 
-- `SelectionModel` 目前只在源码中由 `DefaultSelectionState` 直接实例化；其余直接实例化主要在 tests。
+- `SelectionModel` 在实施前只在源码中由 `DefaultSelectionState` 直接实例化；其余直接实例化主要在 tests。
 - `CellAddress` / `CellRange` / `GridSelection` / `SelectCellOptions` 被大量 core/web/canvas 代码引用；
   迁移必须通过 `SelectionTypes.ts` 稳定承接。
-- `@novasheet/core` 当前公开导出 `SelectionModel`。CLAUDE.md 说明不在 `index.ts` 的符号才不是半稳定契约；
+- `@novasheet/core` 在实施前公开导出 `SelectionModel`。CLAUDE.md 说明不在 `index.ts` 的符号才不是半稳定契约；
   因此删除 `SelectionModel` 导出属于 API 收缩，需要明确接受。推荐做法：不再导出 `SelectionModel` 类，
   只保留 selection 类型与 navigation 函数导出。
 - `SelectionNavigation` 依赖 `SelectionNavigationTarget`（`getSelection` + `selectCell`），这正好可由
