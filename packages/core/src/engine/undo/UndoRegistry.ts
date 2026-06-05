@@ -15,7 +15,7 @@ export class UndoRegistry {
     this.handlers.push(handler)
   }
 
-  /** 解析负责该 kind 的 handler；无人负责返回 `undefined`（交由 replay fallback）。 */
+  /** 解析负责该 kind 的 handler；无人负责返回 `undefined`（`UndoReplay` 据此抛错）。 */
   resolve(kind: UndoCommand['kind']): UndoHandler | undefined {
     return this.handlers.find((handler) => handler.handles(kind))
   }
