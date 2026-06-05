@@ -143,4 +143,78 @@ describe('UndoCommand 序列化 round-trip', () => {
     }
     assertSerializable(cmd)
   })
+
+  it('resizeRow round-trip', () => {
+    const cmd: UndoCommand = { kind: 'resizeRow', rowIndex: 3, before: 24, after: 48 }
+    assertSerializable(cmd)
+  })
+
+  it('resizeColumn round-trip', () => {
+    const cmd: UndoCommand = { kind: 'resizeColumn', colIndex: 2, before: 80, after: 160 }
+    assertSerializable(cmd)
+  })
+
+  it('resizeRowsMulti round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'resizeRowsMulti',
+      rowIds: [0, 2, 5],
+      oldHeights: [24, 24, 30],
+      newHeight: 40,
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+    }
+    assertSerializable(cmd)
+  })
+
+  it('resizeColumnsMulti round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'resizeColumnsMulti',
+      fieldIds: ['a', 'b'],
+      oldWidths: [80, 100],
+      newWidth: 120,
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+    }
+    assertSerializable(cmd)
+  })
+
+  it('hideRows round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'hideRows',
+      underlyingRowIds: [1, 4, 7],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+    }
+    assertSerializable(cmd)
+  })
+
+  it('unhideRows round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'unhideRows',
+      underlyingRowIds: [1, 4, 7],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+    }
+    assertSerializable(cmd)
+  })
+
+  it('hideCols round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'hideCols',
+      fieldIds: ['a', 'c'],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+    }
+    assertSerializable(cmd)
+  })
+
+  it('unhideCols round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'unhideCols',
+      fieldIds: ['a', 'c'],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+    }
+    assertSerializable(cmd)
+  })
 })
