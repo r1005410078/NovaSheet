@@ -38,6 +38,8 @@ import { UndoRegistry } from './undo/UndoRegistry'
 import { UndoReplay } from './undo/UndoReplay'
 import { registerCellUndo } from './undo/registerCellUndo'
 import { registerFormatUndo } from './format/registerFormatUndo'
+import { registerRowUndo } from './row/registerRowUndo'
+import { registerColumnUndo } from './column/registerColumnUndo'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
@@ -223,6 +225,24 @@ export class DefaultGridEngine implements GridEngine {
       restoreFormat: (layers) => this.formatStore.restore(layers),
       restoreMerge: (regions) => this.mergeStore.restore(regions),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
+    })
+    registerRowUndo(this.undoRegistry, {
+      setRowHeight: (rowIndex, height) => this.rowStructure.setRowHeight(rowIndex, height),
+      setRowHeightsMulti: (rowIds, height) => this.rowStructure.setRowHeightsMulti(rowIds, height),
+      addHiddenRows: (ids) => this.rowStructure.addHidden(ids),
+      removeHiddenRows: (ids) => this.rowStructure.removeHidden(ids),
+      rebuildRows: () => this.rebuildViewAxis(),
+      restoreSelection: (selection) => this.selectionController.setSelection(selection),
+      resolveDefaultRowHeight: () => this.resolveDefaultRowHeight(),
+    })
+    registerColumnUndo(this.undoRegistry, {
+      setColWidth: (colIndex, width) => this.columnStructure.setColWidth(colIndex, width),
+      setColWidthById: (fieldId, width) => this.columnStructure.setColWidthById(fieldId, width),
+      addHiddenCols: (ids) => this.columnStructure.addHidden(ids),
+      removeHiddenCols: (ids) => this.columnStructure.removeHidden(ids),
+      rebuildCols: () => this.rebuildViewColsAxis(),
+      restoreSelection: (selection) => this.selectionController.setSelection(selection),
+      getDefaultColWidth: () => this.columnStructure.getDefaultColWidth(),
     })
   }
 
