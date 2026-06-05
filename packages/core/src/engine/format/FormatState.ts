@@ -1,6 +1,6 @@
 import type { FormatLayer } from '../../format/CellFormat'
 import type { RangeStyleStore } from '../../format/RangeStyleStore'
-import type { CellRange, GridSelection } from '../../interaction/SelectionModel'
+import type { CellRange, GridSelection } from '../selection/SelectionTypes'
 import type { MergeRegion, MergeStore } from '../../merge/MergeStore'
 import type { RawRange } from '../../view/coordinates'
 
@@ -18,4 +18,3 @@ export interface FormatStateContext {
     selectionAfter: GridSelection,
   ): void
 }
-

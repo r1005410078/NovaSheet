@@ -1,4 +1,4 @@
-import type { CellRange } from '../interaction/SelectionModel'
+import type { CellRange } from '../engine/selection/SelectionTypes'
 import type { RawRange } from '../view/coordinates'
 import type { BorderPreset, BorderStyle, CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
 import { borderPatchForCell } from './BorderPreset'

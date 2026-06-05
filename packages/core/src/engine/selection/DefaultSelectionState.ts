@@ -4,7 +4,7 @@ import type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from '../../interaction/SelectionModel'
+} from './SelectionTypes'
 import type {
   GridIndexBounds,
   SelectionNavigationIntent,

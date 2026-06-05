@@ -1,4 +1,4 @@
-import type { CellRange } from '../interaction/SelectionModel'
+import type { CellRange } from '../engine/selection/SelectionTypes'
 
 export type BorderWidth = 'thin' | 'medium' | 'thick'
 export type BorderLineStyle = 'solid' | 'dashed' | 'dotted' | 'double'

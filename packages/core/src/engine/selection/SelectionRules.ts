@@ -2,7 +2,7 @@ import type {
   CellAddress,
   CellRange,
   GridSelection,
-} from '../../interaction/SelectionModel'
+} from './SelectionTypes'
 
 const EMPTY_SELECTION: GridSelection = {
   activeCell: null,

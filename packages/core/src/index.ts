@@ -73,7 +73,7 @@ export type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from './interaction/SelectionModel'
+} from './engine/selection/SelectionTypes'
 export { hitTestCell } from './interaction/HitTest'
 export type { HitTestPoint } from './interaction/HitTest'
 export {

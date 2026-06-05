@@ -3,7 +3,7 @@
  */
 
 import type { FieldType } from '../data/Schema'
-import type { CellAddress } from './SelectionModel'
+import type { CellAddress } from '../engine/selection/SelectionTypes'
 
 export interface CellEditSession {
   readonly cell: CellAddress

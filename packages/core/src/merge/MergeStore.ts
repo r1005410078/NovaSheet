@@ -1,4 +1,4 @@
-import type { CellRange } from '../interaction/SelectionModel'
+import type { CellRange } from '../engine/selection/SelectionTypes'
 import type { RawRange } from '../view/coordinates'
 import { isCellInRange, rangesIntersect } from '../geometry/range'
 import {

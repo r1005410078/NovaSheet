@@ -18,7 +18,7 @@ import type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from '../interaction/SelectionModel'
+} from './selection/SelectionTypes'
 import type { Axis } from '../layout/ChunkedAxis'
 import type { FrozenConfig } from '../layout/FrozenRegions'
 import type { Viewport } from '../layout/Viewport'

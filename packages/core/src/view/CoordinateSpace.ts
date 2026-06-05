@@ -1,4 +1,4 @@
-import type { CellRange } from '../interaction/SelectionModel'
+import type { CellRange } from '../engine/selection/SelectionTypes'
 import type { DataSource } from '../data/DataSource'
 import type { Schema } from '../data/Schema'
 import { asRawRange, findViewRow, resolveUnderlyingRow, type RawRange } from './coordinates'

@@ -1,4 +1,4 @@
-import type { CellAddress, CellRange } from '../interaction/SelectionModel'
+import type { CellAddress, CellRange } from '../engine/selection/SelectionTypes'
 import { clamp, unionRange } from '../geometry/range'
 
 /** 填充柄拖拽的主方向；一次拖拽只沿一个轴扩展。 */

@@ -1,4 +1,4 @@
-import type { CellRange } from '../interaction/SelectionModel'
+import type { CellRange } from './selection/SelectionTypes'
 import type { RangeStyleStore } from '../format/RangeStyleStore'
 import type { FormatLayer } from '../format/CellFormat'
 import type { MergeStore, MergeRegion } from '../merge/MergeStore'

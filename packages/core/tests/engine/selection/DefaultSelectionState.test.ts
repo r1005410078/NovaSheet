@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { DefaultSelectionState } from '../../../src/engine/selection/DefaultSelectionState'
-import type { GridSelection } from '../../../src/interaction/SelectionModel'
+import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
 
 describe('DefaultSelectionState', () => {
   it('wraps basic selection model operations', () => {

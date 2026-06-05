@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
 import { computeFillWrites } from '../../src/fill/FillSeries'
 import type { Schema } from '../../src/data/Schema'
-import type { CellRange } from '../../src/interaction/SelectionModel'
+import type { CellRange } from '../../src/engine/selection/SelectionTypes'
 
 const schema: Schema = {
   fields: [

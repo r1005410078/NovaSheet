@@ -1,7 +1,7 @@
 import type { CellValue } from '../../data/Schema'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'
-import type { GridSelection } from '../../interaction/SelectionModel'
+import type { GridSelection } from '../selection/SelectionTypes'
 
 /** Undo replay 可调用的受控写入面；不得镜像整个 `DefaultGridEngine`。 */
 export interface UndoReplayContext {
@@ -12,4 +12,3 @@ export interface UndoReplayContext {
   rebuildRows(): void
   rebuildCols(): void
 }
-

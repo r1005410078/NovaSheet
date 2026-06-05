@@ -1,5 +1,5 @@
 import type { MutableDataSource } from '../data/MutableDataSource'
-import type { CellAddress, CellRange } from '../interaction/SelectionModel'
+import type { CellAddress, CellRange } from '../engine/selection/SelectionTypes'
 import type { CellValue, Schema } from '../data/Schema'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { PasteSkippedCell } from './types'

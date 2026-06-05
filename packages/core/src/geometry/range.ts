@@ -1,4 +1,4 @@
-import type { CellAddress, CellRange } from '../interaction/SelectionModel'
+import type { CellAddress, CellRange } from '../engine/selection/SelectionTypes'
 
 /**
  * 共享 range 几何工具（平台无关）。

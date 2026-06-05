@@ -2,7 +2,11 @@
  * Phase 3.3 — 键盘导航：方向键 / Tab / Enter 移动 active cell，Shift 扩展选区。
  */
 
-import type { CellAddress, GridSelection, SelectCellOptions } from './SelectionModel'
+import type {
+  CellAddress,
+  GridSelection,
+  SelectCellOptions,
+} from '../engine/selection/SelectionTypes'
 
 export interface GridIndexBounds {
   readonly rowCount: number
