@@ -20,7 +20,7 @@ import { MergeStore } from '../merge/MergeStore'
 import type { MergeRegion } from '../merge/MergeStore'
 import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../interaction/CellEdit'
 import { CellEditModel } from '../interaction/CellEditModel'
-import { parseSelectionNavigationKey } from '../interaction/SelectionNavigation'
+import { parseSelectionNavigationKey } from './selection/SelectionNavigation'
 import type {
   CellAddress,
   CellRange,

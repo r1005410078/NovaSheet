@@ -8,7 +8,7 @@ import type {
 import type {
   GridIndexBounds,
   SelectionNavigationIntent,
-} from '../../interaction/SelectionNavigation'
+} from './SelectionNavigation'
 import {
   remapSelectionAfterViewRowsChanged,
   remapSelectionByRowIndexMap,

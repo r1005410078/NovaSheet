@@ -5,8 +5,11 @@
  * 键盘导航都复用同一份状态，不让 web / renderer 各自维护一套选择概念。
  */
 
-import type { GridIndexBounds, SelectionNavigationIntent } from './SelectionNavigation'
-import { applySelectionNavigation } from './SelectionNavigation'
+import type {
+  GridIndexBounds,
+  SelectionNavigationIntent,
+} from '../engine/selection/SelectionNavigation'
+import { applySelectionNavigation } from '../engine/selection/SelectionNavigation'
 import {
   remapColIndexAfterDelete,
   remapColIndexAfterInsert,

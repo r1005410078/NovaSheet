@@ -3,8 +3,8 @@ import {
   applySelectionNavigation,
   parseSelectionNavigationKey,
   type GridIndexBounds,
-} from '../../src/interaction/SelectionNavigation'
-import { SelectionModel } from '../../src/interaction/SelectionModel'
+} from '../../../src/engine/selection/SelectionNavigation'
+import { SelectionModel } from '../../../src/interaction/SelectionModel'
 
 const bounds: GridIndexBounds = { rowCount: 10, colCount: 5 }
 

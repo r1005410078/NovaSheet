@@ -79,12 +79,12 @@ export type { HitTestPoint } from './interaction/HitTest'
 export {
   applySelectionNavigation,
   parseSelectionNavigationKey,
-} from './interaction/SelectionNavigation'
+} from './engine/selection/SelectionNavigation'
 export type {
   GridIndexBounds,
   SelectionNavigationIntent,
   SelectionNavigationTarget,
-} from './interaction/SelectionNavigation'
+} from './engine/selection/SelectionNavigation'
 export { computeScrollReveal } from './interaction/scrollCellIntoView'
 export type { ScrollRevealInput, ScrollRevealResult } from './interaction/scrollCellIntoView'
 export {

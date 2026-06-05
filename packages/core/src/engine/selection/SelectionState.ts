@@ -7,7 +7,7 @@ import type {
 import type {
   GridIndexBounds,
   SelectionNavigationIntent,
-} from '../../interaction/SelectionNavigation'
+} from './SelectionNavigation'
 
 /** Selection handler 需要的最小写入面。 */
 export interface SelectionCommands {
