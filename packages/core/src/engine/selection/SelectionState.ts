@@ -20,7 +20,7 @@ export interface SelectionCommands {
   restoreByCapturedVisibleFieldIds(currentFieldIds: readonly string[]): void
 }
 
-/** 选区领域聚合根接口：封装 SelectionModel 与结构变化后的恢复规则。 */
+/** 选区领域聚合根接口：封装选择状态与结构变化后的恢复规则。 */
 export interface SelectionState extends SelectionCommands {
   getSelection(): GridSelection
   setSelection(selection: GridSelection): void
