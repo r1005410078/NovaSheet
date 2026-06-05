@@ -6,6 +6,7 @@ import type {
 } from './SelectionTypes'
 import type {
   GridIndexBounds,
+  SelectionMergeLookup,
   SelectionNavigationIntent,
 } from './SelectionNavigation'
 import { applySelectionNavigation } from './SelectionNavigation'
@@ -104,8 +105,12 @@ export class DefaultSelectionState implements SelectionState {
   }
 
   /** 应用键盘导航 intent，并返回移动后的 active/extent cell 供滚动跟随。 */
-  navigate(intent: SelectionNavigationIntent, bounds: GridIndexBounds): CellAddress | null {
-    return applySelectionNavigation(this, intent, bounds)
+  navigate(
+    intent: SelectionNavigationIntent,
+    bounds: GridIndexBounds,
+    merge?: SelectionMergeLookup,
+  ): CellAddress | null {
+    return applySelectionNavigation(this, intent, bounds, merge)
   }
 
   /** 行插入后平移已有选区；空选区保持不变。 */

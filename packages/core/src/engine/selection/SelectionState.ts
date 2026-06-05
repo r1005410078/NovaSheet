@@ -6,6 +6,7 @@ import type {
 } from './SelectionTypes'
 import type {
   GridIndexBounds,
+  SelectionMergeLookup,
   SelectionNavigationIntent,
 } from './SelectionNavigation'
 
@@ -27,7 +28,11 @@ export interface SelectionState extends SelectionCommands {
   selectCell(cell: CellAddress, options?: SelectCellOptions): void
   clear(): void
   setSelectedRange(range: CellRange): void
-  navigate(intent: SelectionNavigationIntent, bounds: GridIndexBounds): CellAddress | null
+  navigate(
+    intent: SelectionNavigationIntent,
+    bounds: GridIndexBounds,
+    merge?: SelectionMergeLookup,
+  ): CellAddress | null
   remapAfterViewRowsChanged(context: {
     oldViewRowToRaw(viewRow: number): number
     rawRowToView(rawRow: number): number

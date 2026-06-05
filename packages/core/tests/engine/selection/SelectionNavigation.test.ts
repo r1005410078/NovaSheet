@@ -112,3 +112,34 @@ describe('applySelectionNavigation', () => {
     expect(next).toEqual({ rowIndex: 2, colIndex: 1 })
   })
 })
+
+describe('applySelectionNavigation — merge 感知', () => {
+  // 合并区 rows 1..3 × cols 1..2
+  const region = { startRow: 1, endRow: 3, startCol: 1, endCol: 2 }
+  const merge = {
+    resolveMergeRegion: (rowIndex: number, colIndex: number) =>
+      rowIndex >= 1 && rowIndex <= 3 && colIndex >= 1 && colIndex <= 2 ? region : null,
+  }
+
+  it('向右进入合并区 → 选中整块，active 落到左上角', () => {
+    const model = new DefaultSelectionState()
+    model.selectCell({ rowIndex: 1, colIndex: 0 })
+    applySelectionNavigation(model, { kind: 'delta', dRow: 0, dCol: 1, extend: false }, bounds, merge)
+    expect(model.getSelection().selectedRange).toEqual(region)
+    expect(model.getSelection().activeCell).toEqual({ rowIndex: 1, colIndex: 1 })
+  })
+
+  it('从合并区内向右 → 从右边缘跨出整块，不停在内部', () => {
+    const model = new DefaultSelectionState()
+    model.setSelectedRange(region) // active = 左上角 (1,1)，处于合并区内
+    applySelectionNavigation(model, { kind: 'delta', dRow: 0, dCol: 1, extend: false }, bounds, merge)
+    expect(model.getSelection().activeCell).toEqual({ rowIndex: 1, colIndex: 3 })
+  })
+
+  it('从合并区内向下 → 从底边缘跨出整块', () => {
+    const model = new DefaultSelectionState()
+    model.setSelectedRange(region)
+    applySelectionNavigation(model, { kind: 'delta', dRow: 1, dCol: 0, extend: false }, bounds, merge)
+    expect(model.getSelection().activeCell).toEqual({ rowIndex: 4, colIndex: 1 })
+  })
+})
