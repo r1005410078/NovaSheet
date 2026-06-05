@@ -28,9 +28,10 @@ undo 历史**要是可序列化的数据**（给 AI 读 / 协同 / 审计）。�
 （最彻底但不可序列化）。目标 = **B 的可序列化基底 + A 的所有权下沉**：
 
 - `UndoCommand` 保持**纯数据**（可序列化、可被 AI 读 / 审计 / 将来过网络）。
-- 恢复**不是**中心 switch，也不是哑注册表：每个域注册自己的 `UndoHandler`，只认自己的 kind，
+- 恢复**不是**中心 switch：每个域把自己的 `UndoHandler` **注册进 `UndoRegistry`**，只认自己的 kind，
   调自己聚合的 `restore`。命令数据与其逆操作 handler **同住该域目录**。
-- engine 退成：维护栈 + 按 kind 路由 + 实现各 handler 真正需要的受控能力面。
+- engine 退成：维护栈 + 经 `UndoRegistry` 派发 + 实现各域 ctx + composition root 调各域注册函数。
+  **`undo/` 派发核心对「加域」封闭修改、开放扩展。**
 
 ## 目标 / 非目标
 
@@ -53,27 +54,47 @@ undo 历史**要是可序列化的数据**（给 AI 读 / 协同 / 审计）。�
 （如 `format/FormatUndoCommand.ts` 出 `format`/`merge`/`unmerge`），由中央 `UndoCommand.ts`
 re-export 聚合 —— 与 row/column 的 `*Event` re-export 模式一致。降低中央文件的耦合磁铁效应。
 
-### 2. 各域 UndoHandler
+### 2. 各域 UndoHandler（自持 ctx）
 ```
 interface UndoHandler {
-  /** 是否处理该命令 kind。 */
+  readonly domain: string                       // 'cell' | 'format' | 'row' | 'column' | …（前向兼容开放信封）
   handles(kind: UndoCommand['kind']): boolean
-  applyUndo(command: UndoCommand, ctx: UndoReplayContext): void
-  applyRedo(command: UndoCommand, ctx: UndoReplayContext): void
+  applyUndo(command: UndoCommand): void          // ctx 在构造时注入，不经 replay 传递
+  applyRedo(command: UndoCommand): void
 }
 ```
+- `CellUndoHandler`（editCell/clearRange/paste）。
 - `FormatUndoHandler`（format/merge/unmerge）：住 `format/`，与 `FormatController` 同域。
-- `RowUndoHandler` / `ColumnUndoHandler`（insert/delete/hide/unhide/move/resize*）：住 row/column。
-- `CellUndoHandler`（editCell/clearRange）。
+- `RowUndoHandler` / `ColumnUndoHandler`（resize*/hide*）+ 复合结构 handler（insert/delete/move）：住 row/column。
+- `FillUndoHandler`（fill，跨域）：住 `undo/`。
 
-### 3. UndoReplay = 派发器（取代中心 switch）
-`UndoReplay` 持有 handler 列表 + `UndoReplayContext`，`undo(cmd)`/`redo(cmd)` 按 kind 找到
-唯一 handler 委派。engine 的 `applyUndo`/`applyRedo` 删除，`undo()`/`redo()` 改调 `UndoReplay`。
+每个 handler 在构造时注入其**所需的最小能力面**（见 §4），`applyUndo/Redo(cmd)` 不再透传 ctx。
 
-### 4. 受控能力面收窄
+### 3. UndoRegistry + UndoReplay（注册表 + 派发，取代中心 switch）
+**关键：core 的 undo 派发对「加域」封闭修改、开放扩展。**
+- `UndoRegistry`：`register(handler)` / `resolve(kind): UndoHandler | undefined` / 完整性查询。
+- `UndoReplay`：持 `UndoRegistry`（+ 迁移期 `fallback`），`undo(cmd)`/`redo(cmd)` 经 registry
+  按 kind 解析唯一 handler 委派。**`undo/` 派发核心不认识任何具体 kind。**
+- **各域自注册**：每个域目录导出 `registerXxxUndo(registry, ctx)`（构造 handler 并 `register`）。
+  engine 的 composition root 只是平铺调用这些注册函数——**加一个域 = 写该域 handler + 在 composition
+  调一次注册，不动 `undo/` 派发核心、不改任何 switch**。
+- engine 的 `applyUndo`/`applyRedo` switch 删除，`undo()`/`redo()` 改调 `UndoReplay`。
+
+### 4. 受控能力面收窄（每域一个 ctx）
 现有 `UndoReplayContext`（applyCellWrite / restoreSelection / restoreFormat / restoreMerge /
-rebuildRows / rebuildCols）是「engine 能力清单」。按 handler 实际所需拆分或收窄，避免它变成
-另一个「narrow 化的 God Object」。engine 提供其实现。
+rebuildRows / rebuildCols）是「engine 能力清单」，**不**作为单一大 ctx 使用。改为**每域一个最小
+ctx 接口**（`CellUndoContext` / `FormatUndoContext` / `RowUndoContext` / …），engine 提供各自实现，
+在注册时注入对应 handler，避免 ctx 变成另一个「narrow 化的 God Object」。
+
+### 5. 开放性演进（现在 / 后期）
+| 轴 | 现在（本 spec 落地） | 后期（真插件，另开 spec） |
+| --- | --- | --- |
+| 派发 | `UndoRegistry` + 各域 self-register（核心封闭、加域开放） | 不变（同一注册表即插件插入点） |
+| 命令类型 | 中心 `UndoCommand` union（内部类型安全 + 穷尽检查） | 开放信封 `{domain, kind, payload}`（牺牲穷尽换运行期可扩展） |
+| 能力面 | 每域 ctx，engine 实现 | 稳定 plugin API |
+
+> 现在不引入插件运行时与开放信封（YAGNI）；但**把 `UndoRegistry` 这道缝立起来**，使其既是内部
+> 各域自注册的机制，也是将来插件 plug-in 的同一入口——后期加插件是「往注册表注册」，不是「重构 undo」。
 
 ### 复合命令问题（设计难点，须正面处理）
 部分 kind **跨域**：`paste`（cells+格式+合并+选区）、`fill`（cells+格式+合并+选区）、
@@ -107,11 +128,12 @@ rebuildRows / rebuildCols）是「engine 能力清单」。按 handler 实际所
 | 推荐 | — | ✅ | 与前提冲突 |
 
 ## 验收
-- engine 不再有 `applyUndo`/`applyRedo` 巨型 switch；`undo()`/`redo()` 委派 `UndoReplay`。
+- engine 不再有 `applyUndo`/`applyRedo` 巨型 switch；`undo()`/`redo()` 经 `UndoReplay` + `UndoRegistry` 派发。
+- **`undo/` 派发核心不含任何具体 kind**；各域经 `registerXxxUndo(registry, ctx)` 自注册，
+  「加一个域」不改 `undo/`、不改 switch（registry 完整性测试覆盖全 kind）。
 - 每个 kind 有 round-trip 序列化测试（JSON 深等），CI 守住「命令是可序列化数据」。
-- 各域 undo handler 有独立单元测试（不经 engine）。
+- 各域 undo handler 有独立单元测试（不经 engine）；每域有自己的最小 ctx。
 - 现有 undo/redo 行为全绿（931+ 测试不回归）。
-- `UndoReplay` 被 engine 接线，`UndoReplayContext` 按实际所需收窄并有文档。
 
 ## 风险
 - **复合命令的次序**：undo/redo 中 format/merge/structural/selection 的 restore 次序敏感
@@ -120,8 +142,9 @@ rebuildRows / rebuildCols）是「engine 能力清单」。按 handler 实际所
 - **复合 handler 的归属争议**：它跨域，评审时需就「application 用例对象」达成一致，避免回流 engine。
 
 ## 迁移策略（增量、逐 kind、保持绿）
-1. 先接 `UndoReplay` 派发骨架 + `CellUndoHandler`（editCell/clearRange，最简），engine 双轨。
-2. 逐域迁 format/merge → row → column；每迁一组对拍 undo/redo 测试。
-3. 复合命令（paste/fill/move/insert/delete）最后，引入 composite 用例 handler。
-4. 全部迁完删除 engine 旧 switch。
+1. 先接 `UndoRegistry` + `UndoReplay` 派发骨架 + `CellUndoHandler`（editCell/clearRange/paste，最简），
+   各域 self-register，engine 双轨（registry 未覆盖的 kind 回退旧 switch）。
+2. 逐域迁 format/merge → row → column；每域提供 `registerXxxUndo`，每迁一组对拍 undo/redo 测试。
+3. 复合命令（fill/move/insert/delete）最后，引入 composite 用例 handler。
+4. registry 覆盖全 kind 后删除 engine 旧 switch + `UndoReplay` 的 fallback。
 5. 全程补 round-trip 序列化测试。

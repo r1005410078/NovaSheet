@@ -25,9 +25,14 @@ M1 完成后 engine **仍保留**旧 `applyUndo`/`applyRedo`，仅 editCell/clea
 
 ## M1 设计要点
 
-- `UndoHandler`：`handles(kind)` + `applyUndo(cmd, ctx)` + `applyRedo(cmd, ctx)`。
-- `UndoReplay`：持 handler 列表 + `fallback`（未迁 kind 委回 engine 旧 switch）。
-  `undo(cmd)` / `redo(cmd)` 按 kind 找唯一 handler，否则 fallback。
+- `UndoHandler`：`readonly domain` + `handles(kind)` + `applyUndo(cmd)` + `applyRedo(cmd)`。
+  **ctx 在构造时注入并自持**，`applyUndo/Redo(cmd)` 不透传 ctx（replay 不碰 ctx）。
+- `UndoRegistry`：`register(handler)` / `resolve(kind): UndoHandler | undefined` / 完整性查询。
+  **这是 core undo 对「加域」的封闭/开放边界**：加域 = 注册 handler，不改 `undo/` 派发核心。
+- `UndoReplay`：持 `UndoRegistry` + `fallback`（registry 未覆盖的 kind 回退 engine 旧 switch）。
+  `undo(cmd)` / `redo(cmd)` 经 registry 解析唯一 handler，否则 fallback。
+- 各域 **self-register**：`registerCellUndo(registry, ctx)`（构造 `CellUndoHandler(ctx)` 并 `register`）
+  住 `engine/undo/`（cell 属 undo 域）。engine composition root 平铺调用各域注册函数。
 - `CellUndoContext`（M1 最小能力面，**不**镜像 engine）：
   `applyCellWrite(rowIndex, fieldId, value)`、
   `restoreSelectionAfterEdit(rowIndex, fieldId)`、
@@ -35,9 +40,9 @@ M1 完成后 engine **仍保留**旧 `applyUndo`/`applyRedo`，仅 editCell/clea
   engine 提供实现（复用现有同名私有方法）。三个方法即覆盖 editCell/clearRange/paste 全部所需。
 - engine `undo()`/`redo()` 改调 `this.undoReplay.undo(cmd)` / `.redo(cmd)`。
 
-> 注：现 `engine/undo/UndoReplay.ts` 只有 `UndoReplayContext` 接口、未接线。M1 在该文件加
-> `UndoReplay` 派发类与 `UndoHandler` 接口；`UndoReplayContext` 暂不动（M2+ 收窄），
-> M1 的 `CellUndoContext` 单独定义，避免一上来背 engine 镜像清单。
+> 注：现 `engine/undo/UndoReplay.ts` 只有 `UndoReplayContext` 接口、未接线。M1 在 `engine/undo/`
+> 新增 `UndoHandler` 接口、`UndoRegistry`、`UndoReplay` 派发类；旧 `UndoReplayContext` 暂不动（按域 ctx
+> 取代之，M2+ 逐步淘汰），M1 的 `CellUndoContext` 单独定义，避免一上来背 engine 镜像清单。
 
 ## 任务（TDD：先写失败测试 → 看红 → 实现 → 看绿 → 单任务单 commit）
 
@@ -51,43 +56,52 @@ M1 完成后 engine **仍保留**旧 `applyUndo`/`applyRedo`，仅 editCell/clea
   若样例命中 `Date`，记为发现、缩小 M1 样例到纯 JSON 值，把 `Date` 归一化留给后续任务。
 - **commit**：`test(core): 新增 undo 命令序列化 round-trip 守卫`
 
-### Task 2 — `UndoHandler` 接口 + `CellUndoHandler`（隔离单元）
+### Task 2 — `UndoHandler` 接口 + `CellUndoHandler`（自持 ctx，隔离单元）
 - **测试先行**：`packages/core/tests/engine/undo/CellUndoHandler.test.ts`
-  - fake `CellUndoContext` 捕获 `applyCellWrite` 调用序列与 selection 恢复调用。
+  - 用 fake `CellUndoContext` **构造** `CellUndoHandler(ctx)`，捕获 `applyCellWrite` 序列与 selection 恢复。
   - `editCell` undo → 写 `before`、调 `restoreSelectionAfterEdit`；redo → 写 `after`。
   - `clearRange` undo → 按 `before` 逐格写回、调 `restoreSelectionForWrites(before, range)`；
     redo → 逐格写 `null`、同样恢复选区。
   - `paste` undo → 逐格写 `before`、调 `restoreSelectionForWrites(before, target)`；
     redo → 逐格写 `after`、调 `restoreSelectionForWrites(after, target)`。
-  - `handles('editCell'|'clearRange'|'paste')` 为真，其余为假。
+  - `handles('editCell'|'clearRange'|'paste')` 为真，其余为假；`domain === 'cell'`。
 - **实现**：
-  - `packages/core/src/engine/undo/UndoHandler.ts`：`UndoHandler` 接口 + `CellUndoContext` 接口。
-  - `packages/core/src/engine/undo/CellUndoHandler.ts`：实现，逆/重做逻辑从 engine switch 的
-    editCell/clearRange/paste 分支**原样迁移**（语义不得变）。
-- **plan-risk**：clearRange 的 redo 写 `null`（清空），undo 写回 `before` 值；paste 的 undo 用
-  `before`、redo 用 `after`——务必与现 switch 一致（见 spec：次序/值敏感）。对拍现有 undo 测试。
+  - `packages/core/src/engine/undo/UndoHandler.ts`：`UndoHandler` 接口（`domain`/`handles`/
+    `applyUndo(cmd)`/`applyRedo(cmd)`）+ `CellUndoContext` 接口。
+  - `packages/core/src/engine/undo/CellUndoHandler.ts`：构造注入 `CellUndoContext`；逆/重做逻辑从
+    engine switch 的 editCell/clearRange/paste 分支**原样迁移**（语义不得变）。
+- **plan-risk**：clearRange 的 redo 写 `null`、undo 写 `before`；paste undo 用 `before`、redo 用 `after`
+  ——务必与现 switch 一致（见 spec：次序/值敏感）。对拍现有 undo 测试。
 - **commit**：`feat(core): 新增 UndoHandler 接口与 CellUndoHandler`
 
-### Task 3 — `UndoReplay` 派发 + engine dual-track 接线
+### Task 3 — `UndoRegistry` + `UndoReplay` 派发 + 各域 self-register + dual-track 接线
 - **测试先行**：
-  - `packages/core/tests/engine/undo/UndoReplay.test.ts`：注册一个假 handler + 假 fallback，
-    验证「命中 kind 走 handler、未命中走 fallback、且只调用一次」。
-  - engine 级回归：现有 editCell/clearRange 的 undo/redo 集成测试**保持绿**（行为不变）。
+  - `packages/core/tests/engine/undo/UndoRegistry.test.ts`：`register` 后 `resolve(kind)` 命中正确
+    handler；未注册 kind `resolve` 返回 `undefined`；完整性查询正确。
+  - `packages/core/tests/engine/undo/UndoReplay.test.ts`：registry 命中 → 走 handler；未命中 → 走
+    `fallback`；**命中后不得再调 fallback**（只执行一次）。
+  - engine 级回归：现有 editCell/clearRange/paste 的 undo/redo 集成测试**保持绿**。
 - **实现**：
-  - `UndoReplay` 类（`engine/undo/UndoReplay.ts`）：构造接收 `handlers: UndoHandler[]` +
-    `fallback: { applyUndo(cmd); applyRedo(cmd) }` + `ctx: CellUndoContext`（M1）。
-  - engine：构造 `this.undoReplay = new UndoReplay([new CellUndoHandler()], legacyFallback, cellUndoCtx)`；
-    `legacyFallback` 包 `this.applyUndo`/`this.applyRedo`（旧 switch 仍在，但 editCell/clearRange
-    分支可保留作 fallback 死路或删除——**保留**以缩小本任务改动，M4 统一删）。
+  - `engine/undo/UndoRegistry.ts`：`register` / `resolve` / 完整性查询。
+  - `engine/undo/UndoReplay.ts`：构造接收 `registry: UndoRegistry` + `fallback`；
+    `undo(cmd)`/`redo(cmd)` 经 `registry.resolve(cmd.kind)`，否则 fallback。**不持 ctx**。
+  - `engine/undo/registerCellUndo.ts`（或并入 CellUndoHandler 文件）：
+    `registerCellUndo(registry, ctx)` 构造 `CellUndoHandler(ctx)` 并 `registry.register(it)`。
+  - engine composition：`this.undoRegistry = new UndoRegistry(); registerCellUndo(this.undoRegistry, cellUndoCtx);`
+    `this.undoReplay = new UndoReplay(this.undoRegistry, legacyFallback)`。
+    `legacyFallback` 包 `this.applyUndo`/`this.applyRedo`（旧 switch 仍在，M4 统一删）。
   - `undo()`/`redo()` 改调 `this.undoReplay.undo(cmd)` / `.redo(cmd)`。
-- **plan-risk**：dual-track 下要确保 editCell/clearRange **只被新 handler 执行一次**，不重复经旧
-  switch。`UndoReplay` 命中 handler 后**不得**再调 fallback。
-- **commit**：`refactor(core): engine undo/redo 经 UndoReplay 派发，editCell/clearRange 走域 handler`
+- **plan-risk**：dual-track 下 editCell/clearRange/paste **只被 handler 执行一次**，不重复经旧 switch。
+- **设计验收点**：此后「加一个域」= 写该域 handler + 提供 `registerXxxUndo` + 在 composition 调一次注册，
+  **不动 `engine/undo/` 的 `UndoRegistry`/`UndoReplay` 派发核心**。
+- **commit**：`refactor(core): 引入 UndoRegistry，undo/redo 经各域自注册 handler 派发`
 
 ## M1 验收
-- editCell/clearRange/paste 的 undo/redo 经 `CellUndoHandler`，engine `undo()`/`redo()` 委派 `UndoReplay`。
+- editCell/clearRange/paste 的 undo/redo 经 `CellUndoHandler`（经 `UndoRegistry` 解析），
+  engine `undo()`/`redo()` 委派 `UndoReplay`。
 - 其余 kind 经 dual-track 回退旧 switch，行为不变。
-- `CellUndoHandler` 有隔离单元测试；`UndoReplay` 有派发测试；editCell/clearRange/paste 命令有序列化 round-trip 测试。
+- `UndoRegistry` 立起来：「加域 = 自注册 handler」成立，`engine/undo/` 派发核心不含具体 kind。
+- `CellUndoHandler`/`UndoRegistry`/`UndoReplay` 各有隔离单元测试；editCell/clearRange/paste 有序列化 round-trip 测试。
 - 全量测试（931+）、4 包 typecheck、lint 全绿。
 
 ## 自检（plan self-review）

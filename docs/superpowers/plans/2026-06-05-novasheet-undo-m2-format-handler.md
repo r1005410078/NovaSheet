@@ -24,7 +24,8 @@ redo：
   engine 实现（`formatStore.restore` / `mergeStore.restore` / `selectionController.setSelection`）。
 - `FormatUndoHandler`（住 `engine/format/`，与 `FormatController` 同域）：
   `handles('format'|'merge'|'unmerge')`；undo/redo 按上面分支原样实现。
-- 在 engine 构造的 `UndoReplay` handler 列表中**追加** `FormatUndoHandler`。
+- `format/registerFormatUndo.ts`（或并入 handler 文件）：`registerFormatUndo(registry, ctx)` 自注册；
+  engine composition 调一次。**不动 `engine/undo/` 派发核心。**
 - engine 旧 switch 的 format/merge/unmerge 分支**保留**（dual-track fallback，M4 末统一删）；
   但因 handler 命中，fallback 不会被走到。
 
@@ -50,8 +51,8 @@ redo：
 
 ### Task 3 — 注册进 UndoReplay + 回归
 - **测试**：engine 级 format/merge/unmerge 的 undo/redo 集成测试保持绿（行为不变）。
-- **实现**：engine 构造 `UndoReplay([..., new FormatUndoHandler()], …)`，注入 `FormatUndoContext`
-  实现；engine 旧 switch 分支保留。
+- **实现**：`registerFormatUndo(this.undoRegistry, formatUndoCtx)` 在 engine composition 调用；
+  engine 实现 `FormatUndoContext`；旧 switch 分支保留（M4 删）。
 - **plan-risk**：确认命中 handler 后**不再**走 fallback（M1 的 UndoReplay 已保证；此处只验证三 kind 不双跑）。
 - **commit**：`refactor(core): format/merge/unmerge undo 经 FormatUndoHandler`
 

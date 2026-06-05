@@ -42,7 +42,8 @@
   `addHiddenCols(ids)`、`removeHiddenCols(ids)`、`rebuildCols()`、`restoreSelection(sel)`、
   `getDefaultColWidth()`。
 - `RowUndoHandler`（住 `engine/row/`）、`ColumnUndoHandler`（住 `engine/column/`）。
-- 追加进 engine 的 `UndoReplay` handler 列表；旧 switch 分支保留至 M4。
+- `row/registerRowUndo.ts` / `column/registerColumnUndo.ts`：各域 `registerXxxUndo(registry, ctx)`
+  自注册，engine composition 各调一次；旧 switch 分支保留至 M4。**不动派发核心。**
 
 ## 任务（TDD，单任务单 commit）
 

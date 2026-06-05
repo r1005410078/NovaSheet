@@ -70,7 +70,8 @@
 - **commit**：`feat(core): 新增 ColumnStructureUndoHandler（insert/delete/move 列）`
 
 ### Task 5 — 注册 + 回归
-- engine 构造把三 handler 追加进 `UndoReplay`，注入能力面实现（委派现有私有 helper）。
+- 各 handler 经 `registerXxxUndo(registry, ctx)` 自注册（fill 住 `undo/`，结构住 row/column），
+  engine composition 各调一次并注入能力面实现（委派现有私有 helper）。**不动派发核心。**
 - 现有 fill/move/insert/delete 的 undo/redo 集成测试保持绿。
 - **commit**：`refactor(core): 复合 undo 经 Fill/Row/Column 结构 handler`
 
@@ -78,8 +79,8 @@
 - 删 `applyUndo`/`applyRedo` 两个 switch；`UndoReplay` 去掉 `fallback`（已无未迁 kind）。
 - 删除迁移后变 dead 的 engine 私有方法（核查 `applyEditCellWrite` 等是否仍被能力面实现引用——
   **被引用则保留**）。
-- **plan-risk**：删 fallback 后任何遗漏 kind 会运行期无声 no-op；先加一个「全 21 kind 都被某 handler `handles`」
-  的断言测试（registry 完整性），再删 fallback。
+- **plan-risk**：删 fallback 后任何遗漏 kind 会运行期无声 no-op；先加「全 21 kind 都能被
+  `UndoRegistry.resolve` 命中」的完整性断言测试，再删 fallback。
 - **commit**：`refactor(core): 删除 engine undo/redo 旧 switch，UndoReplay 全量接管`
 
 ## M4 验收
