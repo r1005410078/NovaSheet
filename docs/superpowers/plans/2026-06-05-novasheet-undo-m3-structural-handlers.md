@@ -24,14 +24,27 @@
 - `hideCols`：undo `removeHidden(fieldIds)` + rebuild + before；redo `addHidden` + rebuild + after。
 - `unhideCols`：undo `addHidden` + rebuild + before；redo `removeHidden` + rebuild + after。
 
-## ⚠ STOP（必须先解决再迁 resizeRow）
+## ⚠ STOP（已调查并定调 — 2026-06-05）
 
-`resizeRow` 的 **undo 走 `rebuildViewAxis()`，redo 走 `rowsAxis = getViewRowsAxis()`**——两者
-是否等价？列侧两边都用 `rebuildViewColsAxis()`，行侧不对称，疑似既有 latent 不一致。
-迁移前**停并确认**：
-- 若等价 → `RowUndoContext.rebuildRows()` 统一封装，undo/redo 都用它（顺手抹平不一致，**在 plan 里记一笔**）。
-- 若不等价（`rebuildViewAxis` 多做 frozen sync 等）→ 暴露两个能力或保留差异，**不得擅自归一**，按 CLAUDE.md
-  「plan bug 先改 plan 再实现」处理：先 `docs(plan)` 记录结论，再实现。
+**结论：不等价，且行侧 redo 是 latent bug，范围比原标注广。**
+
+- `rebuildViewAxis()`（`DefaultGridEngine.ts:1339`）= 新 axis + **重建 `frozen` 和 `viewport`**（保留
+  viewport snapshot：headerHeight / rowHeaderWidth / size / scroll）。
+- 行 redo 的裸式 `this.rowsAxis = this.rowStructure.getViewRowsAxis()` 只换 axis 引用，**不**重建
+  frozen/viewport。而 `getViewRowsAxis()`（`row/DefaultRowStructure.ts:131`）**每次 new 一个
+  `ChunkedAxis`**，故 redo 后 `this.frozen` / `this.viewport` 仍持旧 axis 引用 → `getFrame()` 读
+  viewport，渲染仍是 redo 前的行高/可见性，直到下次任何 `rebuildViewAxis`。
+- 范围：不止 `resizeRow`，**4 个行 kind 的 redo 全中**（resizeRow/hideRows/unhideRows/resizeRowsMulti，
+  行 1158/1190/1195/1200）。列侧两边都 `rebuildViewColsAxis()`（全重建），对称且正确。
+- 既有测试全绿因为没有断言「行 redo 后的 viewport 几何/frame」。
+
+**决策（用户拍板 2026-06-05）：M3 内顺手修正。** `RowUndoContext` 只暴露单一 `rebuildRows()`
+（= 全重建语义），行 undo/redo 都走它，与 undo 侧和列侧一致——修掉 latent bug。这是受控的行为变更，
+故 **TDD 先加一条回归测试**：断言「行 resize/hide 的 redo 后 viewport（经 `getFrame`）反映新行高/可见性」，
+看红 → 接 handler（redo 改全重建）→ 看绿。该测试随 Task 2 一并提交（与 RowUndoHandler 同 commit）。
+
+> 注：insertRows/deleteRows redo 也用裸式（行 1169/1182），属 M4 复合范围，本里程碑不动；M4 迁移时
+> 沿用相同「全重建」修正。
 
 ## 设计
 
@@ -47,19 +60,23 @@
 
 ## 任务（TDD，单任务单 commit）
 
-### Task 0 — 解决 resizeRow rebuild 不对称（仅当 STOP 触发）
-- 调查 `rebuildViewAxis()` vs `rowsAxis = getViewRowsAxis()` 差异，结论写入本 plan 的 `docs(plan)` commit。
-- **commit**（按需）：`docs(plan): 厘清 resizeRow undo/redo rebuild 不对称`
+### Task 0 — 解决 resizeRow rebuild 不对称（已触发，结论见上「⚠ STOP」）
+- 调查完成：不等价，行侧 4 个 kind 的 redo 均缺 frozen/viewport 重建（latent bug）。
+- 决策：M3 内顺手修正，`RowUndoContext` 单一 `rebuildRows()` 全重建，redo 回归测试守。
+- **commit**：`docs(plan): 厘清行结构 undo/redo rebuild 不对称并定 M3 内修正`
 
 ### Task 1 — 序列化 round-trip：8 个结构 kind
 - 扩 `UndoCommandSerialization.test.ts`，8 kind 样例 round-trip 深等（均为 number/string/数组，预期通过）。
 - **commit**：`test(core): 扩展 undo 序列化守卫覆盖结构 resize/hide kind`
 
-### Task 2 — `RowUndoHandler` + 隔离单元测试
+### Task 2 — `RowUndoHandler` + 隔离单元测试 + redo 回归测试
 - **测试**：`packages/core/tests/engine/row/RowUndoHandler.test.ts`，fake `RowUndoContext` 捕获调用。
-  覆盖 4 个行 kind 的 undo/redo 调用序列与选区恢复（resizeRow 无选区）。
-- **实现**：`engine/row/RowUndoHandler.ts`（+ `RowUndoContext`）。逻辑原样迁移。
-- **commit**：`feat(core): 新增 RowUndoHandler（resize/hide 行结构）`
+  覆盖 4 个行 kind 的 undo/redo 调用序列与选区恢复（resizeRow 无选区）；undo/redo 均调单一 `rebuildRows()`。
+- **回归测试（修 latent bug）**：engine 级断言「行 resize/hide 的 redo 后 `getFrame()`/viewport 反映新
+  行高或可见性」——先看红（旧裸式 redo 留陈旧 viewport），接 handler 后看绿。可放
+  `DefaultGridEngine.*-undo` 既有结构 undo 测试文件或新增。
+- **实现**：`engine/row/RowUndoHandler.ts`（+ `RowUndoContext`，单一 `rebuildRows()`）。
+- **commit**：`feat(core): 新增 RowUndoHandler（resize/hide 行结构）并修 redo viewport 不重建`
 
 ### Task 3 — `ColumnUndoHandler` + 隔离单元测试
 - **测试**：`packages/core/tests/engine/column/ColumnUndoHandler.test.ts`，覆盖 4 个列 kind。
