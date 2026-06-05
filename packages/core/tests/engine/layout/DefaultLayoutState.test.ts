@@ -88,3 +88,42 @@ describe('DefaultLayoutState 视图装配与 rebuild', () => {
     expect(layout.getViewport().snapshot().rowHeaderWidth).toBe(expected)
   })
 })
+
+describe('DefaultLayoutState applyTheme 与 frozen remap', () => {
+  it('applyTheme：换 theme header + 重算 excel gutter', () => {
+    const layout = makeLayout({ excelHeaders: true })
+    layout.initView(axis(10, 24), axis(3, 100))
+    const themed = {
+      ...denseGridTheme,
+      metrics: { ...denseGridTheme.metrics, headerHeight: 99, rowHeaderWidth: 60 },
+    }
+    layout.applyTheme(themed)
+    const snap = layout.getViewport().snapshot()
+    expect(snap.headerHeight).toBe(99)
+    expect(snap.rowHeaderWidth).toBe(Math.max(60, 44))
+  })
+
+  it('remapFrozenAfterColInsert：插入落在左冻结区内 → leftCols 增长', () => {
+    const layout = makeLayout({ frozenInput: { leftCols: 2, rightCols: 1 } })
+    layout.initView(axis(10, 24), axis(5, 100))
+    // 在 at=1 插 2 列；oldTotalCols=5。at(1) < leftCols(2) → left+2；rightCols>0 且 at(1) >= 5-1=4? 否。
+    layout.remapFrozenAfterColInsert(1, 2, 5)
+    expect(layout.getFrozenConfig()).toEqual({ topRows: 0, leftCols: 4, rightCols: 1 })
+  })
+
+  it('remapFrozenAfterColInsert：插入落在右冻结边界 → rightCols 增长', () => {
+    const layout = makeLayout({ frozenInput: { leftCols: 1, rightCols: 2 } })
+    layout.initView(axis(10, 24), axis(6, 100))
+    // at=5 插 1 列；oldTotalCols=6；at(5) < left(1)? 否。right>0 且 at(5) >= 6-2=4 → right+1。
+    layout.remapFrozenAfterColInsert(5, 1, 6)
+    expect(layout.getFrozenConfig()).toEqual({ topRows: 0, leftCols: 1, rightCols: 3 })
+  })
+
+  it('remapFrozenAfterColDelete：删除命中左右冻结区 → 各自收缩，下界 0', () => {
+    const layout = makeLayout({ frozenInput: { leftCols: 2, rightCols: 2 } })
+    layout.initView(axis(10, 24), axis(6, 100))
+    // totalColsBefore=6；删 [0, 5]：left 命中 idx<2 → 1 个；rightBoundary=6-2=4，idx>=4 → 1 个。
+    layout.remapFrozenAfterColDelete([0, 5], 6)
+    expect(layout.getFrozenConfig()).toEqual({ topRows: 0, leftCols: 1, rightCols: 1 })
+  })
+})

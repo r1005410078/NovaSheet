@@ -100,16 +100,30 @@ export class DefaultLayoutState implements LayoutState {
     this.recreateViewportPreserving()
   }
 
-  applyTheme(): void {
-    throw new Error('not implemented')
+  applyTheme(theme: Theme): void {
+    this.theme = theme
+    this.viewport.setHeaderHeight(theme.metrics.headerHeight)
+    this.applySheetChrome()
   }
 
-  remapFrozenAfterColInsert(): void {
-    throw new Error('not implemented')
+  remapFrozenAfterColInsert(at: number, count: number, oldTotalCols: number): void {
+    const cfg = this.frozen.getFrozenConfig()
+    let { leftCols, rightCols } = cfg
+    if (at < leftCols) leftCols += count
+    if (rightCols > 0 && at >= oldTotalCols - rightCols) rightCols += count
+    this.frozen.setFrozen({ topRows: cfg.topRows, leftCols, rightCols })
   }
 
-  remapFrozenAfterColDelete(): void {
-    throw new Error('not implemented')
+  remapFrozenAfterColDelete(removedIndices: readonly number[], totalColsBefore: number): void {
+    const cfg = this.frozen.getFrozenConfig()
+    const leftHit = removedIndices.filter((idx) => idx < cfg.leftCols).length
+    const rightBoundary = totalColsBefore - cfg.rightCols
+    const rightHit = removedIndices.filter((idx) => idx >= rightBoundary).length
+    this.frozen.setFrozen({
+      topRows: cfg.topRows,
+      leftCols: Math.max(0, cfg.leftCols - leftHit),
+      rightCols: Math.max(0, cfg.rightCols - rightHit),
+    })
   }
 
   setFrozenConfig(config: Partial<FrozenConfig>): void {
