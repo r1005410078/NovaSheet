@@ -476,11 +476,12 @@ export type {
 Run:
 
 ```bash
-rg "SelectionModel" packages/core/src packages/web/src packages/web-canvas2d/src apps
-rg "interaction/Selection" packages/core/src packages/web/src packages/web-canvas2d/src apps
+rg "SelectionModel" packages/core/src packages/web/src packages/web-canvas2d/src apps --glob '!**/README.md'
+rg "interaction/Selection" packages/core/src packages/web/src packages/web-canvas2d/src apps --glob '!**/README.md'
 ```
 
-Expected: both commands print no matches. If matches remain, update them to `engine/selection/SelectionTypes` or `engine/selection/SelectionNavigation`.
+Expected: both commands print no matches in code/app files. README and spec/plan text is updated in Task 5.
+If code matches remain, update them to `engine/selection/SelectionTypes` or `engine/selection/SelectionNavigation`, or delete the legacy file/export when the match is the old `SelectionModel` class.
 
 - [ ] **Step 4: Run core checks**
 
