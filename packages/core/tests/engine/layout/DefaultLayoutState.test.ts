@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { DefaultLayoutState } from '../../../src/engine/layout/LayoutState'
 import { denseGridTheme } from '../../../src/theme/denseGridTheme'
 import type { Schema } from '../../../src/data/Schema'
-import { ChunkedAxis } from '../../../src/layout/ChunkedAxis'
+import { ChunkedAxis } from '../../../src/geometry/ChunkedAxis'
 
 function axis(count: number, defaultSize: number): ChunkedAxis {
   return new ChunkedAxis({ count, defaultSize })

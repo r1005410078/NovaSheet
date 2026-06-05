@@ -161,7 +161,7 @@ Subagent prompts must:
 | Public Grid API                   | `packages/web/src/Grid.ts` / `packages/web/src/index.ts`                  |
 | DataSource / Schema / Theme types | `packages/core/src/index.ts`                                              |
 | Engine state coordinator          | `packages/core/src/engine/DefaultGridEngine.ts`                           |
-| Algorithm core                    | `packages/core/src/layout/ChunkedAxis.ts` (also `Axis` / `MutableAxis`)   |
+| Algorithm core                    | `packages/core/src/geometry/ChunkedAxis.ts` (also `Axis` / `MutableAxis`) |
 | Per-frame Canvas2D logic          | `packages/web-canvas2d/src/render/Canvas2DRenderer.ts`                    |
 | Theme tokens                      | `packages/core/src/theme/denseGridTheme.ts`                               |
 | DOM host                          | `packages/web/src/host/DomGridHost.ts`                                    |

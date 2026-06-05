@@ -19,9 +19,9 @@ import type {
   GridSelection,
   SelectCellOptions,
 } from './selection/SelectionTypes'
-import type { Axis } from '../layout/ChunkedAxis'
-import type { FrozenConfig } from '../layout/FrozenRegions'
-import type { Viewport } from '../layout/Viewport'
+import type { Axis } from '../geometry/ChunkedAxis'
+import type { FrozenConfig } from '../geometry/FrozenRegions'
+import type { Viewport } from '../geometry/Viewport'
 import type { RenderFrame } from '../render/RenderFrame'
 import type { Theme } from '../theme/Theme'
 

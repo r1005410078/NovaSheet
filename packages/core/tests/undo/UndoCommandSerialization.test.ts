@@ -5,7 +5,7 @@ import type { MergeRegion } from '../../src/merge/MergeStore'
 import type { GridSelection } from '../../src/engine/selection/SelectionTypes'
 import type { Field } from '../../src/data/Schema'
 import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../../src/data/MutableDataSource'
-import type { FrozenConfig } from '../../src/layout/FrozenRegions'
+import type { FrozenConfig } from '../../src/geometry/FrozenRegions'
 import { assertSerializable } from '../helpers/undo-serialization'
 
 const FROZEN: FrozenConfig = { topRows: 0, leftCols: 0, rightCols: 0 }

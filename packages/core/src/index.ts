@@ -27,11 +27,11 @@ export type {
 } from './theme/Theme'
 
 // 布局层
-export { ChunkedAxis, CHUNK_SIZE } from './layout/ChunkedAxis'
-export { Viewport } from './layout/Viewport'
-export { FrozenRegions } from './layout/FrozenRegions'
-export { columnIndexToLetter } from './layout/columnLetter'
-export type { Axis, MutableAxis } from './layout/ChunkedAxis'
+export { ChunkedAxis, CHUNK_SIZE } from './geometry/ChunkedAxis'
+export { Viewport } from './geometry/Viewport'
+export { FrozenRegions } from './geometry/FrozenRegions'
+export { columnIndexToLetter } from './geometry/columnLetter'
+export type { Axis, MutableAxis } from './geometry/ChunkedAxis'
 export type {
   ColBand,
   FrozenConfig,
@@ -39,7 +39,7 @@ export type {
   RenderRegion,
   RenderRegionId,
   RowBand,
-} from './layout/FrozenRegions'
+} from './geometry/FrozenRegions'
 export { DefaultGridEngine } from './engine/DefaultGridEngine'
 export type {
   FillCommitResult,
@@ -64,7 +64,7 @@ export type {
   RenderFrameCollapsedColGap,
   RenderFrameCollapsedGap,
 } from './render/RenderFrame'
-export type { ViewportSnapshot } from './layout/Viewport'
+export type { ViewportSnapshot } from './geometry/Viewport'
 
 // 交互层（Phase 3）
 export type {

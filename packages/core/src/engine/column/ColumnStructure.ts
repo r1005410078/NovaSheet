@@ -1,4 +1,4 @@
-import type { ChunkedAxis } from '../../layout/ChunkedAxis'
+import type { ChunkedAxis } from '../../geometry/ChunkedAxis'
 import type { DataSource } from '../../data/DataSource'
 import type { Field } from '../../data/Schema'
 import type { RemovedFieldSnapshot } from '../../data/MutableDataSource'

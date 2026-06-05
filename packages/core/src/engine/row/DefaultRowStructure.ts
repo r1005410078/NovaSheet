@@ -1,4 +1,4 @@
-import { ChunkedAxis } from '../../layout/ChunkedAxis'
+import { ChunkedAxis } from '../../geometry/ChunkedAxis'
 import { HideRowsLayer } from '../../view/HideRowsLayer'
 import { isMutableDataSource } from '../../data/MutableDataSource'
 import type { CollapsedGap } from '../../view/HideRowsLayer'

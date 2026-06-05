@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { ChunkedAxis, CHUNK_SIZE } from '../src/layout/ChunkedAxis'
+import { ChunkedAxis, CHUNK_SIZE } from '../src/geometry/ChunkedAxis'
 
 describe('probe — 轴算法探针（非契约）', () => {
   it('CHUNK_SIZE 恒为 1024', () => {

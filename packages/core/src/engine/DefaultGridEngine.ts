@@ -26,9 +26,9 @@ import type {
   GridSelection,
   SelectCellOptions,
 } from './selection/SelectionTypes'
-import type { ChunkedAxis } from '../layout/ChunkedAxis'
-import type { FrozenConfig } from '../layout/FrozenRegions'
-import type { Viewport } from '../layout/Viewport'
+import type { ChunkedAxis } from '../geometry/ChunkedAxis'
+import type { FrozenConfig } from '../geometry/FrozenRegions'
+import type { Viewport } from '../geometry/Viewport'
 import { DefaultLayoutState } from './layout/LayoutState'
 import type { RenderFrame } from '../render/RenderFrame'
 import { denseGridTheme } from '../theme/denseGridTheme'

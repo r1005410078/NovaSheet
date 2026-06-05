@@ -1,4 +1,4 @@
-import { ChunkedAxis } from '../../layout/ChunkedAxis'
+import { ChunkedAxis } from '../../geometry/ChunkedAxis'
 import { VisibleColumnsDataSource } from '../../data/VisibleColumnsDataSource'
 import { isMutableDataSource } from '../../data/MutableDataSource'
 import {

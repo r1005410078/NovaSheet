@@ -8,7 +8,7 @@ import {
   normalizeDeleteCols,
   normalizeMoveCols,
 } from '../../../src/engine/column/ColumnRules'
-import { ChunkedAxis } from '../../../src/layout/ChunkedAxis'
+import { ChunkedAxis } from '../../../src/geometry/ChunkedAxis'
 import type { Field } from '../../../src/data/Schema'
 
 function fields(ids: string[]): Field[] {

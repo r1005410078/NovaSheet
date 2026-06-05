@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis } from '../../src/layout/ChunkedAxis'
+import { ChunkedAxis } from '../../src/geometry/ChunkedAxis'
 
 const DEFAULT_SIZE = 20
 

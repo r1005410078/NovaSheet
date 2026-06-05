@@ -1,4 +1,4 @@
-import type { ChunkedAxis } from '../../layout/ChunkedAxis'
+import type { ChunkedAxis } from '../../geometry/ChunkedAxis'
 import type { Field } from '../../data/Schema'
 
 /** 列移动归一化后的计划。 */

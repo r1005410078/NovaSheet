@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { columnIndexToLetter } from '../../src/layout/columnLetter'
+import { columnIndexToLetter } from '../../src/geometry/columnLetter'
 
 describe('columnIndexToLetter', () => {
   it('maps 0-based indices to Excel letters', () => {

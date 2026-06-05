@@ -4,7 +4,7 @@ import { ColumnStructureUndoHandler } from '../../../src/engine/column/ColumnStr
 import type { ColumnStructureUndoContext } from '../../../src/engine/column/ColumnStructureUndoHandler'
 import type { Field } from '../../../src/data/Schema'
 import type { RemovedFieldSnapshot } from '../../../src/data/MutableDataSource'
-import type { FrozenConfig } from '../../../src/layout/FrozenRegions'
+import type { FrozenConfig } from '../../../src/geometry/FrozenRegions'
 import type { FormatLayer } from '../../../src/format/CellFormat'
 import type { MergeRegion } from '../../../src/merge/MergeStore'
 import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'

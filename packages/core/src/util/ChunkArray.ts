@@ -1,6 +1,6 @@
 /**
  * ChunkedAxis 的最小存储单元。
- * 见 layout/ChunkedAxis.ts 顶部模块注释了解整体设计与不变量。
+ * 见 geometry/ChunkedAxis.ts 顶部模块注释了解整体设计与不变量。
  */
 export interface Chunk {
   /**

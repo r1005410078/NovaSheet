@@ -1,7 +1,7 @@
-import type { ChunkedAxis } from '../../layout/ChunkedAxis'
-import { FrozenRegions } from '../../layout/FrozenRegions'
-import type { FrozenConfig } from '../../layout/FrozenRegions'
-import { Viewport } from '../../layout/Viewport'
+import type { ChunkedAxis } from '../../geometry/ChunkedAxis'
+import { FrozenRegions } from '../../geometry/FrozenRegions'
+import type { FrozenConfig } from '../../geometry/FrozenRegions'
+import { Viewport } from '../../geometry/Viewport'
 import type { Theme } from '../../theme/Theme'
 import type { Schema } from '../../data/Schema'
 

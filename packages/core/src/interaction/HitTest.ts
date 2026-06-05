@@ -1,4 +1,4 @@
-import type { RenderRegion } from '../layout/FrozenRegions'
+import type { RenderRegion } from '../geometry/FrozenRegions'
 import type { RenderFrame } from '../render/RenderFrame'
 import type { CellAddress } from '../engine/selection/SelectionTypes'
 

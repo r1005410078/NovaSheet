@@ -3,7 +3,7 @@ import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../data/MutableDa
 import type { FormatLayer } from '../format/CellFormat'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { CellRange, GridSelection } from '../engine/selection/SelectionTypes'
-import type { FrozenConfig } from '../layout/FrozenRegions'
+import type { FrozenConfig } from '../geometry/FrozenRegions'
 
 export interface CellWrite {
   readonly rowIndex: number

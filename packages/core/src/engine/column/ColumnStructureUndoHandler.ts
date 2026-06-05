@@ -1,6 +1,6 @@
 import type { Field } from '../../data/Schema'
 import type { RemovedFieldSnapshot } from '../../data/MutableDataSource'
-import type { FrozenConfig } from '../../layout/FrozenRegions'
+import type { FrozenConfig } from '../../geometry/FrozenRegions'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'
 import type { GridSelection } from '../selection/SelectionTypes'
