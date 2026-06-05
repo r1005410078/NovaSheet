@@ -21,12 +21,11 @@ import type { MergeRegion } from '../merge/MergeStore'
 import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../interaction/CellEdit'
 import { CellEditModel } from '../interaction/CellEditModel'
 import { parseSelectionNavigationKey } from '../interaction/SelectionNavigation'
-import {
-  SelectionModel,
-  type CellAddress,
-  type CellRange,
-  type GridSelection,
-  type SelectCellOptions,
+import type {
+  CellAddress,
+  CellRange,
+  GridSelection,
+  SelectCellOptions,
 } from '../interaction/SelectionModel'
 import { ChunkedAxis } from '../layout/ChunkedAxis'
 import { FrozenRegions, type FrozenConfig } from '../layout/FrozenRegions'
@@ -60,6 +59,8 @@ import { DeleteColsCommandHandler } from './column/DeleteColsCommandHandler'
 import { HideColsCommandHandler } from './column/HideColsCommandHandler'
 import { UnhideColsCommandHandler } from './column/UnhideColsCommandHandler'
 import { MoveColsCommandHandler } from './column/MoveColsCommandHandler'
+import { DefaultSelectionState } from './selection/DefaultSelectionState'
+import { SelectionEventHandler } from './selection/SelectionEventHandler'
 
 /**
  * `GridEngine` 默认实现。
@@ -88,7 +89,7 @@ export class DefaultGridEngine implements GridEngine {
   })
   private frozen: FrozenRegions
   private viewport: Viewport
-  private selection = new SelectionModel()
+  private readonly selection = new DefaultSelectionState()
   private cellEdit = new CellEditModel()
   private undoStack = new UndoStack()
   /**
@@ -114,6 +115,9 @@ export class DefaultGridEngine implements GridEngine {
     this.coords,
   )
   private readonly eventPipeline = new GridEventPipeline([
+    new SelectionEventHandler(this.selection, {
+      getVisibleFieldIds: () => this.data.getSchema().fields.map((field) => field.id),
+    }),
     new FormatEventHandler({
       remapFormatRows: (indexMap) => this.formatStore.remapByRowIndexMap(indexMap),
       remapMergeRows: (indexMap) => this.mergeStore.remapByRowIndexMap(indexMap),
@@ -186,10 +190,12 @@ export class DefaultGridEngine implements GridEngine {
 
   setViewData(data: DataSource, options: SetViewDataOptions = {}): void {
     this.finishActiveEdit()
-    const selection = this.selection.getSelection()
     this.rebuildData(data)
     if (options.oldResolveUnderlyingRow) {
-      this.remapSelection(selection, options.oldResolveUnderlyingRow)
+      this.selection.remapAfterViewRowsChanged({
+        oldViewRowToRaw: options.oldResolveUnderlyingRow,
+        rawRowToView: (rawRow) => this.coords.rawRowToView(rawRow),
+      })
       return
     }
     if (options.clearSelection !== false) this.selection.clear()
@@ -462,7 +468,6 @@ export class DefaultGridEngine implements GridEngine {
     })
     if (!event) return []
     this.rebuildViewAxis()
-    this.selection.remapAfterRowsInserted(event.at, event.count)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({
       kind: 'insertRows',
@@ -493,7 +498,6 @@ export class DefaultGridEngine implements GridEngine {
     })
     if (!event) return
     this.rebuildViewAxis()
-    this.selection.remapAfterRowsDeleted(event.rowIds)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({
       kind: 'deleteRows',
@@ -573,7 +577,6 @@ export class DefaultGridEngine implements GridEngine {
     const event = this.moveRowsCommand.execute({ kind: 'moveRows', rowIds, beforeRowId })
     if (!event) return false
     this.rebuildViewAxis()
-    this.restoreSelectionByRowIndexMap(selectionBefore, event.indexMap)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({
       kind: 'moveRows',
@@ -601,7 +604,6 @@ export class DefaultGridEngine implements GridEngine {
     if (!event) return []
     this.syncFrozenAfterColInsert(event.at, event.count)
     this.rebuildViewColsAxis()
-    this.selection.remapAfterColsInserted(event.at, event.count)
     const selectionAfter = this.selection.getSelection()
     const frozenAfter = this.frozen.getFrozenConfig()
     this.undoStack.push({
@@ -632,7 +634,6 @@ export class DefaultGridEngine implements GridEngine {
     if (!event) return []
     this.syncFrozenAfterColDelete(event.removedIndices, totalColsBefore)
     this.rebuildViewColsAxis()
-    this.selection.remapAfterColsDeleted(event.removedIndices)
     const selectionAfter = this.selection.getSelection()
     const frozenAfter = this.frozen.getFrozenConfig()
     this.undoStack.push({
@@ -723,11 +724,12 @@ export class DefaultGridEngine implements GridEngine {
     const selectionBefore = this.selection.getSelection()
     const formatBefore = this.formatStore.snapshot()
     const mergeBefore = this.mergeStore.snapshot()
-    const visibleFieldIdsBefore = this.data.getSchema().fields.map((field) => field.id)
+    this.selection.captureVisibleFieldIdsBefore(
+      this.data.getSchema().fields.map((field) => field.id),
+    )
     const event = this.moveColsCommand.execute({ kind: 'moveCols', fieldIds, beforeFieldId })
     if (!event) return false
     this.rebuildViewColsAxis()
-    this.restoreSelectionByVisibleFieldIds(selectionBefore, visibleFieldIdsBefore)
     const selectionAfter = this.selection.getSelection()
     this.undoStack.push({
       kind: 'moveCols',
@@ -1347,93 +1349,6 @@ export class DefaultGridEngine implements GridEngine {
     if (!this.commitCellEdit()) this.cancelCellEdit()
   }
 
-  private remapSelection(
-    selection: GridSelection,
-    oldResolveUnderlyingRow: (viewRow: number) => number,
-  ): void {
-    if (
-      !selection.activeCell ||
-      !selection.anchorCell ||
-      !selection.extentCell ||
-      !selection.selectedRange
-    ) {
-      this.selection.clear()
-      return
-    }
-
-    const activeCell = this.remapCell(selection.activeCell, oldResolveUnderlyingRow)
-    if (!activeCell) {
-      this.selection.clear()
-      return
-    }
-
-    if (isSingleCellRange(selection.selectedRange)) {
-      this.selection.selectCell(activeCell)
-      return
-    }
-
-    const anchorCell = this.remapCell(selection.anchorCell, oldResolveUnderlyingRow)
-    const extentCell = this.remapCell(selection.extentCell, oldResolveUnderlyingRow)
-    const remappedRows = this.remapSelectedRows(selection.selectedRange, oldResolveUnderlyingRow)
-
-    if (
-      anchorCell &&
-      extentCell &&
-      remappedRows &&
-      areContiguousRows(remappedRows) &&
-      selection.selectedRange.endRow - selection.selectedRange.startRow ===
-        Math.max(...remappedRows) - Math.min(...remappedRows)
-    ) {
-      const range = {
-        startRow: Math.min(...remappedRows),
-        endRow: Math.max(...remappedRows),
-        startCol: selection.selectedRange.startCol,
-        endCol: selection.selectedRange.endCol,
-      }
-      this.selection.setSelection({
-        activeCell,
-        anchorCell: { rowIndex: range.startRow, colIndex: range.startCol },
-        extentCell: { rowIndex: range.endRow, colIndex: range.endCol },
-        selectedRange: range,
-      })
-      return
-    }
-
-    this.selection.selectCell(activeCell)
-  }
-
-  private remapCell(
-    cell: CellAddress,
-    oldResolveUnderlyingRow: (viewRow: number) => number,
-  ): CellAddress | null {
-    return this.remapRangeEndpoint(cell.rowIndex, cell.colIndex, oldResolveUnderlyingRow)
-  }
-
-  private remapRangeEndpoint(
-    rowIndex: number,
-    colIndex: number,
-    oldResolveUnderlyingRow: (viewRow: number) => number,
-  ): CellAddress | null {
-    const underlyingRow = oldResolveUnderlyingRow(rowIndex)
-    const viewRow = this.coords.rawRowToView(underlyingRow)
-    if (viewRow === -1) return null
-    return { rowIndex: viewRow, colIndex }
-  }
-
-  private remapSelectedRows(
-    range: CellRange,
-    oldResolveUnderlyingRow: (viewRow: number) => number,
-  ): number[] | null {
-    const rows: number[] = []
-    for (let rowIndex = range.startRow; rowIndex <= range.endRow; rowIndex += 1) {
-      const underlyingRow = oldResolveUnderlyingRow(rowIndex)
-      const viewRow = this.coords.rawRowToView(underlyingRow)
-      if (viewRow === -1) return null
-      rows.push(viewRow)
-    }
-    return rows
-  }
-
   private resolveDefaultRowHeight(): number {
     return this.explicitDefaultRowHeight ?? this.theme.metrics.rowHeight
   }
@@ -1489,82 +1404,6 @@ export class DefaultGridEngine implements GridEngine {
     })
   }
 
-  private restoreSelectionByVisibleFieldIds(
-    selection: GridSelection,
-    visibleFieldIdsBefore: readonly string[],
-  ): void {
-    if (
-      !selection.activeCell ||
-      !selection.anchorCell ||
-      !selection.extentCell ||
-      !selection.selectedRange
-    ) {
-      this.selection.clear()
-      return
-    }
-
-    const fieldsAfter = this.data.getSchema().fields
-    const indexAfterById = new Map<string, number>()
-    for (let i = 0; i < fieldsAfter.length; i += 1) {
-      indexAfterById.set(fieldsAfter[i]!.id, i)
-    }
-    const mapCell = (cell: CellAddress): CellAddress | null => {
-      const fieldId = visibleFieldIdsBefore[cell.colIndex]
-      if (!fieldId) return null
-      const colIndex = indexAfterById.get(fieldId)
-      if (colIndex === undefined) return null
-      return { rowIndex: cell.rowIndex, colIndex }
-    }
-
-    const activeCell = mapCell(selection.activeCell)
-    const anchorCell = mapCell(selection.anchorCell)
-    const extentCell = mapCell(selection.extentCell)
-    if (!activeCell || !anchorCell || !extentCell) {
-      this.selection.clear()
-      return
-    }
-
-    this.selection.setSelection({
-      activeCell,
-      anchorCell,
-      extentCell,
-      selectedRange: normalizeCellRange(anchorCell, extentCell),
-    })
-  }
-
-  private restoreSelectionByRowIndexMap(
-    selection: GridSelection,
-    indexMap: ReadonlyMap<number, number>,
-  ): void {
-    if (
-      !selection.activeCell ||
-      !selection.anchorCell ||
-      !selection.extentCell ||
-      !selection.selectedRange
-    ) {
-      this.selection.clear()
-      return
-    }
-    const mapCell = (cell: CellAddress): CellAddress | null => {
-      const rowIndex = indexMap.get(cell.rowIndex)
-      if (rowIndex === undefined) return null
-      return { rowIndex, colIndex: cell.colIndex }
-    }
-    const activeCell = mapCell(selection.activeCell)
-    const anchorCell = mapCell(selection.anchorCell)
-    const extentCell = mapCell(selection.extentCell)
-    if (!activeCell || !anchorCell || !extentCell) {
-      this.selection.clear()
-      return
-    }
-    this.selection.setSelection({
-      activeCell,
-      anchorCell,
-      extentCell,
-      selectedRange: normalizeCellRange(anchorCell, extentCell),
-    })
-  }
-
   private getRawColumnIndex(fieldId: string): number {
     return this.coords.fieldIdToRaw(fieldId)
   }
@@ -1598,27 +1437,6 @@ export class DefaultGridEngine implements GridEngine {
 
   private fieldAt(colIndex: number) {
     return this.data.getSchema().fields[colIndex]
-  }
-}
-
-function isSingleCellRange(range: CellRange): boolean {
-  return range.startRow === range.endRow && range.startCol === range.endCol
-}
-
-function areContiguousRows(rows: readonly number[]): boolean {
-  const uniqueRows = new Set(rows)
-  if (uniqueRows.size !== rows.length) return false
-  const minRow = Math.min(...rows)
-  const maxRow = Math.max(...rows)
-  return maxRow - minRow + 1 === rows.length
-}
-
-function normalizeCellRange(a: CellAddress, b: CellAddress): CellRange {
-  return {
-    startRow: Math.min(a.rowIndex, b.rowIndex),
-    endRow: Math.max(a.rowIndex, b.rowIndex),
-    startCol: Math.min(a.colIndex, b.colIndex),
-    endCol: Math.max(a.colIndex, b.colIndex),
   }
 }
 

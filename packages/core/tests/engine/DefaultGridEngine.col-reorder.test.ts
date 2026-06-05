@@ -73,6 +73,26 @@ describe('DefaultGridEngine.moveCols', () => {
     })
   })
 
+  it('keeps a moved column selection anchored when a hidden column exists', () => {
+    const engine = makeEngine()
+    engine.hideCols(['a'])
+    engine.setSelection({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 0, colIndex: 1 },
+      selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 1 },
+    })
+
+    engine.moveCols(['b', 'c'], null)
+
+    expect(engine.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 0,
+      startCol: 1,
+      endCol: 2,
+    })
+  })
+
   it('returns false and does not push undo for equivalent self drops', () => {
     const engine = makeEngine()
 
