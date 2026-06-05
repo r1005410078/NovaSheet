@@ -51,5 +51,5 @@ Operation 类型与 `execute` 都没必要——缺的不是某个零件，是�
 
 - 键盘导航的 merge 感知仅覆盖**非 extend**（方向键/Tab 整块跨越、落入合并区吸附为整块）；
   Shift+方向键的 extend 仍按索引推进，未做「扩展到完整覆盖合并块」的 Sheets 语义。
-- `SelectionMergeLookup` 沿用 engine 既有约定：直接以 **view 坐标**查 `MergeStore`
-  （sort/filter/隐藏列下 view≠raw 时的合并吸附为既有行为，本次未改坐标翻译）。
+- `SelectionMergeLookup` 由 engine 注入，经 `resolveViewMergeRegion` 做 view→raw→view 翻译，
+  sort/filter/隐藏列（view≠raw）下合并吸附正确（spec 2026-06-05-...-view-raw-coordinate，已实现）。

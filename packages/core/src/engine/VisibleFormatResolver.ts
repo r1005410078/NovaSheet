@@ -3,6 +3,7 @@ import type { MergeStore } from '../merge/MergeStore'
 import type { RangeStyleStore } from '../format/RangeStyleStore'
 import type { ResolvedCellFormat } from '../format/CellFormat'
 import type { CoordinateSpace } from '../view/CoordinateSpace'
+import { mergeRegionToView } from './MergeViewResolver'
 
 /**
  * 把 RAW 键控的 format/merge store 在可见区解析为 **VIEW 坐标** 的帧字段
@@ -40,7 +41,7 @@ export class VisibleFormatResolver {
     if (rawRegions.length === 0) return []
     const result: MergeRegion[] = []
     for (const region of rawRegions) {
-      const viewRegion = this.mergeRegionToView(region)
+      const viewRegion = mergeRegionToView(region, this.coords)
       if (viewRegion) result.push(viewRegion)
     }
     return result
@@ -119,25 +120,4 @@ export class VisibleFormatResolver {
     return augmented ?? base
   }
 
-  /** 单个合并区域 raw → view；隐藏行列或行序非连续返回 null。 */
-  private mergeRegionToView(region: MergeRegion): MergeRegion | null {
-    const startRow = this.coords.rawRowToView(region.range.startRow)
-    if (startRow === -1) return null
-    let prevViewRow = startRow
-    for (let raw = region.range.startRow + 1; raw <= region.range.endRow; raw += 1) {
-      const viewRow = this.coords.rawRowToView(raw)
-      if (viewRow === -1 || viewRow !== prevViewRow + 1) return null
-      prevViewRow = viewRow
-    }
-    const endRow = prevViewRow
-    const startCol = this.coords.rawColToView(region.range.startCol)
-    const endCol = this.coords.rawColToView(region.range.endCol)
-    if (startCol === -1 || endCol === -1) return null
-    if (endCol - startCol !== region.range.endCol - region.range.startCol) return null
-    return {
-      id: region.id,
-      range: { startRow, endRow, startCol, endCol },
-      anchor: { rowIndex: startRow, colIndex: startCol },
-    }
-  }
 }

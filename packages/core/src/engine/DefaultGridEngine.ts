@@ -62,6 +62,7 @@ import { MoveColsCommandHandler } from './column/MoveColsCommandHandler'
 import { DefaultSelectionState } from './selection/DefaultSelectionState'
 import { SelectionController } from './selection/SelectionController'
 import { SelectionEventHandler } from './selection/SelectionEventHandler'
+import { resolveViewMergeRegion } from './MergeViewResolver'
 
 /**
  * `GridEngine` 默认实现。
@@ -104,12 +105,12 @@ export class DefaultGridEngine implements GridEngine {
    */
   private readonly mergeStore = new MergeStore()
   /**
-   * Selection 写入入口；engine 经命令处理器写选区，不直连聚合 mutation（invariant #3）。
-   * merge lookup 用 view 坐标查 mergeStore（与渲染帧的 view 选区一致），集中合并吸附。
+   * Selection 写入门面；engine 经此写选区，不直连聚合 mutation（invariant #3）。
+   * merge lookup 经 resolveViewMergeRegion 做 view→raw→view 翻译，sort/filter/隐藏列下亦正确。
    */
   private readonly selectionController = new SelectionController(this.selection, {
     resolveMergeRegion: (rowIndex, colIndex) =>
-      this.mergeStore.getRegionAt(rowIndex, colIndex)?.range ?? null,
+      resolveViewMergeRegion(this.mergeStore, this.coords, rowIndex, colIndex)?.range ?? null,
   })
   /** 可见 format/merge → VIEW 帧字段的只读解析器（从 getFrame 抽出，R1）。 */
   private readonly frameFormat = new VisibleFormatResolver(
@@ -271,7 +272,8 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   beginCellEdit(cell: CellAddress): boolean {
-    const region = this.mergeStore.getRegionAt(cell.rowIndex, cell.colIndex)
+    // view→raw→view 翻译：合并格编辑落到 view 坐标的 anchor（sort/filter/隐藏列下亦正确）。
+    const region = resolveViewMergeRegion(this.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
     const editCell = region?.anchor ?? cell
     const field = this.fieldAt(editCell.colIndex)
     if (!field || !isEditableFieldType(field.type)) return false

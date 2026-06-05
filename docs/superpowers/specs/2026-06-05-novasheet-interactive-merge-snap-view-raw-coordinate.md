@@ -1,7 +1,10 @@
 # 交互式 merge 吸附的 view↔raw 坐标隐患
 
 - 日期：2026-06-05
-- 状态：待排期（spec only，未实现）
+- 状态：**已实现**（方案 A）。`packages/core/src/engine/MergeViewResolver.ts` 提供
+  `mergeRegionToView` / `resolveViewMergeRegion`；`VisibleFormatResolver` 复用前者，
+  selectionController merge lookup 与 `beginCellEdit` 改用后者。测试
+  `packages/core/tests/engine/MergeViewResolver.test.ts` 覆盖 view≠raw / 隐藏列 / 行序非连续。
 - 相关：Phase 5-A merge（`2026-05-28-novasheet-phase-5-merge-range-formatting.md`）、
   selection 命令处理器（`packages/core/src/engine/selection/`）
 
