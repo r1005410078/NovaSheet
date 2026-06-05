@@ -6,19 +6,25 @@
 - Spec：`docs/superpowers/specs/2026-06-05-novasheet-undo-decomposition-serializable-commands.md`
 - Plan：`docs/superpowers/plans/2026-06-05-novasheet-undo-m1..m4-*.md`
 
-## 现状（M1 + M2 已落地）
+## 现状（M1 + M2 + M3 已落地）
 
-**dispatch 骨架 + cell/format 两域已接线**：`UndoRegistry`/`UndoReplay`/`UndoHandler` 就位，
-`DefaultGridEngine.undo()`/`redo()` 委派 `UndoReplay`。已迁出旧 switch 的 kind：
+**dispatch 骨架 + cell/format/row/column 四域已接线**：`UndoRegistry`/`UndoReplay`/`UndoHandler`
+就位，`DefaultGridEngine.undo()`/`redo()` 委派 `UndoReplay`。已迁出旧 switch 的 kind：
 - `editCell`/`clearRange`/`paste` → `engine/undo/CellUndoHandler`（M1）。
 - `format`/`merge`/`unmerge` → `engine/format/FormatUndoHandler`（M2，与 `FormatController` 同域）。
+- `resizeRow`/`resizeRowsMulti`/`hideRows`/`unhideRows` → `engine/row/RowUndoHandler`（M3）。
+- `resizeColumn`/`resizeColumnsMulti`/`hideCols`/`unhideCols` → `engine/column/ColumnUndoHandler`（M3）。
 
-其余 15 个 kind 经 dual-track 回退 engine 旧 `applyUndo`/`applyRedo` switch（M4 待 registry
-覆盖全 kind 后统一删）。各域经 `registerXxxUndo(registry, ctx)` 自注册，composition root 平铺调用；
-派发核心未随加域改动。
+M3 顺带修了行结构 redo 仅换 axis 引用、不重建 frozen/viewport 的 latent bug（`RowUndoContext`
+单一 `rebuildRows()` 全重建，回归测试守）。
+
+其余 **7 个复合 kind**（`fill`/`moveRows`/`moveCols`/`insertRows`/`deleteRows`/`insertCols`/
+`deleteCols`，均跨结构+format+merge+选区，cols 还含 frozen）经 dual-track 回退 engine 旧
+`applyUndo`/`applyRedo` switch，待 M4 引入复合用例 handler 后迁移并统一删旧 switch。各域经
+`registerXxxUndo(registry, ctx)` 自注册，composition root 平铺调用；派发核心未随加域改动。
 
 旧 `UndoReplayContext` 脚手架仍在 `UndoReplay.ts` 里但已标 `@deprecated`，由各域最小 ctx
-（`CellUndoContext` / `FormatUndoContext` …）逐步取代。M3 续迁单域结构 resize*/hide*，M4 复合。
+（`CellUndoContext` / `FormatUndoContext` / `RowUndoContext` / `ColumnUndoContext`）逐步取代。
 
 ## 目标设计
 

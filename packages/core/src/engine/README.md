@@ -27,11 +27,11 @@ Grid / runtime
 | 2 | 收窄 `RowStructureContext` | ✅ | 已**彻底删除** context：`DefaultRowStructure` 自持 `rawRowsAxis` + `HideRowsLayer`，仅依赖 raw `MutableDataSource` 引用与 `resolveDefaultRowHeight` 两项（2026-06-04，超额完成，见 `row/README.md`）。 |
 | 3 | 按 row 模板迁移 `column/` | ✅ | 已建 `DefaultColumnStructure` 聚合根（operation/event/rules/命令处理器齐全），内化 `rawColsAxis` + `hiddenColIds` + 列隐藏视图包装，删除死代码 `ColumnStructureContext`（2026-06-05，对称 row，见 `column/README.md`）。format/merge 列 remap 走 `FormatEventHandler`；frozen/selection/undo 留 engine。 |
 | 4 | 抽离 selection remap | ✅ | 已按 row 模板建立 `SelectionState` 聚合根、`SelectionRules` 纯算法与 `SelectionEventHandler`；已删除旧 `interaction/SelectionModel` / `interaction/SelectionNavigation`，`DefaultSelectionState` 直接持有 `GridSelection` 并接管基础选择、键盘导航、结构 remap 状态机；engine 仅保留 composer / undo snapshot / view-row 映射注入职责（2026-06-05）。 |
-| 5 | 抽离 undo replay | 🟡 | M1+M2 已落地：`UndoRegistry`/`UndoReplay` 派发 + `CellUndoHandler`（editCell/clearRange/paste）+ `FormatUndoHandler`（format/merge/unmerge）接线，`undo()/redo()` 委派 `UndoReplay`；余 15 kind dual-track 回退旧 switch（M3 单域结构 resize*/hide* → M4 复合 + 删旧 switch）。 |
+| 5 | 抽离 undo replay | 🟡 | M1–M3 已落地：`UndoRegistry`/`UndoReplay` 派发 + Cell/Format/Row/Column 四域 handler 接线（editCell/clearRange/paste、format/merge/unmerge、resize*/hide* 行列共 14 kind），`undo()/redo()` 委派 `UndoReplay`；M3 顺带修行 redo 不重建 frozen/viewport 的 latent bug。余 7 个复合 kind（fill/move/insert/delete 行列）dual-track 回退旧 switch（M4 复合 handler + 删旧 switch）。 |
 | 6 | 抽离 layout state | ⬜ | `layout/LayoutState.ts` 骨架已建（当前孤儿、引用已与 row 内化后的架构脱节），engine 未接线。 |
 | 7 | 抽离 format/merge 协调 | 🟡 | `format/FormatEventHandler` 已接入 `GridEventPipeline`；`format/FormatState.ts` 未接线。 |
 
-下一步候选：undo M3（`Row/ColumnUndoHandler`：resize*/hide*/unhide* 8 个单域结构 kind 迁出旧 switch），续推第 5 步。
+下一步候选：undo M4（复合用例 handler：fill/move/insert/delete 行列 7 个跨域 kind 迁出，并删除 engine 旧 `applyUndo`/`applyRedo` switch），收尾第 5 步。
 
 ## 当前原则
 
