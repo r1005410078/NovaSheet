@@ -34,6 +34,9 @@ import { denseGridTheme } from '../theme/denseGridTheme'
 import type { Theme } from '../theme/Theme'
 import { UndoStack } from '../undo/UndoStack'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
+import { UndoRegistry } from './undo/UndoRegistry'
+import { UndoReplay } from './undo/UndoReplay'
+import { registerCellUndo } from './undo/registerCellUndo'
 import { CoordinateSpace } from '../view/CoordinateSpace'
 import type { RawRange } from '../view/coordinates'
 import { VisibleFormatResolver } from './VisibleFormatResolver'
@@ -94,6 +97,15 @@ export class DefaultGridEngine implements GridEngine {
   private readonly selection = new DefaultSelectionState()
   private cellEdit = new CellEditModel()
   private undoStack = new UndoStack()
+  /**
+   * undo 派发：cell-write 域经 `UndoRegistry` 路由到 `CellUndoHandler`，其余 kind 回退旧 switch
+   * （`applyUndo`/`applyRedo`，M4 统一删）。各域自注册见构造函数；派发核心不认识具体 kind。
+   */
+  private readonly undoRegistry = new UndoRegistry()
+  private readonly undoReplay = new UndoReplay(this.undoRegistry, {
+    undo: (cmd) => this.applyUndo(cmd),
+    redo: (cmd) => this.applyRedo(cmd),
+  })
   /**
    * Phase 5-A — 稀疏格式存储，按 **raw** 坐标键控（Task 7 的结构变更按 raw 重映）。
    * mutation 入口先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
@@ -198,6 +210,14 @@ export class DefaultGridEngine implements GridEngine {
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
     this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
     this.applySheetChrome()
+    registerCellUndo(this.undoRegistry, {
+      applyCellWrite: (rowIndex, fieldId, value) =>
+        this.applyEditCellWrite(rowIndex, fieldId, value),
+      restoreSelectionAfterEdit: (rowIndex, fieldId) =>
+        this.restoreSelectionForEdit(rowIndex, fieldId),
+      restoreSelectionForWrites: (writes, fallbackRange) =>
+        this.restoreSelectionForWrites(writes, fallbackRange),
+    })
   }
 
   setData(data: DataSource): void {
@@ -768,14 +788,14 @@ export class DefaultGridEngine implements GridEngine {
   undo(): UndoCommand | undefined {
     const cmd = this.undoStack.popUndo()
     if (!cmd) return undefined
-    this.applyUndo(cmd)
+    this.undoReplay.undo(cmd)
     return cmd
   }
 
   redo(): UndoCommand | undefined {
     const cmd = this.undoStack.popRedo()
     if (!cmd) return undefined
-    this.applyRedo(cmd)
+    this.undoReplay.redo(cmd)
     return cmd
   }
 
