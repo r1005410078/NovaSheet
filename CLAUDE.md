@@ -84,11 +84,12 @@ Built up over the M1 cycle. Apply to all sessions, not just M1:
 
 1. **Canvas2DRenderer reads ONLY from engine state** — via held `Viewport` + `RenderFrame` from `engine.getFrame()` on the RAF path; never from `ChunkedAxis` / `FrozenRegions` / `DataSource` outside the frame contract.
 2. **All mutations go through `DefaultGridEngine` or the public `Grid` facade.** The facade decides what to invalidate. Painters / layout objects do not invalidate themselves.
-3. **Theme is the ONLY source of visual values.** No hardcoded px, fonts, or color literals in `packages/web-canvas2d/src/painters/` or `render/`. Future ESLint custom rule planned.
-4. **DataSource.getRows endIndex is INCLUSIVE** (matches `ChunkedAxis.getVisibleRange` `[first, last]`). Do not change this convention.
-5. **One shared `frameScheduler` per Grid instance** — multiple RAF sources must coalesce. Future M2+ NativeScroller and ResizeObserver must use the same scheduler the Renderer uses.
-6. **`Grid.destroy()` must be fully idempotent.** Cancels all pending RAFs, restores `container.style.position`, removes the canvas. Strict Mode test (mount→destroy→mount) must remain green.
-7. **`ChunkedAxis.getSize(index)`** is the canonical row/col size accessor at boundaries. Do NOT compute size as `indexToPosition(i+1) - indexToPosition(i)` — that returns 0 at `i = count-1` due to clamping.
+3. **Engine / facade / runtime must not call aggregate mutation methods directly.** Domain writes go through that domain's command handler; aggregate methods are for command handlers, domain event handlers, and aggregate-focused tests. If a domain lacks command handlers, add them before wiring new or refactored mutations.
+4. **Theme is the ONLY source of visual values.** No hardcoded px, fonts, or color literals in `packages/web-canvas2d/src/painters/` or `render/`. Future ESLint custom rule planned.
+5. **DataSource.getRows endIndex is INCLUSIVE** (matches `ChunkedAxis.getVisibleRange` `[first, last]`). Do not change this convention.
+6. **One shared `frameScheduler` per Grid instance** — multiple RAF sources must coalesce. Future M2+ NativeScroller and ResizeObserver must use the same scheduler the Renderer uses.
+7. **`Grid.destroy()` must be fully idempotent.** Cancels all pending RAFs, restores `container.style.position`, removes the canvas. Strict Mode test (mount→destroy→mount) must remain green.
+8. **`ChunkedAxis.getSize(index)`** is the canonical row/col size accessor at boundaries. Do NOT compute size as `indexToPosition(i+1) - indexToPosition(i)` — that returns 0 at `i = count-1` due to clamping.
 
 ---
 
