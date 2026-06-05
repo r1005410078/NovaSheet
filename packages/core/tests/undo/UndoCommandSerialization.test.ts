@@ -3,7 +3,13 @@ import type { UndoCommand, CellWrite } from '../../src/undo/UndoCommand'
 import type { FormatLayer } from '../../src/format/CellFormat'
 import type { MergeRegion } from '../../src/merge/MergeStore'
 import type { GridSelection } from '../../src/engine/selection/SelectionTypes'
+import type { Field } from '../../src/data/Schema'
+import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../../src/data/MutableDataSource'
+import type { FrozenConfig } from '../../src/layout/FrozenRegions'
 import { assertSerializable } from '../helpers/undo-serialization'
+
+const FROZEN: FrozenConfig = { topRows: 0, leftCols: 0, rightCols: 0 }
+const FIELD: Field = { id: 'x', name: 'X', type: 'text', width: 100 }
 
 const SELECTION: GridSelection = {
   activeCell: { rowIndex: 0, colIndex: 0 },
@@ -214,6 +220,132 @@ describe('UndoCommand 序列化 round-trip', () => {
       fieldIds: ['a', 'c'],
       selectionBefore: SELECTION,
       selectionAfter: SELECTION_AFTER,
+    }
+    assertSerializable(cmd)
+  })
+
+  it('fill round-trip（含可选 format/merge）', () => {
+    const before: CellWrite[] = [{ rowIndex: 0, fieldId: 'a', value: 'x' }]
+    const after: CellWrite[] = [{ rowIndex: 1, fieldId: 'a', value: 'x' }]
+    const cmd: UndoCommand = {
+      kind: 'fill',
+      source: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      fill: { startRow: 0, endRow: 1, startCol: 0, endCol: 0 },
+      result: { startRow: 0, endRow: 1, startCol: 0, endCol: 0 },
+      before,
+      after,
+      formatBefore: [],
+      formatAfter: [{ range: { startRow: 1, endRow: 1, startCol: 0, endCol: 0 }, patch: { fillColor: '#fff' }, order: 0 }],
+      mergeBefore: [],
+      mergeAfter: [],
+    }
+    assertSerializable(cmd)
+  })
+
+  it('moveRows round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'moveRows',
+      rowIds: [2, 3],
+      beforeRowId: 5,
+      inverseRowIds: [2, 3],
+      inverseBeforeRowId: 1,
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+      formatBefore: [],
+      formatAfter: [],
+      mergeBefore: [],
+      mergeAfter: [],
+    }
+    assertSerializable(cmd)
+  })
+
+  it('moveCols round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'moveCols',
+      fieldIds: ['a', 'b'],
+      beforeFieldId: 'd',
+      inverseBeforeFieldId: null,
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+      formatBefore: [],
+      formatAfter: [],
+      mergeBefore: [],
+      mergeAfter: [],
+    }
+    assertSerializable(cmd)
+  })
+
+  it('insertRows round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'insertRows',
+      at: 2,
+      count: 1,
+      newIds: [2],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+      formatBefore: [],
+      formatAfter: [],
+      mergeBefore: [],
+      mergeAfter: [],
+    }
+    assertSerializable(cmd)
+  })
+
+  it('deleteRows round-trip', () => {
+    const snapshots: DeletedRowSnapshot[] = [
+      { originalUnderlyingRow: 1, cells: { a: 'A2', b: 'B2' } },
+    ]
+    const cmd: UndoCommand = {
+      kind: 'deleteRows',
+      snapshots,
+      deletedHeights: [24],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+      formatBefore: [],
+      formatAfter: [],
+      mergeBefore: [],
+      mergeAfter: [],
+    }
+    assertSerializable(cmd)
+  })
+
+  it('insertCols round-trip', () => {
+    const cmd: UndoCommand = {
+      kind: 'insertCols',
+      at: 1,
+      count: 1,
+      newFields: [FIELD],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+      frozenBefore: FROZEN,
+      frozenAfter: FROZEN,
+      formatBefore: [],
+      formatAfter: [],
+      mergeBefore: [],
+      mergeAfter: [],
+    }
+    assertSerializable(cmd)
+  })
+
+  it('deleteCols round-trip（cells 用全 defined 值，避免 undefined→null 不对称）', () => {
+    // 注：RemovedFieldSnapshot.cells 是 (CellValue | undefined)[]，真实空单元格的 undefined 经
+    // JSON.stringify 会变 null → round-trip 不等。此处样例用全 defined 值守住「纯数据可序列化」；
+    // undefined 归一化（视为 null）留作后续（与 spec 的 CellValue/Date 归一化同类发现）。
+    const snapshots: RemovedFieldSnapshot[] = [
+      { originalIndex: 1, field: FIELD, cells: ['A1', 'A2', 'A3'] },
+    ]
+    const cmd: UndoCommand = {
+      kind: 'deleteCols',
+      snapshots,
+      deletedWidths: [100],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+      frozenBefore: FROZEN,
+      frozenAfter: FROZEN,
+      formatBefore: [],
+      formatAfter: [],
+      mergeBefore: [],
+      mergeAfter: [],
     }
     assertSerializable(cmd)
   })
