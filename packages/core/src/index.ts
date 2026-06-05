@@ -67,7 +67,6 @@ export type {
 export type { ViewportSnapshot } from './layout/Viewport'
 
 // 交互层（Phase 3）
-export { SelectionModel } from './interaction/SelectionModel'
 export type {
   CellAddress,
   CellRange,
