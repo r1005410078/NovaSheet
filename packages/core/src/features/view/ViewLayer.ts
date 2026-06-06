@@ -1,6 +1,9 @@
 import type { DataSource } from '../../kernel/data/DataSource'
 import type { Field } from '../../kernel/data/Schema'
+import type { HeaderDecoration } from '../../kernel/render/RenderTypes'
 import type { ContextMenuItem } from '../context-menu/ContextMenuModel'
+
+export type { HeaderDecoration } from '../../kernel/render/RenderTypes'
 
 export type ColumnHeaderMenuAction =
   | ContextMenuItem['id']
@@ -36,11 +39,6 @@ export type ViewLayerChangeReason = 'spec-changed' | 'upstream-reset'
 export interface ViewLayerChange {
   readonly layerId: string
   readonly reason: ViewLayerChangeReason
-}
-
-export interface HeaderDecoration {
-  readonly sortIndicator?: 'asc' | 'desc' | null
-  readonly filterActive?: boolean
 }
 
 export interface ColumnHeaderMenuContext {

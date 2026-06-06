@@ -1,6 +1,6 @@
 import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
-import type { RowsUnhidden } from './RowEvent'
-import type { UnhideRowsOperation } from './RowOperation'
+import type { RowsUnhidden } from '../../kernel/protocol/RowEvent'
+import type { UnhideRowsOperation } from '../../kernel/protocol/RowOperation'
 import type { RowCommands } from './RowStructure'
 
 /** 执行 unhideRows operation，并把 row 领域产出的事件交给内部事件管线。 */

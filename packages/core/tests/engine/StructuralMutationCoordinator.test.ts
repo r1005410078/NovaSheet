@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { StructuralMutationCoordinator } from '../../src/engine/StructuralMutationCoordinator'
 import type { StructuralMutationContext } from '../../src/engine/StructuralMutationCoordinator'
-import type { GridSelection } from '../../src/features/selection/SelectionTypes'
+import type { GridSelection } from '../../src/kernel/coords/SelectionTypes'
 
 const EMPTY: GridSelection = {
   activeCell: null,

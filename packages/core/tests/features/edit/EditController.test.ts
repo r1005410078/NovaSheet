@@ -3,7 +3,7 @@ import { EditController } from '../../../src/features/edit/EditController'
 import type { EditControllerContext } from '../../../src/features/edit/EditController'
 import { CellEditModel } from '../../../src/features/edit/CellEditModel'
 import type { MutableDataSource } from '../../../src/kernel/data/MutableDataSource'
-import type { CellAddress, CellRange } from '../../../src/features/selection/SelectionTypes'
+import type { CellAddress, CellRange } from '../../../src/kernel/coords/SelectionTypes'
 
 function makeDataSource(overrides: Partial<MutableDataSource> = {}): MutableDataSource {
   return {

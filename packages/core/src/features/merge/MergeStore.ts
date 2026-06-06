@@ -1,4 +1,5 @@
-import type { CellRange } from '../selection/SelectionTypes'
+import type { MergeRegion } from '../../kernel/coords/MergeRegion'
+import type { CellRange } from '../../kernel/coords/SelectionTypes'
 import type { RawRange } from '../../kernel/coords/coordinates'
 import { isCellInRange, rangesIntersect } from '../../kernel/geometry/range'
 import {
@@ -7,15 +8,7 @@ import {
   remapSpanByIndexMap,
 } from '../../kernel/coords/remap'
 
-/**
- * 一个合并单元格区域。`range` 为矩形覆盖范围，`anchor` 固定为左上角单元格
- * （承载文本与填充绘制）。坐标一律为 **raw** 空间（与 `RangeStyleStore` 一致）。
- */
-export interface MergeRegion {
-  readonly id: string
-  readonly range: CellRange
-  readonly anchor: { readonly rowIndex: number; readonly colIndex: number }
-}
+export type { MergeRegion } from '../../kernel/coords/MergeRegion'
 
 /**
  * 合并区域存储，按 **raw** 坐标键控。

@@ -3,14 +3,10 @@
  */
 
 import type { FieldType } from '../../kernel/data/Schema'
-import type { CellAddress } from '../selection/SelectionTypes'
+import type { CellAddress } from '../../kernel/coords/SelectionTypes'
+import type { CellEditSession } from '../../kernel/render/RenderTypes'
 
-export interface CellEditSession {
-  readonly cell: CellAddress
-  readonly fieldId: string
-  readonly fieldType: FieldType
-  readonly draft: string
-}
+export type { CellEditSession } from '../../kernel/render/RenderTypes'
 
 export class CellEditModel {
   private session: CellEditSession | null = null

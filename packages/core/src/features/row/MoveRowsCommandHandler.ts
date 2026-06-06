@@ -1,7 +1,7 @@
 import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
 import type { RowCommands } from './RowStructure'
-import type { RowsMoved } from './RowEvent'
-import type { MoveRowsOperation } from './RowOperation'
+import type { RowsMoved } from '../../kernel/protocol/RowEvent'
+import type { MoveRowsOperation } from '../../kernel/protocol/RowOperation'
 
 /** 执行 moveRows operation，并把 row 领域产出的事件交给内部事件管线。 */
 export class MoveRowsCommandHandler {

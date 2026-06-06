@@ -1,6 +1,6 @@
-import type { CellRange } from '../selection/SelectionTypes'
+import type { CellRange } from '../../kernel/coords/SelectionTypes'
 import type { RangeStyleStore } from '../format/RangeStyleStore'
-import type { FormatLayer } from '../format/CellFormat'
+import type { FormatLayer } from '../../kernel/protocol/FormatTypes'
 import type { MergeStore, MergeRegion } from '../merge/MergeStore'
 import type { CoordinateSpace } from '../../kernel/coords/CoordinateSpace'
 import { asRawRange, type RawRange } from '../../kernel/coords/coordinates'

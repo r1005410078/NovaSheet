@@ -1,4 +1,4 @@
-import type { GridSelection } from '../../features/selection/SelectionTypes'
+import type { GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 

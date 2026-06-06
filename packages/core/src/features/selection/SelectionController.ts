@@ -3,7 +3,7 @@ import type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from './SelectionTypes'
+} from '../../kernel/coords/SelectionTypes'
 import type {
   GridIndexBounds,
   SelectionMergeLookup,

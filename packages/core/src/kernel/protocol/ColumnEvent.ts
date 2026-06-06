@@ -1,5 +1,5 @@
-import type { Field } from '../../kernel/data/Schema'
-import type { RemovedFieldSnapshot } from '../../kernel/data/MutableDataSource'
+import type { RemovedFieldSnapshot } from '../data/MutableDataSource'
+import type { Field } from '../data/Schema'
 
 /** 列领域事件：描述 column 领域已经完成的事实。 */
 export type ColumnDomainEvent =

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { DefaultSelectionState } from '../../../src/features/selection/DefaultSelectionState'
-import type { GridSelection } from '../../../src/features/selection/SelectionTypes'
+import type { GridSelection } from '../../../src/kernel/coords/SelectionTypes'
 
 describe('DefaultSelectionState', () => {
   it('点击单元格时同时设置 activeCell、anchorCell 与 selectedRange', () => {

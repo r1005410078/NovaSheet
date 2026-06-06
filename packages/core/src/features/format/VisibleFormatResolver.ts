@@ -1,7 +1,7 @@
 import type { MergeRegion } from '../merge/MergeStore'
 import type { MergeStore } from '../merge/MergeStore'
 import type { RangeStyleStore } from './RangeStyleStore'
-import type { ResolvedCellFormat } from './CellFormat'
+import type { ResolvedCellFormat } from '../../kernel/protocol/FormatTypes'
 import type { CoordinateSpace } from '../../kernel/coords/CoordinateSpace'
 import { mergeRegionToView } from '../merge/MergeViewResolver'
 

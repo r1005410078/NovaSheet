@@ -3,9 +3,9 @@ import type {
   BorderStyle,
   FormatLayer,
   TextWrapMode,
-} from './CellFormat'
+} from '../../kernel/protocol/FormatTypes'
 import type { FormatState } from './FormatState'
-import type { CellRange, GridSelection } from '../selection/SelectionTypes'
+import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 

@@ -5,9 +5,9 @@ import type { ColumnStructureUndoContext } from '../../../src/features/column/Co
 import type { Field } from '../../../src/kernel/data/Schema'
 import type { RemovedFieldSnapshot } from '../../../src/kernel/data/MutableDataSource'
 import type { FrozenConfig } from '../../../src/kernel/geometry/FrozenRegions'
-import type { FormatLayer } from '../../../src/features/format/CellFormat'
+import type { FormatLayer } from '../../../src/kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../../../src/features/merge/MergeStore'
-import type { GridSelection } from '../../../src/features/selection/SelectionTypes'
+import type { GridSelection } from '../../../src/kernel/coords/SelectionTypes'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type Call =

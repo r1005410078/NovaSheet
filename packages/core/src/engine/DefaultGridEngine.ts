@@ -13,8 +13,8 @@ import type {
   BorderStyle,
   CellFormat,
   TextWrapMode,
-} from '../features/format/CellFormat'
-import type { MergeRegion } from '../features/merge/MergeStore'
+} from '../kernel/protocol/FormatTypes'
+import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import { EditController } from '../features/edit/EditController'
 import { CellEditModel } from '../features/edit/CellEditModel'
 import { parseSelectionNavigationKey } from '../features/selection/SelectionNavigation'
@@ -23,7 +23,7 @@ import type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from '../features/selection/SelectionTypes'
+} from '../kernel/coords/SelectionTypes'
 import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { Viewport } from '../kernel/geometry/Viewport'

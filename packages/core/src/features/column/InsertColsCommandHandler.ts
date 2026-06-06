@@ -1,7 +1,7 @@
 import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
 import type { ColumnCommands } from './ColumnStructure'
-import type { ColumnsInserted } from './ColumnEvent'
-import type { InsertColsOperation } from './ColumnOperation'
+import type { ColumnsInserted } from '../../kernel/protocol/ColumnEvent'
+import type { InsertColsOperation } from '../../kernel/protocol/ColumnOperation'
 
 /** 执行 insertCols operation，并把 column 领域产出的事件交给内部事件管线。 */
 export class InsertColsCommandHandler {

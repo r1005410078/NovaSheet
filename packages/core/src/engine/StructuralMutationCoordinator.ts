@@ -1,6 +1,6 @@
-import type { FormatLayer } from '../features/format/CellFormat'
-import type { MergeRegion } from '../features/merge/MergeStore'
-import type { GridSelection } from '../features/selection/SelectionTypes'
+import type { FormatLayer } from '../kernel/protocol/FormatTypes'
+import type { MergeRegion } from '../kernel/coords/MergeRegion'
+import type { GridSelection } from '../kernel/coords/SelectionTypes'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { UndoCommand } from '../kernel/undo/UndoCommand'
 

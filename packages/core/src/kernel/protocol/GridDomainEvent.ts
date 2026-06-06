@@ -1,5 +1,5 @@
-import type { RowDomainEvent } from '../../features/row/RowEvent'
-import type { ColumnDomainEvent } from '../../features/column/ColumnEvent'
+import type { ColumnDomainEvent } from './ColumnEvent'
+import type { RowDomainEvent } from './RowEvent'
 
 export type {
   RowDomainEvent,
@@ -8,7 +8,7 @@ export type {
   RowsInserted,
   RowsMoved,
   RowsUnhidden,
-} from '../../features/row/RowEvent'
+} from './RowEvent'
 
 export type {
   ColumnDomainEvent,
@@ -17,7 +17,7 @@ export type {
   ColumnsInserted,
   ColumnsMoved,
   ColumnsUnhidden,
-} from '../../features/column/ColumnEvent'
+} from './ColumnEvent'
 
 /** Engine 内部同步分发的领域事件。 */
 export type GridDomainEvent = RowDomainEvent | ColumnDomainEvent

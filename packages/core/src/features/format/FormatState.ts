@@ -1,4 +1,4 @@
-import type { CellFormat, FormatLayer } from './CellFormat'
+import type { CellFormat, FormatLayer } from '../../kernel/protocol/FormatTypes'
 import { RangeStyleStore } from './RangeStyleStore'
 import type { MergeRegion, MergeStore } from '../merge/MergeStore'
 import { MergeStore as MergeStoreImpl } from '../merge/MergeStore'

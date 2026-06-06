@@ -1,7 +1,7 @@
 import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
 import type { ColumnCommands } from './ColumnStructure'
-import type { ColumnsHidden } from './ColumnEvent'
-import type { HideColsOperation } from './ColumnOperation'
+import type { ColumnsHidden } from '../../kernel/protocol/ColumnEvent'
+import type { HideColsOperation } from '../../kernel/protocol/ColumnOperation'
 
 /** 执行 hideCols operation，并把 column 领域产出的事件交给内部事件管线。 */
 export class HideColsCommandHandler {

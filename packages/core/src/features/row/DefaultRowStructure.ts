@@ -4,14 +4,14 @@ import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { CollapsedGap } from '../../features/view/HideRowsLayer'
 import type { DataSource } from '../../kernel/data/DataSource'
 import type { DeletedRowSnapshot, MutableDataSource } from '../../kernel/data/MutableDataSource'
-import type { RowsDeleted, RowsHidden, RowsInserted, RowsMoved, RowsUnhidden } from './RowEvent'
+import type { RowsDeleted, RowsHidden, RowsInserted, RowsMoved, RowsUnhidden } from '../../kernel/protocol/RowEvent'
 import type {
   DeleteRowsOperation,
   HideRowsOperation,
   InsertRowsOperation,
   MoveRowsOperation,
   UnhideRowsOperation,
-} from './RowOperation'
+} from '../../kernel/protocol/RowOperation'
 import {
   buildRawRowsAxisFromHeights,
   captureRowHeights,

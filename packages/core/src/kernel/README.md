@@ -16,14 +16,15 @@
 | `data/` | DataSource、Schema、MutableDataSource、VisibleColumnsDataSource |
 | `theme/` | Theme tokens（`denseGridTheme`） |
 | `measure/` | TextMeasurer、wrapText |
-| `render/` | RenderFrame 契约 |
+| `render/` | RenderFrame 契约 + renderer 消费的 payload contract（edit session、collapsed gap、header decoration source） |
 | `util/` | FrameScheduler（raf）等 |
-| `coords/` | view↔raw 坐标（coordinates、CoordinateSpace、remap） |
-| `protocol/` | GridOperation、GridDomainEvent、GridEventPipeline |
+| `coords/` | view↔raw 坐标（coordinates、CoordinateSpace、remap）+ 跨域坐标类型（CellRange/GridSelection/MergeRegion） |
+| `protocol/` | GridOperation、GridDomainEvent、GridEventPipeline + operation/event/format 数据 contract |
 | `undo/` | UndoCommand、UndoStack、UndoRegistry、UndoReplay、UndoHandler（**机制 only**，具体 kind handler 在 features） |
 | `interaction/` | HitTest、CellLayout、HandleLayout、scrollCellIntoView |
 
 ## 约束
 
 - 不含 DOM、canvas、web 包引用。
-- `GridOperation` / `GridDomainEvent` 定义在 `protocol/`；各领域 operation/event 类型由 feature 导出并在 protocol 聚合。
+- `GridOperation` / `GridDomainEvent` / row-column operation-event 类型定义在 `protocol/`；feature 侧可保留 re-export 作为领域导航入口。
+- `kernel/` 只拥有跨域数据形状与协议形状，不拥有 feature behavior/store/controller。

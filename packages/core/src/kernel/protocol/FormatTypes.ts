@@ -1,4 +1,4 @@
-import type { CellRange } from '../selection/SelectionTypes'
+import type { CellRange } from '../coords/SelectionTypes'
 
 export type BorderWidth = 'thin' | 'medium' | 'thick'
 export type BorderLineStyle = 'solid' | 'dashed' | 'dotted' | 'double'

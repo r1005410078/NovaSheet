@@ -3,7 +3,7 @@
  */
 
 import type { RenderFrame } from '../render/RenderFrame'
-import type { CellAddress } from '../../features/selection/SelectionTypes'
+import type { CellAddress } from '../coords/SelectionTypes'
 
 export interface CellRect {
   readonly x: number

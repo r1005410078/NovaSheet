@@ -3,7 +3,7 @@ import { FormatController } from '../../../src/features/format/FormatController'
 import type { FormatControllerContext } from '../../../src/features/format/FormatController'
 import { DefaultFormatState } from '../../../src/features/format/FormatState'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
-import type { CellRange, GridSelection } from '../../../src/features/selection/SelectionTypes'
+import type { CellRange, GridSelection } from '../../../src/kernel/coords/SelectionTypes'
 import { asRawRange } from '../../../src/kernel/coords/coordinates'
 
 const EMPTY_SELECTION: GridSelection = {

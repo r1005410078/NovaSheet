@@ -8,8 +8,8 @@ import type { DataSource } from '../kernel/data/DataSource'
 import type { Field } from '../kernel/data/Schema'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../kernel/undo/UndoCommand'
-import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../features/format/CellFormat'
-import type { MergeRegion } from '../features/merge/MergeStore'
+import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../kernel/protocol/FormatTypes'
+import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import type { ApplyPasteSource, PasteTargetRect } from '../features/clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../features/clipboard/types'
 import type { FillDirection, FillMergeSnap } from '../features/fill/FillTarget'
@@ -18,7 +18,7 @@ import type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from '../features/selection/SelectionTypes'
+} from '../kernel/coords/SelectionTypes'
 import type { Axis } from '../kernel/geometry/ChunkedAxis'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { Viewport } from '../kernel/geometry/Viewport'

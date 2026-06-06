@@ -1,4 +1,4 @@
-import type { CellAddress, CellRange } from '../../features/selection/SelectionTypes'
+import type { CellAddress, CellRange } from '../coords/SelectionTypes'
 
 /**
  * 共享 range 几何工具（平台无关）。

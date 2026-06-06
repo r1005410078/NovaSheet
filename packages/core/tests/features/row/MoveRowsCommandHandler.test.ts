@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import type { RowsMoved } from '../../../src/features/row/RowEvent'
+import type { RowsMoved } from '../../../src/kernel/protocol/RowEvent'
 import { MoveRowsCommandHandler } from '../../../src/features/row/MoveRowsCommandHandler'
-import type { MoveRowsOperation } from '../../../src/features/row/RowOperation'
+import type { MoveRowsOperation } from '../../../src/kernel/protocol/RowOperation'
 import type { RowCommands } from '../../../src/features/row/RowStructure'
 
 function makeRows(overrides: Partial<RowCommands>): RowCommands {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 
 import { ColumnUndoHandler } from '../../../src/features/column/ColumnUndoHandler'
 import type { ColumnUndoContext } from '../../../src/features/column/ColumnUndoHandler'
-import type { GridSelection } from '../../../src/features/selection/SelectionTypes'
+import type { GridSelection } from '../../../src/kernel/coords/SelectionTypes'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type Call =

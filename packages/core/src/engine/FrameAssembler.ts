@@ -3,10 +3,10 @@ import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../kernel/geometry/Viewport'
 import type { RenderFrame, RenderFrameCollapsedColGap } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
-import type { CellEditSession } from '../features/edit/CellEditModel'
+import type { CellEditSession } from '../kernel/render/RenderTypes'
 import type { VisibleFormatResolver } from '../features/format/VisibleFormatResolver'
-import type { GridSelection } from '../features/selection/SelectionTypes'
-import type { CollapsedGap } from '../features/view/HideRowsLayer'
+import type { GridSelection } from '../kernel/coords/SelectionTypes'
+import type { CollapsedGap } from '../kernel/render/RenderTypes'
 
 /** `assembleRenderFrame` 的只读输入；与 `DefaultGridEngine.getFrame` 解耦。 */
 export interface FrameAssemblerInput {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { InsertColsCommandHandler } from '../../../src/features/column/InsertColsCommandHandler'
 import { MoveColsCommandHandler } from '../../../src/features/column/MoveColsCommandHandler'
-import type { ColumnDomainEvent } from '../../../src/features/column/ColumnEvent'
+import type { ColumnDomainEvent } from '../../../src/kernel/protocol/ColumnEvent'
 import type { ColumnCommands } from '../../../src/features/column/ColumnStructure'
 
 function makeCols(overrides: Partial<ColumnCommands>): ColumnCommands {

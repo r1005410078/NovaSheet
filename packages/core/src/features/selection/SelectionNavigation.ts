@@ -7,7 +7,7 @@ import type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from './SelectionTypes'
+} from '../../kernel/coords/SelectionTypes'
 
 export interface GridIndexBounds {
   readonly rowCount: number

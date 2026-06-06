@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { RangeStyleStore } from '../../../src/features/format/RangeStyleStore'
-import type { BorderStyle } from '../../../src/features/format/CellFormat'
+import type { BorderStyle } from '../../../src/kernel/protocol/FormatTypes'
 import { asRawRange } from '../../../src/kernel/coords/coordinates'
 
 const border: BorderStyle = { color: '#000', width: 'thin', lineStyle: 'solid' }

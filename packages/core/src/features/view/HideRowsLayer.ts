@@ -2,13 +2,10 @@ import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { DataSource, DataSourceEvent, DataSourceListener } from '../../kernel/data/DataSource'
 import type { Row } from '../../kernel/data/Schema'
+import type { CollapsedGap } from '../../kernel/render/RenderTypes'
 import type { ViewLayer, ViewLayerChange } from './ViewLayer'
 
-export interface CollapsedGap {
-  readonly atViewRow: number
-  readonly hiddenCount: number
-  readonly hiddenIds: readonly number[]
-}
+export type { CollapsedGap } from '../../kernel/render/RenderTypes'
 
 interface HideRowsSpec {
   readonly hidden: readonly number[]

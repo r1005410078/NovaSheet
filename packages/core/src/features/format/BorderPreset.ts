@@ -1,5 +1,5 @@
-import type { CellRange } from '../selection/SelectionTypes'
-import type { BorderPreset, BorderStyle, CellBorders } from './CellFormat'
+import type { CellRange } from '../../kernel/coords/SelectionTypes'
+import type { BorderPreset, BorderStyle, CellBorders } from '../../kernel/protocol/FormatTypes'
 
 /**
  * Computes the border patch to apply to a single cell within a range for a given preset.

@@ -1,9 +1,9 @@
 import type { Field } from '../../kernel/data/Schema'
 import type { RemovedFieldSnapshot } from '../../kernel/data/MutableDataSource'
 import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
-import type { FormatLayer } from '../format/CellFormat'
+import type { FormatLayer } from '../../kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../merge/MergeStore'
-import type { GridSelection } from '../../features/selection/SelectionTypes'
+import type { GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 

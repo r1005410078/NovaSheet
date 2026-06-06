@@ -1,6 +1,6 @@
 import type { DataSource } from '../../kernel/data/DataSource'
 import type { CellValue } from '../../kernel/data/Schema'
-import type { CellRange } from '../selection/SelectionTypes'
+import type { CellRange } from '../../kernel/coords/SelectionTypes'
 import type { FillDirection } from './FillTarget'
 
 /** 一次 fill commit 要写入的单元格值；colIndex 保留给 web 层和测试按自然网格顺序断言。 */

@@ -3,7 +3,7 @@ import { DeleteRowsCommandHandler } from '../../../src/features/row/DeleteRowsCo
 import { HideRowsCommandHandler } from '../../../src/features/row/HideRowsCommandHandler'
 import { InsertRowsCommandHandler } from '../../../src/features/row/InsertRowsCommandHandler'
 import { UnhideRowsCommandHandler } from '../../../src/features/row/UnhideRowsCommandHandler'
-import type { RowDomainEvent } from '../../../src/features/row/RowEvent'
+import type { RowDomainEvent } from '../../../src/kernel/protocol/RowEvent'
 import type { RowCommands } from '../../../src/features/row/RowStructure'
 
 function makeRows(overrides: Partial<RowCommands>): RowCommands {

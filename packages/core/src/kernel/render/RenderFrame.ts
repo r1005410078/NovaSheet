@@ -6,15 +6,13 @@
  */
 
 import type { DataSource } from '../data/DataSource'
-import type { ResolvedCellFormat } from '../../features/format/CellFormat'
-import type { MergeRegion } from '../../features/merge/MergeStore'
-import type { CellEditSession } from '../../features/edit/CellEditModel'
-import type { GridSelection } from '../../features/selection/SelectionTypes'
+import type { GridSelection } from '../coords/SelectionTypes'
+import type { MergeRegion } from '../coords/MergeRegion'
 import type { Axis } from '../geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../geometry/Viewport'
 import type { Theme } from '../theme/Theme'
-import type { CollapsedGap } from '../../features/view/HideRowsLayer'
-import type { ViewPipeline } from '../../features/view/ViewPipeline'
+import type { ResolvedCellFormat } from '../protocol/FormatTypes'
+import type { CellEditSession, CollapsedGap, HeaderDecorationSource } from './RenderTypes'
 
 /**
  * Phase 4.5 — `RenderFrame` 中的折叠行间隙，扩展 `CollapsedGap` 加入像素坐标。
@@ -39,7 +37,7 @@ export interface RenderFrame {
   viewport: ViewportSnapshot
   selection?: GridSelection
   /** Phase 4.4 — view 管线提供列头排序/筛选装饰。 */
-  viewPipeline?: Pick<ViewPipeline, 'collectHeaderDecorations'>
+  viewPipeline?: HeaderDecorationSource
   /** Phase 3.5 — 正在编辑的单元格（若有）。 */
   cellEdit?: CellEditSession
   /** Phase 4.5 — 当前可见区域内的折叠行间隙列表（含像素坐标）。 */

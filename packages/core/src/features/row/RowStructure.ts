@@ -2,14 +2,14 @@ import type { ChunkedAxis } from '../../kernel/geometry/ChunkedAxis'
 import type { DataSource } from '../../kernel/data/DataSource'
 import type { DeletedRowSnapshot } from '../../kernel/data/MutableDataSource'
 import type { CollapsedGap } from '../../features/view/HideRowsLayer'
-import type { RowsDeleted, RowsHidden, RowsInserted, RowsMoved, RowsUnhidden } from './RowEvent'
+import type { RowsDeleted, RowsHidden, RowsInserted, RowsMoved, RowsUnhidden } from '../../kernel/protocol/RowEvent'
 import type {
   DeleteRowsOperation,
   HideRowsOperation,
   InsertRowsOperation,
   MoveRowsOperation,
   UnhideRowsOperation,
-} from './RowOperation'
+} from '../../kernel/protocol/RowOperation'
 
 /** 行领域命令面：命令处理器只需要的正向变迁方法子集。 */
 export interface RowCommands {

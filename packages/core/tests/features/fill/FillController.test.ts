@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { FillController } from '../../../src/features/fill/FillController'
 import type { FillControllerContext } from '../../../src/features/fill/FillController'
 import type { MutableDataSource } from '../../../src/kernel/data/MutableDataSource'
-import type { CellRange } from '../../../src/features/selection/SelectionTypes'
+import type { CellRange } from '../../../src/kernel/coords/SelectionTypes'
 import type { FillStyleSnapshots } from '../../../src/features/fill/FillStylePropagator'
 
 function makeData(overrides: Partial<MutableDataSource> = {}): MutableDataSource {

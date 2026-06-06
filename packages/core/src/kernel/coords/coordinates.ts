@@ -1,5 +1,5 @@
 import type { DataSource } from '../data/DataSource'
-import type { CellRange } from '../../features/selection/SelectionTypes'
+import type { CellRange } from './SelectionTypes'
 
 /**
  * **raw 空间**的 `CellRange`（底层 row/col 索引，stores 按此键控）。

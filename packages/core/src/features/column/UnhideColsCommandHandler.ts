@@ -1,7 +1,7 @@
 import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
 import type { ColumnCommands } from './ColumnStructure'
-import type { ColumnsUnhidden } from './ColumnEvent'
-import type { UnhideColsOperation } from './ColumnOperation'
+import type { ColumnsUnhidden } from '../../kernel/protocol/ColumnEvent'
+import type { UnhideColsOperation } from '../../kernel/protocol/ColumnOperation'
 
 /** 执行 unhideCols operation，并把 column 领域产出的事件交给内部事件管线。 */
 export class UnhideColsCommandHandler {

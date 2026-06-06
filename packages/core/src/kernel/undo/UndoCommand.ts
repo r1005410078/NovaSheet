@@ -1,9 +1,9 @@
 import type { CellValue, Field } from '../data/Schema'
 import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../data/MutableDataSource'
-import type { FormatLayer } from '../../features/format/CellFormat'
-import type { MergeRegion } from '../../features/merge/MergeStore'
-import type { CellRange, GridSelection } from '../../features/selection/SelectionTypes'
+import type { MergeRegion } from '../coords/MergeRegion'
+import type { CellRange, GridSelection } from '../coords/SelectionTypes'
 import type { FrozenConfig } from '../geometry/FrozenRegions'
+import type { FormatLayer } from '../protocol/FormatTypes'
 
 export interface CellWrite {
   readonly rowIndex: number

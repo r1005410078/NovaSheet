@@ -1,6 +1,6 @@
 import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
-import type { RowsDeleted } from './RowEvent'
-import type { DeleteRowsOperation } from './RowOperation'
+import type { RowsDeleted } from '../../kernel/protocol/RowEvent'
+import type { DeleteRowsOperation } from '../../kernel/protocol/RowOperation'
 import type { RowCommands } from './RowStructure'
 
 /** 执行 deleteRows operation，并把 row 领域产出的事件交给内部事件管线。 */

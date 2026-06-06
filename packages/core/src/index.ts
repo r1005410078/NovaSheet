@@ -72,7 +72,7 @@ export type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from './features/selection/SelectionTypes'
+} from './kernel/coords/SelectionTypes'
 export { hitTestCell } from './kernel/interaction/HitTest'
 export type { HitTestPoint } from './kernel/interaction/HitTest'
 export {
@@ -101,7 +101,7 @@ export {
   parseCellEditInput,
 } from './features/edit/CellEdit'
 export { CellEditModel } from './features/edit/CellEditModel'
-export type { CellEditSession } from './features/edit/CellEditModel'
+export type { CellEditSession } from './kernel/render/RenderTypes'
 export {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
@@ -147,7 +147,7 @@ export type { ComputeFillWritesInput, FillWrite } from './features/fill/FillSeri
 export { findViewRow, resolveUnderlyingRow } from './kernel/coords/coordinates'
 export { FilterLayer } from './features/view/FilterLayer'
 export { HideRowsLayer } from './features/view/HideRowsLayer'
-export type { CollapsedGap } from './features/view/HideRowsLayer'
+export type { CollapsedGap } from './kernel/render/RenderTypes'
 export type { FilterOp, FilterSpec } from './features/view/FilterLayer'
 export { SortLayer } from './features/view/SortLayer'
 export type { SortDirection, SortSpec } from './features/view/SortLayer'
@@ -184,6 +184,6 @@ export type {
   FormatLayer,
   ResolvedCellFormat,
   TextWrapMode,
-} from './features/format/CellFormat'
+} from './kernel/protocol/FormatTypes'
 export { MergeStore } from './features/merge/MergeStore'
-export type { MergeRegion } from './features/merge/MergeStore'
+export type { MergeRegion } from './kernel/coords/MergeRegion'

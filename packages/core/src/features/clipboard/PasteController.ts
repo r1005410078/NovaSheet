@@ -1,7 +1,7 @@
 import type { Schema } from '../../kernel/data/Schema'
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../../kernel/undo/UndoCommand'
-import type { CellRange } from '../selection/SelectionTypes'
+import type { CellRange } from '../../kernel/coords/SelectionTypes'
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { MergeRegion } from '../merge/MergeStore'
 import {

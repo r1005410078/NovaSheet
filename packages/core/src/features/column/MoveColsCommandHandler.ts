@@ -1,7 +1,7 @@
 import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
 import type { ColumnCommands } from './ColumnStructure'
-import type { ColumnsMoved } from './ColumnEvent'
-import type { MoveColsOperation } from './ColumnOperation'
+import type { ColumnsMoved } from '../../kernel/protocol/ColumnEvent'
+import type { MoveColsOperation } from '../../kernel/protocol/ColumnOperation'
 
 /** 执行 moveCols operation，并把 column 领域产出的事件交给内部事件管线。 */
 export class MoveColsCommandHandler {

@@ -1,6 +1,6 @@
 import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
-import type { RowsInserted } from './RowEvent'
-import type { InsertRowsOperation } from './RowOperation'
+import type { RowsInserted } from '../../kernel/protocol/RowEvent'
+import type { InsertRowsOperation } from '../../kernel/protocol/RowOperation'
 import type { RowCommands } from './RowStructure'
 
 /** 执行 insertRows operation，并把 row 领域产出的事件交给内部事件管线。 */

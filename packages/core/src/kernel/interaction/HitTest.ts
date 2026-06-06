@@ -1,6 +1,6 @@
 import type { RenderRegion } from '../geometry/FrozenRegions'
 import type { RenderFrame } from '../render/RenderFrame'
-import type { CellAddress } from '../../features/selection/SelectionTypes'
+import type { CellAddress } from '../coords/SelectionTypes'
 
 export interface HitTestPoint {
   readonly x: number

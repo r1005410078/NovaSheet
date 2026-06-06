@@ -19,14 +19,14 @@ import type {
   ColumnsInserted,
   ColumnsMoved,
   ColumnsUnhidden,
-} from './ColumnEvent'
+} from '../../kernel/protocol/ColumnEvent'
 import type {
   DeleteColsOperation,
   HideColsOperation,
   InsertColsOperation,
   MoveColsOperation,
   UnhideColsOperation,
-} from './ColumnOperation'
+} from '../../kernel/protocol/ColumnOperation'
 import type { ColumnStructure } from './ColumnStructure'
 
 /**

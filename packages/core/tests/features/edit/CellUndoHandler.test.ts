@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test'
 import { CellUndoHandler } from '../../../src/features/edit/CellUndoHandler'
 import type { CellUndoContext } from '../../../src/kernel/undo/UndoHandler'
 import type { CellValue } from '../../../src/kernel/data/Schema'
-import type { CellRange } from '../../../src/features/selection/SelectionTypes'
+import type { CellRange } from '../../../src/kernel/coords/SelectionTypes'
 import type { CellWrite, UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type WriteCall = { op: 'write'; rowIndex: number; fieldId: string; value: CellValue }

@@ -4,7 +4,7 @@ import {
   remapSelectionByRowIndexMap,
   remapSelectionByVisibleFieldIds,
 } from '../../../src/features/selection/SelectionRules'
-import type { GridSelection } from '../../../src/features/selection/SelectionTypes'
+import type { GridSelection } from '../../../src/kernel/coords/SelectionTypes'
 
 const emptySelection: GridSelection = {
   activeCell: null,

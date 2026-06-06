@@ -1,7 +1,7 @@
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
 import { unionRange } from '../../kernel/geometry/range'
 import type { CellWrite, UndoCommand } from '../../kernel/undo/UndoCommand'
-import type { CellRange } from '../selection/SelectionTypes'
+import type { CellRange } from '../../kernel/coords/SelectionTypes'
 import { computeFillWrites } from './FillSeries'
 import type { FillStyleSnapshots } from './FillStylePropagator'
 import type { FillDirection } from './FillTarget'

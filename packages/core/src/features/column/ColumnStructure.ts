@@ -9,14 +9,14 @@ import type {
   ColumnsInserted,
   ColumnsMoved,
   ColumnsUnhidden,
-} from './ColumnEvent'
+} from '../../kernel/protocol/ColumnEvent'
 import type {
   DeleteColsOperation,
   HideColsOperation,
   InsertColsOperation,
   MoveColsOperation,
   UnhideColsOperation,
-} from './ColumnOperation'
+} from '../../kernel/protocol/ColumnOperation'
 
 /** 列领域命令面：命令处理器只需要的正向变迁方法子集。 */
 export interface ColumnCommands {

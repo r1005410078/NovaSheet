@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { borderPatchForCell } from '../../../src/features/format/BorderPreset'
 import { RangeStyleStore } from '../../../src/features/format/RangeStyleStore'
-import type { BorderStyle } from '../../../src/features/format/CellFormat'
+import type { BorderStyle } from '../../../src/kernel/protocol/FormatTypes'
 import { asRawRange } from '../../../src/kernel/coords/coordinates'
 
 const red: BorderStyle = { color: '#d93025', width: 'thin', lineStyle: 'solid' }
