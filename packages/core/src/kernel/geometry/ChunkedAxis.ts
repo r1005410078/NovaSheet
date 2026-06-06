@@ -132,6 +132,8 @@ export class ChunkedAxis {
   private chunks: Chunk[] = []
   /** chunkPrefixSum[i] = chunks[0..i) 的 totalSize 之和；长度 = chunks.length + 1 */
   private chunkPrefixSum!: Float64Array
+  /** chunkCountPrefix[i] = chunks[0..i) 的项数累计；长度 = chunks.length + 1，[0]=0，[last]=count */
+  private chunkCountPrefix!: Float64Array
   /** 所有行/列的总像素尺寸 */
   private totalSize = 0
   /** 每次 mutate 自增；Viewport.snapshot 把它作为 Renderer 的 invalidate 缓存键 */
@@ -222,6 +224,25 @@ export class ChunkedAxis {
     return this.chunks.length
   }
 
+  /** 重算 chunkCountPrefix / chunkPrefixSum / totalSize（O(n_chunks)），结构变更后调用。 */
+  private recomputePrefixes(): void {
+    const n = this.chunks.length
+    this.chunkCountPrefix = new Float64Array(n + 1)
+    this.chunkPrefixSum = new Float64Array(n + 1)
+    for (let i = 0; i < n; i++) {
+      const chunk = this.chunks[i]!
+      this.chunkCountPrefix[i + 1] = this.chunkCountPrefix[i]! + chunk.length
+      this.chunkPrefixSum[i + 1] = this.chunkPrefixSum[i]! + chunk.totalSize
+    }
+    this.totalSize = n === 0 ? 0 : this.chunkPrefixSum[n]!
+  }
+
+  /** 二分 chunkCountPrefix 定位全局 index 所在 chunk 与块内偏移（O(log n_chunks)）。 */
+  private indexToChunk(index: number): { chunkIdx: number; offset: number } {
+    const chunkIdx = upperBound(this.chunkCountPrefix, this.chunks.length + 1, index) - 1
+    return { chunkIdx, offset: index - this.chunkCountPrefix[chunkIdx]! }
+  }
+
   /**
    * 返回当前默认行高/列宽。
    *
@@ -254,11 +275,10 @@ export class ChunkedAxis {
    */
   getSize(index: number): number {
     if (index < 0 || index >= this.count) return 0
-    const chunkIdx = index >>> 10
-    const offsetInChunk = index & 1023
+    const { chunkIdx, offset } = this.indexToChunk(index)
     const chunk = this.chunks[chunkIdx]!
     if (chunk.sizes === null) return this.defaultSize
-    return chunk.sizes[offsetInChunk]!
+    return chunk.sizes[offset]!
   }
 
   /**
@@ -275,16 +295,15 @@ export class ChunkedAxis {
   indexToPosition(index: number): number {
     if (this.count === 0) return 0
     const clamped = Math.max(0, Math.min(this.count - 1, index))
-    const chunkIdx = clamped >>> 10
-    const offsetInChunk = clamped & 1023
+    const { chunkIdx, offset } = this.indexToChunk(clamped)
     const base = this.chunkPrefixSum[chunkIdx]!
     const chunk = this.chunks[chunkIdx]!
     if (chunk.sizes === null) {
       // 整 chunk 都是默认尺寸：跳过逐项累加。
-      return base + offsetInChunk * this.defaultSize
+      return base + offset * this.defaultSize
     }
     let sum = 0
-    for (let i = 0; i < offsetInChunk; i++) sum += chunk.sizes[i]!
+    for (let i = 0; i < offset; i++) sum += chunk.sizes[i]!
     return base + sum
   }
 
@@ -315,9 +334,10 @@ export class ChunkedAxis {
     const chunkIdx = upperBound(this.chunkPrefixSum, this.chunks.length + 1, position) - 1
     const chunk = this.chunks[chunkIdx]!
     const yInChunk = position - this.chunkPrefixSum[chunkIdx]!
+    const baseIndex = this.chunkCountPrefix[chunkIdx]!
     if (chunk.sizes === null) {
-      const inner = Math.min(CHUNK_SIZE - 1, Math.floor(yInChunk / this.defaultSize))
-      return Math.min(this.count - 1, chunkIdx * CHUNK_SIZE + inner)
+      const inner = Math.min(chunk.length - 1, Math.floor(yInChunk / this.defaultSize))
+      return Math.min(this.count - 1, baseIndex + inner)
     }
     // 用 chunk.length（而非 chunk.sizes.length）遍历——Float32Array 统一按 CHUNK_SIZE 分配，
     // 末尾 partial chunk 只填充前 length 项，剩余为零填充必须跳过。
@@ -325,10 +345,10 @@ export class ChunkedAxis {
     for (let i = 0; i < chunk.length; i++) {
       acc += chunk.sizes[i]!
       if (acc > yInChunk) {
-        return Math.min(this.count - 1, chunkIdx * CHUNK_SIZE + i)
+        return Math.min(this.count - 1, baseIndex + i)
       }
     }
-    return Math.min(this.count - 1, chunkIdx * CHUNK_SIZE + chunk.length - 1)
+    return Math.min(this.count - 1, baseIndex + chunk.length - 1)
   }
 
   /**
@@ -351,26 +371,22 @@ export class ChunkedAxis {
    */
   setSize(index: number, size: number): void {
     if (index < 0 || index >= this.count) return
-    const chunkIdx = index >>> 10
-    const offsetInChunk = index & 1023
+    const { chunkIdx, offset } = this.indexToChunk(index)
     const chunk = this.chunks[chunkIdx]!
 
     if (chunk.sizes === null) {
       // 新值就等于默认值，没必要物化整 chunk。
       if (size === this.defaultSize) return
-      const rowsInChunk =
-        chunkIdx === this.chunks.length - 1 ? this.count - chunkIdx * CHUNK_SIZE : CHUNK_SIZE
-      // 即使最后一个 partial chunk 也按 CHUNK_SIZE 分配——超出 rowsInChunk 的位置保持 0，
-      // 通过 chunk.length 控制遍历范围。这样未来 count 扩张时不需要 reallocate。
-      const sizes = new Float32Array(CHUNK_SIZE)
-      for (let i = 0; i < rowsInChunk; i++) sizes[i] = this.defaultSize
+      // 按 chunk.length 分配，而非恒 CHUNK_SIZE——为变长 chunk 做好准备。
+      const sizes = new Float32Array(chunk.length)
+      sizes.fill(this.defaultSize)
       chunk.sizes = sizes
     }
 
-    const old = chunk.sizes[offsetInChunk]!
+    const old = chunk.sizes[offset]!
     const delta = size - old
     if (delta === 0) return
-    chunk.sizes[offsetInChunk] = size
+    chunk.sizes[offset] = size
     chunk.totalSize += delta
 
     // 把 delta 向后传播到所有更高的 chunkPrefixSum。这是分块轴上等价于 Fenwick 的更新，
@@ -515,15 +531,11 @@ export class ChunkedAxis {
   private rebuild(): void {
     const nChunks = Math.ceil(this.count / CHUNK_SIZE)
     this.chunks = Array.from({ length: nChunks })
-    this.chunkPrefixSum = new Float64Array(nChunks + 1)
-    this.totalSize = 0
     for (let i = 0; i < nChunks; i++) {
       const rowsInChunk = i === nChunks - 1 ? this.count - i * CHUNK_SIZE : CHUNK_SIZE
-      const chunk = createDefaultChunk(rowsInChunk, this.defaultSize)
-      this.chunks[i] = chunk
-      this.chunkPrefixSum[i + 1] = this.chunkPrefixSum[i]! + chunk.totalSize
-      this.totalSize += chunk.totalSize
+      this.chunks[i] = createDefaultChunk(rowsInChunk, this.defaultSize)
     }
+    this.recomputePrefixes()
     this._version++
   }
 }
