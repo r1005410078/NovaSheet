@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test'
-import { HideRowsLayer, type CollapsedGap } from '../../src/view/HideRowsLayer'
-import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
-import { SortLayer } from '../../src/view/SortLayer'
-import { ViewPipeline } from '../../src/view/ViewPipeline'
-import type { Row } from '../../src/kernel/data/Schema'
+import { HideRowsLayer, type CollapsedGap } from '../../../src/features/view/HideRowsLayer'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import { SortLayer } from '../../../src/features/view/SortLayer'
+import { ViewPipeline } from '../../../src/features/view/ViewPipeline'
+import type { Row } from '../../../src/kernel/data/Schema'
 
 const schema = { fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 100 }] }
 

@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'bun:test'
-import type { DataSource, DataSourceListener } from '../../src/kernel/data/DataSource'
+import type { DataSource, DataSourceListener } from '../../../src/kernel/data/DataSource'
 import type {
   ColumnHeaderMenuContext,
   HeaderDecoration,
   ViewLayer,
   ViewLayerChange,
-} from '../../src/view/ViewLayer'
-import { ViewPipeline } from '../../src/view/ViewPipeline'
-import { SortLayer } from '../../src/view/SortLayer'
-import { FilterLayer } from '../../src/view/FilterLayer'
-import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
+} from '../../../src/features/view/ViewLayer'
+import { ViewPipeline } from '../../../src/features/view/ViewPipeline'
+import { SortLayer } from '../../../src/features/view/SortLayer'
+import { FilterLayer } from '../../../src/features/view/FilterLayer'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
 
 const source: DataSource = {
   getRowCount: () => 3,

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
-import { FilterLayer } from '../../src/view/FilterLayer'
-import { SortLayer } from '../../src/view/SortLayer'
-import { ViewPipeline } from '../../src/view/ViewPipeline'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import { FilterLayer } from '../../../src/features/view/FilterLayer'
+import { SortLayer } from '../../../src/features/view/SortLayer'
+import { ViewPipeline } from '../../../src/features/view/ViewPipeline'
 
 const schema = {
   fields: [

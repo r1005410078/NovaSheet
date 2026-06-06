@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { FilterLayer } from '../../src/view/FilterLayer'
+import { FilterLayer } from '../../src/features/view/FilterLayer'
 import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
-import { SortLayer } from '../../src/view/SortLayer'
-import { ViewPipeline } from '../../src/view/ViewPipeline'
+import { SortLayer } from '../../src/features/view/SortLayer'
+import { ViewPipeline } from '../../src/features/view/ViewPipeline'
 import type { Schema } from '../../src/kernel/data/Schema'
 import {
   getCellContextMenuItems,

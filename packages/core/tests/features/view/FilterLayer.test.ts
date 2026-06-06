@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test'
-import type { DataSource, DataSourceEvent, DataSourceListener } from '../../src/kernel/data/DataSource'
-import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
-import type { MutableDataSource } from '../../src/kernel/data/MutableDataSource'
-import type { CellValue, Row, Schema } from '../../src/kernel/data/Schema'
-import { FilterLayer } from '../../src/view/FilterLayer'
+import type { DataSource, DataSourceEvent, DataSourceListener } from '../../../src/kernel/data/DataSource'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import type { MutableDataSource } from '../../../src/kernel/data/MutableDataSource'
+import type { CellValue, Row, Schema } from '../../../src/kernel/data/Schema'
+import { FilterLayer } from '../../../src/features/view/FilterLayer'
 
 const schema = {
   fields: [

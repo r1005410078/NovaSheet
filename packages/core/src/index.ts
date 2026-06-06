@@ -145,13 +145,13 @@ export type { ComputeFillWritesInput, FillWrite } from './features/fill/FillSeri
 
 // 视图坐标协议（Phase 4.4）
 export { findViewRow, resolveUnderlyingRow } from './view/coordinates'
-export { FilterLayer } from './view/FilterLayer'
-export { HideRowsLayer } from './view/HideRowsLayer'
-export type { CollapsedGap } from './view/HideRowsLayer'
-export type { FilterOp, FilterSpec } from './view/FilterLayer'
-export { SortLayer } from './view/SortLayer'
-export type { SortDirection, SortSpec } from './view/SortLayer'
-export { ViewPipeline } from './view/ViewPipeline'
+export { FilterLayer } from './features/view/FilterLayer'
+export { HideRowsLayer } from './features/view/HideRowsLayer'
+export type { CollapsedGap } from './features/view/HideRowsLayer'
+export type { FilterOp, FilterSpec } from './features/view/FilterLayer'
+export { SortLayer } from './features/view/SortLayer'
+export type { SortDirection, SortSpec } from './features/view/SortLayer'
+export { ViewPipeline } from './features/view/ViewPipeline'
 export type {
   ColumnHeaderMenuAction,
   ColumnHeaderMenuContext,
@@ -160,7 +160,7 @@ export type {
   ViewLayer,
   ViewLayerChange,
   ViewLayerChangeReason,
-} from './view/ViewLayer'
+} from './features/view/ViewLayer'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
 export { FrameScheduler } from './kernel/util/raf'

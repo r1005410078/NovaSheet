@@ -6,8 +6,8 @@
  */
 
 import type { CellAddress, CellRange } from '../features/selection/SelectionTypes'
-import type { ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext } from '../view/ViewLayer'
-import type { ViewPipeline } from '../view/ViewPipeline'
+import type { ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext } from '../features/view/ViewLayer'
+import type { ViewPipeline } from '../features/view/ViewPipeline'
 
 export type ContextMenuTargetKind = 'cell' | 'columnHeader' | 'rowHeader'
 

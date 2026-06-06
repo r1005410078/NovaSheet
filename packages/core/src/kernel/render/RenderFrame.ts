@@ -13,8 +13,8 @@ import type { GridSelection } from '../../features/selection/SelectionTypes'
 import type { Axis } from '../geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../geometry/Viewport'
 import type { Theme } from '../theme/Theme'
-import type { CollapsedGap } from '../../view/HideRowsLayer'
-import type { ViewPipeline } from '../../view/ViewPipeline'
+import type { CollapsedGap } from '../../features/view/HideRowsLayer'
+import type { ViewPipeline } from '../../features/view/ViewPipeline'
 
 /**
  * Phase 4.5 — `RenderFrame` 中的折叠行间隙，扩展 `CollapsedGap` 加入像素坐标。

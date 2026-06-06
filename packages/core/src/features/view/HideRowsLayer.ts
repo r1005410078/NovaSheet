@@ -1,7 +1,7 @@
-import { isMutableDataSource } from '../kernel/data/MutableDataSource'
-import type { MutableDataSource } from '../kernel/data/MutableDataSource'
-import type { DataSource, DataSourceEvent, DataSourceListener } from '../kernel/data/DataSource'
-import type { Row } from '../kernel/data/Schema'
+import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
+import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
+import type { DataSource, DataSourceEvent, DataSourceListener } from '../../kernel/data/DataSource'
+import type { Row } from '../../kernel/data/Schema'
 import type { ViewLayer, ViewLayerChange } from './ViewLayer'
 
 export interface CollapsedGap {
