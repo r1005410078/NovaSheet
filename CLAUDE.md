@@ -16,21 +16,23 @@ This file is loaded into Claude / Codex / other coding-agent sessions. It encode
 
 ## Current state (read first on a fresh session)
 
-**Last shipped:** **文本换行三态 + Alt+Enter 多行文本** — on `feat/cell-multiline-text`. (1) Multi-line text is now content-driven (value contains `\n`), not column-gated: `CellPainter.paintHardBreaks`/`paintLines` render `\n` lines for any text/fallback cell; the editor uses a `<textarea>` for any non-number field with `rows=1`+`wrap=off` (default 1 line, long single line widens horizontally via `autoGrow`, vertical growth only on Alt+Enter), `AutofitRowHeights` grows rows by `\n` line count (merged cells excluded via `isCellMerged`), and `TsvFormat` RFC-4180-quotes `\n`/`\t`/`"` cells so multi-line copy/paste doesn't split rows. (2) **Text display tri-state** `CellFormat.textWrap: 'overflow'|'wrap'|'clip'` (default `overflow`, aligned with Google/Excel; `field.wrap` is the fallback default): `RangeStyleStore` accumulates it; engine `setTextWrap(range,mode)` + `Grid.setTextWrap` with format undo; `CellPainter` resolves `mode = textWrap ?? (field.wrap?'wrap':'overflow')` and clip = hard cut **no ellipsis**; `Canvas2DRenderer` threads per-cell textWrap (`buildTextWrapLookup`) and, for overflow single-line text, spills into adjacent empty cells (`overflowExtra` scans right via `ctx.measureText`); autofit uses resolved textWrap via `isWrapCell`. Storybook `表格/合并与格式化` gains 溢出/换行/裁断 buttons. Specs: `docs/superpowers/specs/2026-05-30-novasheet-text-wrap-tristate.md` (+ plan). Known limit: overflow text sits under gridlines (stage order unchanged); vertical alignment + Center Across Selection not done.
+**Last shipped (branch, 未合并 `main`):** **Engine Composer Phase 2** — on `refactor-default-grid-engine-decomposition`（纯重构，零行为变化）。在 7 步 + kernel/features 三层之上：`StructuralMutationCoordinator`（结构 9 mutation undo 模板）、`EditController` / `PasteController` / `FillController`（edit/paste/fill 写入门面）、`FrameAssembler`（`getFrame` 纯函数装配）。`DefaultGridEngine` ~1000 行。Specs/plans：`2026-06-07-novasheet-engine-composer-phase-2-design.md`、`2026-06-07-novasheet-engine-composer-phase-2.md`。导航：`packages/core/src/engine/README.md`（Composer 2-A–2-D 表）、`features/edit|clipboard|fill/README.md`。
 
-**Prior shipped:** **填充柄 × 合并/格式 集成** — on `fix/fill-handle-merge-format-snap`. Extends the Phase 4.3 fill handle (autofill) to carry Phase 5-A fill color / borders / merge regions, aligned with Google Sheets merge-fill semantics. `commitFill` now calls `propagateFillStyles` after value writes: `tileFillFormat` tiles the source cell's resolved format along the fill axis (`positiveModulo`, clearing target first so it exactly equals the source) and `tileFillMerge` always `unmerge`s the fill region first (single-cell source over a merge → unmerges it; merged source → clears then tiles whole merge blocks). `computeFillTarget` gained `snap?`/`targetMerge?` params + `snapFillToBlocks`: cursor on an existing merge snaps the fill to that merge's edge, else round-up to whole source-block multiples — so preview and commit agree (both go through `computeFillTarget`). The `fill` undo command carries optional `format/merge` store snapshots restored on undo/redo; non-contiguous raw mapping (sort/filter scatter) conservatively fills values only. New engine `getFillMergeSnap`; runtime injects snap + the cursor's `frame.mergeRegions` entry. Spec: `docs/superpowers/specs/2026-05-30-novasheet-fill-handle-merge-format-integration.md`.
+**Prior shipped:** **文本换行三态 + Alt+Enter 多行文本** — on `feat/cell-multiline-text`. Multi-line text content-driven (`\n`)；`CellFormat.textWrap: 'overflow'|'wrap'|'clip'`；`CellPainter`/`Canvas2DRenderer` overflow 溢出邻空格；`AutofitRowHeights`/`TsvFormat` 多行对齐。Spec: `2026-05-30-novasheet-text-wrap-tristate.md`.
 
-**Prior shipped:** **Phase 5-A merge + basic range styling** — on `feat/phase-5-a-merge-range-styling`. Adds platform-independent sparse `RangeStyleStore` (fill color + `all/outer/inner/clear` solid borders with color + thin/medium/thick width) and `MergeStore` (merge/unmerge, overlap rejection, raw-coord keyed); engine `setFillColor`/`setBorders`/`mergeCells`/`unmergeCells` + `getCellFormat`/`getMergeRegion` (RAW coords) with undo/redo; `RenderFrame.cellFormats?`/`mergeRegions?` (optional, emitted in VIEW coords via raw→view translation); Canvas `FormatFillPainter` + `FormatBorderPainter` stages and merge-aware text/anchor rendering (single canvas, no new DOM); structural remap of both stores on insert/delete/move with undo/redo store-snapshot alignment (Task 7b); clipboard paste-over-merge guard (`onPasteSkipped` reason `'merge'`); public `Grid` API + Storybook `表格/合并与格式化`. Prior shipped stack (Phase 4.7 column drag reorder, etc.) unchanged.
+**Prior shipped:** **填充柄 × 合并/格式 集成** — on `fix/fill-handle-merge-format-snap`. Fill handle 携带 fill/border/merge；`snapFillToBlocks`；fill undo 带 format/merge 快照。Spec: `2026-05-30-novasheet-fill-handle-merge-format-integration.md`.
+
+**Prior shipped:** **Phase 5-A merge + basic range styling** — sparse `RangeStyleStore` + `MergeStore`（**raw** 坐标键控）；`setFillColor`/`setBorders`/`mergeCells`/`unmergeCells`；Canvas `FormatFillPainter`/`FormatBorderPainter`；结构 remap + undo 快照对齐。Spec/plan: `2026-05-28-novasheet-phase-5-merge-range-formatting.md`、`2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md`.
 
 **Phase 5-A coordinate invariant (important):** `RangeStyleStore`/`MergeStore` key cells by **raw** underlying row index + raw col index; `getFrame()` translates the visible region raw→view so painters consume VIEW coords only. Formatting/merge mutations translate the incoming view selection to a contiguous raw range via `viewRangeToRawRange`; when a sort/filter scatters the mapping (non-contiguous) the mutation conservatively returns `false` (no-op) — consistent with the spec's "5-A 保守禁用冲突 mutation" posture.
 
-- `@novasheet/core` — platform-independent (data, schema, theme, layout, `DefaultGridEngine`, `RenderFrame`). No DOM.
-- `@novasheet/web` — browser host/runtime (`DomGridHost`, `NativeScroller`, `ScrollMapper`, `WebGridRuntime`) plus public `Grid` facade and Canvas2D backend assembly.
-- `@novasheet/web-canvas2d` — Canvas2D renderer, text measurer, and surface utilities. Consumers normally import `Grid` from `@novasheet/web`.
+- `@novasheet/core` — platform-independent；`kernel/` + `features/` + `engine/DefaultGridEngine`；无 DOM。
+- `@novasheet/web` — browser host/runtime（`DomGridHost`、`NativeScroller`、`ScrollMapper`、`WebGridRuntime`）+ 公开 `Grid` facade 与 Canvas2D backend 装配。
+- `@novasheet/web-canvas2d` — Canvas2D renderer、text measurer、surface utilities。消费者从 `@novasheet/web` 导入 `Grid`。
 
 M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses the public `Grid` facade from `@novasheet/web`.
 
-**Next milestone:** **Phase 5-C** number/date/currency formatting, then 5-D conditional formatting — unless the user redirects. (5-B advanced borders shipped: `setBorders` accepts all `lineStyle`; `FormatBorderPainter` renders dashed/dotted via stroke+`setLineDash` and double via two 1px rects; spec/plan `2026-05-31-novasheet-phase-5-b-advanced-borders`. Text-wrap tri-state + multi-line text also shipped — see Last shipped above the prior entry.) Phase 5-A is documented in `docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md` + the implementation plan at `docs/superpowers/plans/2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md` (the plan also contains Task 7b, the structural-undo store-alignment fix added mid-execution).
+**Next milestone:** **Phase 5-C** number/date/currency formatting，then 5-D conditional formatting — unless the user redirects.（5-B advanced borders、text-wrap tri-state、multi-line text 已 ship；见 Prior shipped。）**Integration note:** decomposition 分支暂不合 `main`；新功能开发前先确认基于哪条分支。
 
 **Per-Grid scheduler convention** (invariant #5): each `Grid` owns `new FrameScheduler()` shared by `Canvas2DRenderer` and `NativeScroller` via `WebGridRuntime`; the `frameScheduler` singleton from `util/raf` is NOT used cross-Grid.
 
@@ -39,6 +41,8 @@ M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses 
 **Phase 4 status:** 4.0 context menu, 4.1 clipboard, 4.2 undo/redo, 4.3 fill handle, 4.4 sort/filter, 4.5 row structural + row header menu, 4.6 column structural + column header menu extension, and 4.7 column drag reorder are shipped.
 
 **Phase 5 status:** 5-A (merge + fill + basic solid borders), fill-handle × merge/format integration, text-wrap tri-state + Alt+Enter multi-line text, and **5-B advanced borders (dashed/dotted/double)** shipped. 5-C (number/date/currency format), 5-D (conditional formatting) not started.
+
+**Engine refactor status (decomposition branch):** 7 步路线 ✅ + **Composer Phase 2** ✅（2-A 结构协调器、2-B Edit、2-C Paste/Fill、2-D FrameAssembler）。`DefaultGridEngine` 仍保留 composer：事件管线、undo 注册、跨域 ctx 注入、resize/setData 等——有意留 engine，不做脱离功能的大 bang 拆分。
 
 **Locked architectural decisions** (do NOT revisit casually, see spec ADR §A):
 
@@ -50,7 +54,7 @@ M2 scroll behavior preserved (1M+ rows, non-linear `scrollTop`). Storybook uses 
 6. DOM `<handle-layer>` siblings for resize hit-zones (M4) — solves the canvas pointer-events vs hover-detection paradox AND fixes a11y
 7. Single `frameScheduler` per Grid — all RAF sources coalesce
 
-**How to pick up:** start a new session by reading this file + the spec + the M1 plan. Then read the most-recent N commits to understand the latest delta. Open the M1 hardening review (`9579959`) if anything feels off about Renderer / ChunkedAxis / Grid.destroy — that commit captured the post-M1-review polish.
+**How to pick up:** read this file + `packages/core/src/ARCHITECTURE.md` + `packages/core/src/engine/README.md`. On `refactor-default-grid-engine-decomposition`, read recent commits for delta; decomposition **未合并 `main`**。功能线（5-C 等）开发前确认基线分支。M1 硬ening review（`9579959`）仍适用于 Renderer / ChunkedAxis / Grid.destroy 基线行为。
 
 ---
 
@@ -159,16 +163,20 @@ Subagent prompts must:
 | Topic                             | Location                                                                  |
 | --------------------------------- | ------------------------------------------------------------------------- |
 | Public Grid API                   | `packages/web/src/Grid.ts` / `packages/web/src/index.ts`                  |
-| DataSource / Schema / Theme types | `packages/core/src/index.ts`                                              |
-| Engine state coordinator          | `packages/core/src/engine/DefaultGridEngine.ts`                           |
+| DataSource / Schema / Theme types | `packages/core/src/index.ts`（re-export 自 `kernel/`）                    |
+| Engine 组合根                     | `packages/core/src/engine/DefaultGridEngine.ts`                           |
+| Core 三层导航                     | `packages/core/src/ARCHITECTURE.md`                                       |
+| Kernel 原语（geometry/data/theme/render/undo/protocol/coords） | `packages/core/src/kernel/`                          |
+| Feature 领域（row/column/selection/layout/fill/clipboard/view/edit/format/merge/…） | `packages/core/src/features/<domain>/` |
+| Format 聚合 + 写入门面            | `packages/core/src/features/format/`（`DefaultFormatState`、`FormatController`） |
+| Merge store + view 解析           | `packages/core/src/features/merge/`                                       |
 | Algorithm core                    | `packages/core/src/kernel/geometry/ChunkedAxis.ts`                        |
-| Feature domains (row/column/…)    | `packages/core/src/features/`（导航见 `packages/core/src/ARCHITECTURE.md`） |
 | Per-frame Canvas2D logic          | `packages/web-canvas2d/src/render/Canvas2DRenderer.ts`                    |
-| Theme tokens                      | `packages/core/src/kernel/theme/denseGridTheme.ts`                          |
+| Theme tokens                      | `packages/core/src/kernel/theme/denseGridTheme.ts`                        |
 | DOM host                          | `packages/web/src/host/DomGridHost.ts`                                    |
 | Scroll math + SAFE_MAX            | `packages/web/src/scroll/ScrollMapper.ts`                                 |
 | Web orchestrator                  | `packages/web/src/runtime/WebGridRuntime.ts`                              |
-| Tests                             | each `packages/<pkg>/tests/` mirrors its `src/`                           |
+| Tests                             | each `packages/<pkg>/tests/` mirrors its `src/`（core: `tests/kernel/`、`tests/features/`、`tests/engine/`） |
 | RecordingContext helper           | `packages/web-canvas2d/tests/helpers/recording-context.ts`                |
 | global-stub helper                | `packages/web/tests/helpers/global-stub.ts` (+ duplicate in web-canvas2d) |
 | Probe tests                       | `packages/core/tests/_probe.test.ts`                                      |

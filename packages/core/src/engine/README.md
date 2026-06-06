@@ -33,7 +33,16 @@ Grid / runtime
 | 6 | 抽离 layout state | ✅ | `DefaultLayoutState` 聚合根（`layout/LayoutState.ts`）自持 rowsAxis/colsAxis/frozen/viewport，engine 删 4 字段 + 8 方法并全部委派；两阶段生命周期 + push 模型；`rebuildViewAxis`/`rebuildViewColsAxis` 重复消除为单一 `recreateViewportPreserving`。纯重构零行为变化。 |
 | 7 | 抽离 format/merge 协调 | ✅ | `DefaultFormatState` 自持 store + remap；`FormatController`/`FormatEventHandler`/engine 委派。 |
 
-下一步候选：Phase 5-C 数字/日期/货币格式，或继续收缩 composer（结构 undo 快照编排等）。
+### Engine Composer 第二阶段（2026-06-07）
+
+| Slice | 模块 | 状态 | 说明 |
+| --- | --- | --- | --- |
+| Composer 2-A | `StructuralMutationCoordinator` | ✅ | 行/列 insert/delete/move/hide/unhide 结构 command undo 模板 |
+| Composer 2-B | `EditController` | ✅ | edit/clearRange 写入门面；undo raw row 语义不变 |
+| Composer 2-C | `PasteController` / `FillController` | ✅ | commitPaste/commitFill 编排下沉；merge 守卫与 fill 选区联动不变 |
+| Composer 2-D | `FrameAssembler` | ✅ | `assembleRenderFrame` 纯函数；`getFrame` 一行 delegate |
+
+`DefaultGridEngine` ~1000 行（composer：事件管线、undo 注册、结构/fill 跨域 ctx 注入）。下一步候选：Phase 5-C 数字/日期/货币格式。
 
 ## 当前原则
 
@@ -125,10 +134,7 @@ interface BadContext {
 }
 ```
 
-后续应继续收窄 context。column 领域当前仍走 `ColumnStructureContext`，是中间态。
-
-> 注：row 领域已走完这条路线的终点——不再有 `RowStructureContext`，聚合根
-> 自持状态、仅注入 raw 数据源引用与默认行高解析。column 可参照 row 内化。
+后续应继续收窄 context。column 领域已对称 row 内化 `DefaultColumnStructure`，不再有 `ColumnStructureContext`。
 
 ## Event 约束
 
