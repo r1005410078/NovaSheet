@@ -20,8 +20,6 @@ export { DomFillHandleLayer } from './interaction/DomFillHandleLayer'
 export { SelectionOverlay } from './overlay/SelectionOverlay'
 export type { SelectionOverlayState } from './overlay/SelectionOverlay'
 export type { OverlayRect } from './overlay/RangeOverlayRects'
-export type { ColumnReorderOverlay } from './overlay/ColumnReorderOverlay'
-export type { RowReorderOverlay } from './overlay/RowReorderOverlay'
 
 // —— GridController 公开类型（原 web index 已公开）——
 export type {

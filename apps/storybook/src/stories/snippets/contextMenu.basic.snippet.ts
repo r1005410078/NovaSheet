@@ -12,6 +12,7 @@ const schema: Schema = {
 }
 
 const grid = new Grid(container, {
+  backend: canvas2dBackend,
   data: new InMemoryDataSource({ schema, rows }),
   onContextMenuAction: (action, ctx) => {
     console.log('action', action, 'cell', ctx.cell, 'range', ctx.selectedRange)

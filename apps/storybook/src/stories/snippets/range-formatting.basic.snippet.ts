@@ -25,7 +25,7 @@ const data = new InMemoryDataSource({
 })
 
 const container = document.getElementById('grid-container')!
-const grid = new Grid(container, { data })
+const grid = new Grid(container, { data, backend: canvas2dBackend })
 
 function withSelection(action: (range: CellRange) => boolean): boolean {
   const range = grid.getSelection().selectedRange

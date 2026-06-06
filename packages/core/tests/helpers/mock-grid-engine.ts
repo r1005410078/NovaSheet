@@ -1,3 +1,4 @@
+// NOTE: 与 packages/canvas2d/tests/helpers/mock-grid-engine.ts 保持同步（测试 helper 不跨包共享）。
 import { mock } from 'bun:test'
 import { denseGridTheme } from '@novasheet/core'
 import type {
