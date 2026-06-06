@@ -219,24 +219,28 @@ git mv packages/web/src/clipboard/WebClipboardAdapter.ts packages/core/src/dom/c
 - 对 host/scroll（Task 2 已入 core）的 import → core 内相对路径（如 `'../../host/WebHost'` → `'../host/Host'`、drag 下 `'../host/Host'`）。
 - `DomClipboardAdapter.ts`：类名 `WebClipboardAdapter` → `DomClipboardAdapter`，更新文件内自引用与 TSDoc。
 
-- [ ] **Step 3: core barrel 追加导出**
+- [ ] **Step 3: core barrel 导出（含显式临时面）**
 
-`packages/core/src/dom/index.ts` 追加（保持与原 web `index.ts` 公开面一致）：
+`packages/core/src/dom/index.ts` 追加。分两段，临时面必须可 grep、Task 6 删除：
 
 ```ts
+// —— 稳定公开（原 web index 已公开）——
 export { DomClipboardAdapter } from './clipboard/DomClipboardAdapter'
-// SelectionOverlay/handle/popover 等为内部装配用，按需导出（runtime/Grid 装配会从 core 内相对路径引用，不必进公共 barrel）
+
+// —— TRANSITIONAL(web-into-core)：web 的 runtime/backend 仍在 web，需跨包引用这些
+//    DOM 壳内部类；Task 6 删除 web 后，消费者全在 core 走相对 import，整段删除。
+//    grep 锚点：TRANSITIONAL(web-into-core)
+export { SelectionDrag, ColumnHeaderDrag, RowHeaderDrag, FillHandleDrag, ResizeDrag } from './interaction/drag/...'
+export type { Drag } from './interaction/drag/Drag'
+export { DomCellEditor, DomContextMenuLayer, DomFillHandleLayer, DomHandleLayer } from './interaction/...'
+export { HideToggleHandle, HideColToggleHandle } from './interaction/handle/...'
+export { SelectionOverlay, ColumnReorderOverlay, RowReorderOverlay, ColumnWidthPopover, RowHeightPopover, FilterPopover, RangeOverlayRects } from './overlay/...'
 ```
+（按实际文件路径/导出名补全；只导出 web 的 `WebGridRuntime`/`Canvas2DBackend` 真正 import 的符号——先 grep 确认清单，勿多导。）
 
-> ⚠️ 原 `web/index.ts` 仅公开 `WebClipboardAdapter`（现 `DomClipboardAdapter`）；overlay/handle/drag 是内部类，**不要**新增公共导出，避免扩大 public API。
+- [ ] **Step 4: web 残留 importer 改指向 `@novasheet/core`**
 
-- [ ] **Step 4: web 残留 importer 改指向 core**
-
-`runtime/WebGridRuntime.ts:70–88`、`backends/Canvas2DBackend.ts`、`index.ts` 中对 interaction/overlay/handle/clipboard 的相对 import：
-- 这些类的**装配**发生在 runtime/backend（下个 Task 才进 core），现阶段它们仍在 web，但被引用的类已进 core → 改为 `@novasheet/core` 内部相对…**不行**，web 不能用 core 内部相对路径。改为从 `@novasheet/core` 公共入口引用。
-- 因 overlay/handle/drag 不进公共 barrel（Step 3），**本 Task 需临时**在 `core/src/index.ts` 经 `export * from './dom/_assembly'` 暴露这些内部类供 web 装配引用；该临时面在 Task 5（装配进 core）后**删除**。
-
-> ⚠️ STOP+ASK：若不想引入临时 `_assembly` 公共面，可改为「Task 3 与 Task 4、5 合并为一个原子大移动」。两条路二选一前先确认——见本计划末尾「替代：原子大移动」。
+`runtime/WebGridRuntime.ts:70–88`、`backends/Canvas2DBackend.ts`、`index.ts` 中对 interaction/overlay/handle/clipboard 的相对 import（`../interaction/...`、`../overlay/...`、`../handle/...`、`../clipboard/...`）全部改为从 `@novasheet/core` 引用（web 不能用 core 内部相对路径）。这些符号经 Step 3 的临时面公开，可被引用。改完 grep 确认 `packages/web/src` 无残留相对引用到已迁文件。
 
 - [ ] **Step 5: 验证 + 提交**
 
@@ -415,7 +419,9 @@ git mv packages/web/src/Grid.ts packages/core/src/Grid.ts
 - import 改 core 内相对路径（`GridControllerImpl`、类型）。
 - `GridOptions` 加 `backend: RenderBackendFactory`（必填）。
 - 内部 `new GridControllerImpl(container, engineOptions, gridOptions, backend)`。
-- `core/src/index.ts` 加 `export { Grid, withExcelHeaders } from './Grid'` + `export type { GridOptions } from './Grid'`，并移除 Task 3 引入的临时 `_assembly` 公共面。
+- `core/src/index.ts` 加 `export { Grid, withExcelHeaders } from './Grid'` + `export type { GridOptions } from './Grid'`。
+- **删除 Task 3 的临时面**：`grep -rn "TRANSITIONAL(web-into-core)" packages/core/src` 定位 `dom/index.ts` 中标记的临时导出段，整段删除（此时所有消费者已在 core，走相对 import）。
+- **public API 审计**：删除后 typecheck 应仍绿（无外部消费者依赖临时面）；人工过一遍 `core/src/index.ts` 最终导出，确认未泄露 overlay/handle/drag/style 等 DOM 壳内部类——只应公开 `Grid`/`GridOptions`/`DomGridHost`/`ScrollMapper`/`NativeScroller`/`SAFE_MAX`/Host 类型/`DomClipboardAdapter`/`RenderBackend` 及端口/引擎类型。
 
 - [ ] **Step 2: 删除 web 包**
 
