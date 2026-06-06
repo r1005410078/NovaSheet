@@ -9,7 +9,7 @@ import {
   normalizeMoveRows,
   remapRowsByIndexMap,
   reorderByIndexMap,
-} from '../../../src/engine/row/RowRules'
+} from '../../../src/features/row/RowRules'
 
 describe('RowRules', () => {
   it('normalizes a row move into forward and inverse plans', () => {

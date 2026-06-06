@@ -166,7 +166,7 @@ DomainEvent 表达已经发生的事实。
 
 测试导入规则：
 
-- 领域测试直接导入领域文件，例如 `engine/row/DefaultRowStructure`。
+- 领域测试直接导入领域文件，例如 `features/row/DefaultRowStructure`。
 - facade 回归测试继续通过 `DefaultGridEngine`。
 - 不为了测试暴露完整 engine 内部对象。
 

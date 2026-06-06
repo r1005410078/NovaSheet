@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
-import { DefaultRowStructure } from '../../../src/engine/row/DefaultRowStructure'
+import { DefaultRowStructure } from '../../../src/features/row/DefaultRowStructure'
 import type { DataSource } from '../../../src/kernel/data/DataSource'
 import type { Row } from '../../../src/kernel/data/Schema'
 

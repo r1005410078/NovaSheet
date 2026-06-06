@@ -1,4 +1,4 @@
-import type { RowDomainEvent } from '../../engine/row/RowEvent'
+import type { RowDomainEvent } from '../../features/row/RowEvent'
 import type { ColumnDomainEvent } from '../../engine/column/ColumnEvent'
 
 export type {
@@ -8,7 +8,7 @@ export type {
   RowsInserted,
   RowsMoved,
   RowsUnhidden,
-} from '../../engine/row/RowEvent'
+} from '../../features/row/RowEvent'
 
 export type {
   ColumnDomainEvent,

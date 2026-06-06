@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 
-import { RowStructureUndoHandler } from '../../../src/engine/row/RowStructureUndoHandler'
-import type { RowStructureUndoContext } from '../../../src/engine/row/RowStructureUndoHandler'
+import { RowStructureUndoHandler } from '../../../src/features/row/RowStructureUndoHandler'
+import type { RowStructureUndoContext } from '../../../src/features/row/RowStructureUndoHandler'
 import type { DeletedRowSnapshot } from '../../../src/kernel/data/MutableDataSource'
 import type { FormatLayer } from '../../../src/format/CellFormat'
 import type { MergeRegion } from '../../../src/merge/MergeStore'

@@ -168,8 +168,8 @@ export { FrameScheduler } from './kernel/util/raf'
 // 度量层（M3 autofit）
 export { tokenize, wrapText } from './kernel/measure/TextMeasurer'
 export type { TextMeasurer, WrapOptions, WrappedText } from './kernel/measure/TextMeasurer'
-export { autofitRowHeights } from './engine/AutofitRowHeights'
-export type { AutofitRowsParams, AutofitRowsResult } from './engine/AutofitRowHeights'
+export { autofitRowHeights } from './features/row/AutofitRowHeights'
+export type { AutofitRowsParams, AutofitRowsResult } from './features/row/AutofitRowHeights'
 export type { UndoCommand, CellWrite } from './kernel/undo/UndoCommand'
 
 export { RangeStyleStore } from './format/RangeStyleStore'

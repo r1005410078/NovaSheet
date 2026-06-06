@@ -5,10 +5,10 @@ import {
   InMemoryDataSource,
   type Schema,
   type TextMeasurer,
-} from '../../src'
+} from '../../../src'
 
 const fixedWidthMeasurer: TextMeasurer = {
-  measureWidth: (text) => text.length * 7,
+  measureWidth: (text: string) => text.length * 7,
 }
 
 const WRAP_SCHEMA: Schema = {
@@ -40,7 +40,7 @@ describe('autofitRowHeights', () => {
       data,
       theme: denseGridTheme,
       measurer: fixedWidthMeasurer,
-      applyHeight: (r, h) => {
+      applyHeight: (r: number, h: number) => {
         heights[r] = h
       },
     })
@@ -59,7 +59,7 @@ describe('autofitRowHeights', () => {
       data,
       theme: denseGridTheme,
       measurer: fixedWidthMeasurer,
-      applyHeight: (r, h) => {
+      applyHeight: (r: number, h: number) => {
         heights[r] = h
       },
     })
@@ -80,7 +80,7 @@ describe('autofitRowHeights', () => {
       data,
       theme: denseGridTheme,
       measurer: fixedWidthMeasurer,
-      applyHeight: (r, h) => {
+      applyHeight: (r: number, h: number) => {
         heights[r] = h
       },
     })
@@ -101,7 +101,7 @@ describe('autofitRowHeights', () => {
       data,
       theme: denseGridTheme,
       measurer: fixedWidthMeasurer,
-      applyHeight: (r, h) => {
+      applyHeight: (r: number, h: number) => {
         heights[r] = h
       },
     })
@@ -120,7 +120,7 @@ describe('autofitRowHeights', () => {
       data,
       theme: denseGridTheme,
       measurer: fixedWidthMeasurer,
-      applyHeight: (r, h) => {
+      applyHeight: (r: number, h: number) => {
         heights[r] = h
       },
       rows: [1, 3],
@@ -143,7 +143,7 @@ describe('autofitRowHeights', () => {
       data,
       theme: denseGridTheme,
       measurer: fixedWidthMeasurer,
-      applyHeight: (r, h) => {
+      applyHeight: (r: number, h: number) => {
         heights[r] = h
       },
       maxHeight: 40,
@@ -161,7 +161,7 @@ describe('autofitRowHeights', () => {
       data,
       theme: denseGridTheme,
       measurer: fixedWidthMeasurer,
-      applyHeight: (r, h) => calls.push([r, h]),
+      applyHeight: (r: number, h: number) => calls.push([r, h]),
       rows: [-1, 0, 99],
     })
     expect(result.changedRows).toBe(1)
@@ -180,7 +180,7 @@ describe('autofitRowHeights', () => {
       data,
       theme: denseGridTheme,
       measurer: fixedWidthMeasurer,
-      applyHeight: (r, h) => {
+      applyHeight: (r: number, h: number) => {
         heights[r] = h
       },
     })
@@ -199,7 +199,7 @@ describe('autofitRowHeights', () => {
         data,
         theme: denseGridTheme,
         measurer: fixedWidthMeasurer,
-        applyHeight: (r, h) => {
+        applyHeight: (r: number, h: number) => {
           heights[r] = h
         },
       })
@@ -219,10 +219,10 @@ describe('autofitRowHeights', () => {
         data,
         theme: denseGridTheme,
         measurer: fixedWidthMeasurer,
-        applyHeight: (r, h) => {
+        applyHeight: (r: number, h: number) => {
           heights[r] = h
         },
-        isCellMerged: (_row, colIndex) => colIndex === 0, // name 列视为合并
+        isCellMerged: (_row: number, colIndex: number) => colIndex === 0, // name 列视为合并
       })
       expect(result.changedRows).toBe(0) // 唯一多行格被合并排除 → 不撑高
       expect(result.skippedRows).toBe(1)
@@ -242,10 +242,10 @@ describe('autofitRowHeights', () => {
         data,
         theme: denseGridTheme,
         measurer: fixedWidthMeasurer,
-        applyHeight: (r, h) => {
+        applyHeight: (r: number, h: number) => {
           heights[r] = h
         },
-        isWrapCell: (_row, colIndex) => colIndex === 0,
+        isWrapCell: (_row: number, colIndex: number) => colIndex === 0,
       })
       expect(heights[0]).toBeGreaterThan(denseGridTheme.metrics.rowHeight)
     })
@@ -260,7 +260,7 @@ describe('autofitRowHeights', () => {
         data,
         theme: denseGridTheme,
         measurer: fixedWidthMeasurer,
-        applyHeight: (r, h) => {
+        applyHeight: (r: number, h: number) => {
           heights[r] = h
         },
         isWrapCell: () => false, // 全部按 overflow，无软折

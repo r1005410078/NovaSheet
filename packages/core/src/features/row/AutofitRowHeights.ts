@@ -23,11 +23,11 @@
  *   - cell value 为 null/undefined（不参与高度）
  */
 
-import type { CellValue } from '../kernel/data/Schema'
-import type { DataSource } from '../kernel/data/DataSource'
-import type { Theme } from '../kernel/theme/Theme'
-import type { TextMeasurer } from '../kernel/measure/TextMeasurer'
-import { wrapText } from '../kernel/measure/TextMeasurer'
+import type { CellValue } from '../../kernel/data/Schema'
+import type { DataSource } from '../../kernel/data/DataSource'
+import type { Theme } from '../../kernel/theme/Theme'
+import type { TextMeasurer } from '../../kernel/measure/TextMeasurer'
+import { wrapText } from '../../kernel/measure/TextMeasurer'
 
 /** autofitRowHeights 入参 */
 export interface AutofitRowsParams {
