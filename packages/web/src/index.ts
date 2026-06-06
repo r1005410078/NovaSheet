@@ -19,7 +19,7 @@ export type {
   ContextMenuTargetKind,
 } from '@novasheet/core'
 export type { ClipboardAction, PasteSkippedCell } from '@novasheet/core'
-export { WebClipboardAdapter } from './clipboard/WebClipboardAdapter'
+export { DomClipboardAdapter } from '@novasheet/core'
 
 export type { UndoCommand } from '@novasheet/core'
 export type { FillEvent, RedoEvent, UndoEvent } from './grid/GridController'

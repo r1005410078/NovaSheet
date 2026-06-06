@@ -67,27 +67,32 @@ import {
   type ResizeHandleRect,
   type Row,
 } from '@novasheet/core'
-import type { DomCellEditor } from '../interaction/DomCellEditor'
-import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
-import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
-import type { DomHandleLayer } from '../interaction/DomHandleLayer'
-import type { HideToggleHandle } from '../handle/HideToggleHandle'
-import type { HideColToggleHandle } from '../handle/HideColToggleHandle'
-import type { FilterPopover } from '../interaction/FilterPopover'
-import type { RowHeightPopover } from '../overlay/RowHeightPopover'
-import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
-import type { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
-import type { RowReorderOverlay } from '../overlay/RowReorderOverlay'
-import type { SelectionOverlay } from '../overlay/SelectionOverlay'
-import { computeFillHandleRect, computeRangeOverlayRects } from '../interaction/RangeOverlayRects'
-import type { Drag } from '../interaction/drag/Drag'
-import { ColumnHeaderDrag } from '../interaction/drag/ColumnHeaderDrag'
-import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
-import { ResizeDrag } from '../interaction/drag/ResizeDrag'
-import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
-import { SelectionDrag } from '../interaction/drag/SelectionDrag'
+import type {
+  DomCellEditor,
+  DomContextMenuLayer,
+  DomFillHandleLayer,
+  DomHandleLayer,
+  HideToggleHandle,
+  HideColToggleHandle,
+  FilterPopover,
+  RowHeightPopover,
+  ColumnWidthPopover,
+  ColumnReorderOverlay,
+  RowReorderOverlay,
+  SelectionOverlay,
+  Drag,
+  DomClipboardAdapter,
+} from '@novasheet/core'
+import {
+  computeFillHandleRect,
+  computeRangeOverlayRects,
+  ColumnHeaderDrag,
+  FillHandleDrag,
+  ResizeDrag,
+  RowHeaderDrag,
+  SelectionDrag,
+} from '@novasheet/core'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent, RenderBackend } from '@novasheet/core'
-import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
 import { ScrollMapper } from '@novasheet/core'
 
 /** Phase 4.1 — TSV FNV-1a 32-bit hash；用于验证 paste 时剪贴板内容是否仍是 grid 自己刚写出去的，决定 typed 缓存命中。 */
@@ -269,7 +274,7 @@ export class WebGridRuntime {
   /** 当前打开 filter popover 绑定的 field id。 */
   private filterPopoverFieldId: string | null = null
   /** Phase 4.1 — 剪贴板读写 adapter。 */
-  private clipboardAdapter?: WebClipboardAdapter
+  private clipboardAdapter?: DomClipboardAdapter
   /** 最近一次从 grid 写出的剪贴板缓存，用于 typed paste 保留值类型。 */
   private clipboardCache: { range: CellRange; rows: readonly Row[]; tsvHash: number } | null = null
   /** copy 成功后的通知回调。 */
@@ -460,7 +465,7 @@ export class WebGridRuntime {
   }
 
   /** Phase 4.1 — 注入 clipboard adapter；未注入时 copy/cut/paste 全 silent no-op。 */
-  setClipboardAdapter(adapter: WebClipboardAdapter): void {
+  setClipboardAdapter(adapter: DomClipboardAdapter): void {
     this.clipboardAdapter = adapter
   }
 

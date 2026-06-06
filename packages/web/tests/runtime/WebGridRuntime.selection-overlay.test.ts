@@ -9,9 +9,7 @@ import {
 import { Grid } from '../../src/Grid'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
-import type { SelectionOverlay, SelectionOverlayState } from '../../src/overlay/SelectionOverlay'
-import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
-import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
+import type { SelectionOverlay, SelectionOverlayState, DomFillHandleLayer, OverlayRect } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 import { makeMockGridEngine } from '../helpers/mock-grid-engine'
 

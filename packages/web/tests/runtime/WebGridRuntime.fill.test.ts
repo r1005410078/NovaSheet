@@ -9,8 +9,7 @@ import {
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
-import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
-import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
+import type { DomFillHandleLayer, OverlayRect } from '@novasheet/core'
 import { makeMockGridEngine } from '../helpers/mock-grid-engine'
 
 describe('WebGridRuntime fill handle', () => {

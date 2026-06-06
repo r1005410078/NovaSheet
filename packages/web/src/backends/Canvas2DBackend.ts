@@ -36,7 +36,21 @@ import {
   type ViewLayerChange,
 } from '@novasheet/core'
 import { Canvas2DRenderer, Canvas2DTextMeasurer, HighDPI } from '@novasheet/canvas2d'
-import { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
+import {
+  DomClipboardAdapter,
+  DomCellEditor,
+  DomContextMenuLayer,
+  DomFillHandleLayer,
+  DomHandleLayer,
+  HideToggleHandle,
+  HideColToggleHandle,
+  FilterPopover,
+  RowHeightPopover,
+  ColumnWidthPopover,
+  ColumnReorderOverlay,
+  RowReorderOverlay,
+  SelectionOverlay,
+} from '@novasheet/core'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
@@ -48,18 +62,6 @@ import type {
 } from '../grid/GridController'
 import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
 import { DomGridHost } from '@novasheet/core'
-import { DomCellEditor } from '../interaction/DomCellEditor'
-import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
-import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
-import { DomHandleLayer } from '../interaction/DomHandleLayer'
-import { HideToggleHandle } from '../handle/HideToggleHandle'
-import { HideColToggleHandle } from '../handle/HideColToggleHandle'
-import { FilterPopover } from '../interaction/FilterPopover'
-import { RowHeightPopover } from '../overlay/RowHeightPopover'
-import { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
-import { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
-import { RowReorderOverlay } from '../overlay/RowReorderOverlay'
-import { SelectionOverlay } from '../overlay/SelectionOverlay'
 import { WebGridRuntime } from '../runtime/WebGridRuntime'
 
 /**
@@ -113,7 +115,7 @@ export class Canvas2DBackend implements GridController {
   /** 选区高亮与拖拽辅助 DOM 层。 */
   private selectionOverlay: SelectionOverlay
   /** Web 剪贴板适配器；runtime 只依赖抽象能力。 */
-  private clipboardAdapter = new WebClipboardAdapter()
+  private clipboardAdapter = new DomClipboardAdapter()
   /** web 交互编排器；attach 前由 backend 完成全部依赖注入。 */
   private runtime!: WebGridRuntime
   /** 单 Grid 共享 scheduler，host / renderer / runtime 的 RAF 统一合并。 */

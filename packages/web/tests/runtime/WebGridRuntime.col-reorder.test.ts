@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { DefaultGridEngine, denseGridTheme, InMemoryDataSource } from '@novasheet/core'
 import type { GridEngine, ResizeHandleRect, Schema } from '@novasheet/core'
-import type { ColumnReorderOverlay } from '../../src/overlay/ColumnReorderOverlay'
+import type { ColumnReorderOverlay } from '@novasheet/core'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
