@@ -11,7 +11,7 @@
 **收口完成**：全部 21 个 kind 的 undo/redo 经 `UndoRegistry` 派发到各域 undo handler，
 `DefaultGridEngine` **已无** `applyUndo`/`applyRedo` 中心 switch；`undo()`/`redo()` 委派 `UndoReplay`。
 - `editCell`/`clearRange`/`paste` → `engine/undo/CellUndoHandler`（M1）。
-- `format`/`merge`/`unmerge` → `engine/format/FormatUndoHandler`（M2，与 `FormatController` 同域）。
+- `format`/`merge`/`unmerge` → `features/format/FormatUndoHandler`（M2，与 `FormatController` 同域）。
 - `resizeRow`/`resizeRowsMulti`/`hideRows`/`unhideRows` → `features/row/RowUndoHandler`（M3）。
 - `resizeColumn`/`resizeColumnsMulti`/`hideCols`/`unhideCols` → `features/column/ColumnUndoHandler`（M3）。
 - `fill` → `engine/undo/FillUndoHandler`（M4，跨域，不属行/列结构）。

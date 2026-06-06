@@ -8,15 +8,15 @@ import type { PasteSkippedCell } from '../features/clipboard/types'
 import { computeFillWrites } from '../features/fill/FillSeries'
 import type { FillDirection, FillMergeSnap } from '../features/fill/FillTarget'
 import { unionRange } from '../kernel/geometry/range'
-import { RangeStyleStore } from '../format/RangeStyleStore'
+import { RangeStyleStore } from '../features/format/RangeStyleStore'
 import type {
   BorderPreset,
   BorderStyle,
   CellFormat,
   TextWrapMode,
-} from '../format/CellFormat'
-import { MergeStore } from '../merge/MergeStore'
-import type { MergeRegion } from '../merge/MergeStore'
+} from '../features/format/CellFormat'
+import { MergeStore } from '../features/merge/MergeStore'
+import type { MergeRegion } from '../features/merge/MergeStore'
 import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../features/edit/CellEdit'
 import { CellEditModel } from '../features/edit/CellEditModel'
 import { parseSelectionNavigationKey } from '../features/selection/SelectionNavigation'
@@ -38,7 +38,7 @@ import type { CellWrite, UndoCommand } from '../kernel/undo/UndoCommand'
 import { UndoRegistry } from '../kernel/undo/UndoRegistry'
 import { UndoReplay } from '../kernel/undo/UndoReplay'
 import { registerCellUndo } from '../features/edit/registerCellUndo'
-import { registerFormatUndo } from './format/registerFormatUndo'
+import { registerFormatUndo } from '../features/format/registerFormatUndo'
 import { registerRowUndo } from '../features/row/registerRowUndo'
 import { registerColumnUndo } from '../features/column/registerColumnUndo'
 import { registerFillUndo } from '../features/fill/registerFillUndo'
@@ -46,11 +46,11 @@ import { registerRowStructureUndo } from '../features/row/registerRowStructureUn
 import { registerColumnStructureUndo } from '../features/column/registerColumnStructureUndo'
 import { CoordinateSpace } from '../kernel/coords/CoordinateSpace'
 import type { RawRange } from '../kernel/coords/coordinates'
-import { VisibleFormatResolver } from './VisibleFormatResolver'
-import { FormatController } from './format/FormatController'
+import { VisibleFormatResolver } from '../features/format/VisibleFormatResolver'
+import { FormatController } from '../features/format/FormatController'
 import { FillStylePropagator } from '../features/fill/FillStylePropagator'
 import { GridEventPipeline } from '../kernel/protocol/GridEventPipeline'
-import { FormatEventHandler } from './format/FormatEventHandler'
+import { FormatEventHandler } from '../features/format/FormatEventHandler'
 import { DeleteRowsCommandHandler } from '../features/row/DeleteRowsCommandHandler'
 import type {
   FillCommitResult,
@@ -72,7 +72,7 @@ import { MoveColsCommandHandler } from '../features/column/MoveColsCommandHandle
 import { DefaultSelectionState } from '../features/selection/DefaultSelectionState'
 import { SelectionController } from '../features/selection/SelectionController'
 import { SelectionEventHandler } from '../features/selection/SelectionEventHandler'
-import { resolveViewMergeRegion } from './MergeViewResolver'
+import { resolveViewMergeRegion } from '../features/merge/MergeViewResolver'
 
 /**
  * `GridEngine` 默认实现。

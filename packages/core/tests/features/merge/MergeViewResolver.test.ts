@@ -3,8 +3,8 @@ import {
   mergeRegionToView,
   resolveViewMergeRegion,
   type MergeViewCoords,
-} from '../../src/engine/MergeViewResolver'
-import type { MergeRegion } from '../../src/merge/MergeStore'
+} from '../../../src/features/merge/MergeViewResolver'
+import type { MergeRegion } from '../../../src/features/merge/MergeStore'
 
 /** 用 view→raw 映射数组构造 fake coords；数组下标=view，值=raw。 */
 function makeCoords(viewToRawRow: number[], viewToRawCol: number[]): MergeViewCoords {

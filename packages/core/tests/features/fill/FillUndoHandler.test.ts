@@ -4,8 +4,8 @@ import { FillUndoHandler } from '../../../src/features/fill/FillUndoHandler'
 import type { FillUndoContext } from '../../../src/features/fill/FillUndoHandler'
 import type { CellValue } from '../../../src/kernel/data/Schema'
 import type { CellRange } from '../../../src/features/selection/SelectionTypes'
-import type { FormatLayer } from '../../../src/format/CellFormat'
-import type { MergeRegion } from '../../../src/merge/MergeStore'
+import type { FormatLayer } from '../../../src/features/format/CellFormat'
+import type { MergeRegion } from '../../../src/features/merge/MergeStore'
 import type { CellWrite, UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type Call =

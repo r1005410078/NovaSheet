@@ -1,9 +1,9 @@
 import type { MergeRegion } from '../merge/MergeStore'
 import type { MergeStore } from '../merge/MergeStore'
-import type { RangeStyleStore } from '../format/RangeStyleStore'
-import type { ResolvedCellFormat } from '../format/CellFormat'
-import type { CoordinateSpace } from '../kernel/coords/CoordinateSpace'
-import { mergeRegionToView } from './MergeViewResolver'
+import type { RangeStyleStore } from './RangeStyleStore'
+import type { ResolvedCellFormat } from './CellFormat'
+import type { CoordinateSpace } from '../../kernel/coords/CoordinateSpace'
+import { mergeRegionToView } from '../merge/MergeViewResolver'
 
 /**
  * 把 RAW 键控的 format/merge store 在可见区解析为 **VIEW 坐标** 的帧字段

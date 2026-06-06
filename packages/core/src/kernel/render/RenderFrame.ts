@@ -6,8 +6,8 @@
  */
 
 import type { DataSource } from '../data/DataSource'
-import type { ResolvedCellFormat } from '../../format/CellFormat'
-import type { MergeRegion } from '../../merge/MergeStore'
+import type { ResolvedCellFormat } from '../../features/format/CellFormat'
+import type { MergeRegion } from '../../features/merge/MergeStore'
 import type { CellEditSession } from '../../features/edit/CellEditModel'
 import type { GridSelection } from '../../features/selection/SelectionTypes'
 import type { Axis } from '../geometry/ChunkedAxis'

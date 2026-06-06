@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { FormatEventHandler } from '../../../src/engine/format/FormatEventHandler'
-import type { FormatEventHandlerContext } from '../../../src/engine/format/FormatEventHandler'
+import { FormatEventHandler } from '../../../src/features/format/FormatEventHandler'
+import type { FormatEventHandlerContext } from '../../../src/features/format/FormatEventHandler'
 
 function makeContext(calls: string[]): FormatEventHandlerContext {
   return {

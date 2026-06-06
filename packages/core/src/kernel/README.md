@@ -18,7 +18,7 @@
 | `measure/` | TextMeasurer、wrapText |
 | `render/` | RenderFrame 契约 |
 | `util/` | FrameScheduler（raf）等 |
-| `coords/` | view↔raw remap（与 `view/coordinates` 过渡期并存，见 ARCHITECTURE.md） |
+| `coords/` | view↔raw 坐标（coordinates、CoordinateSpace、remap） |
 | `protocol/` | GridOperation、GridDomainEvent、GridEventPipeline |
 | `undo/` | UndoCommand、UndoStack、UndoRegistry、UndoReplay、UndoHandler（**机制 only**，具体 kind handler 在 features） |
 | `interaction/` | HitTest、CellLayout、HandleLayout、scrollCellIntoView |

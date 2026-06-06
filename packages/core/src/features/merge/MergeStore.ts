@@ -1,11 +1,11 @@
-import type { CellRange } from '../features/selection/SelectionTypes'
-import type { RawRange } from '../kernel/coords/coordinates'
-import { isCellInRange, rangesIntersect } from '../kernel/geometry/range'
+import type { CellRange } from '../selection/SelectionTypes'
+import type { RawRange } from '../../kernel/coords/coordinates'
+import { isCellInRange, rangesIntersect } from '../../kernel/geometry/range'
 import {
   remapSpanAfterDelete,
   remapSpanAfterInsert,
   remapSpanByIndexMap,
-} from '../kernel/coords/remap'
+} from '../../kernel/coords/remap'
 
 /**
  * 一个合并单元格区域。`range` 为矩形覆盖范围，`anchor` 固定为左上角单元格

@@ -1,12 +1,12 @@
-import type { RangeStyleStore } from '../../format/RangeStyleStore'
-import type { MergeStore } from '../../merge/MergeStore'
+import type { RangeStyleStore } from './RangeStyleStore'
+import type { MergeStore } from '../merge/MergeStore'
 import type {
   BorderPreset,
   BorderStyle,
   FormatLayer,
   TextWrapMode,
-} from '../../format/CellFormat'
-import type { CellRange, GridSelection } from '../../features/selection/SelectionTypes'
+} from './CellFormat'
+import type { CellRange, GridSelection } from '../selection/SelectionTypes'
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 

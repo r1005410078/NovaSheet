@@ -1,5 +1,5 @@
 import type { CellValue } from '../data/Schema'
-import type { BorderPreset, BorderStyle, TextWrapMode } from '../../format/CellFormat'
+import type { BorderPreset, BorderStyle, TextWrapMode } from '../../features/format/CellFormat'
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { RowOperation } from '../../features/row/RowOperation'
 

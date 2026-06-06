@@ -172,8 +172,8 @@ export { autofitRowHeights } from './features/row/AutofitRowHeights'
 export type { AutofitRowsParams, AutofitRowsResult } from './features/row/AutofitRowHeights'
 export type { UndoCommand, CellWrite } from './kernel/undo/UndoCommand'
 
-export { RangeStyleStore } from './format/RangeStyleStore'
-export { borderPatchForCell } from './format/BorderPreset'
+export { RangeStyleStore } from './features/format/RangeStyleStore'
+export { borderPatchForCell } from './features/format/BorderPreset'
 export type {
   BorderLineStyle,
   BorderPreset,
@@ -184,6 +184,6 @@ export type {
   FormatLayer,
   ResolvedCellFormat,
   TextWrapMode,
-} from './format/CellFormat'
-export { MergeStore } from './merge/MergeStore'
-export type { MergeRegion } from './merge/MergeStore'
+} from './features/format/CellFormat'
+export { MergeStore } from './features/merge/MergeStore'
+export type { MergeRegion } from './features/merge/MergeStore'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { FormatEventHandler } from '../../../src/engine/format/FormatEventHandler'
+import { FormatEventHandler } from '../../../src/features/format/FormatEventHandler'
 
 describe('FormatEventHandler', () => {
   it('remaps format and merge stores when rows move', () => {

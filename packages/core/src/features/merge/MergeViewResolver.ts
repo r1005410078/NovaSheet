@@ -1,4 +1,4 @@
-import type { MergeRegion } from '../merge/MergeStore'
+import type { MergeRegion } from './MergeStore'
 
 /** 合并区 view↔raw 翻译所需的最小坐标能力（`CoordinateSpace` 结构满足）。 */
 export interface MergeViewCoords {

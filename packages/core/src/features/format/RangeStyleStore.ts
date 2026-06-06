@@ -1,13 +1,13 @@
-import type { CellRange } from '../features/selection/SelectionTypes'
-import type { RawRange } from '../kernel/coords/coordinates'
+import type { CellRange } from '../selection/SelectionTypes'
+import type { RawRange } from '../../kernel/coords/coordinates'
 import type { BorderPreset, BorderStyle, CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
 import { borderPatchForCell } from './BorderPreset'
-import { isCellInRange, rangesIntersect } from '../kernel/geometry/range'
+import { isCellInRange, rangesIntersect } from '../../kernel/geometry/range'
 import {
   remapSpanAfterDelete,
   remapSpanAfterInsert,
   remapSpanByIndexMap,
-} from '../kernel/coords/remap'
+} from '../../kernel/coords/remap'
 
 /** Append-only sparse manual format store. Later layers win over earlier ones. */
 export class RangeStyleStore {

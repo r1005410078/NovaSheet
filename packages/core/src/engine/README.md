@@ -31,7 +31,7 @@ Grid / runtime
 | 4 | 抽离 selection remap | ✅ | 已按 row 模板建立 `SelectionState` 聚合根、`SelectionRules` 纯算法与 `SelectionEventHandler`；已删除旧 `interaction/SelectionModel` / `interaction/SelectionNavigation`，`DefaultSelectionState` 直接持有 `GridSelection` 并接管基础选择、键盘导航、结构 remap 状态机；engine 仅保留 composer / undo snapshot / view-row 映射注入职责（2026-06-05）。 |
 | 5 | 抽离 undo replay | ✅ | M1–M4 全部完成：全 21 kind 经 `UndoRegistry`/`UndoReplay` 派发到各域 undo handler（Cell/Format/Row/Column 单域 14 + Fill/Row/Column 结构复合 7），`undo()/redo()` 委派 `UndoReplay`，engine **已删** `applyUndo`/`applyRedo` 中心 switch；完整性测试守全 kind 覆盖，未命中抛错。顺带修了行结构 redo 不重建 frozen/viewport 的 latent bug。 |
 | 6 | 抽离 layout state | ✅ | `DefaultLayoutState` 聚合根（`layout/LayoutState.ts`）自持 rowsAxis/colsAxis/frozen/viewport，engine 删 4 字段 + 8 方法并全部委派；两阶段生命周期 + push 模型；`rebuildViewAxis`/`rebuildViewColsAxis` 重复消除为单一 `recreateViewportPreserving`。纯重构零行为变化。 |
-| 7 | 抽离 format/merge 协调 | 🟡 | `format/FormatEventHandler` 已接入 `GridEventPipeline`；`format/FormatState.ts` 未接线。 |
+| 7 | 抽离 format/merge 协调 | 🟡 | 目录已迁入 `features/format`、`features/merge`；`FormatState.ts` 仍为接口骨架，mutation 编排仍在 `FormatController`。 |
 
 下一步候选：第 7 步（接线 `format/FormatState`，把 format/merge mutation 协调收口为领域聚合），收缩 `DefaultGridEngine` composer 体积。
 
@@ -66,8 +66,9 @@ Grid / runtime
 | `features/column/` | 列领域 |
 | `features/selection/` | 选区领域 |
 | `features/layout/` | 布局 state（axis/frozen/viewport） |
-| `format/` + `engine/format/` | 格式 store + mutation（待 format feature 收口） |
-| `engine/`（本目录） | 组合根、GridEngine facade、VisibleFormatResolver、MergeViewResolver |
+| `format/` | 格式 store + FormatController/EventHandler/Undo + VisibleFormatResolver |
+| `merge/` | MergeStore + MergeViewResolver |
+| `engine/`（本目录） | 组合根、GridEngine facade |
 
 ## 领域目录模板
 

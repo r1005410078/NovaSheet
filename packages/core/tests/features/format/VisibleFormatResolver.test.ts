@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'bun:test'
-import { VisibleFormatResolver } from '../../src/engine/VisibleFormatResolver'
-import { RangeStyleStore } from '../../src/format/RangeStyleStore'
-import { MergeStore } from '../../src/merge/MergeStore'
-import { CoordinateSpace } from '../../src/kernel/coords/CoordinateSpace'
-import type { DataSource } from '../../src/kernel/data/DataSource'
-import type { Schema } from '../../src/kernel/data/Schema'
-import { asRawRange } from '../../src/kernel/coords/coordinates'
+import { VisibleFormatResolver } from '../../../src/features/format/VisibleFormatResolver'
+import { RangeStyleStore } from '../../../src/features/format/RangeStyleStore'
+import { MergeStore } from '../../../src/features/merge/MergeStore'
+import { CoordinateSpace } from '../../../src/kernel/coords/CoordinateSpace'
+import type { DataSource } from '../../../src/kernel/data/DataSource'
+import type { Schema } from '../../../src/kernel/data/Schema'
+import { asRawRange } from '../../../src/kernel/coords/coordinates'
 
 const schema: Schema = {
   fields: [

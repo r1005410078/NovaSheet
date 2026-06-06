@@ -1,7 +1,7 @@
 import type { CellValue } from '../../kernel/data/Schema'
 import type { CellRange } from '../../features/selection/SelectionTypes'
-import type { FormatLayer } from '../../format/CellFormat'
-import type { MergeRegion } from '../../merge/MergeStore'
+import type { FormatLayer } from '../format/CellFormat'
+import type { MergeRegion } from '../merge/MergeStore'
 import type { CellWrite, UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 

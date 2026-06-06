@@ -1,7 +1,7 @@
-import type { FormatLayer } from '../../format/CellFormat'
-import type { RangeStyleStore } from '../../format/RangeStyleStore'
-import type { CellRange, GridSelection } from '../../features/selection/SelectionTypes'
-import type { MergeRegion, MergeStore } from '../../merge/MergeStore'
+import type { FormatLayer } from './CellFormat'
+import type { RangeStyleStore } from './RangeStyleStore'
+import type { CellRange, GridSelection } from '../selection/SelectionTypes'
+import type { MergeRegion, MergeStore } from '../merge/MergeStore'
 import type { RawRange } from '../../kernel/coords/coordinates'
 
 /** 格式/合并领域读取/写入 store 与坐标翻译的最小上下文。 */

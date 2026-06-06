@@ -1,4 +1,4 @@
-import type { CellRange } from '../features/selection/SelectionTypes'
+import type { CellRange } from '../selection/SelectionTypes'
 import type { BorderPreset, BorderStyle, CellBorders } from './CellFormat'
 
 /**
