@@ -1,6 +1,6 @@
 import type { DataSource } from '../../kernel/data/DataSource'
 import type { Field } from '../../kernel/data/Schema'
-import type { ContextMenuItem } from '../../interaction/ContextMenuModel'
+import type { ContextMenuItem } from '../context-menu/ContextMenuModel'
 
 export type ColumnHeaderMenuAction =
   | ContextMenuItem['id']

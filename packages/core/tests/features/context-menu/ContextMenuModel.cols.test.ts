@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import {
   getColumnHeaderStructuralMenuItems,
   type ContextMenuAction,
-} from '../../src/interaction/ContextMenuModel'
+} from '../../../src/features/context-menu/ContextMenuModel'
 
 describe('getColumnHeaderStructuralMenuItems', () => {
   it('返回 5 项（无 hidden）+ 6 项（有 hidden）', () => {

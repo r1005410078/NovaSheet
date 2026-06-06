@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'bun:test'
-import { FilterLayer } from '../../src/features/view/FilterLayer'
-import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
-import { SortLayer } from '../../src/features/view/SortLayer'
-import { ViewPipeline } from '../../src/features/view/ViewPipeline'
-import type { Schema } from '../../src/kernel/data/Schema'
+import { FilterLayer } from '../../../src/features/view/FilterLayer'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import { SortLayer } from '../../../src/features/view/SortLayer'
+import { ViewPipeline } from '../../../src/features/view/ViewPipeline'
+import type { Schema } from '../../../src/kernel/data/Schema'
 import {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
   type ContextMenuContext,
-} from '../../src/interaction/ContextMenuModel'
+} from '../../../src/features/context-menu/ContextMenuModel'
 
 const baseCtx: ContextMenuContext = {
   targetKind: 'cell',

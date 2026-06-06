@@ -106,7 +106,7 @@ export {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
   getRowHeaderContextMenuItems,
-} from './interaction/ContextMenuModel'
+} from './features/context-menu/ContextMenuModel'
 export type {
   CellMenuContext,
   ContextMenuAction,
@@ -114,7 +114,7 @@ export type {
   ContextMenuItem,
   ContextMenuTargetKind,
   RowHeaderMenuContext,
-} from './interaction/ContextMenuModel'
+} from './features/context-menu/ContextMenuModel'
 export { computeCellRect } from './kernel/interaction/CellLayout'
 export type { CellRect } from './kernel/interaction/CellLayout'
 

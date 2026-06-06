@@ -5,9 +5,9 @@
  * 根据选择状态和剪贴板可用性决定菜单项的启用/禁用状态。
  */
 
-import type { CellAddress, CellRange } from '../features/selection/SelectionTypes'
-import type { ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext } from '../features/view/ViewLayer'
-import type { ViewPipeline } from '../features/view/ViewPipeline'
+import type { CellAddress, CellRange } from '../selection/SelectionTypes'
+import type { ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext } from '../view/ViewLayer'
+import type { ViewPipeline } from '../view/ViewPipeline'
 
 export type ContextMenuTargetKind = 'cell' | 'columnHeader' | 'rowHeader'
 
