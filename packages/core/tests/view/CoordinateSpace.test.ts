@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { CoordinateSpace, type CoordinateContext } from '../../src/view/CoordinateSpace'
 import { asRawRange } from '../../src/view/coordinates'
-import type { DataSource } from '../../src/data/DataSource'
-import type { Schema } from '../../src/data/Schema'
+import type { DataSource } from '../../src/kernel/data/DataSource'
+import type { Schema } from '../../src/kernel/data/Schema'
 
 const schema: Schema = {
   fields: [

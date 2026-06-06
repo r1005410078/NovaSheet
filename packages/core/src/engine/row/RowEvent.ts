@@ -1,4 +1,4 @@
-import type { DeletedRowSnapshot } from '../../data/MutableDataSource'
+import type { DeletedRowSnapshot } from '../../kernel/data/MutableDataSource'
 
 /** 行领域事件：描述 row 领域已经完成的事实。 */
 export type RowDomainEvent =

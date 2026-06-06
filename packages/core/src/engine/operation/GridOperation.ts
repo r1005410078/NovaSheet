@@ -1,4 +1,4 @@
-import type { CellValue } from '../../data/Schema'
+import type { CellValue } from '../../kernel/data/Schema'
 import type { BorderPreset, BorderStyle, TextWrapMode } from '../../format/CellFormat'
 import type { RawRange } from '../../view/coordinates'
 import type { RowOperation } from '../row/RowOperation'

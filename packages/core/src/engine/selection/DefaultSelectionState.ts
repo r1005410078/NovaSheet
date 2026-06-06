@@ -15,7 +15,7 @@ import {
   remapColIndexAfterInsert,
   remapRowIndexAfterDelete,
   remapRowIndexAfterInsert,
-} from '../../coords/remap'
+} from '../../kernel/coords/remap'
 import {
   remapSelectionAfterViewRowsChanged,
   remapSelectionByRowIndexMap,

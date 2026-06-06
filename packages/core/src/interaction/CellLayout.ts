@@ -2,7 +2,7 @@
  * Phase 3.5 — 把单元格索引映射到屏幕矩形（CSS px，与 HitTest 同一套 region）。
  */
 
-import type { RenderFrame } from '../render/RenderFrame'
+import type { RenderFrame } from '../kernel/render/RenderFrame'
 import type { CellAddress } from '../engine/selection/SelectionTypes'
 
 export interface CellRect {

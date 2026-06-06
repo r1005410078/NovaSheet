@@ -4,7 +4,7 @@ import {
   applyPaste,
   type ApplyPasteSource,
 } from '../../src/clipboard/ApplyPaste'
-import type { Schema } from '../../src/data/Schema'
+import type { Schema } from '../../src/kernel/data/Schema'
 
 const schema: Schema = {
   fields: [

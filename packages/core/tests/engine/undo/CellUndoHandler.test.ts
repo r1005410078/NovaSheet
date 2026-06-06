@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 
 import { CellUndoHandler } from '../../../src/engine/undo/CellUndoHandler'
 import type { CellUndoContext } from '../../../src/engine/undo/UndoHandler'
-import type { CellValue } from '../../../src/data/Schema'
+import type { CellValue } from '../../../src/kernel/data/Schema'
 import type { CellRange } from '../../../src/engine/selection/SelectionTypes'
 import type { CellWrite, UndoCommand } from '../../../src/undo/UndoCommand'
 

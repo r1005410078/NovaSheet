@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
+import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
 import { FilterLayer } from '../../src/view/FilterLayer'
 import { SortLayer } from '../../src/view/SortLayer'
-import type { DataSource, DataSourceListener } from '../../src/data/DataSource'
-import type { CellValue, Row, Schema } from '../../src/data/Schema'
+import type { DataSource, DataSourceListener } from '../../src/kernel/data/DataSource'
+import type { CellValue, Row, Schema } from '../../src/kernel/data/Schema'
 import type { ApplyPasteSource, PasteTargetRect } from '../../src/clipboard/ApplyPaste'
 
 const schema: Schema = {

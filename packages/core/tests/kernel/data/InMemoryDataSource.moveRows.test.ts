@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../src'
+import { InMemoryDataSource } from '../../../src'
 
 describe('InMemoryDataSource.moveRows', () => {
   it('moves a contiguous row block before a target and emits rowsMoved', () => {

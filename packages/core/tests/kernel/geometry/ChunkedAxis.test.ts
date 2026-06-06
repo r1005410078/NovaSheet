@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis, CHUNK_SIZE } from '../../src/geometry/ChunkedAxis'
+import { ChunkedAxis, CHUNK_SIZE } from '../../../src/kernel/geometry/ChunkedAxis'
 
 describe('ChunkedAxis — 全默认尺寸', () => {
   it('totalSize = count × defaultSize', () => {

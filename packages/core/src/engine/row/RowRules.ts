@@ -1,4 +1,4 @@
-import { ChunkedAxis } from '../../geometry/ChunkedAxis'
+import { ChunkedAxis } from '../../kernel/geometry/ChunkedAxis'
 
 /** 行移动归一化后的计划；调用方据此执行 move 与 undo 反向 move。 */
 export interface RowMovePlan {

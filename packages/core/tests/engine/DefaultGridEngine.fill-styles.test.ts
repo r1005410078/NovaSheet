@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
+import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
 import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
 import { FilterLayer } from '../../src/view/FilterLayer'
 import { SortLayer } from '../../src/view/SortLayer'
 import type { BorderStyle, CellRange } from '../../src/index'
-import type { Row, Schema } from '../../src/data/Schema'
+import type { Row, Schema } from '../../src/kernel/data/Schema'
 
 const schema: Schema = {
   fields: [

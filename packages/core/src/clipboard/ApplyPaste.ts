@@ -1,6 +1,6 @@
-import type { MutableDataSource } from '../data/MutableDataSource'
+import type { MutableDataSource } from '../kernel/data/MutableDataSource'
 import type { CellAddress, CellRange } from '../engine/selection/SelectionTypes'
-import type { CellValue, Schema } from '../data/Schema'
+import type { CellValue, Schema } from '../kernel/data/Schema'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { PasteSkippedCell } from './types'
 

@@ -1,8 +1,8 @@
-import type { ChunkedAxis } from '../../geometry/ChunkedAxis'
-import type { DataSource } from '../../data/DataSource'
-import type { Field } from '../../data/Schema'
-import type { RemovedFieldSnapshot } from '../../data/MutableDataSource'
-import type { RenderFrameCollapsedColGap } from '../../render/RenderFrame'
+import type { ChunkedAxis } from '../../kernel/geometry/ChunkedAxis'
+import type { DataSource } from '../../kernel/data/DataSource'
+import type { Field } from '../../kernel/data/Schema'
+import type { RemovedFieldSnapshot } from '../../kernel/data/MutableDataSource'
+import type { RenderFrameCollapsedColGap } from '../../kernel/render/RenderFrame'
 import type {
   ColumnsDeleted,
   ColumnsHidden,

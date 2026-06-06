@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import type { DataSourceEvent } from '../src/data/DataSource'
-import type { MutableDataSource } from '../src/data/MutableDataSource'
-import type { CellValue } from '../src/data/Schema'
+import type { DataSourceEvent } from '../src/kernel/data/DataSource'
+import type { MutableDataSource } from '../src/kernel/data/MutableDataSource'
+import type { CellValue } from '../src/kernel/data/Schema'
 
 describe('Phase 4.5 type probes', () => {
   it('DataSourceEvent 含 rowsInserted / rowsDeleted', () => {

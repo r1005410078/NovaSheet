@@ -6,15 +6,15 @@
  */
 
 import type { DataSource } from '../data/DataSource'
-import type { ResolvedCellFormat } from '../format/CellFormat'
-import type { MergeRegion } from '../merge/MergeStore'
-import type { CellEditSession } from '../interaction/CellEditModel'
-import type { GridSelection } from '../engine/selection/SelectionTypes'
+import type { ResolvedCellFormat } from '../../format/CellFormat'
+import type { MergeRegion } from '../../merge/MergeStore'
+import type { CellEditSession } from '../../interaction/CellEditModel'
+import type { GridSelection } from '../../engine/selection/SelectionTypes'
 import type { Axis } from '../geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../geometry/Viewport'
 import type { Theme } from '../theme/Theme'
-import type { CollapsedGap } from '../view/HideRowsLayer'
-import type { ViewPipeline } from '../view/ViewPipeline'
+import type { CollapsedGap } from '../../view/HideRowsLayer'
+import type { ViewPipeline } from '../../view/ViewPipeline'
 
 /**
  * Phase 4.5 — `RenderFrame` 中的折叠行间隙，扩展 `CollapsedGap` 加入像素坐标。

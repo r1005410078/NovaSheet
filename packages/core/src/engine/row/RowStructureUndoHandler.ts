@@ -1,4 +1,4 @@
-import type { DeletedRowSnapshot } from '../../data/MutableDataSource'
+import type { DeletedRowSnapshot } from '../../kernel/data/MutableDataSource'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'
 import type { GridSelection } from '../selection/SelectionTypes'

@@ -4,7 +4,7 @@
  * 命中区在列头底边与行号列右边；由 web 层 `DomHandleLayer` 落成 DOM 节点。
  */
 
-import type { RenderFrame } from '../render/RenderFrame'
+import type { RenderFrame } from '../kernel/render/RenderFrame'
 
 export const RESIZE_HANDLE_HIT_SIZE = 8
 export const MIN_RESIZE_SIZE = 20

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { tokenize, wrapText, type TextMeasurer } from '../../src/measure/TextMeasurer'
+import { tokenize, wrapText, type TextMeasurer } from '../../../src/kernel/measure/TextMeasurer'
 
 /** 测试用 measurer——每字符宽度固定 7px。`text.length × 7`。 */
 const fixedWidth: TextMeasurer = {

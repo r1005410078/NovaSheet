@@ -1,4 +1,4 @@
-import type { CellValue } from '../../data/Schema'
+import type { CellValue } from '../../kernel/data/Schema'
 import type { CellRange } from '../selection/SelectionTypes'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'

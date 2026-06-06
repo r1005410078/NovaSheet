@@ -1,6 +1,6 @@
-import { ChunkedAxis } from '../../geometry/ChunkedAxis'
-import { VisibleColumnsDataSource } from '../../data/VisibleColumnsDataSource'
-import { isMutableDataSource } from '../../data/MutableDataSource'
+import { ChunkedAxis } from '../../kernel/geometry/ChunkedAxis'
+import { VisibleColumnsDataSource } from '../../kernel/data/VisibleColumnsDataSource'
+import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import {
   buildColIndexMap,
   captureRawColWidths,
@@ -9,10 +9,10 @@ import {
   normalizeDeleteCols,
   normalizeMoveCols,
 } from './ColumnRules'
-import type { DataSource } from '../../data/DataSource'
-import type { Field } from '../../data/Schema'
-import type { MutableDataSource, RemovedFieldSnapshot } from '../../data/MutableDataSource'
-import type { RenderFrameCollapsedColGap } from '../../render/RenderFrame'
+import type { DataSource } from '../../kernel/data/DataSource'
+import type { Field } from '../../kernel/data/Schema'
+import type { MutableDataSource, RemovedFieldSnapshot } from '../../kernel/data/MutableDataSource'
+import type { RenderFrameCollapsedColGap } from '../../kernel/render/RenderFrame'
 import type {
   ColumnsDeleted,
   ColumnsHidden,

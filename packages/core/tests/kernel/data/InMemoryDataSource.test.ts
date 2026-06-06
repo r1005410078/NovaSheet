@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
-import type { Schema } from '../../src/data/Schema'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
+import type { Schema } from '../../../src/kernel/data/Schema'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
 
 const SCHEMA: Schema = {
   fields: [

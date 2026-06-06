@@ -2,7 +2,7 @@
  * Phase 3.5 — 编辑会话状态（core 纯逻辑，DOM 在 web 层）。
  */
 
-import type { FieldType } from '../data/Schema'
+import type { FieldType } from '../kernel/data/Schema'
 import type { CellAddress } from '../engine/selection/SelectionTypes'
 
 export interface CellEditSession {

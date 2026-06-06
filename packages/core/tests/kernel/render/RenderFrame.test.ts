@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import { DefaultGridEngine } from '../../../src/engine/DefaultGridEngine'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import { denseGridTheme } from '../../../src/kernel/theme/denseGridTheme'
 
 describe('RenderFrame.collapsedRowGaps', () => {
   it('hide 行后 frame.collapsedRowGaps 含一项 + yPx 落在 view-row 下边界', () => {

@@ -7,7 +7,7 @@ import {
   normalizeRange,
   rangesIntersect,
   unionRange,
-} from '../../src/geometry/range'
+} from '../../../src/kernel/geometry/range'
 
 const r = { startRow: 1, endRow: 3, startCol: 1, endCol: 3 }
 

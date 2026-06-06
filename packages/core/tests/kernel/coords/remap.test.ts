@@ -4,7 +4,7 @@ import {
   remapColIndexAfterInsert,
   remapRowIndexAfterInsert,
   remapRowIndexAfterDelete,
-} from '../../src/coords/remap'
+} from '../../../src/kernel/coords/remap'
 
 describe('remapRowIndexAfterInsert', () => {
   it('行在 at 之前 → 不动', () => {

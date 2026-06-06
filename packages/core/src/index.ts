@@ -5,14 +5,14 @@
 // Programmatic engine access: use DefaultGridEngine here.
 
 // 数据层
-export { InMemoryDataSource } from './data/InMemoryDataSource'
-export type { CellValue, Field, FieldType, Row, Schema } from './data/Schema'
-export type { DataSource, DataSourceEvent, DataSourceListener } from './data/DataSource'
-export { isMutableDataSource } from './data/MutableDataSource'
-export type { MutableDataSource, RemovedFieldSnapshot } from './data/MutableDataSource'
+export { InMemoryDataSource } from './kernel/data/InMemoryDataSource'
+export type { CellValue, Field, FieldType, Row, Schema } from './kernel/data/Schema'
+export type { DataSource, DataSourceEvent, DataSourceListener } from './kernel/data/DataSource'
+export { isMutableDataSource } from './kernel/data/MutableDataSource'
+export type { MutableDataSource, RemovedFieldSnapshot } from './kernel/data/MutableDataSource'
 
 // 主题层
-export { denseGridTheme } from './theme/denseGridTheme'
+export { denseGridTheme } from './kernel/theme/denseGridTheme'
 export type {
   IconDef,
   Theme,
@@ -24,14 +24,14 @@ export type {
   ThemeIcons,
   ThemeMetrics,
   ThemeScrollbar,
-} from './theme/Theme'
+} from './kernel/theme/Theme'
 
 // 布局层
-export { ChunkedAxis, CHUNK_SIZE } from './geometry/ChunkedAxis'
-export { Viewport } from './geometry/Viewport'
-export { FrozenRegions } from './geometry/FrozenRegions'
-export { columnIndexToLetter } from './geometry/columnLetter'
-export type { Axis, MutableAxis } from './geometry/ChunkedAxis'
+export { ChunkedAxis, CHUNK_SIZE } from './kernel/geometry/ChunkedAxis'
+export { Viewport } from './kernel/geometry/Viewport'
+export { FrozenRegions } from './kernel/geometry/FrozenRegions'
+export { columnIndexToLetter } from './kernel/geometry/columnLetter'
+export type { Axis, MutableAxis } from './kernel/geometry/ChunkedAxis'
 export type {
   ColBand,
   FrozenConfig,
@@ -39,7 +39,7 @@ export type {
   RenderRegion,
   RenderRegionId,
   RowBand,
-} from './geometry/FrozenRegions'
+} from './kernel/geometry/FrozenRegions'
 export { DefaultGridEngine } from './engine/DefaultGridEngine'
 export type {
   FillCommitResult,
@@ -63,8 +63,8 @@ export type {
   RenderFrame,
   RenderFrameCollapsedColGap,
   RenderFrameCollapsedGap,
-} from './render/RenderFrame'
-export type { ViewportSnapshot } from './geometry/Viewport'
+} from './kernel/render/RenderFrame'
+export type { ViewportSnapshot } from './kernel/geometry/Viewport'
 
 // 交互层（Phase 3）
 export type {
@@ -138,7 +138,7 @@ export {
   normalizeRange,
   rangesIntersect,
   unionRange,
-} from './geometry/range'
+} from './kernel/geometry/range'
 export type { FillDimensions, FillDirection, FillTarget } from './fill/FillTarget'
 export { computeFillWrites } from './fill/FillSeries'
 export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'
@@ -163,11 +163,11 @@ export type {
 } from './view/ViewLayer'
 
 // Utility — exported so @novasheet/web can share RAF scheduling
-export { FrameScheduler } from './util/raf'
+export { FrameScheduler } from './kernel/util/raf'
 
 // 度量层（M3 autofit）
-export { tokenize, wrapText } from './measure/TextMeasurer'
-export type { TextMeasurer, WrapOptions, WrappedText } from './measure/TextMeasurer'
+export { tokenize, wrapText } from './kernel/measure/TextMeasurer'
+export type { TextMeasurer, WrapOptions, WrappedText } from './kernel/measure/TextMeasurer'
 export { autofitRowHeights } from './engine/AutofitRowHeights'
 export type { AutofitRowsParams, AutofitRowsResult } from './engine/AutofitRowHeights'
 export type { UndoCommand, CellWrite } from './undo/UndoCommand'

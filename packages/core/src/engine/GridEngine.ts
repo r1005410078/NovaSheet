@@ -4,9 +4,9 @@
  * 持有数据、主题、行列轴、冻结区、viewport 与逻辑滚动；不含 DOM / canvas。
  */
 
-import type { DataSource } from '../data/DataSource'
-import type { Field } from '../data/Schema'
-import type { RemovedFieldSnapshot } from '../data/MutableDataSource'
+import type { DataSource } from '../kernel/data/DataSource'
+import type { Field } from '../kernel/data/Schema'
+import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
 import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../format/CellFormat'
 import type { MergeRegion } from '../merge/MergeStore'
@@ -19,11 +19,11 @@ import type {
   GridSelection,
   SelectCellOptions,
 } from './selection/SelectionTypes'
-import type { Axis } from '../geometry/ChunkedAxis'
-import type { FrozenConfig } from '../geometry/FrozenRegions'
-import type { Viewport } from '../geometry/Viewport'
-import type { RenderFrame } from '../render/RenderFrame'
-import type { Theme } from '../theme/Theme'
+import type { Axis } from '../kernel/geometry/ChunkedAxis'
+import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
+import type { Viewport } from '../kernel/geometry/Viewport'
+import type { RenderFrame } from '../kernel/render/RenderFrame'
+import type { Theme } from '../kernel/theme/Theme'
 
 /**
  * `DefaultGridEngine` 构造参数。

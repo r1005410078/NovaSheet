@@ -1,5 +1,5 @@
-import type { RenderRegion } from '../geometry/FrozenRegions'
-import type { RenderFrame } from '../render/RenderFrame'
+import type { RenderRegion } from '../kernel/geometry/FrozenRegions'
+import type { RenderFrame } from '../kernel/render/RenderFrame'
 import type { CellAddress } from '../engine/selection/SelectionTypes'
 
 export interface HitTestPoint {

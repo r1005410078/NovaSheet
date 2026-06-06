@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { DataSource } from '../../src/data/DataSource'
+import type { DataSource } from '../../src/kernel/data/DataSource'
 import { findViewRow, resolveUnderlyingRow } from '../../src/view/coordinates'
 
 const identitySource: DataSource = {

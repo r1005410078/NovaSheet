@@ -1,7 +1,7 @@
-import type { DataSource, DataSourceEvent, DataSourceListener } from '../data/DataSource'
-import { isMutableDataSource } from '../data/MutableDataSource'
-import type { MutableDataSource } from '../data/MutableDataSource'
-import type { CellValue, Field, Row, Schema } from '../data/Schema'
+import type { DataSource, DataSourceEvent, DataSourceListener } from '../kernel/data/DataSource'
+import { isMutableDataSource } from '../kernel/data/MutableDataSource'
+import type { MutableDataSource } from '../kernel/data/MutableDataSource'
+import type { CellValue, Field, Row, Schema } from '../kernel/data/Schema'
 import type {
   ColumnHeaderMenuContext,
   ColumnHeaderMenuItem,

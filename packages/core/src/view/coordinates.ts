@@ -1,4 +1,4 @@
-import type { DataSource } from '../data/DataSource'
+import type { DataSource } from '../kernel/data/DataSource'
 import type { CellRange } from '../engine/selection/SelectionTypes'
 
 /**

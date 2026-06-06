@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
+import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
 import { FilterLayer } from '../../src/view/FilterLayer'
 import { SortLayer } from '../../src/view/SortLayer'
 import { ViewPipeline } from '../../src/view/ViewPipeline'

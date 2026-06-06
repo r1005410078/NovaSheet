@@ -3,8 +3,8 @@ import { VisibleFormatResolver } from '../../src/engine/VisibleFormatResolver'
 import { RangeStyleStore } from '../../src/format/RangeStyleStore'
 import { MergeStore } from '../../src/merge/MergeStore'
 import { CoordinateSpace } from '../../src/view/CoordinateSpace'
-import type { DataSource } from '../../src/data/DataSource'
-import type { Schema } from '../../src/data/Schema'
+import type { DataSource } from '../../src/kernel/data/DataSource'
+import type { Schema } from '../../src/kernel/data/Schema'
 import { asRawRange } from '../../src/view/coordinates'
 
 const schema: Schema = {

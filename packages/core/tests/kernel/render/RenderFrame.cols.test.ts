@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
-import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import { DefaultGridEngine } from '../../../src/engine/DefaultGridEngine'
+import { denseGridTheme } from '../../../src/kernel/theme/denseGridTheme'
 
 describe('RenderFrame.collapsedColGaps', () => {
   it('hide cols 后 frame.collapsedColGaps 含一项 + xPx 落在 view-col 右边界', () => {

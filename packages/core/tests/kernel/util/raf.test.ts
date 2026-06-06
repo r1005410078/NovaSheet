@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
-import { stubGlobal, unstubAllGlobals } from '../helpers/global-stub'
-import { FrameScheduler } from '../../src/util/raf'
+import { stubGlobal, unstubAllGlobals } from '../../helpers/global-stub'
+import { FrameScheduler } from '../../../src/kernel/util/raf'
 
 describe('FrameScheduler — RAF 调度', () => {
   let rafs: Array<() => void> = []

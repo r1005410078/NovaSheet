@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { Field, FieldType, Schema } from '../../src/data/Schema'
+import type { Field, FieldType, Schema } from '../../../src/kernel/data/Schema'
 
 describe('Schema — 类型契约', () => {
   it('FieldType 覆盖 Phase1 七种类型', () => {

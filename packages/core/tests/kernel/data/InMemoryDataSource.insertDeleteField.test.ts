@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import type { DataSourceEvent } from '../../src/data/DataSource'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
-import type { Field } from '../../src/data/Schema'
+import type { DataSourceEvent } from '../../../src/kernel/data/DataSource'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import type { Field } from '../../../src/kernel/data/Schema'
 
 const baseSchema = {
   fields: [

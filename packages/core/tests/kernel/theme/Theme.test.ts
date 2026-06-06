@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import { denseGridTheme } from '../../../src/kernel/theme/denseGridTheme'
 
 describe('denseGridTheme — Phase 4.0 menu tokens', () => {
   it('exposes menuItemHover (defaulting to hoverRowBg value)', () => {

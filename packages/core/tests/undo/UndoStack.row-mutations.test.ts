@@ -2,8 +2,8 @@
 // Task 10 落地后移除了 @ts-expect-error 标注，4 项测试全部 GREEN。
 import { describe, expect, it } from 'bun:test'
 import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
+import { denseGridTheme } from '../../src/kernel/theme/denseGridTheme'
 
 const schema = { fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 100 }] }
 

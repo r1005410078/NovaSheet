@@ -1,6 +1,6 @@
-import type { ChunkedAxis } from '../../geometry/ChunkedAxis'
-import type { DataSource } from '../../data/DataSource'
-import type { DeletedRowSnapshot } from '../../data/MutableDataSource'
+import type { ChunkedAxis } from '../../kernel/geometry/ChunkedAxis'
+import type { DataSource } from '../../kernel/data/DataSource'
+import type { DeletedRowSnapshot } from '../../kernel/data/MutableDataSource'
 import type { CollapsedGap } from '../../view/HideRowsLayer'
 import type { RowsDeleted, RowsHidden, RowsInserted, RowsMoved, RowsUnhidden } from './RowEvent'
 import type {

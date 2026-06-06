@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { serializeRowsToTsv, parseTsvToCells } from '../../src/clipboard/TsvFormat'
-import type { Schema } from '../../src/data/Schema'
+import type { Schema } from '../../src/kernel/data/Schema'
 
 const schema: Schema = {
   fields: [

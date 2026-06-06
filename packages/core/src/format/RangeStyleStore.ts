@@ -2,12 +2,12 @@ import type { CellRange } from '../engine/selection/SelectionTypes'
 import type { RawRange } from '../view/coordinates'
 import type { BorderPreset, BorderStyle, CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
 import { borderPatchForCell } from './BorderPreset'
-import { isCellInRange, rangesIntersect } from '../geometry/range'
+import { isCellInRange, rangesIntersect } from '../kernel/geometry/range'
 import {
   remapSpanAfterDelete,
   remapSpanAfterInsert,
   remapSpanByIndexMap,
-} from '../coords/remap'
+} from '../kernel/coords/remap'
 
 /** Append-only sparse manual format store. Later layers win over earlier ones. */
 export class RangeStyleStore {

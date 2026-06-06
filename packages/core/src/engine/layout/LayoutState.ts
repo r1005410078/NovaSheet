@@ -1,9 +1,9 @@
-import type { ChunkedAxis } from '../../geometry/ChunkedAxis'
-import { FrozenRegions } from '../../geometry/FrozenRegions'
-import type { FrozenConfig } from '../../geometry/FrozenRegions'
-import { Viewport } from '../../geometry/Viewport'
-import type { Theme } from '../../theme/Theme'
-import type { Schema } from '../../data/Schema'
+import type { ChunkedAxis } from '../../kernel/geometry/ChunkedAxis'
+import { FrozenRegions } from '../../kernel/geometry/FrozenRegions'
+import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
+import { Viewport } from '../../kernel/geometry/Viewport'
+import type { Theme } from '../../kernel/theme/Theme'
+import type { Schema } from '../../kernel/data/Schema'
 
 /** excel 风格 row header 的最小 gutter 宽度（与抽离前 engine 常量一致）。 */
 const DEFAULT_EXCEL_ROW_HEADER_WIDTH = 44

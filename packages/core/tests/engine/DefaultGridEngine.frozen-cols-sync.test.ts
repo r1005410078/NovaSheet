@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../src/data/InMemoryDataSource'
+import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
 import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import { denseGridTheme } from '../../src/kernel/theme/denseGridTheme'
 
 function mkEngine(leftCols: number, rightCols: number, totalCols = 6) {
   const fields = Array.from({ length: totalCols }, (_, i) => ({

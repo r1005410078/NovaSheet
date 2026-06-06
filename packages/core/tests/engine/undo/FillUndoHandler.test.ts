@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 
 import { FillUndoHandler } from '../../../src/engine/undo/FillUndoHandler'
 import type { FillUndoContext } from '../../../src/engine/undo/FillUndoHandler'
-import type { CellValue } from '../../../src/data/Schema'
+import type { CellValue } from '../../../src/kernel/data/Schema'
 import type { CellRange } from '../../../src/engine/selection/SelectionTypes'
 import type { FormatLayer } from '../../../src/format/CellFormat'
 import type { MergeRegion } from '../../../src/merge/MergeStore'

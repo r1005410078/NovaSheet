@@ -2,7 +2,7 @@
  * Phase 3.3 — 计算将单元格滚入视口所需的最小逻辑滚动偏移。
  */
 
-import type { Axis } from '../geometry/ChunkedAxis'
+import type { Axis } from '../kernel/geometry/ChunkedAxis'
 
 export interface ScrollRevealInput {
   readonly rowIndex: number

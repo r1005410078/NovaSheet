@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test'
-import type { DataSourceEvent } from '../src/data/DataSource'
+import type { DataSourceEvent } from '../src/kernel/data/DataSource'
 import type {
   MutableDataSource,
   RemovedFieldSnapshot,
-} from '../src/data/MutableDataSource'
-import type { Field } from '../src/data/Schema'
+} from '../src/kernel/data/MutableDataSource'
+import type { Field } from '../src/kernel/data/Schema'
 import type { UndoCommand } from '../src/undo/UndoCommand'
 
 const emptySelection = {

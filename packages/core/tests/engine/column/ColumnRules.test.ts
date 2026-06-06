@@ -8,8 +8,8 @@ import {
   normalizeDeleteCols,
   normalizeMoveCols,
 } from '../../../src/engine/column/ColumnRules'
-import { ChunkedAxis } from '../../../src/geometry/ChunkedAxis'
-import type { Field } from '../../../src/data/Schema'
+import { ChunkedAxis } from '../../../src/kernel/geometry/ChunkedAxis'
+import type { Field } from '../../../src/kernel/data/Schema'
 
 function fields(ids: string[]): Field[] {
   return ids.map((id) => ({ id, name: id, type: 'text', width: 80 }))

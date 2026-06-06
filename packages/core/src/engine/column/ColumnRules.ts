@@ -1,5 +1,5 @@
-import type { ChunkedAxis } from '../../geometry/ChunkedAxis'
-import type { Field } from '../../data/Schema'
+import type { ChunkedAxis } from '../../kernel/geometry/ChunkedAxis'
+import type { Field } from '../../kernel/data/Schema'
 
 /** 列移动归一化后的计划。 */
 export interface ColumnMovePlan {

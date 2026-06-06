@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { denseGridTheme } from '../../src/theme/denseGridTheme'
+import { denseGridTheme } from '../../../src/kernel/theme/denseGridTheme'
 
 describe('denseGridTheme — 默认主题', () => {
   it('暴露紧凑表格 metrics', () => {

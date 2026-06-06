@@ -1,5 +1,5 @@
-import type { DataSource } from '../data/DataSource'
-import type { CellValue } from '../data/Schema'
+import type { DataSource } from '../kernel/data/DataSource'
+import type { CellValue } from '../kernel/data/Schema'
 import type { CellRange } from '../engine/selection/SelectionTypes'
 import type { FillDirection } from './FillTarget'
 

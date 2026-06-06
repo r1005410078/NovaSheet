@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis } from '../../src/geometry/ChunkedAxis'
-import { FrozenRegions } from '../../src/geometry/FrozenRegions'
+import { ChunkedAxis } from '../../../src/kernel/geometry/ChunkedAxis'
+import { FrozenRegions } from '../../../src/kernel/geometry/FrozenRegions'
 
 describe('FrozenRegions — M3 冻结区域', () => {
   it('按顶部行、左侧列、右侧列把 viewport 切成 2x3 个区域', () => {

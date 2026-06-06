@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../../src/data/InMemoryDataSource'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
 import { DefaultColumnStructure } from '../../../src/engine/column/DefaultColumnStructure'
-import type { DataSource } from '../../../src/data/DataSource'
+import type { DataSource } from '../../../src/kernel/data/DataSource'
 
 const DEFAULT_WIDTH = 80
 

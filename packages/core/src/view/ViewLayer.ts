@@ -1,5 +1,5 @@
-import type { DataSource } from '../data/DataSource'
-import type { Field } from '../data/Schema'
+import type { DataSource } from '../kernel/data/DataSource'
+import type { Field } from '../kernel/data/Schema'
 import type { ContextMenuItem } from '../interaction/ContextMenuModel'
 
 export type ColumnHeaderMenuAction =

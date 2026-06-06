@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis } from '../../src/geometry/ChunkedAxis'
-import { FrozenRegions } from '../../src/geometry/FrozenRegions'
-import { Viewport } from '../../src/geometry/Viewport'
+import { ChunkedAxis } from '../../../src/kernel/geometry/ChunkedAxis'
+import { FrozenRegions } from '../../../src/kernel/geometry/FrozenRegions'
+import { Viewport } from '../../../src/kernel/geometry/Viewport'
 
 describe('Viewport — regions 快照', () => {
   function setup() {

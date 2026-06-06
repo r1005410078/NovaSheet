@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { DefaultLayoutState } from '../../../src/engine/layout/LayoutState'
-import { denseGridTheme } from '../../../src/theme/denseGridTheme'
-import type { Schema } from '../../../src/data/Schema'
-import { ChunkedAxis } from '../../../src/geometry/ChunkedAxis'
+import { denseGridTheme } from '../../../src/kernel/theme/denseGridTheme'
+import type { Schema } from '../../../src/kernel/data/Schema'
+import { ChunkedAxis } from '../../../src/kernel/geometry/ChunkedAxis'
 
 function axis(count: number, defaultSize: number): ChunkedAxis {
   return new ChunkedAxis({ count, defaultSize })
