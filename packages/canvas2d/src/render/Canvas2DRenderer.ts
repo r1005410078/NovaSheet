@@ -242,7 +242,7 @@ export class Canvas2DRenderer implements RenderBackend {
     this.scheduler.cancel(RENDERER_KEY)
   }
 
-  /** `RenderBackend` 过渡 stub：canvas 由 `Canvas2DBackend` 创建，尚未迁到 mount。 */
+  /** `RenderBackend` 过渡 stub：canvas 由 `canvas2dBackend` 工厂创建，尚未迁到 mount。 */
   mount(container: HTMLElement): void {
     void container
   }

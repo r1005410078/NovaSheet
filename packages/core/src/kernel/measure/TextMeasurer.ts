@@ -25,6 +25,8 @@ export interface TextMeasurer {
    * @param font Canvas2D 风格的 font 字符串，例如 `'12px sans-serif'`
    */
   measureWidth(text: string, font: string): number
+  /** 主动失效内部度量缓存（带缓存的实现提供；主题 / 字段 schema 变更时由调用方调一次）。 */
+  clearCache?(): void
 }
 
 /** 换行结果：一行字符串数组 + 总高度（line count × lineHeight）。 */

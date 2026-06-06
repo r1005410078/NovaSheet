@@ -17,7 +17,8 @@ import type {
   SortLayer,
   ViewPipeline,
 } from '@novasheet/core'
-import { Canvas2DBackend } from './backends/Canvas2DBackend'
+import { GridControllerImpl } from '@novasheet/core'
+import { canvas2dBackend } from '@novasheet/canvas2d'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
@@ -95,16 +96,21 @@ export class Grid {
 
     switch (backend) {
       case 'canvas2d':
-        this.delegate = new Canvas2DBackend(container, engineOptions, {
-          onContextMenuAction: options.onContextMenuAction,
-          onCopy: options.onCopy,
-          onCut: options.onCut,
-          onPaste: options.onPaste,
-          onPasteSkipped: options.onPasteSkipped,
-          onUndo: options.onUndo,
-          onRedo: options.onRedo,
-          onFill: options.onFill,
-        })
+        this.delegate = new GridControllerImpl(
+          container,
+          engineOptions,
+          {
+            onContextMenuAction: options.onContextMenuAction,
+            onCopy: options.onCopy,
+            onCut: options.onCut,
+            onPaste: options.onPaste,
+            onPasteSkipped: options.onPasteSkipped,
+            onUndo: options.onUndo,
+            onRedo: options.onRedo,
+            onFill: options.onFill,
+          },
+          canvas2dBackend,
+        )
         break
       default:
         throw new Error(`NovaSheet: renderer "${backend as string}" is not implemented`)

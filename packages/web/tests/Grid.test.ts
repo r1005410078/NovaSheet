@@ -23,7 +23,7 @@ function makeData() {
   })
 }
 
-/** Reach Canvas2DBackend internals (facade hides delegate). */
+/** Reach GridControllerImpl internals (facade hides delegate). */
 function canvas2dDelegate(grid: Grid) {
   return (
     grid as unknown as {
@@ -58,7 +58,7 @@ function canvas2dDelegate(grid: Grid) {
           }
           getData: () => DataSource
         }
-        highDpi: { resize: (w: number, h: number) => void }
+        handle: { resizeSurface: (w: number, h: number) => void }
         getViewPipeline: () => unknown
       }
     }
@@ -455,8 +455,8 @@ describe('Grid — 浏览器门面', () => {
 
     const viewport = canvas2dDelegate(grid).engine.getViewport()
     const setSizeSpy = spyOn(viewport, 'setSize')
-    const highDpi = canvas2dDelegate(grid).highDpi
-    const resizeSpy = spyOn(highDpi, 'resize')
+    const handle = canvas2dDelegate(grid).handle
+    const resizeSpy = spyOn(handle, 'resizeSurface')
 
     Object.defineProperty(el, 'clientWidth', { value: 500, configurable: true })
     Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true })

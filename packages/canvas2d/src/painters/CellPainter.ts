@@ -46,7 +46,7 @@ export interface CellPaintParams {
 export interface CellPainterOptions {
   /**
    * 文本量度器，wrap 模式下用来度量每行宽度。未提供时 `field.wrap` 退化为单行截断。
-   * Canvas2DBackend 会注入 `Canvas2DTextMeasurer` 实例。
+   * `canvas2dBackend` 工厂会注入 `Canvas2DTextMeasurer` 实例。
    */
   measurer?: TextMeasurer
 }

@@ -62,6 +62,9 @@ export type {
   FilterChangeEvent,
 } from './runtime/GridController'
 
-// —— TRANSITIONAL(web-into-core): GridRuntime 仍在 web 的 Canvas2DBackend 中消费；Task 5 删除。
+// —— TRANSITIONAL(web-into-core): GridRuntime 仍由 web index 公开转发；Task 6 评估收口。
 export { GridRuntime } from './runtime/GridRuntime'
 export type { GridRuntimeOptions } from './runtime/GridRuntime'
+// —— TRANSITIONAL(web-into-core): 通用 GridController 装配层；web 的 Grid 经注入 backend 工厂消费。
+//    Task 6 评估是否内部化。grep 锚点：TRANSITIONAL(web-into-core)
+export { GridControllerImpl } from './runtime/GridControllerImpl'

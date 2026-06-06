@@ -1,56 +1,57 @@
 /**
- * Canvas2DBackend——`Grid` facade 在 `renderer: 'canvas2d'` 时使用的后端实现。
+ * GridControllerImpl——平台无关的 `GridController` 通用装配层。
  *
- * 把 `DefaultGridEngine` + `DomGridHost` + `Canvas2DRenderer` + `GridRuntime`
- * 装配成一个 `GridController`，对外暴露公共 API。其他渲染器（WebGL/WebGPU）
- * 实现各自的 `Backend` 即可，`Grid` 选择器根据 options 切换。
+ * 把 `DefaultGridEngine` + `DomGridHost` + `GridRuntime` + 全部 DOM 交互层
+ * 装配成一个 `GridController`，对外暴露公共 API。渲染表面（canvas / HighDPI /
+ * renderer / measurer）由注入的 `RenderBackendFactory` 创建——本层不依赖任何
+ * 具体渲染后端（canvas2d/webgl），从而反转 core→backend 的依赖方向。
  *
  * 不变量：
- *   - 单实例只有一个 canvas、一个 host、一个 runtime
- *   - canvas 由 backend 拥有（renderer 不再自己 mount canvas，方便后端切换）
+ *   - 单实例只有一个 host、一个 runtime、一个后端 handle
+ *   - 绘制 surface 由后端 handle 拥有（renderer 不自己 mount canvas，方便切后端）
  *   - `setData` 时换 renderer（轴 / viewport 重建后旧 renderer 引用已失效）
+ *
+ * Host 回调在 `attach()` 之后才触发，故可在 `this.runtime` 赋值后安全闭包引用。
  */
 
-import {
-  DefaultGridEngine,
-  FilterLayer,
-  FrameScheduler,
-  SortLayer,
-  ViewPipeline,
-  type BorderPreset,
-  type BorderStyle,
-  type TextWrapMode,
-  type CellRange,
-  type ContextMenuItem,
-  type ContextMenuAction,
-  type ContextMenuContext,
-  type DataSource,
-  type Field,
-  type FilterSpec,
-  type FrozenConfig,
-  type GridEngineOptions,
-  type GridSelection,
-  type PasteSkippedCell,
-  type SortSpec,
-  type Theme,
-  type ViewLayerChange,
-} from '@novasheet/core'
-import { Canvas2DRenderer, Canvas2DTextMeasurer, HighDPI } from '@novasheet/canvas2d'
-import {
-  DomClipboardAdapter,
-  DomCellEditor,
-  DomContextMenuLayer,
-  DomFillHandleLayer,
-  DomHandleLayer,
-  HideToggleHandle,
-  HideColToggleHandle,
-  FilterPopover,
-  RowHeightPopover,
-  ColumnWidthPopover,
-  ColumnReorderOverlay,
-  RowReorderOverlay,
-  SelectionOverlay,
-} from '@novasheet/core'
+import { DefaultGridEngine } from '../../engine/DefaultGridEngine'
+import { FilterLayer } from '../../features/view/FilterLayer'
+import { SortLayer } from '../../features/view/SortLayer'
+import { ViewPipeline } from '../../features/view/ViewPipeline'
+import { FrameScheduler } from '../../kernel/util/raf'
+import type { BorderPreset, BorderStyle, TextWrapMode } from '../../kernel/protocol/FormatTypes'
+import type { CellRange } from '../../kernel/coords/SelectionTypes'
+import type {
+  ContextMenuItem,
+  ContextMenuAction,
+  ContextMenuContext,
+} from '../../features/context-menu/ContextMenuModel'
+import type { DataSource } from '../../kernel/data/DataSource'
+import type { Field } from '../../kernel/data/Schema'
+import type { FilterSpec } from '../../features/view/FilterLayer'
+import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
+import type { GridEngineOptions } from '../../engine/GridEngine'
+import type { GridSelection } from '../../kernel/coords/SelectionTypes'
+import type { PasteSkippedCell } from '../../features/clipboard/types'
+import type { SortSpec } from '../../features/view/SortLayer'
+import type { Theme } from '../../kernel/theme/Theme'
+import type { TextMeasurer } from '../../kernel/measure/TextMeasurer'
+import type { ViewLayerChange } from '../../features/view/ViewLayer'
+import { DomCellEditor } from '../interaction/DomCellEditor'
+import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
+import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
+import { DomHandleLayer } from '../interaction/DomHandleLayer'
+import { DomGridHost } from '../host/DomGridHost'
+import { GridRuntime } from './GridRuntime'
+import { DomClipboardAdapter } from '../clipboard/DomClipboardAdapter'
+import { HideToggleHandle } from '../interaction/handle/HideToggleHandle'
+import { HideColToggleHandle } from '../interaction/handle/HideColToggleHandle'
+import { FilterPopover } from '../overlay/FilterPopover'
+import { RowHeightPopover } from '../overlay/RowHeightPopover'
+import { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
+import { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
+import { RowReorderOverlay } from '../overlay/RowReorderOverlay'
+import { SelectionOverlay } from '../overlay/SelectionOverlay'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
@@ -59,34 +60,31 @@ import type {
   GridPublicEventMap,
   SortChangeEvent,
   ViewChangeEvent,
-} from '@novasheet/core'
-import type { FillEvent, RedoEvent, UndoEvent } from '@novasheet/core'
-import { DomGridHost, GridRuntime } from '@novasheet/core'
+  FillEvent,
+  RedoEvent,
+  UndoEvent,
+} from './GridController'
+import type { RenderBackend, RenderBackendFactory, RenderBackendHandle } from '../../ports/RenderBackend'
 
 /**
- * Canvas2D 渲染后端装配（`Grid` 在 `renderer: 'canvas2d'` 时使用）。
+ * 通用 Grid 装配（`Grid` facade 转发到此）。
  *
  * 职责划分：
- *   - 本类：创建 canvas / HighDPI / `Canvas2DRenderer`，并交给 `GridRuntime` 编排
+ *   - 本类：装配 engine / host / runtime / DOM 层，并经注入的 backend 工厂拿到 renderer
+ *   - 注入的 `RenderBackendFactory`：创建 canvas / HighDPI / renderer / measurer
  *   - `DomGridHost`：scrollHost、spacer、ResizeObserver、DPR 监听
  *   - `GridRuntime`：滚动映射、spacer 尺寸、RAF、`setData` 换 renderer
  *   - `DefaultGridEngine`（core）：数据、轴、viewport 逻辑状态
- *
- * Host 回调在 `attach()` 之后才触发，故可在 `this.runtime` 赋值后安全闭包引用。
  */
-export class Canvas2DBackend implements GridController {
-  /** Grid 挂载容器；所有 DOM 层与 canvas 都以它为根。 */
+export class GridControllerImpl implements GridController {
+  /** Grid 挂载容器；所有 DOM 层都以它为根。 */
   private container: HTMLElement
-  /** backend 拥有的唯一绘制 surface。 */
-  private canvas: HTMLCanvasElement
-  /** Canvas2D renderer 与 HighDPI 共享的原生绘图上下文。 */
-  private ctx: CanvasRenderingContext2D
   /** 平台无关状态引擎；runtime 的所有 mutation 都落到这里。 */
   private engine: DefaultGridEngine
-  /** 负责 DPR 缩放与 surface 尺寸同步。 */
-  private highDpi: HighDPI
-  /** 当前 canvas2d renderer；`setData` 后会随 engine/frame 关系重建。 */
-  private renderer: Canvas2DRenderer
+  /** 注入后端返回的句柄：renderer 重建 / surface 尺寸 / measurer / 销毁。 */
+  private handle: RenderBackendHandle
+  /** 当前 renderer；`setData` 后会随 engine/frame 关系重建。 */
+  private renderer: RenderBackend
   /** DOM 宿主层：scrollHost、spacer、尺寸与输入事件入口。 */
   private host: DomGridHost
   /** 行列 resize 的 DOM hit-zone 层。 */
@@ -115,7 +113,7 @@ export class Canvas2DBackend implements GridController {
   private selectionOverlay: SelectionOverlay
   /** Web 剪贴板适配器；runtime 只依赖抽象能力。 */
   private clipboardAdapter = new DomClipboardAdapter()
-  /** web 交互编排器；attach 前由 backend 完成全部依赖注入。 */
+  /** web 交互编排器；attach 前由本类完成全部依赖注入。 */
   private runtime!: GridRuntime
   /** 单 Grid 共享 scheduler，host / renderer / runtime 的 RAF 统一合并。 */
   private scheduler = new FrameScheduler()
@@ -137,23 +135,25 @@ export class Canvas2DBackend implements GridController {
   private sortChangeListeners = new Set<(event: SortChangeEvent) => void>()
   /** 筛选变更监听器集合。 */
   private filterChangeListeners = new Set<(event: FilterChangeEvent) => void>()
-  /** 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量都使用同一个实例，
-   *  让 LRU 缓存跨绘制 / 度量复用。 */
-  private measurer = new Canvas2DTextMeasurer()
+  /** 共享 measurer：由后端工厂创建并交给本类；runtime.autofitRows 与绘制复用同一实例。 */
+  private measurer: TextMeasurer
 
   constructor(
     container: HTMLElement,
     options: GridEngineOptions,
-    gridOptions?: {
-      onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
-      onCopy?: (range: CellRange) => void
-      onCut?: (range: CellRange) => void
-      onPaste?: (target: CellRange) => void
-      onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
-      onUndo?: (event: UndoEvent) => void
-      onRedo?: (event: RedoEvent) => void
-      onFill?: (event: FillEvent) => void
-    },
+    gridOptions:
+      | {
+          onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+          onCopy?: (range: CellRange) => void
+          onCut?: (range: CellRange) => void
+          onPaste?: (target: CellRange) => void
+          onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
+          onUndo?: (event: UndoEvent) => void
+          onRedo?: (event: RedoEvent) => void
+          onFill?: (event: FillEvent) => void
+        }
+      | undefined,
+    backend: RenderBackendFactory,
   ) {
     this.container = container
     this.rawSource = options.data
@@ -161,22 +161,14 @@ export class Canvas2DBackend implements GridController {
     this.subscribePipeline()
     this.engine = new DefaultGridEngine({ ...options, data: this.pipeline.getComposed() })
 
-    this.canvas = document.createElement('canvas')
-    Object.assign(this.canvas.style, {
-      position: 'absolute',
-      top: '0',
-      left: '0',
-      pointerEvents: 'none',
-      zIndex: '0',
+    const handle = backend({
+      container: this.container,
+      engine: this.engine,
+      scheduler: this.scheduler,
     })
-    this.container.appendChild(this.canvas)
-
-    const ctx = this.canvas.getContext('2d')
-    if (!ctx) throw new Error('NovaSheet: 2d canvas context unavailable')
-    this.ctx = ctx
-
-    this.highDpi = new HighDPI(this.canvas, this.ctx)
-    this.renderer = this.createRenderer()
+    this.handle = handle
+    this.renderer = handle.renderer
+    this.measurer = handle.measurer
 
     this.handleLayer = new DomHandleLayer(this.container, {
       onResizePointerDown: (handle, pointerId, x, y) =>
@@ -236,7 +228,7 @@ export class Canvas2DBackend implements GridController {
       viewPipeline: this.pipeline,
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
-      onSurfaceResize: (w, h) => this.highDpi.resize(w, h),
+      onSurfaceResize: (w, h) => this.handle.resizeSurface(w, h),
     })
 
     this.cellEditor = new DomCellEditor(this.container, {
@@ -306,16 +298,16 @@ export class Canvas2DBackend implements GridController {
       filterLayer: this.filterLayer,
     })
     this.renderer = this.runtime.setData(this.pipeline.getComposed(), () =>
-      this.createRenderer(),
-    ) as Canvas2DRenderer
+      this.handle.createRenderer(this.engine),
+    )
   }
 
   setTheme(theme: Theme): void {
     this.runtime.setTheme(theme, (renderer) => {
-      ;(renderer as Canvas2DRenderer).setTheme(theme)
+      renderer.setTheme?.(theme)
     })
-    // 字体可能随主题变；清空 measurer 缓存避免过期宽度
-    this.measurer.clearCache()
+    // 字体可能随主题变；清空 measurer 缓存避免过期宽度（后端 measurer 若实现 clearCache 才调用）。
+    this.measurer.clearCache?.()
   }
 
   setRowHeight(rowIndex: number, height: number): void {
@@ -382,9 +374,7 @@ export class Canvas2DBackend implements GridController {
     this.fillHandleLayer.destroy()
     this.handleLayer.destroy()
     this.cellEditor.destroy()
-    if (this.canvas.parentNode === this.container) {
-      this.container.removeChild(this.canvas)
-    }
+    this.handle.destroy()
   }
 
   _onContainerResize(): void {
@@ -539,20 +529,6 @@ export class Canvas2DBackend implements GridController {
     }
   }
 
-  /** 用当前 engine 状态构造新的 `Canvas2DRenderer`（`setData` 后轴/viewport 会重建）。 */
-  private createRenderer(): Canvas2DRenderer {
-    return new Canvas2DRenderer({
-      ctx: this.ctx,
-      data: this.engine.getData(),
-      viewport: this.engine.getViewport(),
-      rowsAxis: this.engine.getRowsAxis(),
-      colsAxis: this.engine.getColsAxis(),
-      theme: this.engine.getTheme(),
-      scheduler: this.scheduler,
-      measurer: this.measurer,
-    })
-  }
-
   private createPipeline(source: DataSource): ViewPipeline {
     const pipeline = new ViewPipeline(source)
     // Pipeline 组合顺序对齐 spec §5.3：Sort → Filter → Hide（Hide 由 engine 接管）。
@@ -577,8 +553,7 @@ export class Canvas2DBackend implements GridController {
 
     const data = this.pipeline.getComposed()
     this.runtime.updateViewData(data, { oldResolveUnderlyingRow }, (renderer) => {
-      const canvasRenderer = renderer as Canvas2DRenderer
-      canvasRenderer.setData(data)
+      renderer.setData?.(data)
     })
 
     this.emitViewChange({ layerId: change.layerId })
