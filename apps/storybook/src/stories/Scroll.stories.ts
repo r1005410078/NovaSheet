@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { Grid } from '@novasheet/web'
+import { Grid } from '@novasheet/core'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'

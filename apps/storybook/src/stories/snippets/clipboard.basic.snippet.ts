@@ -1,5 +1,6 @@
 // @ts-nocheck — storybook docs display snippet; references undefined demo names by design
-import { Grid } from '@novasheet/web'
+import { Grid } from '@novasheet/core'
+import { canvas2dBackend } from '@novasheet/canvas2d'
 import { InMemoryDataSource, type Schema } from '@novasheet/core'
 
 const schema: Schema = {

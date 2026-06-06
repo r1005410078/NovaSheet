@@ -15,7 +15,8 @@
 
 import { describe, expect, it } from 'bun:test'
 import { InMemoryDataSource, denseGridTheme, type SortSpec } from '@novasheet/core'
-import { Grid } from '../../src/Grid'
+import { Grid } from '@novasheet/core'
+import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
 
 const SCHEMA = { fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 100 }] }
 
@@ -28,7 +29,7 @@ function mkGrid(rowCount: number) {
   const container = document.createElement('div')
   Object.assign(container.style, { width: '300px', height: '300px' })
   document.body.appendChild(container)
-  const grid = new Grid(container, { data, theme: denseGridTheme })
+  const grid = new Grid(container, { backend: canvas2dBackend, data, theme: denseGridTheme })
   return { grid, data, container }
 }
 

@@ -1,4 +1,5 @@
-import { Grid, type GridOptions } from '@novasheet/web'
+import { Grid, type GridOptions } from '@novasheet/core'
+import { canvas2dBackend } from '@novasheet/canvas2d'
 
 /**
  * Creates a Grid-hosting div, instantiates a Grid inside it, returns the div with the
@@ -10,7 +11,7 @@ import { Grid, type GridOptions } from '@novasheet/web'
  * Pass numbers only for tests or stories that need a fixed px viewport.
  */
 export function createGridHost(
-  opts: GridOptions,
+  opts: Omit<GridOptions, 'backend'>,
   width: number | string = '100%',
   height: number | string = '100%',
 ): HTMLElement {
@@ -22,7 +23,7 @@ export function createGridHost(
   if (width === '100%' || height === '100%') {
     el.style.minHeight = '0'
   }
-  const grid = new Grid(el, opts)
+  const grid = new Grid(el, { backend: canvas2dBackend, ...opts })
   ;(el as unknown as HTMLElement & { __grid: Grid }).__grid = grid
   return el
 }

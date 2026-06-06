@@ -13,40 +13,15 @@ export type {
 // —— 稳定公开（原 web index 已公开）——
 export { DomClipboardAdapter } from './clipboard/DomClipboardAdapter'
 
-// —— TRANSITIONAL(web-into-core): web 的 runtime/backend 仍在 web，需跨包引用这些
-//    DOM 壳内部类；Task 6 删除 web 后整段删除。grep 锚点：TRANSITIONAL(web-into-core)
-export { DomCellEditor } from './interaction/DomCellEditor'
-export type { DomCellEditorCallbacks, OpenCellEditorOptions } from './interaction/DomCellEditor'
-export { DomContextMenuLayer } from './interaction/DomContextMenuLayer'
-export type { DomContextMenuLayerCallbacks } from './interaction/DomContextMenuLayer'
+// —— 运行时白盒测试公开面：GridRuntime + 几个 overlay/handle 句柄类型，
+//    供 @novasheet/canvas2d 的 GridRuntime.selection-overlay 集成测试白盒装配 runtime。
+//    其余 DOM 壳内部类（drag/popover/各 overlay/handle）保持内部，不进半稳定契约。
 export { DomFillHandleLayer } from './interaction/DomFillHandleLayer'
-export type { DomFillHandleLayerCallbacks } from './interaction/DomFillHandleLayer'
-export { DomHandleLayer } from './interaction/DomHandleLayer'
-export type { ResizeIndicatorLine } from './interaction/DomHandleLayer'
-export { FilterPopover } from './overlay/FilterPopover'
-export type { FilterPopoverCallbacks, FilterPopoverAnchor, FilterPopoverOpenOptions } from './overlay/FilterPopover'
 export { SelectionOverlay } from './overlay/SelectionOverlay'
 export type { SelectionOverlayState } from './overlay/SelectionOverlay'
-export { ColumnReorderOverlay } from './overlay/ColumnReorderOverlay'
-export type { ColumnReorderPreview } from './overlay/ColumnReorderOverlay'
-export { RowReorderOverlay } from './overlay/RowReorderOverlay'
-export type { RowReorderPreview } from './overlay/RowReorderOverlay'
-export { ColumnWidthPopover } from './overlay/ColumnWidthPopover'
-export type { ColumnWidthPopoverOptions } from './overlay/ColumnWidthPopover'
-export { RowHeightPopover } from './overlay/RowHeightPopover'
-export type { RowHeightPopoverOptions } from './overlay/RowHeightPopover'
-export { HideToggleHandle } from './interaction/handle/HideToggleHandle'
-export type { HideToggleHandleOptions } from './interaction/handle/HideToggleHandle'
-export { HideColToggleHandle } from './interaction/handle/HideColToggleHandle'
-export type { HideColToggleHandleOptions } from './interaction/handle/HideColToggleHandle'
-export { computeFillHandleRect, computeRangeOverlayRects } from './overlay/RangeOverlayRects'
 export type { OverlayRect } from './overlay/RangeOverlayRects'
-export type { Drag } from './interaction/drag/Drag'
-export { ColumnHeaderDrag } from './interaction/drag/ColumnHeaderDrag'
-export { FillHandleDrag } from './interaction/drag/FillHandleDrag'
-export { ResizeDrag } from './interaction/drag/ResizeDrag'
-export { RowHeaderDrag } from './interaction/drag/RowHeaderDrag'
-export { SelectionDrag } from './interaction/drag/SelectionDrag'
+export type { ColumnReorderOverlay } from './overlay/ColumnReorderOverlay'
+export type { RowReorderOverlay } from './overlay/RowReorderOverlay'
 
 // —— GridController 公开类型（原 web index 已公开）——
 export type {
@@ -62,9 +37,6 @@ export type {
   FilterChangeEvent,
 } from './runtime/GridController'
 
-// —— TRANSITIONAL(web-into-core): GridRuntime 仍由 web index 公开转发；Task 6 评估收口。
+// GridRuntime — 运行时编排，供 canvas2d 的 selection-overlay 白盒测试直接装配。
 export { GridRuntime } from './runtime/GridRuntime'
 export type { GridRuntimeOptions } from './runtime/GridRuntime'
-// —— TRANSITIONAL(web-into-core): 通用 GridController 装配层；web 的 Grid 经注入 backend 工厂消费。
-//    Task 6 评估是否内部化。grep 锚点：TRANSITIONAL(web-into-core)
-export { GridControllerImpl } from './runtime/GridControllerImpl'

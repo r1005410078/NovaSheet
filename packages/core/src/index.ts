@@ -1,8 +1,10 @@
 // @novasheet/core 的公开 API barrel。
 // 任何不在这里 export 的符号视为内部实现，不属于半稳定契约——CLAUDE.md「What goes where」。
 
-// Note: public Grid is exported by @novasheet/web (renderer backend selected via options).
-// Programmatic engine access: use DefaultGridEngine here.
+// 对外 Grid 门面——渲染后端经 options.backend 注入（如 @novasheet/canvas2d 的 canvas2dBackend）。
+// 程序化引擎访问：使用下方 DefaultGridEngine。
+export { Grid, withExcelHeaders } from './Grid'
+export type { GridOptions } from './Grid'
 
 // 数据层
 export { InMemoryDataSource } from './kernel/data/InMemoryDataSource'
@@ -162,7 +164,7 @@ export type {
   ViewLayerChangeReason,
 } from './features/view/ViewLayer'
 
-// Utility — exported so @novasheet/web can share RAF scheduling
+// Utility — exported for RAF scheduling in dom runtime and tests
 export { FrameScheduler } from './kernel/util/raf'
 
 // 度量层（M3 autofit）

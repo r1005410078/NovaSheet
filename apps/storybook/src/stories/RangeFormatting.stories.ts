@@ -139,7 +139,7 @@ export const Basic: Story = {
     const gridEl = createGridHost({ data }, '100%', '100%')
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/web').Grid })
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/core').Grid })
       .__grid
 
     function syncButtons(): void {

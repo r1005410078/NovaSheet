@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { Grid } from '@novasheet/web'
+import { Grid } from '@novasheet/core'
+import { canvas2dBackend } from '@novasheet/canvas2d'
 import { InMemoryDataSource } from '@novasheet/core'
 
 const schema = {
@@ -19,6 +20,7 @@ const rows = [
 ]
 
 const grid = new Grid(document.getElementById('grid')!, {
+  backend: canvas2dBackend,
   data: new InMemoryDataSource({ schema, rows }),
   onFill: (event) => console.log('[fill]', event.direction, event.fill),
 })

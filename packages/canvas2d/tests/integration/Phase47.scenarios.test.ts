@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { InMemoryDataSource, denseGridTheme, type GridEngine } from '@novasheet/core'
-import { Grid } from '../../src/Grid'
+import { Grid } from '@novasheet/core'
+import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
 
 const SCHEMA = {
   fields: [
@@ -19,7 +20,7 @@ function mkGrid() {
   const container = document.createElement('div')
   Object.assign(container.style, { width: '500px', height: '300px' })
   document.body.appendChild(container)
-  return { grid: new Grid(container, { data, theme: denseGridTheme }), data, container }
+  return { grid: new Grid(container, { backend: canvas2dBackend, data, theme: denseGridTheme }), data, container }
 }
 
 function engineOf(grid: Grid): GridEngine {

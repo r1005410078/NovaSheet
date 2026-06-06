@@ -6,7 +6,8 @@ import {
   type GridEngine,
   type GridSelection,
 } from '@novasheet/core'
-import { Grid } from '@novasheet/web'
+import { Grid } from '@novasheet/core'
+import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
 import type { SelectionOverlay, SelectionOverlayState, DomFillHandleLayer, OverlayRect } from '@novasheet/core'
@@ -30,6 +31,7 @@ describe('GridRuntime selection overlay', () => {
     const raf = captureRaf()
 
     const grid = new Grid(container, {
+      backend: canvas2dBackend,
       data: new InMemoryDataSource({
         schema: {
           fields: [
@@ -63,6 +65,7 @@ describe('GridRuntime selection overlay', () => {
     const raf = captureRaf()
 
     const grid = new Grid(container, {
+      backend: canvas2dBackend,
       data: new InMemoryDataSource({
         schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 80 }] },
         rows: [{ a: 'A1' }],
@@ -99,6 +102,7 @@ describe('GridRuntime selection overlay', () => {
     document.body.appendChild(container)
     const raf = captureRaf()
     const grid = new Grid(container, {
+      backend: canvas2dBackend,
       data: new InMemoryDataSource({
         schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 80 }] },
         rows: [{ a: 'A1' }],

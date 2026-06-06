@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { Grid } from '@novasheet/web'
+import { Grid } from '@novasheet/core'
+import { canvas2dBackend } from '@novasheet/canvas2d'
 import { InMemoryDataSource } from '@novasheet/core'
 import type { BorderPreset, BorderStyle, CellRange } from '@novasheet/core'
 

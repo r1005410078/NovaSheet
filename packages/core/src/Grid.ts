@@ -9,16 +9,15 @@ import type {
   DataSource,
   Field,
   FrozenConfig,
-  GridEngineOptions,
   GridSelection,
   PasteSkippedCell,
   Theme,
-  FilterLayer,
-  SortLayer,
-  ViewPipeline,
-} from '@novasheet/core'
-import { GridControllerImpl } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
+} from './index'
+import type { GridEngineOptions } from './engine/GridEngine'
+import type { FilterLayer } from './features/view/FilterLayer'
+import type { SortLayer } from './features/view/SortLayer'
+import type { ViewPipeline } from './features/view/ViewPipeline'
+import { GridControllerImpl } from './dom/runtime/GridControllerImpl'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
@@ -27,14 +26,12 @@ import type {
   GridController,
   RedoEvent,
   UndoEvent,
-} from '@novasheet/core'
-
-/** 已支持的渲染后端；WebGL 待 `@novasheet/webgl` 接入后扩展。 */
-export type GridRendererBackend = 'canvas2d'
+} from './dom/runtime/GridController'
+import type { RenderBackendFactory } from './ports/RenderBackend'
 
 export interface GridOptions extends GridEngineOptions {
-  /** 渲染后端，默认 `'canvas2d'`。 */
-  renderer?: GridRendererBackend
+  /** 渲染后端工厂——由调用方注入（如 `@novasheet/canvas2d` 的 `canvas2dBackend`），反转 core→backend 依赖。 */
+  backend: RenderBackendFactory
   /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后不传走默认引擎（grid.copy/cut/paste）。 */
   onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
   /** Phase 4.1 — copy 完成（snapshot 已写剪贴板）。 */
@@ -68,16 +65,15 @@ export interface GridOptions extends GridEngineOptions {
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
-export function withExcelHeaders<T extends GridOptions>(options: T): T {
+export function withExcelHeaders<T extends Omit<GridOptions, 'backend'>>(options: T): T {
   return { ...options, excelHeaders: true }
 }
 
 /**
- * 浏览器端对外 Grid 门面（spec §7）。
+ * 对外 Grid 门面（spec §7）。
  *
- * 按 `options.renderer` 选择后端实现（默认 Canvas2D），调用方只需
- * `import { Grid } from '@novasheet/web'`，不必依赖 `@novasheet/canvas2d`。
- * 公共 API 方法全部转发给当前后端的 `GridController` 实现。
+ * 渲染后端经 `options.backend` 注入（如 `@novasheet/canvas2d` 的 `canvas2dBackend`），
+ * core 不依赖任何具体后端。公共 API 方法全部转发给注入后端装配出的 `GridController` 实现。
  */
 export class Grid {
   private readonly delegate: GridController
@@ -85,7 +81,6 @@ export class Grid {
 
   constructor(container: HTMLElement, options: GridOptions) {
     this.options = options
-    const backend = options.renderer ?? 'canvas2d'
     const engineOptions: GridEngineOptions = {
       data: options.data, // 数据源：由 engine 持有并驱动 frame。
       theme: options.theme, // 主题 token：engine 负责下发给 renderer。
@@ -94,27 +89,21 @@ export class Grid {
       excelHeaders: options.excelHeaders, // 表头模式：A/B/... 列标 + 1-based 行号。
     }
 
-    switch (backend) {
-      case 'canvas2d':
-        this.delegate = new GridControllerImpl(
-          container,
-          engineOptions,
-          {
-            onContextMenuAction: options.onContextMenuAction,
-            onCopy: options.onCopy,
-            onCut: options.onCut,
-            onPaste: options.onPaste,
-            onPasteSkipped: options.onPasteSkipped,
-            onUndo: options.onUndo,
-            onRedo: options.onRedo,
-            onFill: options.onFill,
-          },
-          canvas2dBackend,
-        )
-        break
-      default:
-        throw new Error(`NovaSheet: renderer "${backend as string}" is not implemented`)
-    }
+    this.delegate = new GridControllerImpl(
+      container,
+      engineOptions,
+      {
+        onContextMenuAction: options.onContextMenuAction,
+        onCopy: options.onCopy,
+        onCut: options.onCut,
+        onPaste: options.onPaste,
+        onPasteSkipped: options.onPasteSkipped,
+        onUndo: options.onUndo,
+        onRedo: options.onRedo,
+        onFill: options.onFill,
+      },
+      options.backend,
+    )
   }
 
   setData(data: DataSource): void {

@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@novasheet/core": "workspace:*",
-    "@novasheet/web": "workspace:*"
+    "@novasheet/canvas2d": "workspace:*",
+    "@novasheet/core": "workspace:*"
   },
   "devDependencies": {
     "@storybook/addon-docs": "10.4.0",
