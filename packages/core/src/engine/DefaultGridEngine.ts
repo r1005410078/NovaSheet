@@ -71,6 +71,7 @@ import { SelectionController } from '../features/selection/SelectionController'
 import { SelectionEventHandler } from '../features/selection/SelectionEventHandler'
 import { resolveViewMergeRegion } from '../features/merge/MergeViewResolver'
 import { StructuralMutationCoordinator } from './StructuralMutationCoordinator'
+import { assembleRenderFrame } from './FrameAssembler'
 
 /**
  * `GridEngine` 默认实现。
@@ -405,57 +406,18 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   getFrame(): RenderFrame {
-    const rowsAxis = this.layout.getRowsAxis()
-    const colsAxis = this.layout.getColsAxis()
-    const vpSnap = this.layout.getViewport().snapshot()
-    const allGaps = this.rowStructure.getCollapsedGaps()
-    const [firstVisible, lastVisible] = rowsAxis.getVisibleRange(
-      vpSnap.scrollY,
-      vpSnap.scrollY + vpSnap.contentRect.height,
-    )
-    const collapsedRowGaps = allGaps
-      .filter((g) => g.atViewRow >= firstVisible && g.atViewRow <= lastVisible)
-      .map((g) => ({
-        ...g,
-        yPx: rowsAxis.indexToPosition(g.atViewRow + 1) - vpSnap.scrollY,
-      }))
-    const allColGaps = this.columnStructure.getCollapsedColGaps()
-    const [firstVisibleCol, lastVisibleCol] = colsAxis.getVisibleRange(
-      vpSnap.scrollX,
-      vpSnap.scrollX + vpSnap.contentRect.width,
-    )
-    const collapsedColGaps = allColGaps
-      .filter((g) => g.atViewCol >= firstVisibleCol && g.atViewCol <= lastVisibleCol)
-      .map((g) => ({
-        ...g,
-        xPx: colsAxis.indexToPosition(g.atViewCol + 1) - vpSnap.scrollX,
-      }))
-    const mergeRegions = this.frameFormat.mergeRegions(
-      firstVisible,
-      lastVisible,
-      firstVisibleCol,
-      lastVisibleCol,
-    )
-    const cellFormats = this.frameFormat.cellFormats(
-      firstVisible,
-      lastVisible,
-      firstVisibleCol,
-      lastVisibleCol,
-      mergeRegions,
-    )
-    return {
+    return assembleRenderFrame({
       data: this.data,
       theme: this.theme,
-      rowsAxis,
-      colsAxis,
-      viewport: vpSnap,
+      rowsAxis: this.layout.getRowsAxis(),
+      colsAxis: this.layout.getColsAxis(),
+      viewport: this.layout.getViewport().snapshot(),
       selection: this.selection.getSelection(),
       cellEdit: this.editController.getSession() ?? undefined,
-      collapsedRowGaps,
-      collapsedColGaps,
-      cellFormats,
-      mergeRegions,
-    }
+      allRowGaps: this.rowStructure.getCollapsedGaps(),
+      allColGaps: this.columnStructure.getCollapsedColGaps(),
+      frameFormat: this.frameFormat,
+    })
   }
 
   getSelection(): GridSelection {
