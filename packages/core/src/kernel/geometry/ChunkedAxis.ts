@@ -46,6 +46,11 @@ import { type Chunk, createDefaultChunk } from '../util/ChunkArray'
  */
 export const CHUNK_SIZE = 1024
 
+/** 单 chunk 超过此长度触发分裂，避免块内线性扫退化二分收益。 */
+const SPLIT_THRESHOLD = CHUNK_SIZE * 2
+/** 相邻两 chunk 长度之和不超过此值时合并，避免删除后碎片化。 */
+const MERGE_THRESHOLD = CHUNK_SIZE
+
 /** ChunkedAxis 构造选项 */
 export interface ChunkedAxisOptions {
   /** 行/列总数 */
@@ -241,6 +246,121 @@ export class ChunkedAxis {
   private indexToChunk(index: number): { chunkIdx: number; offset: number } {
     const chunkIdx = upperBound(this.chunkCountPrefix, this.chunks.length + 1, index) - 1
     return { chunkIdx, offset: index - this.chunkCountPrefix[chunkIdx]! }
+  }
+
+  private makeChunk(length: number, size: number): Chunk {
+    if (size === this.defaultSize) return { length, totalSize: length * size, sizes: null }
+    const sizes = new Float32Array(length)
+    sizes.fill(size)
+    return { length, totalSize: length * size, sizes }
+  }
+
+  /** 在 chunk 的 offset 处插入 count 个 size 项（就地改 chunk）。 */
+  private insertIntoChunk(chunk: Chunk, offset: number, count: number, size: number): void {
+    if (chunk.sizes === null && size === this.defaultSize) {
+      chunk.length += count
+      chunk.totalSize += count * size
+      return
+    }
+    const oldLen = chunk.length
+    const next = new Float32Array(oldLen + count)
+    if (chunk.sizes === null) {
+      next.fill(this.defaultSize)
+      for (let i = 0; i < count; i++) next[offset + i] = size
+    } else {
+      for (let i = 0; i < offset; i++) next[i] = chunk.sizes[i]!
+      for (let i = 0; i < count; i++) next[offset + i] = size
+      for (let i = offset; i < oldLen; i++) next[i + count] = chunk.sizes[i]!
+    }
+    chunk.sizes = next
+    chunk.length = oldLen + count
+    chunk.totalSize += count * size
+  }
+
+  /** 从 chunk 移除给定块内偏移集合（就地改 chunk）。 */
+  private removeFromChunk(chunk: Chunk, offsets: readonly number[]): void {
+    const remove = new Set(offsets)
+    const keepLen = chunk.length - remove.size
+    if (chunk.sizes === null) {
+      chunk.length = keepLen
+      chunk.totalSize = keepLen * this.defaultSize
+      return
+    }
+    const sizes = new Float32Array(keepLen)
+    let w = 0
+    let total = 0
+    for (let i = 0; i < chunk.length; i++) {
+      if (remove.has(i)) continue
+      const v = chunk.sizes[i]!
+      sizes[w++] = v
+      total += v
+    }
+    chunk.sizes = sizes
+    chunk.length = keepLen
+    chunk.totalSize = total
+  }
+
+  /** 返回 chunk[from, length) 的新 chunk。 */
+  private sliceChunk(chunk: Chunk, from: number): Chunk {
+    const len = chunk.length - from
+    if (chunk.sizes === null) return { length: len, totalSize: len * this.defaultSize, sizes: null }
+    const sizes = chunk.sizes.slice(from, chunk.length)
+    let total = 0
+    for (let i = 0; i < sizes.length; i++) total += sizes[i]!
+    return { length: len, totalSize: total, sizes }
+  }
+
+  /** 把 chunk 截断到 [0, to)（就地）。 */
+  private truncateChunk(chunk: Chunk, to: number): void {
+    if (chunk.sizes === null) {
+      chunk.length = to
+      chunk.totalSize = to * this.defaultSize
+      return
+    }
+    const sizes = chunk.sizes.slice(0, to)
+    let total = 0
+    for (let i = 0; i < to; i++) total += sizes[i]!
+    chunk.sizes = sizes
+    chunk.length = to
+    chunk.totalSize = total
+  }
+
+  private mergeChunks(a: Chunk, b: Chunk): Chunk {
+    const length = a.length + b.length
+    if (a.sizes === null && b.sizes === null) {
+      return { length, totalSize: length * this.defaultSize, sizes: null }
+    }
+    const sizes = new Float32Array(length)
+    for (let i = 0; i < a.length; i++) sizes[i] = a.sizes ? a.sizes[i]! : this.defaultSize
+    for (let i = 0; i < b.length; i++) sizes[a.length + i] = b.sizes ? b.sizes[i]! : this.defaultSize
+    return { length, totalSize: a.totalSize + b.totalSize, sizes }
+  }
+
+  /** 单遍把过大 chunk 切成 ≤ CHUNK_SIZE 的左块 + 余块（余块由后续迭代继续切）。 */
+  private splitOversizedChunks(): void {
+    for (let i = 0; i < this.chunks.length; i++) {
+      const chunk = this.chunks[i]!
+      if (chunk.length > SPLIT_THRESHOLD) {
+        const right = this.sliceChunk(chunk, CHUNK_SIZE)
+        this.truncateChunk(chunk, CHUNK_SIZE)
+        this.chunks.splice(i + 1, 0, right)
+      }
+    }
+  }
+
+  /** 单遍贪心合并相邻小块。 */
+  private mergeSmallChunks(): void {
+    let i = 0
+    while (i < this.chunks.length - 1) {
+      const a = this.chunks[i]!
+      const b = this.chunks[i + 1]!
+      if (a.length + b.length <= MERGE_THRESHOLD) {
+        this.chunks[i] = this.mergeChunks(a, b)
+        this.chunks.splice(i + 1, 1)
+      } else {
+        i++
+      }
+    }
   }
 
   /**
@@ -456,60 +576,66 @@ export class ChunkedAxis {
   }
 
   /**
-   * 在 `beforeIndex` 位置前插入 `count` 行/列，每项尺寸初始化为 `defaultSize`。
+   * 在 `beforeIndex` 位置前插入 `count` 行/列，每项尺寸初始化为 `size`。
    *
-   * 实现路径：`flattenSizes()` 展平 → splice 插入 → `rebuild()` 全量重置为
-   * `this.defaultSize` → 遍历 `flat`，对 `flat[i] !== this.defaultSize` 的项调
-   * `setSize` 恢复。`defaultSize` 参数与 `this.defaultSize` 可以不同——新插入项
-   * 会通过 setSize 路径正确写入指定尺寸。Task 10（DefaultGridEngine）调用时
-   * 通常传入 `theme.dimensions.rowHeight`，与 `this.defaultSize` 一致。
+   * 实现路径：定位插入点所在 chunk → 块内 splice 插入 → 过大 chunk 分裂 →
+   * `recomputePrefixes()`。`size` 参数与 `this.defaultSize` 可以不同——块内物化
+   * 时按 size 写入。Task 10（DefaultGridEngine）调用时通常传入
+   * `theme.dimensions.rowHeight`，与 `this.defaultSize` 一致。
    *
    * `beforeIndex` clamp 到 `[0, this.count]`；`count <= 0` no-op。
+   * 复杂度：O(n_chunks + CHUNK_SIZE)。
    */
-  insertRange(beforeIndex: number, count: number, defaultSize: number): void {
+  insertRange(beforeIndex: number, count: number, size: number): void {
     if (count <= 0) return
-    const at = Math.max(0, Math.min(beforeIndex, this.count))
-    const flat = this.flattenSizes()
-    const inserted = Array.from({ length: count }, () => defaultSize)
-    flat.splice(at, 0, ...inserted)
-    this.count += count
-    this.rebuild()
-    for (let i = 0; i < flat.length; i++) {
-      if (flat[i] !== this.defaultSize) this.setSize(i, flat[i]!)
+    const oldCount = this.count
+    const at = Math.max(0, Math.min(beforeIndex, oldCount))
+    this.count = oldCount + count
+    if (this.chunks.length === 0) {
+      this.chunks = [this.makeChunk(count, size)]
+    } else if (at === oldCount) {
+      const last = this.chunks[this.chunks.length - 1]!
+      this.insertIntoChunk(last, last.length, count, size)
+    } else {
+      const { chunkIdx, offset } = this.indexToChunk(at)
+      this.insertIntoChunk(this.chunks[chunkIdx]!, offset, count, size)
     }
+    this.splitOversizedChunks()
+    this.recomputePrefixes()
+    this._version++
   }
 
   /**
    * 删除 `removedSortedIndices` 指定的行/列。**约定**：调用方保证升序、无重复、
-   * 所有索引落在 `[0, this.count)` 内。越界索引会被 `Array.filter` 静默忽略，
-   * 不影响最终 count；不会抛错。空数组 no-op。
+   * 所有索引落在 `[0, this.count)` 内。越界索引被静默跳过，不影响最终 count；不抛错。
+   * 空数组 no-op。
    *
-   * 实现路径：`flattenSizes()` → filter → `rebuild()` → 逐项 `setSize` 恢复
-   * 非默认尺寸。Task 10（DefaultGridEngine）传入的 `underlyingRowIds` 由
+   * 实现路径：用插入前结构的 `indexToChunk` 把待删项按 chunk 分组收集块内 offset →
+   * 逐块 `removeFromChunk` → filter 空块 → `mergeSmallChunks` → `recomputePrefixes`。
+   * Task 10（DefaultGridEngine）传入的 `underlyingRowIds` 由
    * `InMemoryDataSource.deleteRows` 校验过升序，本方法不重复校验。
+   * 复杂度：O(n_chunks + CHUNK_SIZE)。
    */
   deleteRange(removedSortedIndices: readonly number[]): void {
     if (removedSortedIndices.length === 0) return
-    const flat = this.flattenSizes()
-    const removeSet = new Set(removedSortedIndices)
-    const next = flat.filter((_, i) => !removeSet.has(i))
-    this.count = next.length
-    this.rebuild()
-    for (let i = 0; i < next.length; i++) {
-      if (next[i] !== this.defaultSize) this.setSize(i, next[i]!)
+    const byChunk = new Map<number, number[]>()
+    for (const idx of removedSortedIndices) {
+      if (idx < 0 || idx >= this.count) continue
+      const { chunkIdx, offset } = this.indexToChunk(idx)
+      const list = byChunk.get(chunkIdx)
+      if (list) list.push(offset)
+      else byChunk.set(chunkIdx, [offset])
     }
-  }
-
-  /** 把当前所有 chunk 展平成逐项尺寸 number[]，insertRange/deleteRange 共用。 */
-  private flattenSizes(): number[] {
-    const result: number[] = Array.from({ length: this.count })
-    for (let i = 0; i < this.count; i++) {
-      const chunkIdx = i >>> 10
-      const offset = i & 1023
-      const chunk = this.chunks[chunkIdx]!
-      result[i] = chunk.sizes === null ? this.defaultSize : chunk.sizes[offset]!
+    let removedTotal = 0
+    for (const [chunkIdx, offsets] of byChunk) {
+      this.removeFromChunk(this.chunks[chunkIdx]!, offsets)
+      removedTotal += offsets.length
     }
-    return result
+    this.count -= removedTotal
+    this.chunks = this.chunks.filter((chunk) => chunk.length > 0)
+    this.mergeSmallChunks()
+    this.recomputePrefixes()
+    this._version++
   }
 
   /**
