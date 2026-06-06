@@ -4,7 +4,7 @@ import type { GridEngine, ResizeHandleRect, Schema } from '@novasheet/core'
 import type { ColumnReorderOverlay } from '@novasheet/core'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { GridRuntime } from '@novasheet/core'
 
 function makeEngine(): DefaultGridEngine {
   const schema: Schema = {
@@ -87,13 +87,13 @@ function selectCellRange(
   })
 }
 
-describe('WebGridRuntime column reorder drag', () => {
+describe('GridRuntime column reorder drag', () => {
   it('shows preview and grabbing cursor immediately on selected header pointerdown', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 2)
     const host = makeHost()
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host,
       renderer: makeRenderer(),
@@ -119,7 +119,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)
     const host = makeHost()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host,
       renderer: makeRenderer(),
@@ -137,7 +137,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -167,7 +167,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -198,7 +198,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 2)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -236,7 +236,7 @@ describe('WebGridRuntime column reorder drag', () => {
     })
     engine.setViewportSize(500, 240)
     selectCols(engine, 2, 3) // c,d
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -254,7 +254,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -283,7 +283,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -305,7 +305,7 @@ describe('WebGridRuntime column reorder drag', () => {
   it('dragging from an unselected column header selects contiguous whole columns', () => {
     const engine = makeEngine()
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -329,7 +329,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCellRange(engine, 0, 0, 1, 1)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -358,7 +358,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -375,7 +375,7 @@ describe('WebGridRuntime column reorder drag', () => {
     const engine = makeEngine()
     selectCols(engine, 1, 1)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -405,7 +405,7 @@ describe('WebGridRuntime column reorder drag', () => {
   })
 })
 
-describe('WebGridRuntime column reorder drag auto-scroll', () => {
+describe('GridRuntime column reorder drag auto-scroll', () => {
   function wideEngine(): DefaultGridEngine {
     const schema: Schema = {
       fields: Array.from({ length: 12 }, (_, i) => ({
@@ -438,7 +438,7 @@ describe('WebGridRuntime column reorder drag auto-scroll', () => {
       getScrollPosition: () => ({ scrollTop: 0, scrollLeft }),
       getContainerSize: () => ({ width: 300, height: 240 }),
     } satisfies WebHost
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host,
       renderer: makeRenderer(),

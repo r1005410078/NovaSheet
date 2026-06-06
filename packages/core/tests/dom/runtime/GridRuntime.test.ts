@@ -12,7 +12,7 @@ import type {
 } from '@novasheet/core'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { GridRuntime } from '@novasheet/core'
 
 function makeEngine(): GridEngine {
   return {
@@ -206,17 +206,17 @@ function makeExcelHeaderRuntime(options: { rowHeaderWidth?: number; columnWidth?
     collapsedRowGaps: [],
     collapsedColGaps: [],
   }))
-  const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+  const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
   return { engine, runtime }
 }
 
-describe('WebGridRuntime.replaceRenderer — 更换渲染器', () => {
+describe('GridRuntime.replaceRenderer — 更换渲染器', () => {
   it('销毁旧 renderer 并安装 factory 产物', () => {
     const engine = makeEngine()
     const host = makeHost()
     const first = makeRenderer()
     const second = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer: first })
+    const runtime = new GridRuntime({ engine, host, renderer: first })
 
     const installed = runtime.replaceRenderer(() => second)
 
@@ -226,13 +226,13 @@ describe('WebGridRuntime.replaceRenderer — 更换渲染器', () => {
   })
 })
 
-describe('WebGridRuntime.setData — 换数据', () => {
+describe('GridRuntime.setData — 换数据', () => {
   it('更新 engine、经 factory 换 renderer 并 refresh', () => {
     const engine = makeEngine()
     const host = makeHost()
     const first = makeRenderer()
     const second = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer: first })
+    const runtime = new GridRuntime({ engine, host, renderer: first })
     const refreshSpy = spyOn(runtime, 'refresh')
 
     const data = {} as DataSource
@@ -247,13 +247,13 @@ describe('WebGridRuntime.setData — 换数据', () => {
   })
 })
 
-describe('WebGridRuntime.scheduleHostResize — 合并 resize', () => {
+describe('GridRuntime.scheduleHostResize — 合并 resize', () => {
   it('合并 resize 回调，RAF 内 paintSync', () => {
     const engine = makeEngine()
     const host = makeHost()
     const renderer = makeRenderer()
     const onSurfaceResize = mock(() => {})
-    const runtime = new WebGridRuntime({ engine, host, renderer, onSurfaceResize })
+    const runtime = new GridRuntime({ engine, host, renderer, onSurfaceResize })
 
     const rafs: Array<FrameRequestCallback> = []
     const originalRaf = globalThis.requestAnimationFrame
@@ -277,12 +277,12 @@ describe('WebGridRuntime.scheduleHostResize — 合并 resize', () => {
   })
 })
 
-describe('WebGridRuntime.setTheme — 换主题', () => {
+describe('GridRuntime.setTheme — 换主题', () => {
   it('更新 engine、可选 patch renderer 后 refresh', () => {
     const engine = makeEngine()
     const host = makeHost()
     const renderer = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer })
+    const runtime = new GridRuntime({ engine, host, renderer })
     const refreshSpy = spyOn(runtime, 'refresh')
     const patch = mock(() => {})
 
@@ -296,12 +296,12 @@ describe('WebGridRuntime.setTheme — 换主题', () => {
   })
 })
 
-describe('WebGridRuntime.handleHostPointerDown — 点击选择', () => {
+describe('GridRuntime.handleHostPointerDown — 点击选择', () => {
   it('命中 body 单元格后更新 selection 并请求重绘', () => {
     const engine = makeEngine()
     const host = makeHost()
     const renderer = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer })
+    const runtime = new GridRuntime({ engine, host, renderer })
     const refreshSpy = spyOn(runtime, 'refresh')
 
     runtime.handleHostPointerDown({ x: 120, y: 72, shiftKey: false })
@@ -317,7 +317,7 @@ describe('WebGridRuntime.handleHostPointerDown — 点击选择', () => {
     const engine = makeEngine()
     const host = makeHost()
     const renderer = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer })
+    const runtime = new GridRuntime({ engine, host, renderer })
 
     runtime.handleHostPointerDown({ x: 120, y: 72, shiftKey: true })
 
@@ -383,12 +383,12 @@ describe('WebGridRuntime.handleHostPointerDown — 点击选择', () => {
   })
 })
 
-describe('WebGridRuntime drag selection — 拖拽框选', () => {
+describe('GridRuntime drag selection — 拖拽框选', () => {
   it('pointerdown 后 pointermove 用 anchor 扩展选区，pointerup 后停止扩展', () => {
     const engine = makeEngine()
     const host = makeHost()
     const renderer = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer })
+    const runtime = new GridRuntime({ engine, host, renderer })
 
     runtime.handleHostPointerDown({ x: 20, y: 44, shiftKey: false })
     runtime.handleHostPointerMove({ x: 220, y: 100, shiftKey: false })
@@ -408,7 +408,7 @@ describe('WebGridRuntime drag selection — 拖拽框选', () => {
     const engine = makeEngine()
     const host = makeHost()
     const renderer = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer })
+    const runtime = new GridRuntime({ engine, host, renderer })
 
     runtime.handleHostPointerDown({ x: 20, y: 12, shiftKey: false })
     runtime.handleHostPointerMove({ x: 220, y: 100, shiftKey: false })
@@ -417,7 +417,7 @@ describe('WebGridRuntime drag selection — 拖拽框选', () => {
   })
 })
 
-describe('WebGridRuntime drag auto-scroll — 拖选带动滚动', () => {
+describe('GridRuntime drag auto-scroll — 拖选带动滚动', () => {
   it('拖到视口右下热区时滚动 scrollHost，并继续扩展选区', () => {
     const engine = {
       ...makeEngine(),
@@ -436,7 +436,7 @@ describe('WebGridRuntime drag auto-scroll — 拖选带动滚动', () => {
       getContainerSize: () => ({ width: 300, height: 300 }),
     } satisfies WebHost
     const renderer = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer })
+    const runtime = new GridRuntime({ engine, host, renderer })
 
     const rafs: Array<FrameRequestCallback> = []
     const originalRaf = globalThis.requestAnimationFrame
@@ -465,7 +465,7 @@ describe('WebGridRuntime drag auto-scroll — 拖选带动滚动', () => {
     const engine = makeEngine()
     const host = makeHost()
     const renderer = makeRenderer()
-    const runtime = new WebGridRuntime({ engine, host, renderer })
+    const runtime = new GridRuntime({ engine, host, renderer })
 
     const rafs: Array<FrameRequestCallback> = []
     const originalRaf = globalThis.requestAnimationFrame
@@ -486,7 +486,7 @@ describe('WebGridRuntime drag auto-scroll — 拖选带动滚动', () => {
   })
 })
 
-describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
+describe('GridRuntime keyboard navigation — Phase 3.3', () => {
   it('消费方向键后更新选区、滚动跟随并重绘', () => {
     const engine = makeEngine()
     engine.navigateSelection = mock(() => true)
@@ -520,7 +520,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
     }))
 
     const host = makeHost()
-    const runtime = new WebGridRuntime({ engine, host, renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host, renderer: makeRenderer() })
 
     const handled = runtime.handleHostKeyDown({
       key: 'ArrowDown',
@@ -536,7 +536,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
 
   it('未识别按键返回 false', () => {
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
 
     expect(
       runtime.handleHostKeyDown({
@@ -599,7 +599,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
       syncRect: mock(() => {}),
       applyTheme: mock(() => {}),
     }
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer })
     runtime.setCellEditor(editor as never)
 
     const keyEvent = {
@@ -675,7 +675,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
       syncRect: mock(() => {}),
       applyTheme: mock(() => {}),
     }
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.setCellEditor(editor as never)
 
     expect(runtime.handleHostKeyDown({ key: 'x', shiftKey: false, ctrlKey: false, metaKey: false, altKey: false })).toBe(
@@ -719,7 +719,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
       collapsedRowGaps: [],
       collapsedColGaps: [],
     }))
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
 
     expect(
       runtime.handleHostKeyDown({
@@ -735,7 +735,7 @@ describe('WebGridRuntime keyboard navigation — Phase 3.3', () => {
   })
 })
 
-describe('WebGridRuntime contextmenu — Phase 4.0', () => {
+describe('GridRuntime contextmenu — Phase 4.0', () => {
   function makeContextMenu() {
     return {
       open: mock((_options: unknown) => {}),
@@ -822,7 +822,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       collapsedRowGaps: [],
       collapsedColGaps: [],
     }))
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -837,7 +837,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
 
   it('drag-select 进行中不开菜单', () => {
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     const menu = makeContextMenu()
     runtime.setContextMenuLayer(menu as never)
     runtime.handleHostPointerDown({ x: 50, y: 60, shiftKey: false, button: 0 })
@@ -878,7 +878,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       collapsedRowGaps: [],
       collapsedColGaps: [],
     }))
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.handleHostPointerDown({ x: 50, y: 60, shiftKey: false, button: 2 })
     expect(engine.selectCell).not.toHaveBeenCalled()
   })
@@ -917,7 +917,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       collapsedRowGaps: [],
       collapsedColGaps: [],
     }))
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     const editor = {
       open: mock(() => {}),
       close: mock(() => {}),
@@ -1107,7 +1107,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
       collapsedRowGaps: [],
       collapsedColGaps: [],
     }))
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.setContextMenuLayer(makeContextMenu() as never)
 
     // 命中 (rowIndex=2, colIndex=1) — 在 range (0,0,0,0) 外
@@ -1122,7 +1122,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
 
   it('setData / scroll 自动关闭菜单（via afterEngineMutation）', () => {
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     const menu = makeContextMenu()
     menu.isOpen = mock(() => true)
     runtime.setContextMenuLayer(menu as never)
@@ -1136,7 +1136,7 @@ describe('WebGridRuntime contextmenu — Phase 4.0', () => {
   })
 })
 
-describe('WebGridRuntime column resize — Phase 3.4', () => {
+describe('GridRuntime column resize — Phase 3.4', () => {
   const columnHandle: ResizeHandleRect = {
     kind: 'column',
     id: 'name',
@@ -1158,7 +1158,7 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
 
     const showIndicator = mock(() => {})
     const hideIndicator = mock(() => {})
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -1187,7 +1187,7 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
         getSize: () => 100,
       }) as never
 
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -1227,7 +1227,7 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
       collapsedColGaps: [],
     }))
 
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -1248,7 +1248,7 @@ describe('WebGridRuntime column resize — Phase 3.4', () => {
   })
 })
 
-describe('WebGridRuntime clipboard — Phase 4.1', () => {
+describe('GridRuntime clipboard — Phase 4.1', () => {
   function makeAdapter(readReturn = '') {
     return {
       writeText: mock(async (_: string) => true),
@@ -1300,7 +1300,7 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
     }))
     engine.clearRange = mock(() => {})
     const adapter = makeAdapter()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.setClipboardAdapter(adapter as never)
     return { engine, runtime, adapter, data, rows }
   }
@@ -1406,7 +1406,7 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
       selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
     }))
     const adapter = makeAdapter()
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.setClipboardAdapter(adapter as never)
 
     expect(await runtime.handleClipboardCut()).toBe(false)
@@ -1415,7 +1415,7 @@ describe('WebGridRuntime clipboard — Phase 4.1', () => {
   })
 })
 
-describe('WebGridRuntime keyboard clipboard — Phase 4.1', () => {
+describe('GridRuntime keyboard clipboard — Phase 4.1', () => {
   function setup() {
     const engine = makeEngine()
     const rows = [{ a: 'x', b: 1 }] as Row[]
@@ -1449,7 +1449,7 @@ describe('WebGridRuntime keyboard clipboard — Phase 4.1', () => {
       writeText: mock(async (_: string) => true),
       readText: mock(async () => ''),
     }
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.setClipboardAdapter(adapter as never)
     return { engine, runtime, adapter }
   }
@@ -1538,7 +1538,7 @@ describe('WebGridRuntime keyboard clipboard — Phase 4.1', () => {
   })
 })
 
-describe('WebGridRuntime menu default dispatch — Phase 4.1', () => {
+describe('GridRuntime menu default dispatch — Phase 4.1', () => {
   function setup() {
     const engine = makeEngine()
     const rows = [{ a: 'x' }] as Row[]
@@ -1568,7 +1568,7 @@ describe('WebGridRuntime menu default dispatch — Phase 4.1', () => {
       writeText: mock(async (_: string) => true),
       readText: mock(async () => ''),
     }
-    const runtime = new WebGridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     runtime.setClipboardAdapter(adapter as never)
     return { engine, runtime, adapter }
   }

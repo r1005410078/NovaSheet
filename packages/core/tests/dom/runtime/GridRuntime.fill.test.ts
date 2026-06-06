@@ -6,17 +6,17 @@ import {
   type GridSelection,
   type Theme,
 } from '@novasheet/core'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { GridRuntime } from '@novasheet/core'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
 import type { DomFillHandleLayer, OverlayRect } from '@novasheet/core'
-import { makeMockGridEngine } from '../helpers/mock-grid-engine'
+import { makeMockGridEngine } from '../../helpers/mock-grid-engine'
 
-describe('WebGridRuntime fill handle', () => {
+describe('GridRuntime fill handle', () => {
   it('syncs fill handle after render when selection exists', () => {
     const fillLayer = makeFillLayer()
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -29,7 +29,7 @@ describe('WebGridRuntime fill handle', () => {
   it('resyncs fill handle when pointer selection ends', () => {
     const fillLayer = makeFillLayer()
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -50,7 +50,7 @@ describe('WebGridRuntime fill handle', () => {
   it('syncs fill handle in the same render as pointer selection', () => {
     const fillLayer = makeFillLayer()
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -79,7 +79,7 @@ describe('WebGridRuntime fill handle', () => {
   it('drag commits fill target and emits onFill', () => {
     const engine = makeEngine()
     const fillLayer = makeFillLayer()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -98,7 +98,7 @@ describe('WebGridRuntime fill handle', () => {
 
   it('uses local pointer coordinates for fill drag hit testing', () => {
     const engine = makeEngine()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost({ left: 100, top: 80 }),
       renderer: makeRenderer(),
@@ -119,7 +119,7 @@ describe('WebGridRuntime fill handle', () => {
       anchorCell: null,
       extentCell: null,
     })
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -154,7 +154,7 @@ describe('WebGridRuntime fill handle', () => {
       result: { startRow: 0, endRow: 2, startCol: 0, endCol: 0 },
       writes: [{ rowIndex: 2, fieldId: 'a', value: 'filled text needs several wrapped lines' }],
     }))
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),

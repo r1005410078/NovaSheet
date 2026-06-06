@@ -7,7 +7,7 @@ import {
 } from '@novasheet/core'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { GridRuntime } from '@novasheet/core'
 
 const schema: Schema = {
   fields: [
@@ -52,11 +52,11 @@ function setup() {
   const engine = new DefaultGridEngine({ data })
   const host = makeHost()
   const renderer = makeRenderer()
-  const runtime = new WebGridRuntime({ engine, host, renderer })
+  const runtime = new GridRuntime({ engine, host, renderer })
   return { engine, runtime, data, host, renderer }
 }
 
-describe('WebGridRuntime — undo/redo + events', () => {
+describe('GridRuntime — undo/redo + events', () => {
   it('runtime.canUndo / canRedo 委派 engine', () => {
     const { engine, runtime } = setup()
     expect(runtime.canUndo()).toBe(false)
@@ -117,7 +117,7 @@ describe('WebGridRuntime — undo/redo + events', () => {
   })
 })
 
-describe('WebGridRuntime — keyboard routing', () => {
+describe('GridRuntime — keyboard routing', () => {
   it('Cmd+Z 在 canUndo 时返回 true 并 undo', () => {
     const { engine, runtime } = setup()
     engine.commitRowResize(0, 24, 50)
@@ -205,7 +205,7 @@ describe('WebGridRuntime — keyboard routing', () => {
   })
 })
 
-describe('WebGridRuntime — resize via commit* APIs', () => {
+describe('GridRuntime — resize via commit* APIs', () => {
   it('engine.commitRowResize 直调走 undo 栈', () => {
     const { engine, runtime } = setup()
     const before = engine.getRowsAxis().getSize(0)
@@ -224,7 +224,7 @@ describe('WebGridRuntime — resize via commit* APIs', () => {
   })
 })
 
-describe('WebGridRuntime — paste undo integration', () => {
+describe('GridRuntime — paste undo integration', () => {
   it('engine.commitPaste 走 undo 栈,runtime.undo 还原 + 选区设回 target', () => {
     const { engine, runtime } = setup()
     engine.selectCell({ rowIndex: 0, colIndex: 0 })

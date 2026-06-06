@@ -6,11 +6,11 @@ import {
   type GridEngine,
   type GridSelection,
 } from '@novasheet/core'
-import { Grid } from '../../src/Grid'
+import { Grid } from '@novasheet/web'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
 import type { SelectionOverlay, SelectionOverlayState, DomFillHandleLayer, OverlayRect } from '@novasheet/core'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { GridRuntime } from '@novasheet/core'
 import { makeMockGridEngine } from '../helpers/mock-grid-engine'
 
 function makeFillLayer(): DomFillHandleLayer {
@@ -22,7 +22,7 @@ function makeFillLayer(): DomFillHandleLayer {
   } as unknown as DomFillHandleLayer
 }
 
-describe('WebGridRuntime selection overlay', () => {
+describe('GridRuntime selection overlay', () => {
   it('syncs DOM selection overlay after setSelection render flush', () => {
     const container = document.createElement('div')
     Object.assign(container.style, { width: '480px', height: '320px' })
@@ -157,7 +157,7 @@ describe('WebGridRuntime selection overlay', () => {
       return getFrameCalls === 1 ? frame : laterFrame
     }) as GridEngine['getFrame']
     const renderer = makeRenderer()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer,
@@ -191,7 +191,7 @@ describe('WebGridRuntime selection overlay', () => {
       ],
       columnWidth: 80,
     })
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine: makeEngine(frame),
       host: makeHost(),
       renderer: makeRenderer(),
@@ -225,7 +225,7 @@ describe('WebGridRuntime selection overlay', () => {
       ],
       columnWidth: 80,
     })
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine: makeEngine(frame),
       host: makeHost(),
       renderer: makeRenderer(),
@@ -260,7 +260,7 @@ describe('WebGridRuntime selection overlay', () => {
       ],
       columnWidth: 80,
     })
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine: makeEngine(frame),
       host: makeHost(),
       renderer: makeRenderer(),
@@ -287,7 +287,7 @@ describe('WebGridRuntime selection overlay', () => {
       }),
     )
     engine.isCellEditing = mock(() => true) as GridEngine['isCellEditing']
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),

@@ -1,5 +1,5 @@
 /**
- * WebGridRuntime——Web 侧表格编排器（spec §6 + CLAUDE.md「Per-Grid scheduler」不变量 #5）。
+ * GridRuntime——Web 侧表格编排器（spec §6 + CLAUDE.md「Per-Grid scheduler」不变量 #5）。
  *
  * 职责：
  *   - 把 `GridEngine`（状态）、`WebHost`（DOM 生命周期）、`RenderBackend`（绘制）、
@@ -17,83 +17,77 @@
  *   - 公开 API 面（由 `@novasheet/web` 的 `Grid` facade 包一层暴露）
  */
 
-import type {
-  AutofitRowsResult,
-  DataSource,
-  FilterLayer,
-  FilterOp,
-  Field,
-  FrozenConfig,
-  GridEngine,
-  SetViewDataOptions,
-  SortLayer,
-  TextMeasurer,
-  Theme,
-  UndoCommand,
-  ViewPipeline,
-} from '@novasheet/core'
+import type { AutofitRowsResult } from '../../features/row/AutofitRowHeights'
+import type { DataSource } from '../../kernel/data/DataSource'
+import type { Field, Row } from '../../kernel/data/Schema'
+import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
+import { FilterLayer } from '../../features/view/FilterLayer'
+import type { FilterOp } from '../../features/view/FilterLayer'
+import { SortLayer } from '../../features/view/SortLayer'
+import { ViewPipeline } from '../../features/view/ViewPipeline'
+import type { TextMeasurer } from '../../kernel/measure/TextMeasurer'
+import type { Theme } from '../../kernel/theme/Theme'
+import type { UndoCommand } from '../../kernel/undo/UndoCommand'
+import type { GridEngine, SetViewDataOptions } from '../../engine/GridEngine'
+import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
+import { autofitRowHeights } from '../../features/row/AutofitRowHeights'
 import {
-  autofitRowHeights,
   cellInRange,
   clamp,
-  computeCellRect,
-  computePasteTarget,
   unionRange,
+} from '../../kernel/geometry/range'
+import { computeCellRect } from '../../kernel/interaction/CellLayout'
+import { computePasteTarget } from '../../features/clipboard/ApplyPaste'
+import type { ApplyPasteSource } from '../../features/clipboard/ApplyPaste'
+import {
   computeResizeHandles,
-  computeScrollReveal,
-  FrameScheduler,
+  MIN_RESIZE_SIZE,
+} from '../../kernel/interaction/HandleLayout'
+import type { ResizeHandleRect } from '../../kernel/interaction/HandleLayout'
+import { computeScrollReveal } from '../../kernel/interaction/scrollCellIntoView'
+import { FrameScheduler } from '../../kernel/util/raf'
+import {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
   getRowHeaderContextMenuItems,
-  hitTestCell,
-  isMutableDataSource,
-  MIN_RESIZE_SIZE,
-  isTypableEditKey,
-  parseTsvToCells,
-  serializeRowsToTsv,
-  type ApplyPasteSource,
-  type BorderPreset,
-  type BorderStyle,
-  type TextWrapMode,
-  type CellAddress,
-  type CellRange,
-  type MergeRegion,
-  type ContextMenuAction,
-  type ContextMenuContext,
-  type ContextMenuItem,
-  type FillDirection,
-  type GridSelection,
-  type PasteSkippedCell,
-  type ResizeHandleRect,
-  type Row,
-} from '@novasheet/core'
+} from '../../features/context-menu/ContextMenuModel'
 import type {
-  DomCellEditor,
-  DomContextMenuLayer,
-  DomFillHandleLayer,
-  DomHandleLayer,
-  HideToggleHandle,
-  HideColToggleHandle,
-  FilterPopover,
-  RowHeightPopover,
-  ColumnWidthPopover,
-  ColumnReorderOverlay,
-  RowReorderOverlay,
-  SelectionOverlay,
-  Drag,
-  DomClipboardAdapter,
-} from '@novasheet/core'
-import {
-  computeFillHandleRect,
-  computeRangeOverlayRects,
-  ColumnHeaderDrag,
-  FillHandleDrag,
-  ResizeDrag,
-  RowHeaderDrag,
-  SelectionDrag,
-} from '@novasheet/core'
-import type { WebHost, WebKeyboardEvent, WebPointerEvent, RenderBackend } from '@novasheet/core'
-import { ScrollMapper } from '@novasheet/core'
+  ContextMenuAction,
+  ContextMenuContext,
+  ContextMenuItem,
+} from '../../features/context-menu/ContextMenuModel'
+import { hitTestCell } from '../../kernel/interaction/HitTest'
+import { isTypableEditKey } from '../../features/edit/CellEdit'
+import { parseTsvToCells, serializeRowsToTsv } from '../../features/clipboard/TsvFormat'
+import type { PasteSkippedCell } from '../../features/clipboard/types'
+import type { BorderPreset, BorderStyle, TextWrapMode } from '../../kernel/protocol/FormatTypes'
+import type { CellAddress, CellRange } from '../../kernel/coords/SelectionTypes'
+import type { MergeRegion } from '../../kernel/coords/MergeRegion'
+import type { FillDirection } from '../../features/fill/FillTarget'
+import type { GridSelection } from '../../kernel/coords/SelectionTypes'
+import type { DomCellEditor } from '../interaction/DomCellEditor'
+import type { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
+import type { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'
+import type { DomHandleLayer } from '../interaction/DomHandleLayer'
+import type { HideToggleHandle } from '../interaction/handle/HideToggleHandle'
+import type { HideColToggleHandle } from '../interaction/handle/HideColToggleHandle'
+import type { FilterPopover } from '../overlay/FilterPopover'
+import type { RowHeightPopover } from '../overlay/RowHeightPopover'
+import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
+import type { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
+import type { RowReorderOverlay } from '../overlay/RowReorderOverlay'
+import type { SelectionOverlay } from '../overlay/SelectionOverlay'
+import type { Drag } from '../interaction/drag/Drag'
+import type { DomClipboardAdapter } from '../clipboard/DomClipboardAdapter'
+import { computeFillHandleRect, computeRangeOverlayRects } from '../overlay/RangeOverlayRects'
+import { ColumnHeaderDrag } from '../interaction/drag/ColumnHeaderDrag'
+import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
+import { ResizeDrag } from '../interaction/drag/ResizeDrag'
+import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
+import { SelectionDrag } from '../interaction/drag/SelectionDrag'
+import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/Host'
+import type { RenderBackend } from '../../ports/RenderBackend'
+import { ScrollMapper } from '../scroll/ScrollMapper'
 
 /** Phase 4.1 — TSV FNV-1a 32-bit hash；用于验证 paste 时剪贴板内容是否仍是 grid 自己刚写出去的，决定 typed 缓存命中。 */
 function fnv1aHash(s: string): number {
@@ -105,7 +99,7 @@ function fnv1aHash(s: string): number {
   return h
 }
 
-/** WebGridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
+/** GridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
 export interface AutofitRowsRuntimeOptions {
   /** 需要重算高度的行；未传则扫描全部行。 */
   rows?: readonly number[]
@@ -115,8 +109,8 @@ export interface AutofitRowsRuntimeOptions {
   maxHeight?: number
 }
 
-/** WebGridRuntime 的依赖注入参数，由 backend 装配阶段提供。 */
-export interface WebGridRuntimeOptions {
+/** GridRuntime 的依赖注入参数，由 backend 装配阶段提供。 */
+export interface GridRuntimeOptions {
   /** 核心表格状态与 mutation 引擎。 */
   engine: GridEngine
   /** Web 平台 host adapter，封装 DOM 生命周期、尺寸与滚动。 */
@@ -204,7 +198,7 @@ function mergeVisualRange(
 }
 
 /**
- * Web 端表格编排器（spec §6 `WebGridRuntime`）。
+ * Web 端表格编排器（spec §6 `GridRuntime`）。
  *
  * 连接 `GridEngine` + `WebHost` + `RenderBackend` + `ScrollMapper`，不持有 canvas DOM。
  * 数据流：scrollHost 滚动 → `ScrollMapper` → `engine.setScroll` → `renderer.render(frame)`。
@@ -212,7 +206,7 @@ function mergeVisualRange(
  * 引擎变更（`setData` 等）后的通用收尾在 `afterEngineMutation()`：
  * 同步 viewport 尺寸、重算 spacer、remap 滚动、触发重绘。
  */
-export class WebGridRuntime {
+export class GridRuntime {
   /** 核心表格状态与 mutation 引擎。 */
   private engine: GridEngine
   /** Web 平台 host adapter，负责 DOM 生命周期、尺寸、滚动与事件入口。 */
@@ -224,7 +218,7 @@ export class WebGridRuntime {
   /** DOM scroll 与逻辑 scroll 坐标之间的映射器。 */
   private scrollMapper: ScrollMapper
   /** 绘制表面 resize 回调，通常用于同步 canvas bitmap 与 DPR。 */
-  private onSurfaceResize?: WebGridRuntimeOptions['onSurfaceResize']
+  private onSurfaceResize?: GridRuntimeOptions['onSurfaceResize']
   /** 文本量度器，用于 wrap 字段自动行高。 */
   private measurer?: TextMeasurer
   /** runtime 是否已经销毁；销毁后所有入口都应短路。 */
@@ -312,7 +306,7 @@ export class WebGridRuntime {
   private drags: readonly Drag[] = []
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
-  constructor(opts: WebGridRuntimeOptions) {
+  constructor(opts: GridRuntimeOptions) {
     this.engine = opts.engine
     this.host = opts.host
     this.renderer = opts.renderer

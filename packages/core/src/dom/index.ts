@@ -47,3 +47,21 @@ export { FillHandleDrag } from './interaction/drag/FillHandleDrag'
 export { ResizeDrag } from './interaction/drag/ResizeDrag'
 export { RowHeaderDrag } from './interaction/drag/RowHeaderDrag'
 export { SelectionDrag } from './interaction/drag/SelectionDrag'
+
+// —— GridController 公开类型（原 web index 已公开）——
+export type {
+  AutofitRowsOptions,
+  AutofitRowsResult,
+  GridController,
+  GridPublicEventMap,
+  FillEvent,
+  RedoEvent,
+  UndoEvent,
+  ViewChangeEvent,
+  SortChangeEvent,
+  FilterChangeEvent,
+} from './runtime/GridController'
+
+// —— TRANSITIONAL(web-into-core): GridRuntime 仍在 web 的 Canvas2DBackend 中消费；Task 5 删除。
+export { GridRuntime } from './runtime/GridRuntime'
+export type { GridRuntimeOptions } from './runtime/GridRuntime'

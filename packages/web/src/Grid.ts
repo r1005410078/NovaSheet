@@ -26,7 +26,7 @@ import type {
   GridController,
   RedoEvent,
   UndoEvent,
-} from './grid/GridController'
+} from '@novasheet/core'
 
 /** 已支持的渲染后端；WebGL 待 `@novasheet/webgl` 接入后扩展。 */
 export type GridRendererBackend = 'canvas2d'

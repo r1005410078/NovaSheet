@@ -3,7 +3,7 @@ import { DefaultGridEngine, InMemoryDataSource, denseGridTheme } from '@novashee
 import type { Row, Schema } from '@novasheet/core'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { GridRuntime } from '@novasheet/core'
 
 function bigEngine(cols = 12, rows = 60): DefaultGridEngine {
   const schema: Schema = {
@@ -70,11 +70,11 @@ function withRaf(run: (flush: () => void) => void): void {
   }
 }
 
-describe('WebGridRuntime drag auto-scroll — 表头拖选 + 填充柄', () => {
+describe('GridRuntime drag auto-scroll — 表头拖选 + 填充柄', () => {
   it('列表头拖选到右边缘时横向滚动', () => {
     const engine = bigEngine()
     const { host, pos } = trackingHost()
-    const runtime = new WebGridRuntime({ engine, host, renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host, renderer: makeRenderer() })
 
     withRaf((flush) => {
       runtime.handleHostPointerDown({ x: 50, y: 10, shiftKey: false, button: 0 }) // 列表头 → 起拖
@@ -90,7 +90,7 @@ describe('WebGridRuntime drag auto-scroll — 表头拖选 + 填充柄', () => {
   it('行表头拖选到下边缘时纵向滚动', () => {
     const engine = bigEngine()
     const { host, pos } = trackingHost()
-    const runtime = new WebGridRuntime({ engine, host, renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host, renderer: makeRenderer() })
 
     withRaf((flush) => {
       runtime.handleHostPointerDown({ x: 20, y: 60, shiftKey: false, button: 0 }) // 行表头 → 起拖
@@ -112,7 +112,7 @@ describe('WebGridRuntime drag auto-scroll — 表头拖选 + 填充柄', () => {
       selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
     })
     const { host, pos } = trackingHost()
-    const runtime = new WebGridRuntime({ engine, host, renderer: makeRenderer() })
+    const runtime = new GridRuntime({ engine, host, renderer: makeRenderer() })
 
     withRaf((flush) => {
       runtime.handleFillPointerDown(1, 100, 100)

@@ -1,22 +1,15 @@
-import type {
-  BorderPreset,
-  BorderStyle,
-  TextWrapMode,
-  CellRange,
-  ContextMenuItem,
-  DataSource,
-  FilterLayer,
-  FilterSpec,
-  Field,
-  FrozenConfig,
-  GridEngineOptions,
-  GridSelection,
-  SortLayer,
-  SortSpec,
-  Theme,
-  ViewPipeline,
-} from '@novasheet/core'
-import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
+import type { BorderPreset, BorderStyle, TextWrapMode } from '../../kernel/protocol/FormatTypes'
+import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
+import type { ContextMenuItem } from '../../features/context-menu/ContextMenuModel'
+import type { DataSource } from '../../kernel/data/DataSource'
+import type { Field } from '../../kernel/data/Schema'
+import type { FilterLayer, FilterSpec } from '../../features/view/FilterLayer'
+import type { SortLayer, SortSpec } from '../../features/view/SortLayer'
+import type { ViewPipeline } from '../../features/view/ViewPipeline'
+import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
+import type { GridEngineOptions } from '../../engine/GridEngine'
+import type { Theme } from '../../kernel/theme/Theme'
+import type { FillEvent, RedoEvent, UndoEvent } from './GridRuntime'
 export type { FillEvent, RedoEvent, UndoEvent }
 
 export interface ViewChangeEvent {

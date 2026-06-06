@@ -2,13 +2,13 @@
 export { Grid } from './Grid'
 export type { GridOptions, GridRendererBackend } from './Grid'
 export { withExcelHeaders } from './Grid'
-export type { AutofitRowsOptions, AutofitRowsResult } from './grid/GridController'
+export type { AutofitRowsOptions, AutofitRowsResult } from '@novasheet/core'
 
 export { ScrollMapper, SAFE_MAX, NativeScroller, DomGridHost } from '@novasheet/core'
 export type { ScrollListener, WebHost, WebHostOptions, WebHostFactory } from '@novasheet/core'
 export type { RenderBackend } from '@novasheet/core'
-export { WebGridRuntime } from './runtime/WebGridRuntime'
-export type { WebGridRuntimeOptions } from './runtime/WebGridRuntime'
+export { GridRuntime } from '@novasheet/core'
+export type { GridRuntimeOptions } from '@novasheet/core'
 
 export type {
   CellMenuContext,
@@ -22,4 +22,4 @@ export type { ClipboardAction, PasteSkippedCell } from '@novasheet/core'
 export { DomClipboardAdapter } from '@novasheet/core'
 
 export type { UndoCommand } from '@novasheet/core'
-export type { FillEvent, RedoEvent, UndoEvent } from './grid/GridController'
+export type { FillEvent, RedoEvent, UndoEvent } from '@novasheet/core'

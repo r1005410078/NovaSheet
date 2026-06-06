@@ -1,7 +1,7 @@
 /**
  * Canvas2DBackend——`Grid` facade 在 `renderer: 'canvas2d'` 时使用的后端实现。
  *
- * 把 `DefaultGridEngine` + `DomGridHost` + `Canvas2DRenderer` + `WebGridRuntime`
+ * 把 `DefaultGridEngine` + `DomGridHost` + `Canvas2DRenderer` + `GridRuntime`
  * 装配成一个 `GridController`，对外暴露公共 API。其他渲染器（WebGL/WebGPU）
  * 实现各自的 `Backend` 即可，`Grid` 选择器根据 options 切换。
  *
@@ -59,18 +59,17 @@ import type {
   GridPublicEventMap,
   SortChangeEvent,
   ViewChangeEvent,
-} from '../grid/GridController'
-import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
-import { DomGridHost } from '@novasheet/core'
-import { WebGridRuntime } from '../runtime/WebGridRuntime'
+} from '@novasheet/core'
+import type { FillEvent, RedoEvent, UndoEvent } from '@novasheet/core'
+import { DomGridHost, GridRuntime } from '@novasheet/core'
 
 /**
  * Canvas2D 渲染后端装配（`Grid` 在 `renderer: 'canvas2d'` 时使用）。
  *
  * 职责划分：
- *   - 本类：创建 canvas / HighDPI / `Canvas2DRenderer`，并交给 `WebGridRuntime` 编排
+ *   - 本类：创建 canvas / HighDPI / `Canvas2DRenderer`，并交给 `GridRuntime` 编排
  *   - `DomGridHost`：scrollHost、spacer、ResizeObserver、DPR 监听
- *   - `WebGridRuntime`：滚动映射、spacer 尺寸、RAF、`setData` 换 renderer
+ *   - `GridRuntime`：滚动映射、spacer 尺寸、RAF、`setData` 换 renderer
  *   - `DefaultGridEngine`（core）：数据、轴、viewport 逻辑状态
  *
  * Host 回调在 `attach()` 之后才触发，故可在 `this.runtime` 赋值后安全闭包引用。
@@ -117,7 +116,7 @@ export class Canvas2DBackend implements GridController {
   /** Web 剪贴板适配器；runtime 只依赖抽象能力。 */
   private clipboardAdapter = new DomClipboardAdapter()
   /** web 交互编排器；attach 前由 backend 完成全部依赖注入。 */
-  private runtime!: WebGridRuntime
+  private runtime!: GridRuntime
   /** 单 Grid 共享 scheduler，host / renderer / runtime 的 RAF 统一合并。 */
   private scheduler = new FrameScheduler()
   /** 用户传入的原始数据源；sort/filter pipeline 会基于它重建 view data。 */
@@ -221,7 +220,7 @@ export class Canvas2DBackend implements GridController {
       onContextMenu: (event) => this.runtime.handleHostContextMenu(event),
     })
 
-    this.runtime = new WebGridRuntime({
+    this.runtime = new GridRuntime({
       engine: this.engine,
       host: this.host,
       renderer: this.renderer,

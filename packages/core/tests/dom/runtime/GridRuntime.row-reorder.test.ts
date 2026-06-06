@@ -4,7 +4,7 @@ import type { GridEngine, ResizeHandleRect, Row, Schema } from '@novasheet/core'
 import type { RowReorderOverlay } from '@novasheet/core'
 import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
-import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
+import { GridRuntime } from '@novasheet/core'
 
 function makeEngine(): DefaultGridEngine {
   const schema: Schema = {
@@ -69,13 +69,13 @@ function rowNames(engine: GridEngine): string[] {
   return (engine.getData().getRows(0, 3) as Row[]).map((row) => String(row.name))
 }
 
-describe('WebGridRuntime row reorder drag', () => {
+describe('GridRuntime row reorder drag', () => {
   it('shows preview and grabbing cursor immediately on selected row header pointerdown', () => {
     const engine = makeEngine()
     selectRows(engine, 1, 2)
     const host = makeHost()
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host,
       renderer: makeRenderer(),
@@ -101,7 +101,7 @@ describe('WebGridRuntime row reorder drag', () => {
     const engine = makeEngine()
     selectRows(engine, 1, 2)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -121,7 +121,7 @@ describe('WebGridRuntime row reorder drag', () => {
     // 与底部「映射为追加到末尾」不对称——导致行向上拖（含上边缘自动滚动）永远不提交。
     const engine = makeEngine()
     selectRows(engine, 2, 3) // C,D；row2 起于 y≈88
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -138,7 +138,7 @@ describe('WebGridRuntime row reorder drag', () => {
   it('dragging from an unselected row header selects contiguous whole rows without reorder', () => {
     const engine = makeEngine()
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -163,7 +163,7 @@ describe('WebGridRuntime row reorder drag', () => {
     const engine = makeEngine()
     selectRows(engine, 1, 1)
     const overlay = makeOverlay()
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host: makeHost(),
       renderer: makeRenderer(),
@@ -192,7 +192,7 @@ describe('WebGridRuntime row reorder drag', () => {
   })
 })
 
-describe('WebGridRuntime row reorder drag auto-scroll', () => {
+describe('GridRuntime row reorder drag auto-scroll', () => {
   function tallEngine(): DefaultGridEngine {
     const schema: Schema = { fields: [{ id: 'name', name: 'Name', type: 'text', width: 100 }] }
     const rows: Row[] = Array.from({ length: 60 }, (_, i) => ({ name: `R${i}` }))
@@ -217,7 +217,7 @@ describe('WebGridRuntime row reorder drag auto-scroll', () => {
       getScrollPosition: () => ({ scrollTop, scrollLeft: 0 }),
       getContainerSize: () => ({ width: 300, height: 200 }),
     } satisfies WebHost
-    const runtime = new WebGridRuntime({
+    const runtime = new GridRuntime({
       engine,
       host,
       renderer: makeRenderer(),
