@@ -2,7 +2,7 @@ import { describe, expect, it, mock } from 'bun:test'
 import { DefaultGridEngine, InMemoryDataSource, denseGridTheme } from '@novasheet/core'
 import type { Row, Schema } from '@novasheet/core'
 import type { WebHost } from '../../src/host/WebHost'
-import type { WebRenderer } from '../../src/render/WebRenderer'
+import type { RenderBackend } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 
 function bigEngine(cols = 12, rows = 60): DefaultGridEngine {
@@ -47,7 +47,7 @@ function trackingHost(): { host: WebHost; pos: { top: number; left: number } } {
   return { host, pos }
 }
 
-function makeRenderer(): WebRenderer {
+function makeRenderer(): RenderBackend {
   return {
     mount: mock(() => {}),
     resize: mock(() => {}),

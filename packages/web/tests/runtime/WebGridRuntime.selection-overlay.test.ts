@@ -8,7 +8,7 @@ import {
 } from '@novasheet/core'
 import { Grid } from '../../src/Grid'
 import type { WebHost } from '../../src/host/WebHost'
-import type { WebRenderer } from '../../src/render/WebRenderer'
+import type { RenderBackend } from '@novasheet/core'
 import type { SelectionOverlay, SelectionOverlayState } from '../../src/overlay/SelectionOverlay'
 import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
 import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
@@ -407,7 +407,7 @@ function makeHost(): WebHost {
   }
 }
 
-function makeRenderer(): WebRenderer {
+function makeRenderer(): RenderBackend {
   return {
     mount: mock(() => {}),
     resize: mock(() => {}),

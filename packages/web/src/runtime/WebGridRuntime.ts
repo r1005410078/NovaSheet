@@ -2,7 +2,7 @@
  * WebGridRuntime——Web 侧表格编排器（spec §6 + CLAUDE.md「Per-Grid scheduler」不变量 #5）。
  *
  * 职责：
- *   - 把 `GridEngine`（状态）、`WebHost`（DOM 生命周期）、`WebRenderer`（绘制）、
+ *   - 把 `GridEngine`（状态）、`WebHost`（DOM 生命周期）、`RenderBackend`（绘制）、
  *     `ScrollMapper`（逻辑↔DOM 滚动映射）四件套连起来，对外暴露
  *     `setData / setTheme / setRowHeight / setColumnWidth / setFrozen / scrollTo* / refresh / destroy`。
  *   - 拥有**单个** `FrameScheduler`，让 scroll/resize/render 在同一帧里合并（CLAUDE.md 不变量 #5）。
@@ -12,7 +12,7 @@
  *   scrollHost scroll → handleHostScroll → ScrollMapper → engine.setScroll → renderer.render(frame)
  *
  * 不在职责范围内的：
- *   - canvas/WebGL 上下文（由 `WebRenderer` 实现拥有）
+ *   - canvas/WebGL 上下文（由 `RenderBackend` 实现拥有）
  *   - DOM 节点的创建与销毁（由 `WebHost` 实现拥有）
  *   - 公开 API 面（由 `@novasheet/web` 的 `Grid` facade 包一层暴露）
  */
@@ -87,7 +87,7 @@ import { ResizeDrag } from '../interaction/drag/ResizeDrag'
 import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
 import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
-import type { WebRenderer } from '../render/WebRenderer'
+import type { RenderBackend } from '@novasheet/core'
 import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
 import { ScrollMapper } from '../scroll/ScrollMapper'
 
@@ -118,10 +118,10 @@ export interface WebGridRuntimeOptions {
   /** Web 平台 host adapter，封装 DOM 生命周期、尺寸与滚动。 */
   host: WebHost
   /** 当前渲染器实现，负责消费 render frame。 */
-  renderer: WebRenderer
+  renderer: RenderBackend
   /** 每个 grid 独立的 RAF scheduler；未传时 runtime 自建。 */
   scheduler?: FrameScheduler
-  /** 调整绘制表面位图（如 HighDPI）；Canvas2D 目前走此回调，`WebRenderer.resize` 仍为过渡 stub。 */
+  /** 调整绘制表面位图（如 HighDPI）；Canvas2D 目前走此回调，`RenderBackend.resize` 仍为过渡 stub。 */
   onSurfaceResize?: (width: number, height: number, dpr: number) => void
   /**
    * 文本量度器（M3 autofit）。`autofitRows()` 调用时必须可用——backend 装配阶段注入。
@@ -202,7 +202,7 @@ function mergeVisualRange(
 /**
  * Web 端表格编排器（spec §6 `WebGridRuntime`）。
  *
- * 连接 `GridEngine` + `WebHost` + `WebRenderer` + `ScrollMapper`，不持有 canvas DOM。
+ * 连接 `GridEngine` + `WebHost` + `RenderBackend` + `ScrollMapper`，不持有 canvas DOM。
  * 数据流：scrollHost 滚动 → `ScrollMapper` → `engine.setScroll` → `renderer.render(frame)`。
  *
  * 引擎变更（`setData` 等）后的通用收尾在 `afterEngineMutation()`：
@@ -214,7 +214,7 @@ export class WebGridRuntime {
   /** Web 平台 host adapter，负责 DOM 生命周期、尺寸、滚动与事件入口。 */
   private host: WebHost
   /** 当前渲染器实现。 */
-  private renderer: WebRenderer
+  private renderer: RenderBackend
   /** 每个 grid 独立的帧调度器，用于合并 resize/scroll/render。 */
   private scheduler: FrameScheduler
   /** DOM scroll 与逻辑 scroll 坐标之间的映射器。 */
@@ -1180,7 +1180,7 @@ export class WebGridRuntime {
   }
 
   /** 更换渲染器实现（Canvas2D / 未来 WebGL）；销毁旧实例并取消 pending flush。 */
-  replaceRenderer(factory: () => WebRenderer): WebRenderer {
+  replaceRenderer(factory: () => RenderBackend): RenderBackend {
     if (!this.destroyed) {
       this.scheduler.cancel('renderer:flush')
       this.renderer.destroy()
@@ -1190,7 +1190,7 @@ export class WebGridRuntime {
   }
 
   /** 替换底层 data source 与 renderer，并清空剪贴板 typed 缓存。 */
-  setData(data: DataSource, factory: () => WebRenderer): WebRenderer {
+  setData(data: DataSource, factory: () => RenderBackend): RenderBackend {
     this.engine.setData(data)
     this.replaceRenderer(factory)
     this.clipboardCache = null
@@ -1202,7 +1202,7 @@ export class WebGridRuntime {
   updateViewData(
     data: DataSource,
     options?: SetViewDataOptions,
-    patchRenderer?: (renderer: WebRenderer) => void,
+    patchRenderer?: (renderer: RenderBackend) => void,
   ): void {
     this.engine.setViewData(data, options)
     patchRenderer?.(this.renderer)
@@ -1211,7 +1211,7 @@ export class WebGridRuntime {
   }
 
   /** 应用主题到 engine、renderer 与所有 DOM overlay layer。 */
-  setTheme(theme: Theme, patchRenderer?: (renderer: WebRenderer) => void): void {
+  setTheme(theme: Theme, patchRenderer?: (renderer: RenderBackend) => void): void {
     this.engine.setTheme(theme)
     patchRenderer?.(this.renderer)
     this.syncScrollbarTheme()

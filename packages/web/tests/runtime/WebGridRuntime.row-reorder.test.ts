@@ -3,7 +3,7 @@ import { DefaultGridEngine, InMemoryDataSource, denseGridTheme } from '@novashee
 import type { GridEngine, ResizeHandleRect, Row, Schema } from '@novasheet/core'
 import type { RowReorderOverlay } from '../../src/overlay/RowReorderOverlay'
 import type { WebHost } from '../../src/host/WebHost'
-import type { WebRenderer } from '../../src/render/WebRenderer'
+import type { RenderBackend } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 
 function makeEngine(): DefaultGridEngine {
@@ -38,7 +38,7 @@ function makeHost(): WebHost {
   }
 }
 
-function makeRenderer(): WebRenderer {
+function makeRenderer(): RenderBackend {
   return {
     mount: mock(() => {}),
     resize: mock(() => {}),

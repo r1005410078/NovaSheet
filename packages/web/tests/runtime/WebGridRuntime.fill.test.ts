@@ -8,7 +8,7 @@ import {
 } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 import type { WebHost } from '../../src/host/WebHost'
-import type { WebRenderer } from '../../src/render/WebRenderer'
+import type { RenderBackend } from '@novasheet/core'
 import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
 import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'
 import { makeMockGridEngine } from '../helpers/mock-grid-engine'
@@ -231,7 +231,7 @@ function makeHost(offset: { left: number; top: number } = { left: 0, top: 0 }): 
   }
 }
 
-function makeRenderer(): WebRenderer {
+function makeRenderer(): RenderBackend {
   return {
     mount: mock(() => {}),
     resize: mock(() => {}),

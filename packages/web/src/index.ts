@@ -7,7 +7,7 @@ export type { AutofitRowsOptions, AutofitRowsResult } from './grid/GridControlle
 export { ScrollMapper, SAFE_MAX } from './scroll/ScrollMapper'
 export { NativeScroller } from './scroll/NativeScroller'
 export type { ScrollListener } from './scroll/NativeScroller'
-export type { WebRenderer } from './render/WebRenderer'
+export type { RenderBackend } from '@novasheet/core'
 export type { WebHost, WebHostOptions, WebHostFactory } from './host/WebHost'
 export { DomGridHost } from './host/DomGridHost'
 export { WebGridRuntime } from './runtime/WebGridRuntime'

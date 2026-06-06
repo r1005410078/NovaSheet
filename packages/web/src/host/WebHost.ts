@@ -58,7 +58,7 @@ export interface WebHostOptions {
  * 浏览器宿主契约（spec §6 `WebHost`）。
  *
  * 拥有 scrollHost + scrollSpacer 与滚动/尺寸/DPR 监听；**不**拥有 canvas。
- * canvas 由具体 `WebRenderer` 实现挂载。
+ * canvas 由具体 `RenderBackend` 实现挂载。
  */
 export interface WebHost {
   attach(): void

@@ -57,6 +57,7 @@
 
 import type {
   DataSource,
+  RenderBackend,
   RenderFrame,
   RenderRegion,
   CellAddress,
@@ -127,7 +128,7 @@ interface Canvas2DPaintFrameContext {
  *
  * 无冻结时只画 `main` 区域；冻结行列开启后同一管线迭代额外区域。
  */
-export class Canvas2DRenderer {
+export class Canvas2DRenderer implements RenderBackend {
   /** canvas 2D 绘图上下文 */
   private ctx: CanvasRenderingContext2D
   /** 当前数据源 */
@@ -241,19 +242,19 @@ export class Canvas2DRenderer {
     this.scheduler.cancel(RENDERER_KEY)
   }
 
-  /** `WebRenderer` 过渡 stub：canvas 由 `Canvas2DBackend` 创建，尚未迁到 mount。 */
+  /** `RenderBackend` 过渡 stub：canvas 由 `Canvas2DBackend` 创建，尚未迁到 mount。 */
   mount(container: HTMLElement): void {
     void container
   }
 
-  /** `WebRenderer` 过渡 stub：位图缩放由 `HighDPI` + `onSurfaceResize` 处理。 */
+  /** `RenderBackend` 过渡 stub：位图缩放由 `HighDPI` + `onSurfaceResize` 处理。 */
   resize(width: number, height: number, dpr: number): void {
     void width
     void height
     void dpr
   }
 
-  /** `WebRenderer` 入口：只读 `RenderFrame`（spec 不变量 #1）。 */
+  /** `RenderBackend` 入口：只读 `RenderFrame`（spec 不变量 #1）。 */
   render(frame: RenderFrame): void {
     this.syncFromFrame(frame)
     this.paintFrame(frame)

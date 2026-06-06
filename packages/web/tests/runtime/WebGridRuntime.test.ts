@@ -11,7 +11,7 @@ import type {
   Theme,
 } from '@novasheet/core'
 import type { WebHost } from '../../src/host/WebHost'
-import type { WebRenderer } from '../../src/render/WebRenderer'
+import type { RenderBackend } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 
 function makeEngine(): GridEngine {
@@ -140,7 +140,7 @@ function makeHost(): WebHost {
   }
 }
 
-function makeRenderer(): WebRenderer {
+function makeRenderer(): RenderBackend {
   return {
     mount: mock(() => {}),
     resize: mock(() => {}),
