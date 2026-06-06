@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { InsertColsCommandHandler } from '../../../src/engine/column/InsertColsCommandHandler'
-import { MoveColsCommandHandler } from '../../../src/engine/column/MoveColsCommandHandler'
-import type { ColumnDomainEvent } from '../../../src/engine/column/ColumnEvent'
-import type { ColumnCommands } from '../../../src/engine/column/ColumnStructure'
+import { InsertColsCommandHandler } from '../../../src/features/column/InsertColsCommandHandler'
+import { MoveColsCommandHandler } from '../../../src/features/column/MoveColsCommandHandler'
+import type { ColumnDomainEvent } from '../../../src/features/column/ColumnEvent'
+import type { ColumnCommands } from '../../../src/features/column/ColumnStructure'
 
 function makeCols(overrides: Partial<ColumnCommands>): ColumnCommands {
   return {

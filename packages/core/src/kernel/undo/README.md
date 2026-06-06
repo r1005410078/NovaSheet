@@ -13,10 +13,10 @@
 - `editCell`/`clearRange`/`paste` → `engine/undo/CellUndoHandler`（M1）。
 - `format`/`merge`/`unmerge` → `engine/format/FormatUndoHandler`（M2，与 `FormatController` 同域）。
 - `resizeRow`/`resizeRowsMulti`/`hideRows`/`unhideRows` → `features/row/RowUndoHandler`（M3）。
-- `resizeColumn`/`resizeColumnsMulti`/`hideCols`/`unhideCols` → `engine/column/ColumnUndoHandler`（M3）。
+- `resizeColumn`/`resizeColumnsMulti`/`hideCols`/`unhideCols` → `features/column/ColumnUndoHandler`（M3）。
 - `fill` → `engine/undo/FillUndoHandler`（M4，跨域，不属行/列结构）。
 - `insertRows`/`deleteRows`/`moveRows` → `features/row/RowStructureUndoHandler`（M4，复合）。
-- `insertCols`/`deleteCols`/`moveCols` → `engine/column/ColumnStructureUndoHandler`（M4，复合，含 frozen）。
+- `insertCols`/`deleteCols`/`moveCols` → `features/column/ColumnStructureUndoHandler`（M4，复合，含 frozen）。
 
 M3+M4 顺带修了行结构 redo 仅换 axis 引用、不重建 frozen/viewport 的 latent bug（各 `*UndoContext`
 统一 `rebuildRows()` 全重建，回归测试守）。

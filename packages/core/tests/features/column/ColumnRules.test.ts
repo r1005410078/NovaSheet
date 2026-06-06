@@ -7,7 +7,7 @@ import {
   isContiguousFieldGroup,
   normalizeDeleteCols,
   normalizeMoveCols,
-} from '../../../src/engine/column/ColumnRules'
+} from '../../../src/features/column/ColumnRules'
 import { ChunkedAxis } from '../../../src/kernel/geometry/ChunkedAxis'
 import type { Field } from '../../../src/kernel/data/Schema'
 

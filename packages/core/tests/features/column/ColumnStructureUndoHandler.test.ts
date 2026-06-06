@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 
-import { ColumnStructureUndoHandler } from '../../../src/engine/column/ColumnStructureUndoHandler'
-import type { ColumnStructureUndoContext } from '../../../src/engine/column/ColumnStructureUndoHandler'
+import { ColumnStructureUndoHandler } from '../../../src/features/column/ColumnStructureUndoHandler'
+import type { ColumnStructureUndoContext } from '../../../src/features/column/ColumnStructureUndoHandler'
 import type { Field } from '../../../src/kernel/data/Schema'
 import type { RemovedFieldSnapshot } from '../../../src/kernel/data/MutableDataSource'
 import type { FrozenConfig } from '../../../src/kernel/geometry/FrozenRegions'

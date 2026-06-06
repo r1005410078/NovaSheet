@@ -6,8 +6,8 @@ import { registerFillUndo } from '../../../src/engine/undo/registerFillUndo'
 import { registerFormatUndo } from '../../../src/engine/format/registerFormatUndo'
 import { registerRowUndo } from '../../../src/features/row/registerRowUndo'
 import { registerRowStructureUndo } from '../../../src/features/row/registerRowStructureUndo'
-import { registerColumnUndo } from '../../../src/engine/column/registerColumnUndo'
-import { registerColumnStructureUndo } from '../../../src/engine/column/registerColumnStructureUndo'
+import { registerColumnUndo } from '../../../src/features/column/registerColumnUndo'
+import { registerColumnStructureUndo } from '../../../src/features/column/registerColumnStructureUndo'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 // 全 21 个 kind —— 删除 engine 旧 switch / UndoReplay fallback 前的兜底：
