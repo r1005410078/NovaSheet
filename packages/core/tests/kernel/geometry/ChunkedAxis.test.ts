@@ -153,3 +153,60 @@ describe('ChunkedAxis.getSize — 行高读取', () => {
     expect(axis.indexToPosition(10) - axis.indexToPosition(9)).toBe(0)
   })
 })
+
+describe('ChunkedAxis — 探针边界（自 _probe 迁入）', () => {
+  it('positionToIndex 在 chunk 边界 upperBound 正确', () => {
+    const axis = new ChunkedAxis({ count: 3000, defaultSize: 28 })
+    expect(axis.positionToIndex(28672)).toBe(1024)
+    expect(axis.positionToIndex(28671)).toBe(1023)
+  })
+
+  it('indexToPosition 超 count 时钳制到 count-1', () => {
+    const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
+    const lastIdx = axis.indexToPosition(9)
+    expect(axis.indexToPosition(10)).toBe(lastIdx)
+  })
+
+  it('覆盖 chunk 时 indexToPosition 的 chunk 末端语义', () => {
+    const axis = new ChunkedAxis({ count: 2048, defaultSize: 28 })
+    axis.setSize(1023, 100)
+    expect(axis.indexToPosition(1024)).toBe(28744)
+  })
+
+  it('count=1 边界情况', () => {
+    const axis = new ChunkedAxis({ count: 1, defaultSize: 28 })
+    expect(axis.getTotalSize()).toBe(28)
+    expect(axis.indexToPosition(0)).toBe(0)
+    expect(axis.positionToIndex(0)).toBe(0)
+    expect(axis.positionToIndex(27)).toBe(0)
+    expect(axis.positionToIndex(28)).toBe(0)
+  })
+
+  it('末 chunk setSize：Float32 填充不影响 totalSize', () => {
+    const axis = new ChunkedAxis({ count: 1025, defaultSize: 28 })
+    axis.setSize(1024, 100)
+    expect(axis.getTotalSize()).toBe(1024 * 28 + 100)
+    expect(axis.positionToIndex(1024 * 28 + 99)).toBe(1024)
+  })
+
+  it('部分物化 chunk：positionToIndex 用 chunk.length', () => {
+    const axis = new ChunkedAxis({ count: 1025, defaultSize: 28 })
+    axis.setSize(1024, 100)
+    expect(axis.positionToIndex(28672)).toBe(1024)
+    expect(axis.positionToIndex(28771)).toBe(1024)
+  })
+
+  it('末 chunk 越界 setSize 静默 no-op', () => {
+    const axis = new ChunkedAxis({ count: 1025, defaultSize: 28 })
+    axis.setSize(1025, 100)
+    expect(axis.getTotalSize()).toBe(1025 * 28)
+  })
+
+  it('末行高度用 totalSize 回退（非 indexToPosition 差分）', () => {
+    const axis = new ChunkedAxis({ count: 10, defaultSize: 28 })
+    axis.setSize(9, 50)
+    expect(axis.indexToPosition(9)).toBe(9 * 28)
+    expect(axis.indexToPosition(10)).toBe(9 * 28)
+    expect(axis.getTotalSize() - axis.indexToPosition(9)).toBe(50)
+  })
+})
