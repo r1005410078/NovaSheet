@@ -72,6 +72,7 @@ import { DefaultSelectionState } from '../features/selection/DefaultSelectionSta
 import { SelectionController } from '../features/selection/SelectionController'
 import { SelectionEventHandler } from '../features/selection/SelectionEventHandler'
 import { resolveViewMergeRegion } from '../features/merge/MergeViewResolver'
+import { StructuralMutationCoordinator } from './StructuralMutationCoordinator'
 
 /**
  * `GridEngine` 默认实现。
@@ -154,6 +155,21 @@ export class DefaultGridEngine implements GridEngine {
   private readonly deleteRowsCommand: DeleteRowsCommandHandler
   private readonly hideRowsCommand: HideRowsCommandHandler
   private readonly unhideRowsCommand: UnhideRowsCommandHandler
+  private readonly structural = new StructuralMutationCoordinator({
+    getSelection: () => this.selection.getSelection(),
+    pushUndo: (command) => this.undoStack.push(command),
+    rebuildRows: () => this.layout.rebuildRows(this.rowStructure.getViewRowsAxis()),
+    rebuildCols: () => this.layout.rebuildCols(this.columnStructure.getViewColsAxis()),
+    snapshotFormatMerge: () => ({
+      formatBefore: this.formatState.formatStore.snapshot(),
+      mergeBefore: this.formatState.mergeStore.snapshot(),
+    }),
+    snapshotFormatMergeAfter: () => ({
+      formatAfter: this.formatState.formatStore.snapshot(),
+      mergeAfter: this.formatState.mergeStore.snapshot(),
+    }),
+    getFrozenConfig: () => this.layout.getFrozenConfig(),
+  })
 
   constructor(options: GridEngineOptions) {
     this.rawData = options.data
@@ -524,30 +540,25 @@ export class DefaultGridEngine implements GridEngine {
    * 触发 UndoStack 并将新行 id 返回。
    */
   insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
-    const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatState.formatStore.snapshot()
-    const mergeBefore = this.formatState.mergeStore.snapshot()
-    const event = this.insertRowsCommand.execute({
-      kind: 'insertRows',
-      at: beforeUnderlyingRow,
-      count,
+    const event = this.structural.runCommandStructural({
+      execute: () =>
+        this.insertRowsCommand.execute({ kind: 'insertRows', at: beforeUnderlyingRow, count }),
+      rebuild: 'rows',
+      withFormatMerge: true,
+      buildUndo: (event, sel, ex) => ({
+        kind: 'insertRows',
+        at: event.at,
+        count: event.count,
+        newIds: event.newRowIds,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+        formatBefore: ex!.formatBefore!,
+        formatAfter: ex!.formatAfter!,
+        mergeBefore: ex!.mergeBefore!,
+        mergeAfter: ex!.mergeAfter!,
+      }),
     })
-    if (!event) return []
-    this.layout.rebuildRows(this.rowStructure.getViewRowsAxis())
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
-      kind: 'insertRows',
-      at: event.at,
-      count: event.count,
-      newIds: event.newRowIds,
-      selectionBefore,
-      selectionAfter,
-      formatBefore,
-      formatAfter: this.formatState.formatStore.snapshot(),
-      mergeBefore,
-      mergeAfter: this.formatState.mergeStore.snapshot(),
-    })
-    return event.newRowIds
+    return event?.newRowIds ?? []
   }
 
   /**
@@ -555,26 +566,21 @@ export class DefaultGridEngine implements GridEngine {
    * 返回被删行快照，供上层 UI 反馈。
    */
   deleteRows(underlyingRowIds: readonly number[]): void {
-    const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatState.formatStore.snapshot()
-    const mergeBefore = this.formatState.mergeStore.snapshot()
-    const event = this.deleteRowsCommand.execute({
-      kind: 'deleteRows',
-      rowIds: underlyingRowIds,
-    })
-    if (!event) return
-    this.layout.rebuildRows(this.rowStructure.getViewRowsAxis())
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
-      kind: 'deleteRows',
-      snapshots: event.snapshots,
-      deletedHeights: event.deletedHeights,
-      selectionBefore,
-      selectionAfter,
-      formatBefore,
-      formatAfter: this.formatState.formatStore.snapshot(),
-      mergeBefore,
-      mergeAfter: this.formatState.mergeStore.snapshot(),
+    this.structural.runCommandStructural({
+      execute: () => this.deleteRowsCommand.execute({ kind: 'deleteRows', rowIds: underlyingRowIds }),
+      rebuild: 'rows',
+      withFormatMerge: true,
+      buildUndo: (event, sel, ex) => ({
+        kind: 'deleteRows',
+        snapshots: event.snapshots,
+        deletedHeights: event.deletedHeights,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+        formatBefore: ex!.formatBefore!,
+        formatAfter: ex!.formatAfter!,
+        mergeBefore: ex!.mergeBefore!,
+        mergeAfter: ex!.mergeAfter!,
+      }),
     })
   }
 
@@ -582,16 +588,15 @@ export class DefaultGridEngine implements GridEngine {
    * 隐藏给定 underlying row id 集合（幂等：已隐藏的行不重复计入命令）。
    */
   hideRows(underlyingRowIds: readonly number[]): void {
-    const selectionBefore = this.selection.getSelection()
-    const event = this.hideRowsCommand.execute({ kind: 'hideRows', rowIds: underlyingRowIds })
-    if (!event) return
-    this.layout.rebuildRows(this.rowStructure.getViewRowsAxis())
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
-      kind: 'hideRows',
-      underlyingRowIds: event.rowIds,
-      selectionBefore,
-      selectionAfter,
+    this.structural.runCommandStructural({
+      execute: () => this.hideRowsCommand.execute({ kind: 'hideRows', rowIds: underlyingRowIds }),
+      rebuild: 'rows',
+      buildUndo: (event, sel) => ({
+        kind: 'hideRows',
+        underlyingRowIds: event.rowIds,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+      }),
     })
   }
 
@@ -599,16 +604,15 @@ export class DefaultGridEngine implements GridEngine {
    * 取消隐藏给定 underlying row id 集合（幂等：未隐藏的行不重复计入命令）。
    */
   unhideRows(underlyingRowIds: readonly number[]): void {
-    const selectionBefore = this.selection.getSelection()
-    const event = this.unhideRowsCommand.execute({ kind: 'unhideRows', rowIds: underlyingRowIds })
-    if (!event) return
-    this.layout.rebuildRows(this.rowStructure.getViewRowsAxis())
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
-      kind: 'unhideRows',
-      underlyingRowIds: event.rowIds,
-      selectionBefore,
-      selectionAfter,
+    this.structural.runCommandStructural({
+      execute: () => this.unhideRowsCommand.execute({ kind: 'unhideRows', rowIds: underlyingRowIds }),
+      rebuild: 'rows',
+      buildUndo: (event, sel) => ({
+        kind: 'unhideRows',
+        underlyingRowIds: event.rowIds,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+      }),
     })
   }
 
@@ -637,118 +641,114 @@ export class DefaultGridEngine implements GridEngine {
     if (this.data.getRowCount() !== this.rawData.getRowCount()) return false
 
     this.finishActiveEdit()
-    const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatState.formatStore.snapshot()
-    const mergeBefore = this.formatState.mergeStore.snapshot()
-    const event = this.moveRowsCommand.execute({ kind: 'moveRows', rowIds, beforeRowId })
-    if (!event) return false
-    this.layout.rebuildRows(this.rowStructure.getViewRowsAxis())
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
-      kind: 'moveRows',
-      rowIds: event.rowIds,
-      beforeRowId: event.beforeRowId,
-      inverseRowIds: event.inverseRowIds,
-      inverseBeforeRowId: event.inverseBeforeRowId,
-      selectionBefore,
-      selectionAfter,
-      formatBefore,
-      formatAfter: this.formatState.formatStore.snapshot(),
-      mergeBefore,
-      mergeAfter: this.formatState.mergeStore.snapshot(),
+    const event = this.structural.runCommandStructural({
+      execute: () => this.moveRowsCommand.execute({ kind: 'moveRows', rowIds, beforeRowId }),
+      rebuild: 'rows',
+      withFormatMerge: true,
+      buildUndo: (event, sel, ex) => ({
+        kind: 'moveRows',
+        rowIds: event.rowIds,
+        beforeRowId: event.beforeRowId,
+        inverseRowIds: event.inverseRowIds,
+        inverseBeforeRowId: event.inverseBeforeRowId,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+        formatBefore: ex!.formatBefore!,
+        formatAfter: ex!.formatAfter!,
+        mergeBefore: ex!.mergeBefore!,
+        mergeAfter: ex!.mergeAfter!,
+      }),
     })
-    return true
+    return event !== null
   }
 
   /** 在 schema field index 位置前插入 count 个文本列。 */
   insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
-    const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatState.formatStore.snapshot()
-    const mergeBefore = this.formatState.mergeStore.snapshot()
-    const frozenBefore = this.layout.getFrozenConfig()
-    const event = this.insertColsCommand.execute({ kind: 'insertCols', beforeFieldIndex, count })
-    if (!event) return []
-    this.layout.remapFrozenAfterColInsert(
-      event.at,
-      event.count,
-      this.rawData.getSchema().fields.length - event.count,
-    )
-    this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
-    const selectionAfter = this.selection.getSelection()
-    const frozenAfter = this.layout.getFrozenConfig()
-    this.undoStack.push({
-      kind: 'insertCols',
-      at: event.at,
-      count: event.count,
-      newFields: event.newFields,
-      selectionBefore,
-      selectionAfter,
-      frozenBefore,
-      frozenAfter,
-      formatBefore,
-      formatAfter: this.formatState.formatStore.snapshot(),
-      mergeBefore,
-      mergeAfter: this.formatState.mergeStore.snapshot(),
+    const event = this.structural.runCommandStructural({
+      execute: () =>
+        this.insertColsCommand.execute({ kind: 'insertCols', beforeFieldIndex, count }),
+      rebuild: 'cols',
+      withFormatMerge: true,
+      withFrozen: true,
+      afterExecute: (event) =>
+        this.layout.remapFrozenAfterColInsert(
+          event.at,
+          event.count,
+          this.rawData.getSchema().fields.length - event.count,
+        ),
+      buildUndo: (event, sel, ex) => ({
+        kind: 'insertCols',
+        at: event.at,
+        count: event.count,
+        newFields: event.newFields,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+        frozenBefore: ex!.frozenBefore!,
+        frozenAfter: ex!.frozenAfter!,
+        formatBefore: ex!.formatBefore!,
+        formatAfter: ex!.formatAfter!,
+        mergeBefore: ex!.mergeBefore!,
+        mergeAfter: ex!.mergeAfter!,
+      }),
     })
-    return event.newFields
+    return event?.newFields ?? []
   }
 
   /** 按 fieldId 删除列，返回删除快照。 */
   deleteCols(fieldIds: readonly string[]): readonly RemovedFieldSnapshot[] {
-    const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatState.formatStore.snapshot()
-    const mergeBefore = this.formatState.mergeStore.snapshot()
-    const frozenBefore = this.layout.getFrozenConfig()
-    const totalColsBefore = this.rawData.getSchema().fields.length
-    const event = this.deleteColsCommand.execute({ kind: 'deleteCols', fieldIds })
-    if (!event) return []
-    this.layout.remapFrozenAfterColDelete(event.removedIndices, totalColsBefore)
-    this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
-    const selectionAfter = this.selection.getSelection()
-    const frozenAfter = this.layout.getFrozenConfig()
-    this.undoStack.push({
-      kind: 'deleteCols',
-      snapshots: event.snapshots,
-      deletedWidths: event.deletedWidths,
-      selectionBefore,
-      selectionAfter,
-      frozenBefore,
-      frozenAfter,
-      formatBefore,
-      formatAfter: this.formatState.formatStore.snapshot(),
-      mergeBefore,
-      mergeAfter: this.formatState.mergeStore.snapshot(),
+    let totalColsBefore = 0
+    const event = this.structural.runCommandStructural({
+      beforeExecute: () => {
+        totalColsBefore = this.rawData.getSchema().fields.length
+      },
+      execute: () => this.deleteColsCommand.execute({ kind: 'deleteCols', fieldIds }),
+      rebuild: 'cols',
+      withFormatMerge: true,
+      withFrozen: true,
+      afterExecute: (event) =>
+        this.layout.remapFrozenAfterColDelete(event.removedIndices, totalColsBefore),
+      buildUndo: (event, sel, ex) => ({
+        kind: 'deleteCols',
+        snapshots: event.snapshots,
+        deletedWidths: event.deletedWidths,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+        frozenBefore: ex!.frozenBefore!,
+        frozenAfter: ex!.frozenAfter!,
+        formatBefore: ex!.formatBefore!,
+        formatAfter: ex!.formatAfter!,
+        mergeBefore: ex!.mergeBefore!,
+        mergeAfter: ex!.mergeAfter!,
+      }),
     })
-    return event.snapshots
+    return event?.snapshots ?? []
   }
 
   /** 隐藏给定 fieldId 集合。 */
   hideCols(fieldIds: readonly string[]): void {
-    const selectionBefore = this.selection.getSelection()
-    const event = this.hideColsCommand.execute({ kind: 'hideCols', fieldIds })
-    if (!event) return
-    this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
-      kind: 'hideCols',
-      fieldIds: event.fieldIds,
-      selectionBefore,
-      selectionAfter,
+    this.structural.runCommandStructural({
+      execute: () => this.hideColsCommand.execute({ kind: 'hideCols', fieldIds }),
+      rebuild: 'cols',
+      buildUndo: (event, sel) => ({
+        kind: 'hideCols',
+        fieldIds: event.fieldIds,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+      }),
     })
   }
 
   /** 取消隐藏给定 fieldId 集合。 */
   unhideCols(fieldIds: readonly string[]): void {
-    const selectionBefore = this.selection.getSelection()
-    const event = this.unhideColsCommand.execute({ kind: 'unhideCols', fieldIds })
-    if (!event) return
-    this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
-      kind: 'unhideCols',
-      fieldIds: event.fieldIds,
-      selectionBefore,
-      selectionAfter,
+    this.structural.runCommandStructural({
+      execute: () => this.unhideColsCommand.execute({ kind: 'unhideCols', fieldIds }),
+      rebuild: 'cols',
+      buildUndo: (event, sel) => ({
+        kind: 'unhideCols',
+        fieldIds: event.fieldIds,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+      }),
     })
   }
 
@@ -791,29 +791,28 @@ export class DefaultGridEngine implements GridEngine {
   moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
     if (!isMutableDataSource(this.rawData) || !this.rawData.moveFields) return false
     this.finishActiveEdit()
-    const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatState.formatStore.snapshot()
-    const mergeBefore = this.formatState.mergeStore.snapshot()
-    this.selectionController.captureVisibleFieldIdsBefore(
-      this.data.getSchema().fields.map((field) => field.id),
-    )
-    const event = this.moveColsCommand.execute({ kind: 'moveCols', fieldIds, beforeFieldId })
-    if (!event) return false
-    this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
-    const selectionAfter = this.selection.getSelection()
-    this.undoStack.push({
-      kind: 'moveCols',
-      fieldIds: event.fieldIds,
-      beforeFieldId: event.beforeFieldId,
-      inverseBeforeFieldId: event.inverseBeforeFieldId,
-      selectionBefore,
-      selectionAfter,
-      formatBefore,
-      formatAfter: this.formatState.formatStore.snapshot(),
-      mergeBefore,
-      mergeAfter: this.formatState.mergeStore.snapshot(),
+    const event = this.structural.runCommandStructural({
+      beforeExecute: () =>
+        this.selectionController.captureVisibleFieldIdsBefore(
+          this.data.getSchema().fields.map((field) => field.id),
+        ),
+      execute: () => this.moveColsCommand.execute({ kind: 'moveCols', fieldIds, beforeFieldId }),
+      rebuild: 'cols',
+      withFormatMerge: true,
+      buildUndo: (event, sel, ex) => ({
+        kind: 'moveCols',
+        fieldIds: event.fieldIds,
+        beforeFieldId: event.beforeFieldId,
+        inverseBeforeFieldId: event.inverseBeforeFieldId,
+        selectionBefore: sel.selectionBefore,
+        selectionAfter: sel.selectionAfter,
+        formatBefore: ex!.formatBefore!,
+        formatAfter: ex!.formatAfter!,
+        mergeBefore: ex!.mergeBefore!,
+        mergeAfter: ex!.mergeAfter!,
+      }),
     })
-    return true
+    return event !== null
   }
 
   /** Phase 4.5 — 程序化设置选区（不入 undo 栈）。 */
