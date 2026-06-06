@@ -1,4 +1,4 @@
-import type { WebPointerEvent } from '../../host/WebHost'
+import type { WebPointerEvent } from '@novasheet/core'
 
 /** 边缘自动滚动的轴向；null 表示该拖拽不自动滚动。 */
 export type AutoScrollAxis = 'both' | 'horizontal' | 'vertical' | null

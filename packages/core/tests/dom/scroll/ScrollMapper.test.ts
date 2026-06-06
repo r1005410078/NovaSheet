@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ScrollMapper, SAFE_MAX } from '../../src/scroll/ScrollMapper'
+import { ScrollMapper, SAFE_MAX } from '../../../src/dom/scroll/ScrollMapper'
 
 describe('ScrollMapper — 滚动映射', () => {
   describe('computeSpacerSize — spacer 尺寸', () => {

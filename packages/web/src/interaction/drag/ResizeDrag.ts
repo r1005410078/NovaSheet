@@ -5,7 +5,7 @@ import {
   type ResizeHandleRect,
 } from '@novasheet/core'
 import type { DomHandleLayer } from '../DomHandleLayer'
-import type { WebPointerEvent } from '../../host/WebHost'
+import type { WebPointerEvent } from '@novasheet/core'
 import type { AutoScrollAxis, Drag } from './Drag'
 
 type ResizeDragEngine = Pick<

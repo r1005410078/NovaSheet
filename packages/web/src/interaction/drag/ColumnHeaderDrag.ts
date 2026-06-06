@@ -4,7 +4,7 @@ import type {
   GridFrameReader,
   GridSelectionAccess,
 } from '@novasheet/core'
-import type { WebHost, WebPointerEvent } from '../../host/WebHost'
+import type { WebHost, WebPointerEvent } from '@novasheet/core'
 import type { ColumnReorderOverlay, ColumnReorderPreview } from '../../overlay/ColumnReorderOverlay'
 import type { AutoScrollAxis, Drag } from './Drag'
 

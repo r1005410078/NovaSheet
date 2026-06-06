@@ -11,7 +11,7 @@
  * destroy() 之后即使回调入队也不会触发——内部 destroyed 标志直接吞掉。
  */
 
-import type { FrameScheduler } from '@novasheet/core'
+import type { FrameScheduler } from '../../kernel/util/raf'
 
 export type ScrollListener = (scrollTop: number, scrollLeft: number) => void
 

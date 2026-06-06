@@ -47,7 +47,7 @@ import type {
   ViewChangeEvent,
 } from '../grid/GridController'
 import type { FillEvent, RedoEvent, UndoEvent } from '../runtime/WebGridRuntime'
-import { DomGridHost } from '../host/DomGridHost'
+import { DomGridHost } from '@novasheet/core'
 import { DomCellEditor } from '../interaction/DomCellEditor'
 import { DomContextMenuLayer } from '../interaction/DomContextMenuLayer'
 import { DomFillHandleLayer } from '../interaction/DomFillHandleLayer'

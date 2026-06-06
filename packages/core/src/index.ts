@@ -188,3 +188,4 @@ export type {
 export { MergeStore } from './features/merge/MergeStore'
 export type { MergeRegion } from './kernel/coords/MergeRegion'
 export type { RenderBackend } from './ports/RenderBackend'
+export * from './dom'

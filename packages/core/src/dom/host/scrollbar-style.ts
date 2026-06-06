@@ -13,7 +13,7 @@
  *   - 仅在容器范围内生效——靠 `[data-novasheet-scroll-host]` 选择器隔离
  */
 
-import type { ThemeScrollbar } from '@novasheet/core'
+import type { ThemeScrollbar } from '../../kernel/theme/Theme'
 
 const STYLESHEET_ID = 'novasheet-scrollbar-style'
 

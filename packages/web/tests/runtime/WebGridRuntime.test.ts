@@ -10,7 +10,7 @@ import type {
   Schema,
   Theme,
 } from '@novasheet/core'
-import type { WebHost } from '../../src/host/WebHost'
+import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { FrameScheduler } from '@novasheet/core'
-import { DomGridHost } from '../../src/host/DomGridHost'
-import type { WebPointerEvent } from '../../src/host/WebHost'
+import { DomGridHost } from '../../../src/dom/host/DomGridHost'
+import type { WebPointerEvent } from '../../../src/dom/host/Host'
 
 describe('DomGridHost — DPR 监听', () => {
   it('destroy 时 removeEventListener，销毁后 handler 不再触发', () => {

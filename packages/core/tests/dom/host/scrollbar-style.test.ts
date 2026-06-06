@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { denseGridTheme } from '@novasheet/core'
-import { applyScrollbarTheme, ensureScrollbarStylesheet } from '../../src/host/scrollbar-style'
+import { applyScrollbarTheme, ensureScrollbarStylesheet } from '../../../src/dom/host/scrollbar-style'
 
 describe('scrollbar-style', () => {
   it('注入全局滚动条样式表（幂等）', () => {

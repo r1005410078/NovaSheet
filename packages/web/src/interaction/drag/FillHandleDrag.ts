@@ -13,7 +13,7 @@ import {
 } from '@novasheet/core'
 import type { DomFillHandleLayer } from '../DomFillHandleLayer'
 import { computeRangeOverlayRects } from '../RangeOverlayRects'
-import type { WebHost, WebPointerEvent } from '../../host/WebHost'
+import type { WebHost, WebPointerEvent } from '@novasheet/core'
 import type { AutoScrollAxis, Drag } from './Drag'
 
 export interface FillEvent {

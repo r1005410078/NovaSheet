@@ -7,7 +7,7 @@ import {
   type Theme,
 } from '@novasheet/core'
 import { WebGridRuntime } from '../../src/runtime/WebGridRuntime'
-import type { WebHost } from '../../src/host/WebHost'
+import type { WebHost } from '@novasheet/core'
 import type { RenderBackend } from '@novasheet/core'
 import type { DomFillHandleLayer } from '../../src/interaction/DomFillHandleLayer'
 import type { OverlayRect } from '../../src/interaction/RangeOverlayRects'

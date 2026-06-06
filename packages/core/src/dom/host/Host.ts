@@ -1,4 +1,5 @@
-import type { FrameScheduler, ThemeScrollbar } from '@novasheet/core'
+import type { FrameScheduler } from '../../kernel/util/raf'
+import type { ThemeScrollbar } from '../../kernel/theme/Theme'
 
 export interface WebPointerEvent {
   /** scrollHost 本地坐标，单位 CSS px。 */

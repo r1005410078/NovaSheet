@@ -2,7 +2,7 @@ import { describe, expect, it, mock } from 'bun:test'
 import { FillHandleDrag } from '../../../src/interaction/drag/FillHandleDrag'
 import type { DomFillHandleLayer } from '../../../src/interaction/DomFillHandleLayer'
 import type { OverlayRect } from '../../../src/interaction/RangeOverlayRects'
-import type { WebHost, WebPointerEvent } from '../../../src/host/WebHost'
+import type { WebHost, WebPointerEvent } from '@novasheet/core'
 import { makeMockGridEngine } from '../../helpers/mock-grid-engine'
 
 describe('FillHandleDrag', () => {

@@ -1,8 +1,5 @@
 import type { Field, FilterOp, Theme } from '@novasheet/core'
-import {
-  applyFilterPopoverTheme,
-  ensureFilterPopoverStylesheet,
-} from '../host/filter-popover-style'
+import { applyFilterPopoverTheme, ensureFilterPopoverStylesheet } from '../host/filter-popover-style'
 
 export interface FilterPopoverCallbacks {
   onApply: (op: FilterOp | null) => void

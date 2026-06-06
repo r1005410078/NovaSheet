@@ -86,10 +86,9 @@ import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
 import { ResizeDrag } from '../interaction/drag/ResizeDrag'
 import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
 import { SelectionDrag } from '../interaction/drag/SelectionDrag'
-import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/WebHost'
-import type { RenderBackend } from '@novasheet/core'
+import type { WebHost, WebKeyboardEvent, WebPointerEvent, RenderBackend } from '@novasheet/core'
 import type { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
-import { ScrollMapper } from '../scroll/ScrollMapper'
+import { ScrollMapper } from '@novasheet/core'
 
 /** Phase 4.1 — TSV FNV-1a 32-bit hash；用于验证 paste 时剪贴板内容是否仍是 grid 自己刚写出去的，决定 typed 缓存命中。 */
 function fnv1aHash(s: string): number {

@@ -1,7 +1,8 @@
-import type { FrameScheduler, ThemeScrollbar } from '@novasheet/core'
+import type { FrameScheduler } from '../../kernel/util/raf'
+import type { ThemeScrollbar } from '../../kernel/theme/Theme'
 import { NativeScroller } from '../scroll/NativeScroller'
 import { applyScrollbarTheme } from './scrollbar-style'
-import type { WebHost, WebHostOptions } from './WebHost'
+import type { WebHost, WebHostOptions } from './Host'
 
 /**
  * `WebHost` 的 DOM 实现：原生滚动容器 + 占位 spacer。

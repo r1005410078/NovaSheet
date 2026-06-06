@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
-import { NativeScroller } from '../../src/scroll/NativeScroller'
+import { NativeScroller } from '../../../src/dom/scroll/NativeScroller'
 import { FrameScheduler } from '@novasheet/core'
 
 describe('NativeScroller — 原生滚动', () => {
