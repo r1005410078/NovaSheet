@@ -439,16 +439,10 @@ export class ChunkedAxis {
     if (newDefault === this.defaultSize) return
     const oldDefault = this.defaultSize
     this.defaultSize = newDefault
-    // 重算每个 chunk 的 totalSize 与全局 prefix-sum 表。
-    this.totalSize = 0
-    this.chunkPrefixSum = new Float64Array(this.chunks.length + 1)
-    for (let i = 0; i < this.chunks.length; i++) {
-      const chunk = this.chunks[i]!
+    for (const chunk of this.chunks) {
       if (chunk.sizes === null) {
-        const rowsInChunk = i === this.chunks.length - 1 ? this.count - i * CHUNK_SIZE : CHUNK_SIZE
-        chunk.totalSize = rowsInChunk * newDefault
+        chunk.totalSize = chunk.length * newDefault
       } else {
-        // 遍历 chunk.length（避免末尾填充零）；把等于 oldDefault 的项提升到 newDefault。
         let sum = 0
         for (let k = 0; k < chunk.length; k++) {
           if (chunk.sizes[k] === oldDefault) chunk.sizes[k] = newDefault
@@ -456,9 +450,8 @@ export class ChunkedAxis {
         }
         chunk.totalSize = sum
       }
-      this.chunkPrefixSum[i + 1] = this.chunkPrefixSum[i]! + chunk.totalSize
-      this.totalSize += chunk.totalSize
     }
+    this.recomputePrefixes()
     this._version++
   }
 
