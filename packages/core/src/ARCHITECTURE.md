@@ -1,8 +1,8 @@
 # `@novasheet/core` 源码导航
 
-> **状态：目录搬移基本完成**（分支 `refactor-default-grid-engine-decomposition`）  
-> **仍待行为收口：** engine 第 7 步 `FormatState` 接线（`FormatState.ts` 仍为接口骨架）  
-> 设计：`docs/superpowers/specs/2026-06-06-novasheet-features-kernel-restructure-design.md`  
+> **状态：Engine 重构 7 步已完成**（分支 `refactor-default-grid-engine-decomposition`）  
+> 设计：`docs/superpowers/specs/2026-06-06-novasheet-features-kernel-restructure-design.md`、
+> `docs/superpowers/specs/2026-06-06-novasheet-format-state-aggregate-design.md`  
 > 子目录：`kernel/README.md`、`features/README.md`；组合根：`engine/README.md`
 
 ---
@@ -28,7 +28,7 @@ engine/          组合根：DefaultGridEngine + GridEngine
 | kernel | 底座 + protocol/undo/interaction + coords/coordinates | ✅ |
 | features | row/column/selection/layout/fill/clipboard/view/edit/context-menu | ✅ |
 | features | format + merge（含 VisibleFormatResolver、MergeViewResolver） | ✅ |
-| engine 第 7 步 | `FormatState` 聚合接线，收缩 DefaultGridEngine format 编排 | ⬜ |
+| engine 第 7 步 | `DefaultFormatState` 聚合接线，收缩 DefaultGridEngine format 编排 | ✅ |
 
 ---
 
