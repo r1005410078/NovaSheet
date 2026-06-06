@@ -10,4 +10,4 @@
 
 - Updated dependencies
   - @novasheet/core@0.1.0
-  - @novasheet/web-canvas2d@0.1.0
+  - @novasheet/canvas2d@0.1.0

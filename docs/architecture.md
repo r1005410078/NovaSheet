@@ -1,7 +1,7 @@
 # NovaSheet 当前架构设计图
 
 - **范围**：当前仓库源码状态（`refactor/cross-platform` 分支）
-- **包**：`@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d`
+- **包**：`@novasheet/core` · `@novasheet/web` · `@novasheet/canvas2d`
 - **对外入口**：`import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）
 - **能力状态**：M2 虚拟滚动 + 原生滚动映射已实现；M3 冻结象限 / 动态行高 / 交互 resize 仍为 planned
 
@@ -24,7 +24,7 @@ flowchart TB
     Host --> NS
   end
 
-  subgraph CanvasPkg["@novasheet/web-canvas2d — Canvas2D 绘制"]
+  subgraph CanvasPkg["@novasheet/canvas2d — Canvas2D 绘制"]
     Backend --> Renderer["Canvas2DRenderer<br/>WebRenderer 实现"]
     Backend --> HighDPI["HighDPI"]
     Renderer --> CellP["CellPainter"]
@@ -52,7 +52,7 @@ flowchart TB
     FrozenM3["4 象限冻结绘制"]
     DynamicH["动态行高"]
     Interaction["resize / selection / editing"]
-    WebGL["@novasheet/web-webgl"]
+    WebGL["@novasheet/webgl"]
   end
 
   Frozen -.-> FrozenM3
@@ -61,12 +61,12 @@ flowchart TB
   Grid -.-> WebGL
 ```
 
-**依赖方向（无环）**：`core` ← `web-canvas2d` ← `web` ← Storybook / 应用。
+**依赖方向（无环）**：`core` ← `canvas2d` ← `web` ← Storybook / 应用。
 
 | 包                        | 职责                                                                                                                  | 不含                        |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------- |
 | `@novasheet/core`         | 数据、Schema、Theme、ChunkedAxis、Viewport、FrozenRegions、`DefaultGridEngine`、`RenderFrame`、`FrameScheduler`       | DOM、Canvas、滚动容器       |
-| `@novasheet/web-canvas2d` | `Canvas2DRenderer`、三个 painter、`HighDPI`                                                                           | Grid 门面、scrollHost、编排 |
+| `@novasheet/canvas2d` | `Canvas2DRenderer`、三个 painter、`HighDPI`                                                                           | Grid 门面、scrollHost、编排 |
 | `@novasheet/web`          | 对外 `Grid`、`Canvas2DBackend`、`WebGridRuntime`、`DomGridHost`、`ScrollMapper`、`NativeScroller`、`WebRenderer` 契约 | 引擎算法、未来 WebGL 实现   |
 
 核心关系：
@@ -165,7 +165,7 @@ sequenceDiagram
 | NativeScroller  | `src/scroll/NativeScroller.ts`    | 原生 scroll 事件 → RAF 节流                                        |
 | WebRenderer     | `src/render/WebRenderer.ts`       | 渲染后端接口（Canvas2D / 未来 WebGL）                              |
 
-### 4.3 `@novasheet/web-canvas2d`
+### 4.3 `@novasheet/canvas2d`
 
 | 模块             | 路径                               | 职责                                          |
 | ---------------- | ---------------------------------- | --------------------------------------------- |
@@ -234,11 +234,11 @@ flowchart TB
 | ---------------------------------------- | ----------------------------------------------------------------------------- |
 | 对外 mutation 走 `Grid`                  | painter / runtime 不自行改数据源或布局                                        |
 | 渲染只读 `RenderFrame` / `viewport` 快照 | 每帧单一读取源，避免绘制中状态撕裂                                            |
-| Theme 为视觉唯一来源                     | `web-canvas2d` 的 painter 不硬编码颜色/尺寸                                   |
+| Theme 为视觉唯一来源                     | `canvas2d` 的 painter 不硬编码颜色/尺寸                                   |
 | 每 Grid 一个 `FrameScheduler`            | `scroll:read`、`host:resize`、`renderer:flush` 同帧合并；禁止跨 Grid 共用单例 |
 | `Grid.destroy()` 幂等                    | 取消 pending RAF、移除 canvas 与 scroll-host、恢复 container `position`       |
 | `ScrollMapper.SAFE_MAX = 6_000_000`      | 避开 Firefox / iOS Safari scrollHeight 上限                                   |
-| 包依赖无环                               | `core` ← `web-canvas2d` ← `web`；core 不得 import DOM/Canvas 类型             |
+| 包依赖无环                               | `core` ← `canvas2d` ← `web`；core 不得 import DOM/Canvas 类型             |
 
 ---
 

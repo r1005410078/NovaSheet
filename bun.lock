@@ -30,9 +30,22 @@
         "vite": "^5.4.0",
       },
     },
+    "packages/canvas2d": {
+      "name": "@novasheet/canvas2d",
+      "version": "0.1.0",
+      "dependencies": {
+        "@novasheet/core": "^0.1.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^20.9.0",
+        "@types/bun": "latest",
+        "happy-dom": "^20.9.0",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/core": {
       "name": "@novasheet/core",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.9.0",
         "@types/bun": "^1.3.14",
@@ -42,23 +55,10 @@
     },
     "packages/web": {
       "name": "@novasheet/web",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "dependencies": {
-        "@novasheet/core": "workspace:*",
-        "@novasheet/web-canvas2d": "workspace:*",
-      },
-      "devDependencies": {
-        "@happy-dom/global-registrator": "^20.9.0",
-        "@types/bun": "latest",
-        "happy-dom": "^20.9.0",
-        "typescript": "^6.0.3",
-      },
-    },
-    "packages/web-canvas2d": {
-      "name": "@novasheet/web-canvas2d",
-      "version": "0.0.0",
-      "dependencies": {
-        "@novasheet/core": "workspace:*",
+        "@novasheet/canvas2d": "^0.1.0",
+        "@novasheet/core": "^0.1.0",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.9.0",
@@ -194,13 +194,13 @@
 
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
 
+    "@novasheet/canvas2d": ["@novasheet/canvas2d@workspace:packages/canvas2d"],
+
     "@novasheet/core": ["@novasheet/core@workspace:packages/core"],
 
     "@novasheet/storybook": ["@novasheet/storybook@workspace:apps/storybook"],
 
     "@novasheet/web": ["@novasheet/web@workspace:packages/web"],
-
-    "@novasheet/web-canvas2d": ["@novasheet/web-canvas2d@workspace:packages/web-canvas2d"],
 
     "@oxc-parser/binding-android-arm-eabi": ["@oxc-parser/binding-android-arm-eabi@0.127.0", "", { "os": "android", "cpu": "arm" }, "sha512-0LC7ye4hvqbIKxAzThzvswgHLFu2AURKzYLeSVvLdu2TBOYWQDmHnTqPLeA597BcUCxiLqLsS4CJ5uoI5WYWCQ=="],
 

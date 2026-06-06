@@ -17,7 +17,7 @@ The long-term goal is to provide infrastructure for AI-native data workbenches: 
 - **Canvas-first performance**: a single visible-region redraw path for large datasets.
 - **Portable core**: `@novasheet/core` has no DOM or Canvas dependency.
 - **Browser-ready facade**: `@novasheet/web` exposes the public `Grid` API.
-- **Dedicated renderer package**: `@novasheet/web-canvas2d` owns Canvas2D painting.
+- **Dedicated renderer package**: `@novasheet/canvas2d` owns Canvas2D painting.
 - **Spreadsheet interactions**: selection, keyboard navigation, editing, clipboard, undo/redo, fill handle, sorting, filtering, row/column operations, merge cells, and range formatting.
 - **Live Storybook demos**: interactive examples for scroll, frozen regions, autofit, Excel-style headers, editing, clipboard, selection, formatting, and more.
 - **Tested monorepo**: 842 passing `bun:test` tests across the workspace.
@@ -28,7 +28,7 @@ NovaSheet is pre-1.0 and actively developed.
 
 | Area       | Status                                                         |
 | ---------- | -------------------------------------------------------------- |
-| Packages   | `@novasheet/core`, `@novasheet/web`, `@novasheet/web-canvas2d` |
+| Packages   | `@novasheet/core`, `@novasheet/web`, `@novasheet/canvas2d` |
 | Tests      | 842 passing tests with `bun:test`                              |
 | CI gates   | lint, typecheck, test, build                                   |
 | Public API | `import { Grid } from '@novasheet/web'`                        |
@@ -55,7 +55,7 @@ NovaSheet uses Bun workspaces.
 ```bash
 bun install
 bun run --filter @novasheet/core build
-bun run --filter @novasheet/web-canvas2d build
+bun run --filter @novasheet/canvas2d build
 bun run --filter @novasheet/web build
 ```
 
@@ -117,7 +117,7 @@ novasheet/
 ├── packages/
 │   ├── core/                @novasheet/core
 │   ├── web/                 @novasheet/web
-│   └── web-canvas2d/        @novasheet/web-canvas2d
+│   └── canvas2d/        @novasheet/canvas2d
 ├── apps/
 │   └── storybook/           interactive demo app
 ├── docs/
@@ -141,7 +141,7 @@ novasheet/
                              │ depends on
                              ▼
 ┌────────────────────────────────────────────────────────────┐
-│   @novasheet/web-canvas2d                                  │
+│   @novasheet/canvas2d                                  │
 │   Canvas2DRenderer · Cell / Header / GridLines painters    │
 │   HighDPI                                                  │
 └────────────────────────────┬───────────────────────────────┘
@@ -157,7 +157,7 @@ novasheet/
 Dependency direction is intentionally one-way:
 
 ```text
-core <- web-canvas2d <- web <- apps
+core <- canvas2d <- web <- apps
 ```
 
 See [docs/architecture.md](docs/architecture.md) for the detailed architecture notes.

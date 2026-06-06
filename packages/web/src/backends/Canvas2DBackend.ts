@@ -35,7 +35,7 @@ import {
   type Theme,
   type ViewLayerChange,
 } from '@novasheet/core'
-import { Canvas2DRenderer, Canvas2DTextMeasurer, HighDPI } from '@novasheet/web-canvas2d'
+import { Canvas2DRenderer, Canvas2DTextMeasurer, HighDPI } from '@novasheet/canvas2d'
 import { WebClipboardAdapter } from '../clipboard/WebClipboardAdapter'
 import type {
   AutofitRowsOptions,

@@ -24,7 +24,7 @@ This project follows Conventional Commits and intends to adopt semantic versioni
 
 ### Current Project State
 
-- `@novasheet/core`, `@novasheet/web`, and `@novasheet/web-canvas2d` are active workspace packages.
+- `@novasheet/core`, `@novasheet/web`, and `@novasheet/canvas2d` are active workspace packages.
 - Storybook is published as the live demo for interactive grid variants.
 - Current README status tracks the milestone roadmap and verification state.
 - Public npm publication has not happened yet; see `docs/npm-publishing.md`.

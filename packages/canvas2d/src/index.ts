@@ -1,5 +1,5 @@
 /**
- * @novasheet/web-canvas2d——Canvas2D 渲染端实现。
+ * @novasheet/canvas2d——Canvas2D 渲染端实现。
  *
  * 本包导出渲染器 / 量度器 / surface 工具，由 `@novasheet/web` 的 Canvas2DBackend
  * 装配。引擎与数据契约从 `@novasheet/core` 导入；公共 `Grid` facade 在 `@novasheet/web`。

@@ -28,7 +28,7 @@ import type {
   UndoEvent,
 } from './grid/GridController'
 
-/** 已支持的渲染后端；WebGL 待 `@novasheet/web-webgl` 接入后扩展。 */
+/** 已支持的渲染后端；WebGL 待 `@novasheet/webgl` 接入后扩展。 */
 export type GridRendererBackend = 'canvas2d'
 
 export interface GridOptions extends GridEngineOptions {
@@ -75,7 +75,7 @@ export function withExcelHeaders<T extends GridOptions>(options: T): T {
  * 浏览器端对外 Grid 门面（spec §7）。
  *
  * 按 `options.renderer` 选择后端实现（默认 Canvas2D），调用方只需
- * `import { Grid } from '@novasheet/web'`，不必依赖 `@novasheet/web-canvas2d`。
+ * `import { Grid } from '@novasheet/web'`，不必依赖 `@novasheet/canvas2d`。
  * 公共 API 方法全部转发给当前后端的 `GridController` 实现。
  */
 export class Grid {

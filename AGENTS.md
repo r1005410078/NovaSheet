@@ -19,7 +19,7 @@ both `AGENTS.md` and `CLAUDE.md` as binding for any agent operating on NovaSheet
   - `bun run lint` — oxlint, must be **0 errors / 0 warnings**
   - `bun run --filter '*' typecheck` — strict TS, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`
   - `bun test`
-  - `bun run --filter @novasheet/web build && bun run --filter @novasheet/web-canvas2d build && bun run --filter @novasheet/core build` (order matters)
+  - `bun run --filter @novasheet/web build && bun run --filter @novasheet/canvas2d build && bun run --filter @novasheet/core build` (order matters)
 
 ### Tests
 
@@ -27,7 +27,7 @@ both `AGENTS.md` and `CLAUDE.md` as binding for any agent operating on NovaSheet
 - `bun:test` only — `import { describe, expect, it, mock, spyOn } from 'bun:test'`.
   No Vitest / Jest imports.
 - Canvas tests use `RecordingContext2D`
-  (`packages/web-canvas2d/tests/helpers/recording-context.ts`).
+  (`packages/canvas2d/tests/helpers/recording-context.ts`).
 
 ### Commits
 
@@ -50,7 +50,7 @@ both `AGENTS.md` and `CLAUDE.md` as binding for any agent operating on NovaSheet
 4. `DataSource.getRows(start, end)` — **`endIndex` is INCLUSIVE** (matches
    `ChunkedAxis.getVisibleRange [first, last]`).
 5. Theme tokens are the ONLY source of visual values. No hardcoded px / fonts /
-   colors in `packages/web-canvas2d/src/painters/` or `render/`.
+   colors in `packages/canvas2d/src/painters/` or `render/`.
 6. DOM `<handle-layer>` siblings for resize hit-zones.
 7. One shared `frameScheduler` per `Grid` instance — all RAF sources coalesce.
    Do not use the `frameScheduler` singleton from `util/raf` cross-Grid.

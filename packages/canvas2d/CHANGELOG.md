@@ -1,4 +1,4 @@
-# @novasheet/web-canvas2d
+# @novasheet/canvas2d
 
 ## 0.1.0
 

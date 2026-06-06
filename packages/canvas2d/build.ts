@@ -1,5 +1,5 @@
 /**
- * Build script for @novasheet/web-canvas2d. Same pattern as packages/core/build.ts.
+ * Build script for @novasheet/canvas2d. Same pattern as packages/core/build.ts.
  */
 
 import { rm, copyFile } from 'node:fs/promises'

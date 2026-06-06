@@ -22,7 +22,7 @@ NovaSheet is open source under the [MIT License](LICENSE). Contributions, bug re
 
 | 维度                     | 数值                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/web-canvas2d`                                                     |
+| 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/canvas2d`                                                     |
 | 测试                     | 693 passing（bun:test，跨三包）                                                                                      |
 | Lint / Typecheck / Build | 全部 clean                                                                                                           |
 | 公共 API                 | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
@@ -71,7 +71,7 @@ NovaSheet is open source under the [MIT License](LICENSE). Contributions, bug re
 ```bash
 bun install
 bun run --filter @novasheet/core build
-bun run --filter @novasheet/web-canvas2d build
+bun run --filter @novasheet/canvas2d build
 bun run --filter @novasheet/web build
 ```
 
@@ -162,7 +162,7 @@ grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
                              │ depends on
                              ▼
 ┌────────────────────────────────────────────────────────────┐
-│   @novasheet/web-canvas2d                                  │
+│   @novasheet/canvas2d                                  │
 │   Canvas2DRenderer · Cell / Header / GridLines painters    │
 │   HighDPI                                                  │
 └────────────────────────────┬───────────────────────────────┘
@@ -175,7 +175,7 @@ grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 └────────────────────────────────────────────────────────────┘
 ```
 
-**依赖方向（无环）**：`core` ← `web-canvas2d` ← `web` ← 应用 / Storybook。
+**依赖方向（无环）**：`core` ← `canvas2d` ← `web` ← 应用 / Storybook。
 
 ---
 
@@ -186,7 +186,7 @@ novasheet/
 ├── packages/
 │   ├── core/                @novasheet/core — 平台无关引擎
 │   ├── web/                 @novasheet/web — 对外 Grid + 浏览器编排
-│   └── web-canvas2d/        @novasheet/web-canvas2d — Canvas2D 渲染器
+│   └── canvas2d/        @novasheet/canvas2d — Canvas2D 渲染器
 ├── apps/
 │   └── storybook/           组件变体玩具间（vanilla HTML，无 React 依赖）
 ├── docs/
@@ -207,7 +207,7 @@ novasheet/
 bun install                # 安装依赖
 bun test                   # 跑全部包测试
 bun run --filter @novasheet/core build
-bun run --filter @novasheet/web-canvas2d build
+bun run --filter @novasheet/canvas2d build
 bun run --filter @novasheet/web build
 bun run lint               # oxlint
 bun run format             # Prettier 全量格式化（带 --cache）

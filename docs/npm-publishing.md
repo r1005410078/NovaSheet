@@ -9,7 +9,7 @@ Do not publish from a dirty working tree.
 Changesets publishes packages in dependency order:
 
 1. `@novasheet/core`
-2. `@novasheet/web-canvas2d`
+2. `@novasheet/canvas2d`
 3. `@novasheet/web`
 
 The root workspace and Storybook app are private and should not be published.
@@ -30,7 +30,7 @@ Confirm that each publishable package has the expected generated files:
 
 ```bash
 ls packages/core/dist
-ls packages/web-canvas2d/dist
+ls packages/canvas2d/dist
 ls packages/web/dist
 ```
 
@@ -74,7 +74,7 @@ Run a dry run from each package directory and inspect the included files:
 cd packages/core
 npm publish --dry-run
 
-cd ../web-canvas2d
+cd ../canvas2d
 npm publish --dry-run
 
 cd ../web
@@ -91,7 +91,7 @@ Only publish manually after dry runs look correct:
 cd packages/core
 npm publish --access public
 
-cd ../web-canvas2d
+cd ../canvas2d
 npm publish --access public
 
 cd ../web

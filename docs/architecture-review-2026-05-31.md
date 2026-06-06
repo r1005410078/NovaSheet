@@ -4,7 +4,7 @@
 
 ## 0. 总体判断
 
-地基**整体是健康的**：分层清晰（core 平台无关 / web host / web-canvas2d 渲染）、ADR 与 invariant 明确、TDD 纪律好、Phase 4–5 功能扎实。
+地基**整体是健康的**：分层清晰（core 平台无关 / web host / canvas2d 渲染）、ADR 与 invariant 明确、TDD 纪律好、Phase 4–5 功能扎实。
 
 但已经出现**一个核心 god object**、一个仍偏大的 web 编排器，以及**几处缺失的共享抽象**——它们正是本轮多个疑难 bug（合并填充柄锚定、autofit 坐标、选区 visualRange、填充吸附）的共同结构性根因。趁现在功能还没更复杂，是收口的最佳窗口。
 
