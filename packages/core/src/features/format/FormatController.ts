@@ -1,11 +1,10 @@
-import type { RangeStyleStore } from './RangeStyleStore'
-import type { MergeStore } from '../merge/MergeStore'
 import type {
   BorderPreset,
   BorderStyle,
   FormatLayer,
   TextWrapMode,
 } from './CellFormat'
+import type { FormatState } from './FormatState'
 import type { CellRange, GridSelection } from '../selection/SelectionTypes'
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
@@ -32,8 +31,7 @@ export interface FormatControllerContext {
  */
 export class FormatController {
   constructor(
-    private readonly formatStore: RangeStyleStore,
-    private readonly mergeStore: MergeStore,
+    private readonly formatState: FormatState,
     private readonly ctx: FormatControllerContext,
   ) {}
 
@@ -42,11 +40,11 @@ export class FormatController {
     const rawRange = this.ctx.translateRange(range)
     if (!rawRange) return false
     const selectionBefore = this.ctx.getSelection()
-    const before = this.formatStore.snapshot()
+    const before = this.formatState.formatStore.snapshot()
     if (color === null) {
-      this.formatStore.clearFill(rawRange)
+      this.formatState.formatStore.clearFill(rawRange)
     } else {
-      this.formatStore.apply(rawRange, { fillColor: color })
+      this.formatState.formatStore.apply(rawRange, { fillColor: color })
     }
     return this.commitFormatChange(before, selectionBefore)
   }
@@ -56,8 +54,8 @@ export class FormatController {
     const rawRange = this.ctx.translateRange(range)
     if (!rawRange) return false
     const selectionBefore = this.ctx.getSelection()
-    const before = this.formatStore.snapshot()
-    this.formatStore.apply(rawRange, { textWrap: mode })
+    const before = this.formatState.formatStore.snapshot()
+    this.formatState.formatStore.apply(rawRange, { textWrap: mode })
     return this.commitFormatChange(before, selectionBefore)
   }
 
@@ -74,11 +72,11 @@ export class FormatController {
     const rawRange = this.ctx.translateRange(range)
     if (!rawRange) return false
     const selectionBefore = this.ctx.getSelection()
-    const before = this.formatStore.snapshot()
+    const before = this.formatState.formatStore.snapshot()
     if (preset === 'clear') {
-      this.formatStore.applyBorders(rawRange, 'clear')
+      this.formatState.formatStore.applyBorders(rawRange, 'clear')
     } else {
-      this.formatStore.applyBorders(rawRange, preset, border!)
+      this.formatState.formatStore.applyBorders(rawRange, preset, border!)
     }
     return this.commitFormatChange(before, selectionBefore)
   }
@@ -91,11 +89,11 @@ export class FormatController {
     const rawRange = this.ctx.translateRange(range)
     if (!rawRange) return false
     const selectionBefore = this.ctx.getSelection()
-    const before = this.mergeStore.snapshot()
-    const region = this.mergeStore.merge(rawRange)
+    const before = this.formatState.mergeStore.snapshot()
+    const region = this.formatState.mergeStore.merge(rawRange)
     if (!region) return false
     this.ctx.selectRange(range)
-    const after = this.mergeStore.snapshot()
+    const after = this.formatState.mergeStore.snapshot()
     const selectionAfter = this.ctx.getSelection()
     this.ctx.pushUndo({ kind: 'merge', before, after, selectionBefore, selectionAfter })
     return true
@@ -106,10 +104,10 @@ export class FormatController {
     const rawRange = this.ctx.translateRange(range)
     if (!rawRange) return false
     const selectionBefore = this.ctx.getSelection()
-    const before = this.mergeStore.snapshot()
-    const removed = this.mergeStore.unmerge(rawRange)
+    const before = this.formatState.mergeStore.snapshot()
+    const removed = this.formatState.mergeStore.unmerge(rawRange)
     if (removed.length === 0) return false
-    const after = this.mergeStore.snapshot()
+    const after = this.formatState.mergeStore.snapshot()
     const selectionAfter = this.ctx.getSelection()
     this.ctx.pushUndo({ kind: 'unmerge', before, after, selectionBefore, selectionAfter })
     return true
@@ -117,7 +115,7 @@ export class FormatController {
 
   /** 快照前后一致说明 store 未变动（无副作用），返回 false；否则入栈 format 命令返回 true。 */
   private commitFormatChange(before: readonly FormatLayer[], selectionBefore: GridSelection): boolean {
-    const after = this.formatStore.snapshot()
+    const after = this.formatState.formatStore.snapshot()
     if (sameFormatLayers(before, after)) return false
     const selectionAfter = this.ctx.getSelection()
     this.ctx.pushUndo({ kind: 'format', before, after, selectionBefore, selectionAfter })
