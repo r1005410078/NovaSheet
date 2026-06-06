@@ -4,7 +4,7 @@ import { FormatUndoHandler } from '../../../src/engine/format/FormatUndoHandler'
 import type { FormatUndoContext } from '../../../src/engine/format/FormatUndoHandler'
 import type { FormatLayer } from '../../../src/format/CellFormat'
 import type { MergeRegion } from '../../../src/merge/MergeStore'
-import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
+import type { GridSelection } from '../../../src/features/selection/SelectionTypes'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type RestoreFormatCall = { op: 'format'; layers: readonly FormatLayer[] }

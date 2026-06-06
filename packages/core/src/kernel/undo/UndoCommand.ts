@@ -2,7 +2,7 @@ import type { CellValue, Field } from '../data/Schema'
 import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'
-import type { CellRange, GridSelection } from '../../engine/selection/SelectionTypes'
+import type { CellRange, GridSelection } from '../../features/selection/SelectionTypes'
 import type { FrozenConfig } from '../geometry/FrozenRegions'
 
 export interface CellWrite {

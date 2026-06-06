@@ -4,7 +4,7 @@ import type { FormatControllerContext } from '../../../src/engine/format/FormatC
 import { RangeStyleStore } from '../../../src/format/RangeStyleStore'
 import { MergeStore } from '../../../src/merge/MergeStore'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
-import type { CellRange, GridSelection } from '../../../src/engine/selection/SelectionTypes'
+import type { CellRange, GridSelection } from '../../../src/features/selection/SelectionTypes'
 import { asRawRange } from '../../../src/view/coordinates'
 
 const EMPTY_SELECTION: GridSelection = {

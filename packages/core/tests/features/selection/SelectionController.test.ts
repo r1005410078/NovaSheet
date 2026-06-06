@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { DefaultSelectionState } from '../../../src/engine/selection/DefaultSelectionState'
-import { SelectionController } from '../../../src/engine/selection/SelectionController'
-import type { SelectionMergeLookup } from '../../../src/engine/selection/SelectionNavigation'
+import { DefaultSelectionState } from '../../../src/features/selection/DefaultSelectionState'
+import { SelectionController } from '../../../src/features/selection/SelectionController'
+import type { SelectionMergeLookup } from '../../../src/features/selection/SelectionNavigation'
 
 const region = { startRow: 1, endRow: 3, startCol: 1, endCol: 2 }
 const merge: SelectionMergeLookup = {

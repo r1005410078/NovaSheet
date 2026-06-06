@@ -3,8 +3,8 @@ import {
   remapSelectionAfterViewRowsChanged,
   remapSelectionByRowIndexMap,
   remapSelectionByVisibleFieldIds,
-} from '../../../src/engine/selection/SelectionRules'
-import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
+} from '../../../src/features/selection/SelectionRules'
+import type { GridSelection } from '../../../src/features/selection/SelectionTypes'
 
 const emptySelection: GridSelection = {
   activeCell: null,

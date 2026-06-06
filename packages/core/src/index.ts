@@ -72,18 +72,18 @@ export type {
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from './engine/selection/SelectionTypes'
+} from './features/selection/SelectionTypes'
 export { hitTestCell } from './kernel/interaction/HitTest'
 export type { HitTestPoint } from './kernel/interaction/HitTest'
 export {
   applySelectionNavigation,
   parseSelectionNavigationKey,
-} from './engine/selection/SelectionNavigation'
+} from './features/selection/SelectionNavigation'
 export type {
   GridIndexBounds,
   SelectionNavigationIntent,
   SelectionNavigationTarget,
-} from './engine/selection/SelectionNavigation'
+} from './features/selection/SelectionNavigation'
 export { computeScrollReveal } from './kernel/interaction/scrollCellIntoView'
 export type { ScrollRevealInput, ScrollRevealResult } from './kernel/interaction/scrollCellIntoView'
 export {

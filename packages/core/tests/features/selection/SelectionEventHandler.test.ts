@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { SelectionEventHandler } from '../../../src/engine/selection/SelectionEventHandler'
-import type { SelectionCommands } from '../../../src/engine/selection/SelectionState'
+import { SelectionEventHandler } from '../../../src/features/selection/SelectionEventHandler'
+import type { SelectionCommands } from '../../../src/features/selection/SelectionState'
 
 function makeCommands(calls: string[]): SelectionCommands {
   return {

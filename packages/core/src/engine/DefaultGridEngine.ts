@@ -19,13 +19,13 @@ import { MergeStore } from '../merge/MergeStore'
 import type { MergeRegion } from '../merge/MergeStore'
 import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../interaction/CellEdit'
 import { CellEditModel } from '../interaction/CellEditModel'
-import { parseSelectionNavigationKey } from './selection/SelectionNavigation'
+import { parseSelectionNavigationKey } from '../features/selection/SelectionNavigation'
 import type {
   CellAddress,
   CellRange,
   GridSelection,
   SelectCellOptions,
-} from './selection/SelectionTypes'
+} from '../features/selection/SelectionTypes'
 import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { Viewport } from '../kernel/geometry/Viewport'
@@ -69,9 +69,9 @@ import { DeleteColsCommandHandler } from './column/DeleteColsCommandHandler'
 import { HideColsCommandHandler } from './column/HideColsCommandHandler'
 import { UnhideColsCommandHandler } from './column/UnhideColsCommandHandler'
 import { MoveColsCommandHandler } from './column/MoveColsCommandHandler'
-import { DefaultSelectionState } from './selection/DefaultSelectionState'
-import { SelectionController } from './selection/SelectionController'
-import { SelectionEventHandler } from './selection/SelectionEventHandler'
+import { DefaultSelectionState } from '../features/selection/DefaultSelectionState'
+import { SelectionController } from '../features/selection/SelectionController'
+import { SelectionEventHandler } from '../features/selection/SelectionEventHandler'
 import { resolveViewMergeRegion } from './MergeViewResolver'
 
 /**

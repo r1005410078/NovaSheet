@@ -1,6 +1,6 @@
 import type { FormatLayer } from '../../format/CellFormat'
 import type { RangeStyleStore } from '../../format/RangeStyleStore'
-import type { CellRange, GridSelection } from '../selection/SelectionTypes'
+import type { CellRange, GridSelection } from '../../features/selection/SelectionTypes'
 import type { MergeRegion, MergeStore } from '../../merge/MergeStore'
 import type { RawRange } from '../../view/coordinates'
 

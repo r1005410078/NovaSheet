@@ -1,5 +1,5 @@
 import type { CellValue } from '../data/Schema'
-import type { CellRange } from '../../engine/selection/SelectionTypes'
+import type { CellRange } from '../../features/selection/SelectionTypes'
 import type { CellWrite, UndoCommand } from './UndoCommand'
 
 /**

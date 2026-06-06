@@ -5,7 +5,7 @@
  * 根据选择状态和剪贴板可用性决定菜单项的启用/禁用状态。
  */
 
-import type { CellAddress, CellRange } from '../engine/selection/SelectionTypes'
+import type { CellAddress, CellRange } from '../features/selection/SelectionTypes'
 import type { ColumnHeaderMenuContext as PipelineColumnHeaderMenuContext } from '../view/ViewLayer'
 import type { ViewPipeline } from '../view/ViewPipeline'
 

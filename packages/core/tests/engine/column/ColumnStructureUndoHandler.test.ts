@@ -7,7 +7,7 @@ import type { RemovedFieldSnapshot } from '../../../src/kernel/data/MutableDataS
 import type { FrozenConfig } from '../../../src/kernel/geometry/FrozenRegions'
 import type { FormatLayer } from '../../../src/format/CellFormat'
 import type { MergeRegion } from '../../../src/merge/MergeStore'
-import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
+import type { GridSelection } from '../../../src/features/selection/SelectionTypes'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type Call =

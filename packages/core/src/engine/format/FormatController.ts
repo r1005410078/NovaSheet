@@ -6,7 +6,7 @@ import type {
   FormatLayer,
   TextWrapMode,
 } from '../../format/CellFormat'
-import type { CellRange, GridSelection } from '../selection/SelectionTypes'
+import type { CellRange, GridSelection } from '../../features/selection/SelectionTypes'
 import type { RawRange } from '../../view/coordinates'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 

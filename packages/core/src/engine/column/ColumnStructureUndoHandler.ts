@@ -3,7 +3,7 @@ import type { RemovedFieldSnapshot } from '../../kernel/data/MutableDataSource'
 import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'
-import type { GridSelection } from '../selection/SelectionTypes'
+import type { GridSelection } from '../../features/selection/SelectionTypes'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 

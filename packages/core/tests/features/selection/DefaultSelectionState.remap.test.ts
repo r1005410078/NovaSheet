@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { DefaultSelectionState } from '../../../src/engine/selection/DefaultSelectionState'
-import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
+import { DefaultSelectionState } from '../../../src/features/selection/DefaultSelectionState'
+import type { GridSelection } from '../../../src/features/selection/SelectionTypes'
 
 /** anchor/extent 必须与 selectedRange 的规整结果一致——聚合根不变量。 */
 function expectConsistent(s: GridSelection): void {
