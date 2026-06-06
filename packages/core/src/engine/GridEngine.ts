@@ -10,8 +10,8 @@ import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../kernel/undo/UndoCommand'
 import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../format/CellFormat'
 import type { MergeRegion } from '../merge/MergeStore'
-import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
-import type { PasteSkippedCell } from '../clipboard/types'
+import type { ApplyPasteSource, PasteTargetRect } from '../features/clipboard/ApplyPaste'
+import type { PasteSkippedCell } from '../features/clipboard/types'
 import type { FillDirection, FillMergeSnap } from '../features/fill/FillTarget'
 import type {
   CellAddress,

@@ -3,8 +3,8 @@ import {
   computePasteTarget,
   applyPaste,
   type ApplyPasteSource,
-} from '../../src/clipboard/ApplyPaste'
-import type { Schema } from '../../src/kernel/data/Schema'
+} from '../../../src/features/clipboard/ApplyPaste'
+import type { Schema } from '../../../src/kernel/data/Schema'
 
 const schema: Schema = {
   fields: [

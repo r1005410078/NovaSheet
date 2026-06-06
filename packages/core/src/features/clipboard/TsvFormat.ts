@@ -11,7 +11,7 @@
  * 解析端支持类型强制：number/checkbox 按规则将字符串转换为对应值或 null。
  */
 
-import type { CellValue, Row, Schema } from '../kernel/data/Schema'
+import type { CellValue, Row, Schema } from '../../kernel/data/Schema'
 
 type ParsedCellValue = string | number | boolean | null
 

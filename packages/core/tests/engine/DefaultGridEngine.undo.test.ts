@@ -5,7 +5,7 @@ import { FilterLayer } from '../../src/view/FilterLayer'
 import { SortLayer } from '../../src/view/SortLayer'
 import type { DataSource, DataSourceListener } from '../../src/kernel/data/DataSource'
 import type { CellValue, Row, Schema } from '../../src/kernel/data/Schema'
-import type { ApplyPasteSource, PasteTargetRect } from '../../src/clipboard/ApplyPaste'
+import type { ApplyPasteSource, PasteTargetRect } from '../../src/features/clipboard/ApplyPaste'
 
 const schema: Schema = {
   fields: [

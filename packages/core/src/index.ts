@@ -119,14 +119,14 @@ export { computeCellRect } from './kernel/interaction/CellLayout'
 export type { CellRect } from './kernel/interaction/CellLayout'
 
 // 剪贴板层（Phase 4.1）
-export { serializeRowsToTsv, parseTsvToCells } from './clipboard/TsvFormat'
-export type { ClipboardAction, PasteSkippedCell } from './clipboard/types'
+export { serializeRowsToTsv, parseTsvToCells } from './features/clipboard/TsvFormat'
+export type { ClipboardAction, PasteSkippedCell } from './features/clipboard/types'
 export {
   computePasteTarget,
   applyPaste,
   pasteTargetConflictsWithMerges,
-} from './clipboard/ApplyPaste'
-export type { ApplyPasteSource, GridDimensions, PasteTargetRect } from './clipboard/ApplyPaste'
+} from './features/clipboard/ApplyPaste'
+export type { ApplyPasteSource, GridDimensions, PasteTargetRect } from './features/clipboard/ApplyPaste'
 
 // 填充柄层（Phase 4.3）
 export { computeFillTarget } from './features/fill/FillTarget'

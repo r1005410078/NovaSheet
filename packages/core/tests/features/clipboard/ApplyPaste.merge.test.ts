@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { pasteTargetConflictsWithMerges } from '../../src/clipboard/ApplyPaste'
+import { pasteTargetConflictsWithMerges } from '../../../src/features/clipboard/ApplyPaste'
 
 describe('pasteTargetConflictsWithMerges', () => {
   it('rejects target ranges that partially overlap merge regions', () => {
