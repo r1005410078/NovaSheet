@@ -29,7 +29,7 @@ import type {
 import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { Viewport } from '../kernel/geometry/Viewport'
-import { DefaultLayoutState } from './layout/LayoutState'
+import { DefaultLayoutState } from '../features/layout/LayoutState'
 import type { RenderFrame } from '../kernel/render/RenderFrame'
 import { denseGridTheme } from '../kernel/theme/denseGridTheme'
 import type { Theme } from '../kernel/theme/Theme'
