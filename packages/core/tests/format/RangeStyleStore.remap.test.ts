@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { RangeStyleStore } from '../../src/format/RangeStyleStore'
-import { asRawRange } from '../../src/view/coordinates'
+import { asRawRange } from '../../src/kernel/coords/coordinates'
 
 describe('RangeStyleStore structural remap', () => {
   it('shifts format ranges after rows and columns are inserted', () => {

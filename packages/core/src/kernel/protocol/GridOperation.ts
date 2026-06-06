@@ -1,6 +1,6 @@
 import type { CellValue } from '../data/Schema'
 import type { BorderPreset, BorderStyle, TextWrapMode } from '../../format/CellFormat'
-import type { RawRange } from '../../view/coordinates'
+import type { RawRange } from '../../kernel/coords/coordinates'
 import type { RowOperation } from '../../features/row/RowOperation'
 
 export type {

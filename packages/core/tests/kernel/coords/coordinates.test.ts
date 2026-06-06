@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import type { DataSource } from '../../src/kernel/data/DataSource'
-import { findViewRow, resolveUnderlyingRow } from '../../src/view/coordinates'
+import type { DataSource } from '../../../src/kernel/data/DataSource'
+import { findViewRow, resolveUnderlyingRow } from '../../../src/kernel/coords/coordinates'
 
 const identitySource: DataSource = {
   getRowCount: () => 3,

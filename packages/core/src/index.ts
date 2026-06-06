@@ -144,7 +144,7 @@ export { computeFillWrites } from './features/fill/FillSeries'
 export type { ComputeFillWritesInput, FillWrite } from './features/fill/FillSeries'
 
 // 视图坐标协议（Phase 4.4）
-export { findViewRow, resolveUnderlyingRow } from './view/coordinates'
+export { findViewRow, resolveUnderlyingRow } from './kernel/coords/coordinates'
 export { FilterLayer } from './features/view/FilterLayer'
 export { HideRowsLayer } from './features/view/HideRowsLayer'
 export type { CollapsedGap } from './features/view/HideRowsLayer'

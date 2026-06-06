@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { RangeStyleStore } from '../../src/format/RangeStyleStore'
-import { asRawRange } from '../../src/view/coordinates'
+import { asRawRange } from '../../src/kernel/coords/coordinates'
 
 describe('RangeStyleStore — textWrap', () => {
   it('apply textWrap 后 resolveCell 返回，写序覆盖', () => {

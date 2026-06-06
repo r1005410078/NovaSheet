@@ -1,6 +1,6 @@
-import type { CellRange } from '../features/selection/SelectionTypes'
-import type { DataSource } from '../kernel/data/DataSource'
-import type { Schema } from '../kernel/data/Schema'
+import type { CellRange } from '../../features/selection/SelectionTypes'
+import type { DataSource } from '../data/DataSource'
+import type { Schema } from '../data/Schema'
 import { asRawRange, findViewRow, resolveUnderlyingRow, type RawRange } from './coordinates'
 
 /**

@@ -5,7 +5,7 @@ import { RangeStyleStore } from '../../../src/format/RangeStyleStore'
 import { MergeStore } from '../../../src/merge/MergeStore'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 import type { CellRange, GridSelection } from '../../../src/features/selection/SelectionTypes'
-import { asRawRange } from '../../../src/view/coordinates'
+import { asRawRange } from '../../../src/kernel/coords/coordinates'
 
 const EMPTY_SELECTION: GridSelection = {
   activeCell: null,

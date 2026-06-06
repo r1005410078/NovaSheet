@@ -7,7 +7,7 @@ import type {
   TextWrapMode,
 } from '../../format/CellFormat'
 import type { CellRange, GridSelection } from '../../features/selection/SelectionTypes'
-import type { RawRange } from '../../view/coordinates'
+import type { RawRange } from '../../kernel/coords/coordinates'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 
 /** FormatController 编排所需的 engine 能力（view→raw 翻译、undo 入栈、选区读写）。 */

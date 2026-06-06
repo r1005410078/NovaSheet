@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { MergeStore } from '../../src/merge/MergeStore'
-import { asRawRange } from '../../src/view/coordinates'
+import { asRawRange } from '../../src/kernel/coords/coordinates'
 
 describe('MergeStore structural remap', () => {
   it('shifts merge regions after insertions', () => {

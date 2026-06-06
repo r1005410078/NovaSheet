@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { MergeStore } from '../../src/merge/MergeStore'
-import { asRawRange } from '../../src/view/coordinates'
+import { asRawRange } from '../../src/kernel/coords/coordinates'
 
 describe('MergeStore', () => {
   it('creates merge regions and maps any covered cell to the anchor region', () => {

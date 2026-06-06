@@ -1,5 +1,5 @@
 import type { CellRange } from '../features/selection/SelectionTypes'
-import type { RawRange } from '../view/coordinates'
+import type { RawRange } from '../kernel/coords/coordinates'
 import type { BorderPreset, BorderStyle, CellFormat, FormatLayer, ResolvedCellFormat } from './CellFormat'
 import { borderPatchForCell } from './BorderPreset'
 import { isCellInRange, rangesIntersect } from '../kernel/geometry/range'
