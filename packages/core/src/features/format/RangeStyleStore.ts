@@ -46,7 +46,8 @@ export class RangeStyleStore {
   private anyLayerContributesBorders(target: CellRange): boolean {
     for (const layer of this.layers) {
       if (!rangesIntersect(layer.range, target)) continue
-      if (layer.clearBorders || layer.patch.borders !== undefined) return true
+      if (layer.clearBorders || layer.patch.borders !== undefined || layer.borderPreset !== undefined)
+        return true
     }
     return false
   }
@@ -64,16 +65,13 @@ export class RangeStyleStore {
       this.clearBorders(range)
       return
     }
-    for (let row = range.startRow; row <= range.endRow; row++) {
-      for (let col = range.startCol; col <= range.endCol; col++) {
-        const patch = borderPatchForCell(range, row, col, preset, border!)
-        // Only push a layer when the patch actually sets at least one edge.
-        if (Object.keys(patch).length > 0) {
-          const cellRange: CellRange = { startRow: row, endRow: row, startCol: col, endCol: col }
-          this.layers.push({ range: cellRange, patch: { borders: patch }, order: this.nextOrder++ })
-        }
-      }
-    }
+    this.layers.push({
+      range,
+      patch: {},
+      borderPreset: preset,
+      borderStyle: border!,
+      order: this.nextOrder++,
+    })
   }
 
   resolveCell(rowIndex: number, colIndex: number): CellFormat | undefined {
@@ -98,7 +96,19 @@ export class RangeStyleStore {
           fillColor = layer.patch.fillColor
           fillActive = true
         }
-        if (layer.patch.borders !== undefined) {
+        if (layer.borderPreset !== undefined && layer.borderStyle !== undefined) {
+          const patch = borderPatchForCell(
+            layer.range,
+            rowIndex,
+            colIndex,
+            layer.borderPreset,
+            layer.borderStyle,
+          )
+          if (Object.keys(patch).length > 0) {
+            borders = { ...borders, ...patch }
+            hasBorders = true
+          }
+        } else if (layer.patch.borders !== undefined) {
           borders = { ...borders, ...layer.patch.borders }
           hasBorders = true
         }
