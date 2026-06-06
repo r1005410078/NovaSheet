@@ -22,9 +22,17 @@ feature-sliced 的领域内聚直觉。
 
 > 一段代码**有没有单一功能主人**——没有 → `kernel/`；有 → 那个 `features/<domain>/`。
 
-- `kernel/` 回答「网格引擎靠什么跑」：平台无关**原语** + **组合根** + **跨域协议**。
-- `features/` 回答「网格能做什么」：行/列/选区/格式/合并/填充/排序筛选/编辑等**行为领域**，
-  每个域是垂直切片（store + controller + operation + event + handler + undo-handler + rules 合一）。
+实为**三层**（依赖单向，上层依赖下层，下层绝不反依赖）：
+
+| 层 | 依赖 | 内容 |
+| --- | --- | --- |
+| `kernel/` | 不依赖任何上层 | 平台无关**原语** + **跨域协议** + undo 机制 + 交互基建 |
+| `features/` | 只依赖 `kernel/` | 行/列/选区/格式/合并/填充/排序筛选/编辑等**行为领域**（垂直切片：store + controller + operation + event + handler + undo-handler + rules 合一） |
+| `engine/`（组合根） | 依赖 `kernel/` + `features/` | `DefaultGridEngine`（组装各域、持事件管线/undo registry）+ `GridEngine` facade |
+
+> **组合根悖论**：`DefaultGridEngine` import 所有 feature（它的职责就是把各域接起来），故它**不能在
+> kernel**（否则 kernel 依赖 feature）。组合根天然在**最外层**，保留顶层 `engine/`，只装这两个文件。
+> 顶层最终 = `kernel/` + `features/` + `engine/` + `index.ts` + `types.ts`。
 
 典型对照：`MergeStore`（合并怎么存）→ `features/merge`；`CoordinateSpace`（坐标怎么翻译，
 合并/排序/隐藏都要用）→ `kernel/coords`。
@@ -42,7 +50,6 @@ feature-sliced 的领域内聚直觉。
 | `render/` | `render/` | `RenderFrame` 输出契约 |
 | `util/` | `util/` | 通用工具 |
 | `coords/` | `coords/` + `view/CoordinateSpace`、`view/coordinates` | view↔raw 坐标翻译 |
-| `engine/` | `engine/DefaultGridEngine`、`engine/GridEngine` | 组合根 + facade 接口 |
 | `protocol/` | `engine/operation/`（`GridOperation`/`GridTransaction`）+ `engine/event/`（`GridDomainEvent`/`GridEventPipeline`） | 跨域协议：发生前 operation / 发生后 event + 固定事件管线 |
 | `undo/` | `undo/`（`UndoCommand`/`UndoStack`）+ `engine/undo/`（`UndoRegistry`/`UndoReplay`/`UndoHandler` 接口 + `registerCellUndo` 之类的机制） | undo **机制 + 栈 + 命令 union**，**不认识任何具体 kind** |
 
@@ -126,7 +133,8 @@ feature-sliced 的领域内聚直觉。
 
 ## 验收
 
-- `packages/core/src/` 顶层只剩 `kernel/`、`features/`、`index.ts`、`types.ts`（无散落的按层/按域混合目录）。
+- `packages/core/src/` 顶层只剩 `kernel/`、`features/`、`engine/`（仅组合根 `DefaultGridEngine`/`GridEngine`）、
+  `index.ts`、`types.ts`（无散落的按层/按域混合目录）。依赖单向：`kernel/` ← `features/` ← `engine/`。
 - 同名分裂消除：`format`/`undo`/`merge` 各自一处。
 - `kernel/undo` 不含任何具体 kind handler（纯机制）；各域 undo-handler 在对应 `features/<domain>`。
 - 公共 API（`index.ts` 导出名）不变；`@novasheet/web`/`web-canvas2d`/storybook 零改动。
