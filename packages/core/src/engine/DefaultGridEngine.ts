@@ -2,12 +2,11 @@ import type { CellValue, Field } from '../kernel/data/Schema'
 import type { DataSource } from '../kernel/data/DataSource'
 import { isMutableDataSource } from '../kernel/data/MutableDataSource'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
-import { applyPaste, pasteTargetConflictsWithMerges } from '../features/clipboard/ApplyPaste'
-import type { ApplyPasteSource, PasteTargetRect, PasteWriteRecord } from '../features/clipboard/ApplyPaste'
+import type { ApplyPasteSource, PasteTargetRect } from '../features/clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../features/clipboard/types'
-import { computeFillWrites } from '../features/fill/FillSeries'
+import { PasteController } from '../features/clipboard/PasteController'
 import type { FillDirection, FillMergeSnap } from '../features/fill/FillTarget'
-import { unionRange } from '../kernel/geometry/range'
+import { FillController } from '../features/fill/FillController'
 import { DefaultFormatState } from '../features/format/FormatState'
 import type {
   BorderPreset,
@@ -44,7 +43,6 @@ import { registerFillUndo } from '../features/fill/registerFillUndo'
 import { registerRowStructureUndo } from '../features/row/registerRowStructureUndo'
 import { registerColumnStructureUndo } from '../features/column/registerColumnStructureUndo'
 import { CoordinateSpace } from '../kernel/coords/CoordinateSpace'
-import type { RawRange } from '../kernel/coords/coordinates'
 import { VisibleFormatResolver } from '../features/format/VisibleFormatResolver'
 import { FormatController } from '../features/format/FormatController'
 import { FillStylePropagator } from '../features/fill/FillStylePropagator'
@@ -104,6 +102,22 @@ export class DefaultGridEngine implements GridEngine {
         ?.anchor ?? cell,
     viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
     pushUndo: (command) => this.undoStack.push(command),
+  })
+  private readonly pasteController = new PasteController({
+    getMutableData: () => (isMutableDataSource(this.data) ? this.data : null),
+    viewRangeToRaw: (range) => this.coords.viewRangeToRaw(range),
+    getMergeSnapshot: () => this.formatState.mergeStore.snapshot(),
+    getSchema: () => this.data.getSchema(),
+    viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
+    pushUndo: (command) => this.undoStack.push(command),
+  })
+  private readonly fillController = new FillController({
+    getMutableData: () => (isMutableDataSource(this.data) ? this.data : null),
+    viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
+    pushUndo: (command) => this.undoStack.push(command),
+    propagateFillStyles: (source, fill, direction) =>
+      this.fillStyles.propagateFillStyles(source, fill, direction),
+    selectRange: (range) => this.selectionController.setSelectedRange(range),
   })
   private undoStack = new UndoStack()
   /**
@@ -834,54 +848,7 @@ export class DefaultGridEngine implements GridEngine {
     fieldIdsAtCols: readonly string[],
     onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
   ): void {
-    if (!isMutableDataSource(this.data)) return
-
-    // 合并守卫：target 是 view 矩形、mergeStore 存 raw 区域，须在同一空间比较。
-    // 先把 view target 翻译为 raw（viewRangeToRawRange）；非连续映射（排序/筛选打乱）
-    // 时保守视为冲突，避免在 raw 空间漏判。冲突则跳过整次粘贴：不写值、不入栈。
-    const rawTarget = this.viewRangeToRawRange({
-      startRow: target.startRow,
-      endRow: target.endRow,
-      startCol: target.startCol,
-      endCol: target.endCol,
-    })
-    const conflictsWithMerges =
-      rawTarget === null ||
-      pasteTargetConflictsWithMerges(
-        { ...rawTarget, tile: target.tile },
-        this.formatState.mergeStore.snapshot(),
-      )
-    if (conflictsWithMerges) {
-      const topLeftFieldId = fieldIdsAtCols[target.startCol]
-      if (topLeftFieldId !== undefined) {
-        onSkipped?.([{ rowIndex: target.startRow, fieldId: topLeftFieldId, reason: 'merge' }])
-      }
-      return
-    }
-
-    const before: CellWrite[] = []
-    const after: CellWrite[] = []
-    applyPaste(
-      source,
-      target,
-      this.data.getSchema(),
-      fieldIdsAtCols,
-      this.data,
-      onSkipped,
-      (rec: PasteWriteRecord) => {
-        const underlyingRow = this.coords.viewRowToRaw(rec.rowIndex)
-        before.push({ rowIndex: underlyingRow, fieldId: rec.fieldId, value: rec.before })
-        after.push({ rowIndex: underlyingRow, fieldId: rec.fieldId, value: rec.after })
-      },
-    )
-    if (after.length === 0) return
-    const range: CellRange = {
-      startRow: target.startRow,
-      endRow: target.endRow,
-      startCol: target.startCol,
-      endCol: target.endCol,
-    }
-    this.undoStack.push({ kind: 'paste', target: range, before, after })
+    this.pasteController.commit(source, target, fieldIdsAtCols, onSkipped)
   }
 
   commitFill(
@@ -889,35 +856,7 @@ export class DefaultGridEngine implements GridEngine {
     fill: CellRange,
     direction: FillDirection,
   ): FillCommitResult | null {
-    if (!isMutableDataSource(this.data)) return null
-    const viewWrites = computeFillWrites({ data: this.data, source, fill, direction })
-    const resultWrites: CellWrite[] = viewWrites.map((w) => ({
-      rowIndex: w.rowIndex,
-      fieldId: w.fieldId,
-      value: w.value,
-    }))
-    const after: CellWrite[] = viewWrites.map((w) => ({
-      rowIndex: this.coords.viewRowToRaw(w.rowIndex),
-      fieldId: w.fieldId,
-      value: w.value,
-    }))
-    if (after.length === 0) return null
-
-    const before: CellWrite[] = viewWrites.map((w) => ({
-      rowIndex: this.coords.viewRowToRaw(w.rowIndex),
-      fieldId: w.fieldId,
-      value: this.data.getCell(w.rowIndex, w.fieldId) ?? null,
-    }))
-    for (const w of viewWrites) this.data.updateCell(w.rowIndex, w.fieldId, w.value)
-
-    // Phase 5-A fill：把源选区的填充色/边框/合并按填充轴平铺到目标区。
-    // 非连续 raw 映射（排序/筛选散裂）时保守跳过，仅保留值填充。
-    const styles = this.fillStyles.propagateFillStyles(source, fill, direction)
-
-    const result = unionRange(source, fill)
-    this.undoStack.push({ kind: 'fill', source, fill, result, before, after, ...styles })
-    this.selectionController.setSelectedRange(result)
-    return { source, fill, result, writes: resultWrites }
+    return this.fillController.commit(source, fill, direction)
   }
 
   /**
@@ -987,15 +926,6 @@ export class DefaultGridEngine implements GridEngine {
   /** Phase 5-A — 返回覆盖单元格的合并区域。坐标为 **raw** 空间（与 `getCellFormat` 一致）。 */
   getMergeRegion(rowIndex: number, colIndex: number): MergeRegion | null {
     return this.formatState.getMergeRegionAt(rowIndex, colIndex)
-  }
-
-  /**
-   * 把 view `CellRange` 翻译为 raw `RawRange`。无 hide/sort/filter 时为恒等映射。
-   * 行经 `viewRowToRaw`、列经 `fieldId → raw col index` 映射；映射结果在 raw 空间
-   * 非连续（排序/筛选打乱行序）时返回 null（5-A 不展开大范围，见 plan Coordinate Space Invariant）。
-   */
-  private viewRangeToRawRange(range: CellRange): RawRange | null {
-    return this.coords.viewRangeToRaw(range)
   }
 
   private applyMoveColsCommand(
