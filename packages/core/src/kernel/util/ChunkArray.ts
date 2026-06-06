@@ -13,7 +13,9 @@ export interface Chunk {
   totalSize: number
   /**
    * 逐项尺寸数组。null 表示「全 chunk 还是默认尺寸」（O(1) 内存基线）；
-   * 一旦有任何一项偏离 defaultSize 就懒分配 Float32Array(CHUNK_SIZE)。
+   * 一旦有任何一项偏离 defaultSize 就懒分配 Float32Array。
+   * 物化数组容量 = chunk.length（变长，insert/delete 后可能变化）；
+   * 遍历时必须用 chunk.length，不能用 sizes.length。
    */
   sizes: Float32Array | null
 }

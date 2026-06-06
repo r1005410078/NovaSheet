@@ -20,16 +20,19 @@
  * `sizes = null`（O(1) 存储），任何一项偏离才懒分配 Float32Array(CHUNK_SIZE)。
  *
  * 核心操作复杂度（n = 1M，n_chunks ≈ 977）：
- *   - indexToPosition / getSize / positionToIndex：默认 chunk 走 O(1) 快路径，
- *     非默认 chunk 在 chunk 内累加，最坏 O(CHUNK_SIZE)，受 SIMD-友好的 Float32Array 加持
- *     单次 < 1μs
+ *   - getSize / indexToPosition / positionToIndex：O(log n_chunks)——先二分 chunkCountPrefix /
+ *     chunkPrefixSum 定位 chunk，再块内最多扫 chunk.length 项（默认 chunk 走 O(1) 快路径）
  *   - setSize：单 chunk 内更新 + O(n_chunks) 维护 chunkPrefixSum，~3μs（写 977 个 Float64）
+ *   - insertRange / deleteRange：O(n_chunks + 受影响 chunk 项数总和)——块内 splice +
+ *     recomputePrefixes 全量重算；大插入触发分裂，小块合并避免碎片化
  *   - getVisibleRange：两次 positionToIndex（半开区间在调用方处理，spec §6.4）
  *
  * 关键不变量（破坏 = 渲染崩）：
  *   - `chunkPrefixSum[i]` = chunks[0..i) 的尺寸总和；长度 = chunks.length + 1
- *   - `chunk.length` 是该 chunk 实际行数（末块可能 < CHUNK_SIZE）；迭代 `chunk.sizes` 必须
- *     用 `chunk.length`，不能用 `chunk.sizes.length`（M1 hardening 修复，CLAUDE.md 不变量 #7）
+ *   - `chunkCountPrefix[i]` = chunks[0..i) 的项数累计；chunkCountPrefix[0]=0，
+ *     chunkCountPrefix[chunks.length]=count；单调递增
+ *   - 每个 chunk 满足 `0 < chunk.length ≤ 2·CHUNK_SIZE`（分裂/合并后保持）；
+ *     遍历 chunk 内容必须用 `chunk.length`，不能用 `chunk.sizes?.length`
  *   - `getSize(index)` 是边界正确的尺寸访问器；不要用 `indexToPosition(i+1) - indexToPosition(i)`
  *     在 `i = count - 1` 时会因 clamp 返回 0
  *
@@ -77,12 +80,14 @@ export interface ChunkedAxisOptions {
  *   而 Fenwick/扁平 prefix 都需要全量重算。
  *
  * 不变量：
- * - chunks.length == ceil(count / CHUNK_SIZE)；count == 0 时为 0
- * - chunkPrefixSum.length == chunks.length + 1，prefixSum[0] == 0
+ * - chunks.length >= 0；count == 0 时 chunks 为空
+ * - 每个 chunk 满足 `0 < chunk.length ≤ 2·CHUNK_SIZE`（分裂/合并后保持）
+ * - chunkCountPrefix.length == chunks.length + 1，chunkCountPrefix[0] == 0，
+ *   chunkCountPrefix[chunks.length] == count，单调递增
+ * - chunkPrefixSum.length == chunks.length + 1，chunkPrefixSum[0] == 0
  * - totalSize == chunkPrefixSum[chunks.length]
  * - chunk.sizes 非空 iff 该 chunk 内至少有一项被写成了 !== defaultSize 的值
- * - 即使 chunk.sizes 分配成 Float32Array(CHUNK_SIZE)，也只有前 chunk.length 项是有效数据；
- *   遍历用 chunk.length 而非 sizes.length，以跳过末尾 chunk 的零填充
+ * - chunk.sizes 分配后容量 = chunk.length（变长）；遍历用 chunk.length 而非 sizes.length
  *
  * @example
  * ```ts
