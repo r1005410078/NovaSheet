@@ -66,18 +66,44 @@ export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
 
   getCollapsedGaps(): readonly CollapsedGap[] {
     if (this.hiddenUnderlyingRows.size === 0) return []
-    const hiddenSorted = Array.from(this.hiddenUnderlyingRows).sort((a, b) => a - b)
+    const upstream = this.currentUpstream
+    if (upstream == null) return []
+    const visible = this.visibleRows
+    const total = upstream.getRowCount()
+    const toUnderlying = (pos: number): number => upstream.resolveUnderlyingRow?.(pos) ?? pos
+    const collectHidden = (fromPos: number, toPos: number): number[] => {
+      const ids: number[] = []
+      for (let pos = fromPos; pos < toPos; pos++) ids.push(toUnderlying(pos))
+      return ids
+    }
     const gaps: CollapsedGap[] = []
-    let run: number[] = []
-    for (const id of hiddenSorted) {
-      if (run.length === 0 || id === run[run.length - 1]! + 1) {
-        run.push(id)
-      } else {
-        gaps.push(this.makeGap(run))
-        run = [id]
+
+    // 顶部隐藏段：首个可见 upstream 位置之前的位置全被隐藏
+    const firstVisible = visible.length > 0 ? visible[0]! : total
+    if (firstVisible > 0) {
+      const hiddenIds = collectHidden(0, firstVisible)
+      gaps.push({ atViewRow: -1, hiddenCount: hiddenIds.length, hiddenIds })
+    }
+
+    // 中段：相邻可见位置间的跳变即隐藏段
+    for (let k = 0; k < visible.length - 1; k++) {
+      const prev = visible[k]!
+      const cur = visible[k + 1]!
+      if (cur > prev + 1) {
+        const hiddenIds = collectHidden(prev + 1, cur)
+        gaps.push({ atViewRow: k, hiddenCount: hiddenIds.length, hiddenIds })
       }
     }
-    if (run.length > 0) gaps.push(this.makeGap(run))
+
+    // 末尾隐藏段：末个可见位置之后的位置全被隐藏
+    if (visible.length > 0) {
+      const lastVisible = visible[visible.length - 1]!
+      if (lastVisible < total - 1) {
+        const hiddenIds = collectHidden(lastVisible + 1, total)
+        gaps.push({ atViewRow: visible.length - 1, hiddenCount: hiddenIds.length, hiddenIds })
+      }
+    }
+
     return gaps
   }
 
@@ -148,13 +174,6 @@ export class HideRowsLayer implements ViewLayer<HideRowsSpec> {
     }
   }
 
-  private makeGap(run: number[]): CollapsedGap {
-    const first = run[0]!
-    // atViewRow = 紧邻 hidden run 之前的最后一个 visible underlying 行在 visibleRows 中的索引
-    const upperUnderlying = first - 1
-    const atViewRow = upperUnderlying < 0 ? -1 : this.visibleRows.indexOf(upperUnderlying)
-    return { atViewRow, hiddenCount: run.length, hiddenIds: run.slice() }
-  }
 }
 
 /** Internal DataSource wrapper produced by HideRowsLayer.wrap(). Not exported. */
