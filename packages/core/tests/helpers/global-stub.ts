@@ -1,6 +1,3 @@
-// TEMPORARY duplicate — primary copy is in packages/web/tests/helpers/.
-// Deleted when packages/core/tests/render/ and util/ tests relocate (Tasks 5–6).
-
 /**
  * Vitest-style global stubbing for bun:test.
  *
