@@ -7,7 +7,7 @@
 import type { DataSource } from '../kernel/data/DataSource'
 import type { Field } from '../kernel/data/Schema'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
-import type { CellWrite, UndoCommand } from '../undo/UndoCommand'
+import type { CellWrite, UndoCommand } from '../kernel/undo/UndoCommand'
 import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../format/CellFormat'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'

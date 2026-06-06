@@ -3,7 +3,7 @@ import { FormatController } from '../../../src/engine/format/FormatController'
 import type { FormatControllerContext } from '../../../src/engine/format/FormatController'
 import { RangeStyleStore } from '../../../src/format/RangeStyleStore'
 import { MergeStore } from '../../../src/merge/MergeStore'
-import type { UndoCommand } from '../../../src/undo/UndoCommand'
+import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 import type { CellRange, GridSelection } from '../../../src/engine/selection/SelectionTypes'
 import { asRawRange } from '../../../src/view/coordinates'
 

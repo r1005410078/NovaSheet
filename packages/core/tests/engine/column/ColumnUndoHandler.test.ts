@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test'
 import { ColumnUndoHandler } from '../../../src/engine/column/ColumnUndoHandler'
 import type { ColumnUndoContext } from '../../../src/engine/column/ColumnUndoHandler'
 import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
-import type { UndoCommand } from '../../../src/undo/UndoCommand'
+import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type Call =
   | { op: 'setColWidth'; colIndex: number; width: number }

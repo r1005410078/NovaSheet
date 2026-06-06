@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-import { UndoRegistry } from '../../../src/engine/undo/UndoRegistry'
+import { UndoRegistry } from '../../../src/kernel/undo/UndoRegistry'
 import { registerCellUndo } from '../../../src/engine/undo/registerCellUndo'
 import { registerFillUndo } from '../../../src/engine/undo/registerFillUndo'
 import { registerFormatUndo } from '../../../src/engine/format/registerFormatUndo'
@@ -8,7 +8,7 @@ import { registerRowUndo } from '../../../src/engine/row/registerRowUndo'
 import { registerRowStructureUndo } from '../../../src/engine/row/registerRowStructureUndo'
 import { registerColumnUndo } from '../../../src/engine/column/registerColumnUndo'
 import { registerColumnStructureUndo } from '../../../src/engine/column/registerColumnStructureUndo'
-import type { UndoCommand } from '../../../src/undo/UndoCommand'
+import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 // 全 21 个 kind —— 删除 engine 旧 switch / UndoReplay fallback 前的兜底：
 // 若新增 kind 而未注册 handler，本测试会失败（resolve 漏网 = 运行期无声 no-op）。

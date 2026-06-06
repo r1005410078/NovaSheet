@@ -1,5 +1,5 @@
-import type { GridDomainEvent } from '../event/GridDomainEvent'
-import type { GridDomainEventHandler } from '../event/GridEventPipeline'
+import type { GridDomainEvent } from '../../kernel/protocol/GridDomainEvent'
+import type { GridDomainEventHandler } from '../../kernel/protocol/GridEventPipeline'
 
 /** Format 领域响应结构事件所需的最小写入面。 */
 export interface FormatEventHandlerContext {

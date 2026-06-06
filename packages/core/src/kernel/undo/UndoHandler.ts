@@ -1,6 +1,6 @@
-import type { CellValue } from '../../kernel/data/Schema'
-import type { CellRange } from '../selection/SelectionTypes'
-import type { CellWrite, UndoCommand } from '../../undo/UndoCommand'
+import type { CellValue } from '../data/Schema'
+import type { CellRange } from '../../engine/selection/SelectionTypes'
+import type { CellWrite, UndoCommand } from './UndoCommand'
 
 /**
  * 单个领域的 undo/redo replay 单元：自持本域最小 ctx，按 `kind` 自治逆/重做。

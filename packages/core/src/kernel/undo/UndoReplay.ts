@@ -1,4 +1,4 @@
-import type { UndoCommand } from '../../undo/UndoCommand'
+import type { UndoCommand } from './UndoCommand'
 import type { UndoHandler } from './UndoHandler'
 import type { UndoRegistry } from './UndoRegistry'
 

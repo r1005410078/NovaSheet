@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { DefaultGridEngine, denseGridTheme, InMemoryDataSource } from '../../src'
+import { DefaultGridEngine, denseGridTheme, InMemoryDataSource } from '../../../src'
 
 describe('UndoStack — moveCols', () => {
   it('undo / redo restores schema order after column reorder', () => {

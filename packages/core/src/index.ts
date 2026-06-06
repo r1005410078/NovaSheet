@@ -73,8 +73,8 @@ export type {
   GridSelection,
   SelectCellOptions,
 } from './engine/selection/SelectionTypes'
-export { hitTestCell } from './interaction/HitTest'
-export type { HitTestPoint } from './interaction/HitTest'
+export { hitTestCell } from './kernel/interaction/HitTest'
+export type { HitTestPoint } from './kernel/interaction/HitTest'
 export {
   applySelectionNavigation,
   parseSelectionNavigationKey,
@@ -84,16 +84,16 @@ export type {
   SelectionNavigationIntent,
   SelectionNavigationTarget,
 } from './engine/selection/SelectionNavigation'
-export { computeScrollReveal } from './interaction/scrollCellIntoView'
-export type { ScrollRevealInput, ScrollRevealResult } from './interaction/scrollCellIntoView'
+export { computeScrollReveal } from './kernel/interaction/scrollCellIntoView'
+export type { ScrollRevealInput, ScrollRevealResult } from './kernel/interaction/scrollCellIntoView'
 export {
   computeResizeHandles,
   MIN_RESIZE_SIZE,
   RESIZE_HANDLE_HIT_SIZE,
   RESIZE_KEYBOARD_STEP,
   RESIZE_KEYBOARD_STEP_LARGE,
-} from './interaction/HandleLayout'
-export type { ResizeHandleKind, ResizeHandleRect } from './interaction/HandleLayout'
+} from './kernel/interaction/HandleLayout'
+export type { ResizeHandleKind, ResizeHandleRect } from './kernel/interaction/HandleLayout'
 export {
   formatCellForEdit,
   isEditableFieldType,
@@ -115,8 +115,8 @@ export type {
   ContextMenuTargetKind,
   RowHeaderMenuContext,
 } from './interaction/ContextMenuModel'
-export { computeCellRect } from './interaction/CellLayout'
-export type { CellRect } from './interaction/CellLayout'
+export { computeCellRect } from './kernel/interaction/CellLayout'
+export type { CellRect } from './kernel/interaction/CellLayout'
 
 // 剪贴板层（Phase 4.1）
 export { serializeRowsToTsv, parseTsvToCells } from './clipboard/TsvFormat'
@@ -170,7 +170,7 @@ export { tokenize, wrapText } from './kernel/measure/TextMeasurer'
 export type { TextMeasurer, WrapOptions, WrappedText } from './kernel/measure/TextMeasurer'
 export { autofitRowHeights } from './engine/AutofitRowHeights'
 export type { AutofitRowsParams, AutofitRowsResult } from './engine/AutofitRowHeights'
-export type { UndoCommand, CellWrite } from './undo/UndoCommand'
+export type { UndoCommand, CellWrite } from './kernel/undo/UndoCommand'
 
 export { RangeStyleStore } from './format/RangeStyleStore'
 export { borderPatchForCell } from './format/BorderPreset'

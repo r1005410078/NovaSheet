@@ -1,12 +1,12 @@
 import { describe, it } from 'bun:test'
-import type { UndoCommand, CellWrite } from '../../src/undo/UndoCommand'
-import type { FormatLayer } from '../../src/format/CellFormat'
-import type { MergeRegion } from '../../src/merge/MergeStore'
-import type { GridSelection } from '../../src/engine/selection/SelectionTypes'
-import type { Field } from '../../src/kernel/data/Schema'
-import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../../src/kernel/data/MutableDataSource'
-import type { FrozenConfig } from '../../src/kernel/geometry/FrozenRegions'
-import { assertSerializable } from '../helpers/undo-serialization'
+import type { UndoCommand, CellWrite } from '../../../src/kernel/undo/UndoCommand'
+import type { FormatLayer } from '../../../src/format/CellFormat'
+import type { MergeRegion } from '../../../src/merge/MergeStore'
+import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
+import type { Field } from '../../../src/kernel/data/Schema'
+import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../../../src/kernel/data/MutableDataSource'
+import type { FrozenConfig } from '../../../src/kernel/geometry/FrozenRegions'
+import { assertSerializable } from '../../helpers/undo-serialization'
 
 const FROZEN: FrozenConfig = { topRows: 0, leftCols: 0, rightCols: 0 }
 const FIELD: Field = { id: 'x', name: 'X', type: 'text', width: 100 }

@@ -9,7 +9,7 @@ import {
   RESIZE_HANDLE_HIT_SIZE,
   type RenderFrame,
   type Schema,
-} from '../../src'
+} from '../../../src'
 
 const SCHEMA: Schema = {
   fields: [

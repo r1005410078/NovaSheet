@@ -6,7 +6,7 @@ import type { CellValue } from '../../../src/kernel/data/Schema'
 import type { CellRange } from '../../../src/engine/selection/SelectionTypes'
 import type { FormatLayer } from '../../../src/format/CellFormat'
 import type { MergeRegion } from '../../../src/merge/MergeStore'
-import type { CellWrite, UndoCommand } from '../../../src/undo/UndoCommand'
+import type { CellWrite, UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type Call =
   | { op: 'write'; rowIndex: number; fieldId: string; value: CellValue }

@@ -2,8 +2,8 @@ import type { DeletedRowSnapshot } from '../../kernel/data/MutableDataSource'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'
 import type { GridSelection } from '../selection/SelectionTypes'
-import type { UndoCommand } from '../../undo/UndoCommand'
-import type { UndoHandler } from '../undo/UndoHandler'
+import type { UndoCommand } from '../../kernel/undo/UndoCommand'
+import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 
 /** 本 handler 负责的复合行结构 kind 集合（结构 + format + merge + 选区）。 */
 const ROW_STRUCTURE_KINDS = new Set<UndoCommand['kind']>(['insertRows', 'deleteRows', 'moveRows'])

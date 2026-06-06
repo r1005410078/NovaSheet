@@ -1,6 +1,6 @@
 import type { GridSelection } from '../selection/SelectionTypes'
-import type { UndoCommand } from '../../undo/UndoCommand'
-import type { UndoHandler } from '../undo/UndoHandler'
+import type { UndoCommand } from '../../kernel/undo/UndoCommand'
+import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 
 /** 本 handler 负责的单域列结构 kind 集合（无 format/merge/frozen）。 */
 const COLUMN_KINDS = new Set<UndoCommand['kind']>([

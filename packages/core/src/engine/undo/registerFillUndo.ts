@@ -1,6 +1,6 @@
 import { FillUndoHandler } from './FillUndoHandler'
 import type { FillUndoContext } from './FillUndoHandler'
-import type { UndoRegistry } from './UndoRegistry'
+import type { UndoRegistry } from '../../kernel/undo/UndoRegistry'
 
 /**
  * fill 域自注册入口：构造 `FillUndoHandler` 并登记进 registry。

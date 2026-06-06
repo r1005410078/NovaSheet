@@ -1,5 +1,5 @@
 import { expect } from 'bun:test'
-import type { UndoCommand } from '../../src/undo/UndoCommand'
+import type { UndoCommand } from '../../src/kernel/undo/UndoCommand'
 
 /**
  * JSON round-trip 守卫：断言命令可安全序列化/反序列化而不丢失数据。

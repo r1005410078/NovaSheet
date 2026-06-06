@@ -8,7 +8,7 @@ import {
   hitTestCell,
   type RenderFrame,
   type Schema,
-} from '../../src'
+} from '../../../src'
 
 const SCHEMA: Schema = {
   fields: [

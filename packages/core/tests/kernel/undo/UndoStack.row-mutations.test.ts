@@ -1,9 +1,9 @@
 // Task 8 预写测试：定义 Task 10/11 将实现的 engine API 契约。
 // Task 10 落地后移除了 @ts-expect-error 标注，4 项测试全部 GREEN。
 import { describe, expect, it } from 'bun:test'
-import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
-import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
-import { denseGridTheme } from '../../src/kernel/theme/denseGridTheme'
+import { DefaultGridEngine } from '../../../src/engine/DefaultGridEngine'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import { denseGridTheme } from '../../../src/kernel/theme/denseGridTheme'
 
 const schema = { fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 100 }] }
 

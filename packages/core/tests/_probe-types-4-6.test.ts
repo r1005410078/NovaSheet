@@ -5,7 +5,7 @@ import type {
   RemovedFieldSnapshot,
 } from '../src/kernel/data/MutableDataSource'
 import type { Field } from '../src/kernel/data/Schema'
-import type { UndoCommand } from '../src/undo/UndoCommand'
+import type { UndoCommand } from '../src/kernel/undo/UndoCommand'
 
 const emptySelection = {
   activeCell: null,

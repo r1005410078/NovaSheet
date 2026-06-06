@@ -2,8 +2,8 @@ import type { CellValue } from '../../kernel/data/Schema'
 import type { CellRange } from '../selection/SelectionTypes'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'
-import type { CellWrite, UndoCommand } from '../../undo/UndoCommand'
-import type { UndoHandler } from './UndoHandler'
+import type { CellWrite, UndoCommand } from '../../kernel/undo/UndoCommand'
+import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 
 /**
  * fill 域 undo 所需的最小 engine 能力面。

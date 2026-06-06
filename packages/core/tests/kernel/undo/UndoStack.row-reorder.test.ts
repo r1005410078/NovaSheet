@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { DefaultGridEngine, InMemoryDataSource, denseGridTheme } from '../../src'
-import type { Row } from '../../src'
+import { DefaultGridEngine, InMemoryDataSource, denseGridTheme } from '../../../src'
+import type { Row } from '../../../src'
 
 describe('UndoStack — moveRows', () => {
   it('undo / redo restores row order after row reorder', () => {

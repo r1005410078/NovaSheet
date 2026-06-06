@@ -1,6 +1,6 @@
 import { ColumnStructureUndoHandler } from './ColumnStructureUndoHandler'
 import type { ColumnStructureUndoContext } from './ColumnStructureUndoHandler'
-import type { UndoRegistry } from '../undo/UndoRegistry'
+import type { UndoRegistry } from '../../kernel/undo/UndoRegistry'
 
 /**
  * 复合列结构域自注册入口：构造 `ColumnStructureUndoHandler` 并登记进 registry。

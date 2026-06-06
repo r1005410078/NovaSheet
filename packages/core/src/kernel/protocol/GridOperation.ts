@@ -1,7 +1,7 @@
-import type { CellValue } from '../../kernel/data/Schema'
+import type { CellValue } from '../data/Schema'
 import type { BorderPreset, BorderStyle, TextWrapMode } from '../../format/CellFormat'
 import type { RawRange } from '../../view/coordinates'
-import type { RowOperation } from '../row/RowOperation'
+import type { RowOperation } from '../../engine/row/RowOperation'
 
 export type {
   DeleteRowsOperation,
@@ -10,7 +10,7 @@ export type {
   MoveRowsOperation,
   RowOperation,
   UnhideRowsOperation,
-} from '../row/RowOperation'
+} from '../../engine/row/RowOperation'
 
 /** 可序列化、可传输、可回放的 engine 原子操作。 */
 export type GridOperation =

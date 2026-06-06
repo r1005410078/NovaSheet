@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 
-import { UndoRegistry } from '../../../src/engine/undo/UndoRegistry'
-import type { UndoHandler } from '../../../src/engine/undo/UndoHandler'
-import type { UndoCommand } from '../../../src/undo/UndoCommand'
+import { UndoRegistry } from '../../../src/kernel/undo/UndoRegistry'
+import type { UndoHandler } from '../../../src/kernel/undo/UndoHandler'
+import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 function fakeHandler(domain: string, kinds: ReadonlyArray<UndoCommand['kind']>): UndoHandler {
   const owned = new Set<UndoCommand['kind']>(kinds)

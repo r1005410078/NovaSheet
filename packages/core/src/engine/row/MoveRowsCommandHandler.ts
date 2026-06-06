@@ -1,4 +1,4 @@
-import type { GridEventPipeline } from '../event/GridEventPipeline'
+import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
 import type { RowCommands } from './RowStructure'
 import type { RowsMoved } from './RowEvent'
 import type { MoveRowsOperation } from './RowOperation'

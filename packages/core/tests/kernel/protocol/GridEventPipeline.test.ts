@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { GridEventPipeline } from '../../../src/engine/event/GridEventPipeline'
-import type { GridDomainEventHandler } from '../../../src/engine/event/GridEventPipeline'
+import { GridEventPipeline } from '../../../src/kernel/protocol/GridEventPipeline'
+import type { GridDomainEventHandler } from '../../../src/kernel/protocol/GridEventPipeline'
 
 describe('GridEventPipeline', () => {
   it('dispatches domain events to fixed handlers in registration order', () => {

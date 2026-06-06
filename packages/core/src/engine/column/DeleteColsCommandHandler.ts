@@ -1,4 +1,4 @@
-import type { GridEventPipeline } from '../event/GridEventPipeline'
+import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
 import type { ColumnCommands } from './ColumnStructure'
 import type { ColumnsDeleted } from './ColumnEvent'
 import type { DeleteColsOperation } from './ColumnOperation'

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 
-import { UndoRegistry } from '../../../src/engine/undo/UndoRegistry'
-import { UndoReplay } from '../../../src/engine/undo/UndoReplay'
-import type { UndoHandler } from '../../../src/engine/undo/UndoHandler'
-import type { UndoCommand } from '../../../src/undo/UndoCommand'
+import { UndoRegistry } from '../../../src/kernel/undo/UndoRegistry'
+import { UndoReplay } from '../../../src/kernel/undo/UndoReplay'
+import type { UndoHandler } from '../../../src/kernel/undo/UndoHandler'
+import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type Call = { op: 'undo' | 'redo'; kind: UndoCommand['kind'] }
 

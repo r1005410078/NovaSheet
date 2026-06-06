@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { UndoStack } from '../../src/undo/UndoStack'
-import type { UndoCommand } from '../../src/undo/UndoCommand'
+import { UndoStack } from '../../../src/kernel/undo/UndoStack'
+import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 const edit = (rowIndex: number): UndoCommand => ({
   kind: 'editCell',

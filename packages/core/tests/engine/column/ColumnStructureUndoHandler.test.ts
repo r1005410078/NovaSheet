@@ -8,7 +8,7 @@ import type { FrozenConfig } from '../../../src/kernel/geometry/FrozenRegions'
 import type { FormatLayer } from '../../../src/format/CellFormat'
 import type { MergeRegion } from '../../../src/merge/MergeStore'
 import type { GridSelection } from '../../../src/engine/selection/SelectionTypes'
-import type { UndoCommand } from '../../../src/undo/UndoCommand'
+import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type Call =
   | { op: 'reinsert'; snapshots: readonly RemovedFieldSnapshot[]; widths: readonly number[] }

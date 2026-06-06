@@ -1,6 +1,6 @@
 import { RowStructureUndoHandler } from './RowStructureUndoHandler'
 import type { RowStructureUndoContext } from './RowStructureUndoHandler'
-import type { UndoRegistry } from '../undo/UndoRegistry'
+import type { UndoRegistry } from '../../kernel/undo/UndoRegistry'
 
 /**
  * 复合行结构域自注册入口：构造 `RowStructureUndoHandler` 并登记进 registry。

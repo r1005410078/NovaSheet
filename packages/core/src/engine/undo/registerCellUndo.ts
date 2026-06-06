@@ -1,6 +1,6 @@
 import { CellUndoHandler } from './CellUndoHandler'
-import type { CellUndoContext } from './UndoHandler'
-import type { UndoRegistry } from './UndoRegistry'
+import type { CellUndoContext } from '../../kernel/undo/UndoHandler'
+import type { UndoRegistry } from '../../kernel/undo/UndoRegistry'
 
 /**
  * cell-write 域自注册入口：构造 `CellUndoHandler` 并登记进 registry。

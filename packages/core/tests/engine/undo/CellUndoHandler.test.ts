@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 
 import { CellUndoHandler } from '../../../src/engine/undo/CellUndoHandler'
-import type { CellUndoContext } from '../../../src/engine/undo/UndoHandler'
+import type { CellUndoContext } from '../../../src/kernel/undo/UndoHandler'
 import type { CellValue } from '../../../src/kernel/data/Schema'
 import type { CellRange } from '../../../src/engine/selection/SelectionTypes'
-import type { CellWrite, UndoCommand } from '../../../src/undo/UndoCommand'
+import type { CellWrite, UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
 type WriteCall = { op: 'write'; rowIndex: number; fieldId: string; value: CellValue }
 type EditSelCall = { op: 'restoreEdit'; rowIndex: number; fieldId: string }

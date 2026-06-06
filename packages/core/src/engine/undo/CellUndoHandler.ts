@@ -1,5 +1,5 @@
-import type { CellUndoContext, UndoHandler } from './UndoHandler'
-import type { UndoCommand } from '../../undo/UndoCommand'
+import type { CellUndoContext, UndoHandler } from '../../kernel/undo/UndoHandler'
+import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 
 /** 本 handler 负责的 cell-write 域命令 kind 集合。 */
 const CELL_KINDS = new Set<UndoCommand['kind']>(['editCell', 'clearRange', 'paste'])

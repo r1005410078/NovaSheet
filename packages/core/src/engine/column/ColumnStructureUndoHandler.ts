@@ -4,8 +4,8 @@ import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
 import type { FormatLayer } from '../../format/CellFormat'
 import type { MergeRegion } from '../../merge/MergeStore'
 import type { GridSelection } from '../selection/SelectionTypes'
-import type { UndoCommand } from '../../undo/UndoCommand'
-import type { UndoHandler } from '../undo/UndoHandler'
+import type { UndoCommand } from '../../kernel/undo/UndoCommand'
+import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 
 /** 本 handler 负责的复合列结构 kind 集合（结构 + frozen + format + merge + 选区）。 */
 const COLUMN_STRUCTURE_KINDS = new Set<UndoCommand['kind']>(['insertCols', 'deleteCols', 'moveCols'])

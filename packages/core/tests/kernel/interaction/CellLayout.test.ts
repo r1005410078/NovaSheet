@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis } from '../../src/kernel/geometry/ChunkedAxis'
-import { FrozenRegions } from '../../src/kernel/geometry/FrozenRegions'
-import { Viewport } from '../../src/kernel/geometry/Viewport'
-import { denseGridTheme } from '../../src/kernel/theme/denseGridTheme'
-import { computeCellRect } from '../../src/interaction/CellLayout'
-import type { RenderFrame } from '../../src/kernel/render/RenderFrame'
+import { ChunkedAxis } from '../../../src/kernel/geometry/ChunkedAxis'
+import { FrozenRegions } from '../../../src/kernel/geometry/FrozenRegions'
+import { Viewport } from '../../../src/kernel/geometry/Viewport'
+import { denseGridTheme } from '../../../src/kernel/theme/denseGridTheme'
+import { computeCellRect } from '../../../src/kernel/interaction/CellLayout'
+import type { RenderFrame } from '../../../src/kernel/render/RenderFrame'
 
 function makeFrame(): RenderFrame {
   const rowsAxis = new ChunkedAxis({ count: 10, defaultSize: 28 })

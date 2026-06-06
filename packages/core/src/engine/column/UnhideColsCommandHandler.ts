@@ -1,4 +1,4 @@
-import type { GridEventPipeline } from '../event/GridEventPipeline'
+import type { GridEventPipeline } from '../../kernel/protocol/GridEventPipeline'
 import type { ColumnCommands } from './ColumnStructure'
 import type { ColumnsUnhidden } from './ColumnEvent'
 import type { UnhideColsOperation } from './ColumnOperation'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis } from '../../src/kernel/geometry/ChunkedAxis'
-import { computeScrollReveal } from '../../src/interaction/scrollCellIntoView'
+import { ChunkedAxis } from '../../../src/kernel/geometry/ChunkedAxis'
+import { computeScrollReveal } from '../../../src/kernel/interaction/scrollCellIntoView'
 
 describe('computeScrollReveal — Phase 3.3', () => {
   const rowsAxis = new ChunkedAxis({ count: 20, defaultSize: 28 })

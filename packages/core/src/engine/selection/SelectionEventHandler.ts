@@ -1,5 +1,5 @@
-import type { GridDomainEvent } from '../event/GridDomainEvent'
-import type { GridDomainEventHandler } from '../event/GridEventPipeline'
+import type { GridDomainEvent } from '../../kernel/protocol/GridDomainEvent'
+import type { GridDomainEventHandler } from '../../kernel/protocol/GridEventPipeline'
 import type { SelectionCommands } from './SelectionState'
 
 export interface SelectionEventHandlerContext {

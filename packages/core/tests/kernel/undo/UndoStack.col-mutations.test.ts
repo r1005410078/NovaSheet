@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
-import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
-import { denseGridTheme } from '../../src/kernel/theme/denseGridTheme'
+import { InMemoryDataSource } from '../../../src/kernel/data/InMemoryDataSource'
+import { DefaultGridEngine } from '../../../src/engine/DefaultGridEngine'
+import { denseGridTheme } from '../../../src/kernel/theme/denseGridTheme'
 
 const schema = {
   fields: [
