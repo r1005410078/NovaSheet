@@ -8,14 +8,13 @@ import type { PasteSkippedCell } from '../features/clipboard/types'
 import { computeFillWrites } from '../features/fill/FillSeries'
 import type { FillDirection, FillMergeSnap } from '../features/fill/FillTarget'
 import { unionRange } from '../kernel/geometry/range'
-import { RangeStyleStore } from '../features/format/RangeStyleStore'
+import { DefaultFormatState } from '../features/format/FormatState'
 import type {
   BorderPreset,
   BorderStyle,
   CellFormat,
   TextWrapMode,
 } from '../features/format/CellFormat'
-import { MergeStore } from '../features/merge/MergeStore'
 import type { MergeRegion } from '../features/merge/MergeStore'
 import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../features/edit/CellEdit'
 import { CellEditModel } from '../features/edit/CellEditModel'
@@ -105,29 +104,21 @@ export class DefaultGridEngine implements GridEngine {
    */
   private readonly undoRegistry = new UndoRegistry()
   private readonly undoReplay = new UndoReplay(this.undoRegistry)
-  /**
-   * Phase 5-A — 稀疏格式存储，按 **raw** 坐标键控（Task 7 的结构变更按 raw 重映）。
-   * mutation 入口先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
-   */
-  private readonly formatStore = new RangeStyleStore()
-  /**
-   * Phase 5-A — 合并区域存储，与 formatStore 同按 **raw** 坐标键控。
-   * mergeCells/unmergeCells 先把 view range 翻译为 raw range 再写入；getFrame() 反向翻译回 view。
-   */
-  private readonly mergeStore = new MergeStore()
+  /** Phase 5-A — format/merge 聚合根；store 按 **raw** 坐标键控，结构变更经 remap 面委托。 */
+  private readonly formatState = new DefaultFormatState()
   /**
    * Selection 写入门面；engine 经此写选区，不直连聚合 mutation（invariant #3）。
    * merge lookup 经 resolveViewMergeRegion 做 view→raw→view 翻译，sort/filter/隐藏列下亦正确。
    */
   private readonly selectionController = new SelectionController(this.selection, {
     resolveMergeRegion: (rowIndex, colIndex) =>
-      resolveViewMergeRegion(this.mergeStore, this.coords, rowIndex, colIndex)?.range ?? null,
+      resolveViewMergeRegion(this.formatState.mergeStore, this.coords, rowIndex, colIndex)?.range ?? null,
   })
   /**
    * Format/Merge 写入门面；engine 经此做 5 个正向 mutation 的编排，不直连 store mutation。
    * undo restore 仍在 engine 统一 switch（与 selection 一致）。
    */
-  private readonly formatController = new FormatController(this.formatStore, this.mergeStore, {
+  private readonly formatController = new FormatController(this.formatState, {
     translateRange: (range) => this.coords.viewRangeToRaw(range),
     pushUndo: (command) => this.undoStack.push(command),
     getSelection: () => this.selection.getSelection(),
@@ -135,42 +126,21 @@ export class DefaultGridEngine implements GridEngine {
   })
   /** 可见 format/merge → VIEW 帧字段的只读解析器（从 getFrame 抽出，R1）。 */
   private readonly frameFormat = new VisibleFormatResolver(
-    this.formatStore,
-    this.mergeStore,
+    this.formatState.formatStore,
+    this.formatState.mergeStore,
     this.coords,
   )
   /** 填充柄「携带格式/合并」平铺逻辑（从 commitFill 抽出，R1）。 */
   private readonly fillStyles = new FillStylePropagator(
-    this.formatStore,
-    this.mergeStore,
+    this.formatState.formatStore,
+    this.formatState.mergeStore,
     this.coords,
   )
   private readonly eventPipeline = new GridEventPipeline([
     new SelectionEventHandler(this.selection, {
       getVisibleFieldIds: () => this.data.getSchema().fields.map((field) => field.id),
     }),
-    new FormatEventHandler({
-      remapFormatRows: (indexMap) => this.formatStore.remapByRowIndexMap(indexMap),
-      remapMergeRows: (indexMap) => this.mergeStore.remapByRowIndexMap(indexMap),
-      remapFormatAfterRowsInserted: (at, count) =>
-        this.formatStore.remapAfterRowsInserted(at, count),
-      remapMergeAfterRowsInserted: (at, count) =>
-        this.mergeStore.remapAfterRowsInserted(at, count),
-      remapFormatAfterRowsDeleted: (rowIds) =>
-        this.formatStore.remapAfterRowsDeleted([...rowIds].sort((a, b) => a - b)),
-      remapMergeAfterRowsDeleted: (rowIds) =>
-        this.mergeStore.remapAfterRowsDeleted([...rowIds].sort((a, b) => a - b)),
-      remapFormatAfterColsInserted: (at, count) =>
-        this.formatStore.remapAfterColsInserted(at, count),
-      remapMergeAfterColsInserted: (at, count) =>
-        this.mergeStore.remapAfterColsInserted(at, count),
-      remapFormatAfterColsDeleted: (idx) =>
-        this.formatStore.remapAfterColsDeleted([...idx].sort((a, b) => a - b)),
-      remapMergeAfterColsDeleted: (idx) =>
-        this.mergeStore.remapAfterColsDeleted([...idx].sort((a, b) => a - b)),
-      remapFormatCols: (m) => this.formatStore.remapByColIndexMap(m),
-      remapMergeCols: (m) => this.mergeStore.remapByColIndexMap(m),
-    }),
+    new FormatEventHandler(this.formatState),
   ])
   private readonly columnStructure!: DefaultColumnStructure
   private readonly insertColsCommand!: InsertColsCommandHandler
@@ -227,8 +197,8 @@ export class DefaultGridEngine implements GridEngine {
         this.restoreSelectionForWrites(writes, fallbackRange),
     })
     registerFormatUndo(this.undoRegistry, {
-      restoreFormat: (layers) => this.formatStore.restore(layers),
-      restoreMerge: (regions) => this.mergeStore.restore(regions),
+      restoreFormat: (layers) => this.formatState.restoreFormat(layers),
+      restoreMerge: (regions) => this.formatState.restoreMerge(regions),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
     registerRowUndo(this.undoRegistry, {
@@ -253,8 +223,8 @@ export class DefaultGridEngine implements GridEngine {
       applyCellWrite: (rowIndex, fieldId, value) => this.applyEditCellWrite(rowIndex, fieldId, value),
       restoreSelectionForWrites: (writes, fallbackRange) =>
         this.restoreSelectionForWrites(writes, fallbackRange),
-      restoreFormat: (layers) => this.formatStore.restore(layers),
-      restoreMerge: (regions) => this.mergeStore.restore(regions),
+      restoreFormat: (layers) => this.formatState.restoreFormat(layers),
+      restoreMerge: (regions) => this.formatState.restoreMerge(regions),
     })
     registerRowStructureUndo(this.undoRegistry, {
       canInsertRows: () => !!(isMutableDataSource(this.rawData) && this.rawData.insertRows),
@@ -265,8 +235,8 @@ export class DefaultGridEngine implements GridEngine {
       replayMoveRows: (rowIds, beforeRowId, selection) =>
         this.applyMoveRowsCommand(rowIds, beforeRowId, selection),
       rebuildRows: () => this.layout.rebuildRows(this.rowStructure.getViewRowsAxis()),
-      restoreFormat: (layers) => this.formatStore.restore(layers),
-      restoreMerge: (regions) => this.mergeStore.restore(regions),
+      restoreFormat: (layers) => this.formatState.restoreFormat(layers),
+      restoreMerge: (regions) => this.formatState.restoreMerge(regions),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
     registerColumnStructureUndo(this.undoRegistry, {
@@ -277,8 +247,8 @@ export class DefaultGridEngine implements GridEngine {
         this.applyMoveColsCommand(fieldIds, beforeFieldId, selection),
       restoreFrozen: (config) => this.layout.setFrozenConfig(config),
       rebuildCols: () => this.layout.rebuildCols(this.columnStructure.getViewColsAxis()),
-      restoreFormat: (layers) => this.formatStore.restore(layers),
-      restoreMerge: (regions) => this.mergeStore.restore(regions),
+      restoreFormat: (layers) => this.formatState.restoreFormat(layers),
+      restoreMerge: (regions) => this.formatState.restoreMerge(regions),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
   }
@@ -363,7 +333,7 @@ export class DefaultGridEngine implements GridEngine {
 
   beginCellEdit(cell: CellAddress): boolean {
     // view→raw→view 翻译：合并格编辑落到 view 坐标的 anchor（sort/filter/隐藏列下亦正确）。
-    const region = resolveViewMergeRegion(this.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
+    const region = resolveViewMergeRegion(this.formatState.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
     const editCell = region?.anchor ?? cell
     const field = this.fieldAt(editCell.colIndex)
     if (!field || !isEditableFieldType(field.type)) return false
@@ -555,8 +525,8 @@ export class DefaultGridEngine implements GridEngine {
    */
   insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
     const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatStore.snapshot()
-    const mergeBefore = this.mergeStore.snapshot()
+    const formatBefore = this.formatState.formatStore.snapshot()
+    const mergeBefore = this.formatState.mergeStore.snapshot()
     const event = this.insertRowsCommand.execute({
       kind: 'insertRows',
       at: beforeUnderlyingRow,
@@ -573,9 +543,9 @@ export class DefaultGridEngine implements GridEngine {
       selectionBefore,
       selectionAfter,
       formatBefore,
-      formatAfter: this.formatStore.snapshot(),
+      formatAfter: this.formatState.formatStore.snapshot(),
       mergeBefore,
-      mergeAfter: this.mergeStore.snapshot(),
+      mergeAfter: this.formatState.mergeStore.snapshot(),
     })
     return event.newRowIds
   }
@@ -586,8 +556,8 @@ export class DefaultGridEngine implements GridEngine {
    */
   deleteRows(underlyingRowIds: readonly number[]): void {
     const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatStore.snapshot()
-    const mergeBefore = this.mergeStore.snapshot()
+    const formatBefore = this.formatState.formatStore.snapshot()
+    const mergeBefore = this.formatState.mergeStore.snapshot()
     const event = this.deleteRowsCommand.execute({
       kind: 'deleteRows',
       rowIds: underlyingRowIds,
@@ -602,9 +572,9 @@ export class DefaultGridEngine implements GridEngine {
       selectionBefore,
       selectionAfter,
       formatBefore,
-      formatAfter: this.formatStore.snapshot(),
+      formatAfter: this.formatState.formatStore.snapshot(),
       mergeBefore,
-      mergeAfter: this.mergeStore.snapshot(),
+      mergeAfter: this.formatState.mergeStore.snapshot(),
     })
   }
 
@@ -668,8 +638,8 @@ export class DefaultGridEngine implements GridEngine {
 
     this.finishActiveEdit()
     const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatStore.snapshot()
-    const mergeBefore = this.mergeStore.snapshot()
+    const formatBefore = this.formatState.formatStore.snapshot()
+    const mergeBefore = this.formatState.mergeStore.snapshot()
     const event = this.moveRowsCommand.execute({ kind: 'moveRows', rowIds, beforeRowId })
     if (!event) return false
     this.layout.rebuildRows(this.rowStructure.getViewRowsAxis())
@@ -683,9 +653,9 @@ export class DefaultGridEngine implements GridEngine {
       selectionBefore,
       selectionAfter,
       formatBefore,
-      formatAfter: this.formatStore.snapshot(),
+      formatAfter: this.formatState.formatStore.snapshot(),
       mergeBefore,
-      mergeAfter: this.mergeStore.snapshot(),
+      mergeAfter: this.formatState.mergeStore.snapshot(),
     })
     return true
   }
@@ -693,8 +663,8 @@ export class DefaultGridEngine implements GridEngine {
   /** 在 schema field index 位置前插入 count 个文本列。 */
   insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
     const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatStore.snapshot()
-    const mergeBefore = this.mergeStore.snapshot()
+    const formatBefore = this.formatState.formatStore.snapshot()
+    const mergeBefore = this.formatState.mergeStore.snapshot()
     const frozenBefore = this.layout.getFrozenConfig()
     const event = this.insertColsCommand.execute({ kind: 'insertCols', beforeFieldIndex, count })
     if (!event) return []
@@ -716,9 +686,9 @@ export class DefaultGridEngine implements GridEngine {
       frozenBefore,
       frozenAfter,
       formatBefore,
-      formatAfter: this.formatStore.snapshot(),
+      formatAfter: this.formatState.formatStore.snapshot(),
       mergeBefore,
-      mergeAfter: this.mergeStore.snapshot(),
+      mergeAfter: this.formatState.mergeStore.snapshot(),
     })
     return event.newFields
   }
@@ -726,8 +696,8 @@ export class DefaultGridEngine implements GridEngine {
   /** 按 fieldId 删除列，返回删除快照。 */
   deleteCols(fieldIds: readonly string[]): readonly RemovedFieldSnapshot[] {
     const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatStore.snapshot()
-    const mergeBefore = this.mergeStore.snapshot()
+    const formatBefore = this.formatState.formatStore.snapshot()
+    const mergeBefore = this.formatState.mergeStore.snapshot()
     const frozenBefore = this.layout.getFrozenConfig()
     const totalColsBefore = this.rawData.getSchema().fields.length
     const event = this.deleteColsCommand.execute({ kind: 'deleteCols', fieldIds })
@@ -745,9 +715,9 @@ export class DefaultGridEngine implements GridEngine {
       frozenBefore,
       frozenAfter,
       formatBefore,
-      formatAfter: this.formatStore.snapshot(),
+      formatAfter: this.formatState.formatStore.snapshot(),
       mergeBefore,
-      mergeAfter: this.mergeStore.snapshot(),
+      mergeAfter: this.formatState.mergeStore.snapshot(),
     })
     return event.snapshots
   }
@@ -822,8 +792,8 @@ export class DefaultGridEngine implements GridEngine {
     if (!isMutableDataSource(this.rawData) || !this.rawData.moveFields) return false
     this.finishActiveEdit()
     const selectionBefore = this.selection.getSelection()
-    const formatBefore = this.formatStore.snapshot()
-    const mergeBefore = this.mergeStore.snapshot()
+    const formatBefore = this.formatState.formatStore.snapshot()
+    const mergeBefore = this.formatState.mergeStore.snapshot()
     this.selectionController.captureVisibleFieldIdsBefore(
       this.data.getSchema().fields.map((field) => field.id),
     )
@@ -839,9 +809,9 @@ export class DefaultGridEngine implements GridEngine {
       selectionBefore,
       selectionAfter,
       formatBefore,
-      formatAfter: this.formatStore.snapshot(),
+      formatAfter: this.formatState.formatStore.snapshot(),
       mergeBefore,
-      mergeAfter: this.mergeStore.snapshot(),
+      mergeAfter: this.formatState.mergeStore.snapshot(),
     })
     return true
   }
@@ -915,7 +885,7 @@ export class DefaultGridEngine implements GridEngine {
       rawTarget === null ||
       pasteTargetConflictsWithMerges(
         { ...rawTarget, tile: target.tile },
-        this.mergeStore.snapshot(),
+        this.formatState.mergeStore.snapshot(),
       )
     if (conflictsWithMerges) {
       const topLeftFieldId = fieldIdsAtCols[target.startCol]
@@ -1025,7 +995,7 @@ export class DefaultGridEngine implements GridEngine {
 
   /** Phase 5-A — 解析单个单元格的格式。坐标为 **raw** 空间（与 store 键控一致）。 */
   getCellFormat(rowIndex: number, colIndex: number): CellFormat | undefined {
-    return this.formatStore.resolveCell(rowIndex, colIndex)
+    return this.formatState.resolveCellFormat(rowIndex, colIndex)
   }
 
   /**
@@ -1052,7 +1022,7 @@ export class DefaultGridEngine implements GridEngine {
 
   /** Phase 5-A — 返回覆盖单元格的合并区域。坐标为 **raw** 空间（与 `getCellFormat` 一致）。 */
   getMergeRegion(rowIndex: number, colIndex: number): MergeRegion | null {
-    return this.mergeStore.getRegionAt(rowIndex, colIndex)
+    return this.formatState.getMergeRegionAt(rowIndex, colIndex)
   }
 
   /**
