@@ -289,13 +289,17 @@ export class ChunkedAxis {
     const sizes = new Float32Array(keepLen)
     let w = 0
     let total = 0
+    let nonDefault = 0
     for (let i = 0; i < chunk.length; i++) {
       if (remove.has(i)) continue
       const v = chunk.sizes[i]!
       sizes[w++] = v
       total += v
+      if (v !== this.defaultSize) nonDefault++
     }
-    chunk.sizes = sizes
+    // 删除后若残留项全部等于 defaultSize，回退到 null-sizes 以复原 O(1) 内存快路径
+    // （维持不变量：chunk.sizes 非空 iff 块内至少一项 !== defaultSize）。
+    chunk.sizes = nonDefault === 0 ? null : sizes
     chunk.length = keepLen
     chunk.totalSize = total
   }
@@ -331,8 +335,20 @@ export class ChunkedAxis {
       return { length, totalSize: length * this.defaultSize, sizes: null }
     }
     const sizes = new Float32Array(length)
-    for (let i = 0; i < a.length; i++) sizes[i] = a.sizes ? a.sizes[i]! : this.defaultSize
-    for (let i = 0; i < b.length; i++) sizes[a.length + i] = b.sizes ? b.sizes[i]! : this.defaultSize
+    let nonDefault = 0
+    for (let i = 0; i < a.length; i++) {
+      const v = a.sizes ? a.sizes[i]! : this.defaultSize
+      sizes[i] = v
+      if (v !== this.defaultSize) nonDefault++
+    }
+    for (let i = 0; i < b.length; i++) {
+      const v = b.sizes ? b.sizes[i]! : this.defaultSize
+      sizes[a.length + i] = v
+      if (v !== this.defaultSize) nonDefault++
+    }
+    // 合并结果若全部等于 defaultSize，丢弃物化数组回退 null-sizes（复原 O(1) 内存不变量）；
+    // 全默认时 a.totalSize + b.totalSize === length * defaultSize。
+    if (nonDefault === 0) return { length, totalSize: length * this.defaultSize, sizes: null }
     return { length, totalSize: a.totalSize + b.totalSize, sizes }
   }
 
@@ -584,7 +600,9 @@ export class ChunkedAxis {
    * `theme.dimensions.rowHeight`，与 `this.defaultSize` 一致。
    *
    * `beforeIndex` clamp 到 `[0, this.count]`；`count <= 0` no-op。
-   * 复杂度：O(n_chunks + CHUNK_SIZE)。
+   * 复杂度：O(n_chunks + 受影响 chunk 的项数总和)——插入点所在 chunk 需块内
+   * 重建（O(chunk.length)），叠加 splitOversizedChunks / recomputePrefixes 的
+   * O(n_chunks)。
    */
   insertRange(beforeIndex: number, count: number, size: number): void {
     if (count <= 0) return
@@ -614,7 +632,9 @@ export class ChunkedAxis {
    * 逐块 `removeFromChunk` → filter 空块 → `mergeSmallChunks` → `recomputePrefixes`。
    * Task 10（DefaultGridEngine）传入的 `underlyingRowIds` 由
    * `InMemoryDataSource.deleteRows` 校验过升序，本方法不重复校验。
-   * 复杂度：O(n_chunks + CHUNK_SIZE)。
+   * 复杂度：O(n_chunks + 受影响 chunk 的项数总和)——分散删除可触及多个 chunk，每个
+   * removeFromChunk 是 O(chunk.length)，叠加 mergeSmallChunks / recomputePrefixes 的
+   * O(n_chunks)。
    */
   deleteRange(removedSortedIndices: readonly number[]): void {
     if (removedSortedIndices.length === 0) return
