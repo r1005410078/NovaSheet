@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 
 import { UndoRegistry } from '../../../src/kernel/undo/UndoRegistry'
-import { registerCellUndo } from '../../../src/engine/undo/registerCellUndo'
+import { registerCellUndo } from '../../../src/features/edit/registerCellUndo'
 import { registerFillUndo } from '../../../src/features/fill/registerFillUndo'
 import { registerFormatUndo } from '../../../src/engine/format/registerFormatUndo'
 import { registerRowUndo } from '../../../src/features/row/registerRowUndo'

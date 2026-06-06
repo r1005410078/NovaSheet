@@ -4,7 +4,7 @@ import {
   isEditableFieldType,
   isTypableEditKey,
   parseCellEditInput,
-} from '../../src/interaction/CellEdit'
+} from '../../../src/features/edit/CellEdit'
 
 describe('CellEdit — Phase 3.5', () => {
   it('仅 text / number 可编辑', () => {

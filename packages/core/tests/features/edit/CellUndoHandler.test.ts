@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-import { CellUndoHandler } from '../../../src/engine/undo/CellUndoHandler'
+import { CellUndoHandler } from '../../../src/features/edit/CellUndoHandler'
 import type { CellUndoContext } from '../../../src/kernel/undo/UndoHandler'
 import type { CellValue } from '../../../src/kernel/data/Schema'
 import type { CellRange } from '../../../src/features/selection/SelectionTypes'

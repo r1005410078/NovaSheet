@@ -99,9 +99,9 @@ export {
   isEditableFieldType,
   isTypableEditKey,
   parseCellEditInput,
-} from './interaction/CellEdit'
-export { CellEditModel } from './interaction/CellEditModel'
-export type { CellEditSession } from './interaction/CellEditModel'
+} from './features/edit/CellEdit'
+export { CellEditModel } from './features/edit/CellEditModel'
+export type { CellEditSession } from './features/edit/CellEditModel'
 export {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,

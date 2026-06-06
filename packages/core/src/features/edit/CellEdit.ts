@@ -2,7 +2,7 @@
  * Phase 3.5 — 单元格编辑：text / number 的展示与解析。
  */
 
-import type { CellValue, FieldType } from '../kernel/data/Schema'
+import type { CellValue, FieldType } from '../../kernel/data/Schema'
 
 export function isEditableFieldType(type: FieldType): boolean {
   return type === 'text' || type === 'number'
