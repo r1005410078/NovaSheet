@@ -55,6 +55,25 @@ describe('HideRowsLayer.getCollapsedGaps — view 空间', () => {
     expect(gaps).toEqual([{ atViewRow: 1, hiddenCount: 1, hiddenIds: [12] }])
   })
 
+  it('hide-only：末尾隐藏段 atViewRow = 末个可见行', () => {
+    const layer = new HideRowsLayer()
+    layer.wrap(makeUpstream(5))
+    layer.setHidden([3, 4])
+    const gaps = layer.getCollapsedGaps()
+    expect(gaps).toEqual([{ atViewRow: 2, hiddenCount: 2, hiddenIds: [3, 4] }])
+  })
+
+  it('hide-only：中段 + 末尾两段并存', () => {
+    const layer = new HideRowsLayer()
+    layer.wrap(makeUpstream(6))
+    layer.setHidden([2, 5])
+    const gaps = layer.getCollapsedGaps()
+    expect(gaps).toEqual([
+      { atViewRow: 1, hiddenCount: 1, hiddenIds: [2] },
+      { atViewRow: 3, hiddenCount: 1, hiddenIds: [5] },
+    ])
+  })
+
   it('全隐藏：单 gap atViewRow=-1 覆盖全部', () => {
     const layer = new HideRowsLayer()
     layer.wrap(makeUpstream(3))

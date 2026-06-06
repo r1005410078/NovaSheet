@@ -59,4 +59,14 @@ describe('RangeStyleStore — applyBorders 单层化', () => {
     store.clearBorders(r(0, 1, 0, 1))
     expect(store.resolveCell(0, 0)).toBeUndefined()
   })
+
+  it('结构 remap 平移单层 range 后边缘按新位置解析', () => {
+    const store = new RangeStyleStore()
+    store.applyBorders(r(0, 2, 0, 2), 'outer', border)
+    store.remapAfterRowsInserted(0, 2) // range 行区间 0..2 → 2..4
+    expect(store.resolveCell(0, 0)).toBeUndefined() // 原左上角已不在 range
+    expect(store.resolveCell(2, 0)?.borders).toEqual({ top: border, left: border }) // 新左上角
+    expect(store.resolveCell(4, 2)?.borders).toEqual({ bottom: border, right: border }) // 新右下角
+    expect(store.resolveCell(3, 1)).toBeUndefined() // 新内部
+  })
 })

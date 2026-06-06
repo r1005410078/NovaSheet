@@ -4,9 +4,8 @@
  */
 export interface Chunk {
   /**
-   * 该 chunk 内的实际项数。除最后一个 partial chunk 外都等于 CHUNK_SIZE。
-   * **遍历 sizes 时必须用 length，不能用 sizes.length**——后者恒为 CHUNK_SIZE，
-   * 会把末尾零填充也算进去。
+   * 该 chunk 内的实际项数（变长，`0 < length ≤ 2·CHUNK_SIZE`；insert/delete 经分裂/合并维持）。
+   * **遍历 sizes 时必须用 length，不能用 sizes.length**——二者通常相等，但取 length 才是契约。
    */
   length: number
   /** 该 chunk 内所有项尺寸之和 */
