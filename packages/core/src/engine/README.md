@@ -1,8 +1,10 @@
 # Engine Refactor
 
+> **目录导航：** 三层架构与子目录职责见 `../ARCHITECTURE.md`、`../kernel/README.md`、
+> `../features/README.md`。本文聚焦 **组合根**（`DefaultGridEngine`）职责与领域化 refactor 进度。
+
 `DefaultGridEngine` 正在从单个重状态实现，逐步拆成职责明确的领域模块。
-对外 `GridEngine` facade 保持稳定；内部逻辑按领域迁移到 `row/`、`column/`、
-`selection/`、`format/` 等目录。
+对外 `GridEngine` facade 保持稳定；内部逻辑已迁移到 `features/<domain>/`。
 
 目标不是“把文件拆小”，而是让每个行为有清晰调用链：
 
@@ -60,14 +62,12 @@ Grid / runtime
 
 | 目录 | 职责 |
 | --- | --- |
-| `row/` | 行领域：行插入、删除、隐藏、取消隐藏、移动，row axis 和 hidden rows 重映射。 |
-| `column/` | 列领域：列插入、删除、隐藏、取消隐藏、移动，field width 和 frozen columns 同步。 |
-| `selection/` | 选区领域：结构变化、视图变化后的选区恢复和重映射。 |
-| `format/` | 格式领域：format / merge store mutation，响应 row/column 结构事件。 |
-| `layout/` | 布局领域：axis、theme、frozen-region、viewport、sheet chrome 初始化和 rebuild。 |
-| `undo/` | 撤销领域：后续承接 `UndoCommand` replay 与 inverse replay。 |
-| `operation/` | 顶层 operation / transaction 聚合协议；具体领域 operation 优先放回领域目录。 |
-| `event/` | 顶层 domain event 聚合协议和固定同步事件管线。 |
+| `features/row/` | 行领域（见 `features/README.md`） |
+| `features/column/` | 列领域 |
+| `features/selection/` | 选区领域 |
+| `features/layout/` | 布局 state（axis/frozen/viewport） |
+| `format/` + `engine/format/` | 格式 store + mutation（待 format feature 收口） |
+| `engine/`（本目录） | 组合根、GridEngine facade、VisibleFormatResolver、MergeViewResolver |
 
 ## 领域目录模板
 

@@ -138,17 +138,20 @@ sequenceDiagram
 
 ### 4.1 `@novasheet/core`
 
+**内部三层**（`packages/core/src/`）：`kernel/` ← `features/` ← `engine/`（组合根）。详见 `packages/core/src/ARCHITECTURE.md`。
+
 | 模块              | 路径                                              | 职责                                                 |
 | ----------------- | ------------------------------------------------- | ---------------------------------------------------- |
-| DataSource        | `src/data/DataSource.ts`, `InMemoryDataSource.ts` | 数据读取；`getCell` 同步热路径；`getRows` 闭区间预热 |
-| Schema            | `src/data/Schema.ts`                              | 字段类型、列宽、行结构                               |
-| ChunkedAxis       | `src/geometry/ChunkedAxis.ts`                     | 行/列尺寸 → 像素位置；`CHUNK_SIZE = 1024`            |
-| Viewport          | `src/geometry/Viewport.ts`                        | 尺寸、滚动、可见区；`snapshot()` 供渲染              |
-| FrozenRegions     | `src/geometry/FrozenRegions.ts`                   | 象限切分；**当前仅返回 `main`**                      |
-| DefaultGridEngine | `src/engine/DefaultGridEngine.ts`                 | 引擎状态；`getFrame()` 快照                          |
-| RenderFrame       | `src/render/RenderFrame.ts`                       | 跨平台每帧输入（data / theme / axes / viewport）     |
-| Theme             | `src/theme/`                                      | 全部视觉 token                                       |
-| FrameScheduler    | `src/util/raf.ts`                                 | per-Grid RAF 合并（导出供 web 使用）                 |
+| DataSource        | `src/kernel/data/`                                | 数据读取；`getCell` 同步热路径；`getRows` 闭区间预热 |
+| Schema            | `src/kernel/data/Schema.ts`                       | 字段类型、列宽、行结构                               |
+| ChunkedAxis       | `src/kernel/geometry/ChunkedAxis.ts`              | 行/列尺寸 → 像素位置；`CHUNK_SIZE = 1024`            |
+| Viewport          | `src/kernel/geometry/Viewport.ts`                 | 尺寸、滚动、可见区；`snapshot()` 供渲染              |
+| FrozenRegions     | `src/kernel/geometry/FrozenRegions.ts`            | 象限切分；**当前仅返回 `main`**                      |
+| Feature domains   | `src/features/*/`                                 | row/column/selection/layout/fill/clipboard/view/edit 等 |
+| DefaultGridEngine | `src/engine/DefaultGridEngine.ts`                 | 组合根；`getFrame()` 快照                            |
+| RenderFrame       | `src/kernel/render/RenderFrame.ts`                | 跨平台每帧输入（data / theme / axes / viewport）     |
+| Theme             | `src/kernel/theme/`                               | 全部视觉 token                                       |
+| FrameScheduler    | `src/kernel/util/raf.ts`                          | per-Grid RAF 合并（导出供 web 使用）                 |
 
 ### 4.2 `@novasheet/web`
 
