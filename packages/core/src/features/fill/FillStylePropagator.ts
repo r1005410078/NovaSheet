@@ -1,11 +1,11 @@
-import type { CellRange } from '../features/selection/SelectionTypes'
-import type { RangeStyleStore } from '../format/RangeStyleStore'
-import type { FormatLayer } from '../format/CellFormat'
-import type { MergeStore, MergeRegion } from '../merge/MergeStore'
-import type { CoordinateSpace } from '../view/CoordinateSpace'
-import { asRawRange, type RawRange } from '../view/coordinates'
-import type { FillDirection, FillMergeSnap } from '../fill/FillTarget'
-import { positiveModulo } from '../fill/FillSeries'
+import type { CellRange } from '../selection/SelectionTypes'
+import type { RangeStyleStore } from '../../format/RangeStyleStore'
+import type { FormatLayer } from '../../format/CellFormat'
+import type { MergeStore, MergeRegion } from '../../merge/MergeStore'
+import type { CoordinateSpace } from '../../view/CoordinateSpace'
+import { asRawRange, type RawRange } from '../../view/coordinates'
+import type { FillDirection, FillMergeSnap } from './FillTarget'
+import { positiveModulo } from './FillSeries'
 
 /** propagateFillStyles 返回的 store 快照（供 commitFill 组装 fill undo 命令）。 */
 export interface FillStyleSnapshots {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { computeFillTarget } from '../../src/fill/FillTarget'
-import type { CellRange } from '../../src/features/selection/SelectionTypes'
+import { computeFillTarget } from '../../../src/features/fill/FillTarget'
+import type { CellRange } from '../../../src/features/selection/SelectionTypes'
 
 const source: CellRange = { startRow: 2, endRow: 3, startCol: 1, endCol: 2 }
 const dims = { rowCount: 10, colCount: 8 }

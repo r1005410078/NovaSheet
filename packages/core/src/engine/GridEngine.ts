@@ -12,7 +12,7 @@ import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../for
 import type { MergeRegion } from '../merge/MergeStore'
 import type { ApplyPasteSource, PasteTargetRect } from '../clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../clipboard/types'
-import type { FillDirection, FillMergeSnap } from '../fill/FillTarget'
+import type { FillDirection, FillMergeSnap } from '../features/fill/FillTarget'
 import type {
   CellAddress,
   CellRange,

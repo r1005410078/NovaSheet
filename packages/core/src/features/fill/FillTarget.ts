@@ -1,5 +1,5 @@
-import type { CellAddress, CellRange } from '../features/selection/SelectionTypes'
-import { clamp, unionRange } from '../kernel/geometry/range'
+import type { CellAddress, CellRange } from '../selection/SelectionTypes'
+import { clamp, unionRange } from '../../kernel/geometry/range'
 
 /** 填充柄拖拽的主方向；一次拖拽只沿一个轴扩展。 */
 export type FillDirection = 'down' | 'up' | 'right' | 'left'

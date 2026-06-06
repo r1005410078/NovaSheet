@@ -129,7 +129,7 @@ export {
 export type { ApplyPasteSource, GridDimensions, PasteTargetRect } from './clipboard/ApplyPaste'
 
 // 填充柄层（Phase 4.3）
-export { computeFillTarget } from './fill/FillTarget'
+export { computeFillTarget } from './features/fill/FillTarget'
 export {
   cellInRange,
   clamp,
@@ -139,9 +139,9 @@ export {
   rangesIntersect,
   unionRange,
 } from './kernel/geometry/range'
-export type { FillDimensions, FillDirection, FillTarget } from './fill/FillTarget'
-export { computeFillWrites } from './fill/FillSeries'
-export type { ComputeFillWritesInput, FillWrite } from './fill/FillSeries'
+export type { FillDimensions, FillDirection, FillTarget } from './features/fill/FillTarget'
+export { computeFillWrites } from './features/fill/FillSeries'
+export type { ComputeFillWritesInput, FillWrite } from './features/fill/FillSeries'
 
 // 视图坐标协议（Phase 4.4）
 export { findViewRow, resolveUnderlyingRow } from './view/coordinates'
