@@ -114,10 +114,11 @@ Expected: typecheck/test/lint 全绿。
 - `packages/web/src/scroll/ScrollMapper.ts` → `packages/core/src/dom/scroll/ScrollMapper.ts`
 - `packages/web/src/host/WebHost.ts` → `packages/core/src/dom/host/Host.ts`
 - `packages/web/src/host/scrollbar-style.ts` → `packages/core/src/dom/host/scrollbar-style.ts`
-- `packages/web/src/host/cell-editor-style.ts` `context-menu-style.ts` `filter-popover-style.ts` `resize-handle-style.ts` → `packages/core/src/dom/host/`
 - `packages/web/src/host/DomGridHost.ts` → `packages/core/src/dom/host/DomGridHost.ts`
 - Create: `packages/core/src/dom/index.ts`（DOM 壳 barrel）
 - Modify: `packages/core/src/index.ts`、web 中各 importer
+
+> **只迁 `scrollbar-style.ts`**（其消费者 `DomGridHost` 本 Task 迁入 core，可走相对 import）。其余 4 个 style 文件（`cell-editor-style`/`context-menu-style`/`filter-popover-style`/`resize-handle-style`）的消费者（`DomCellEditor`/`DomContextMenuLayer`/`FilterPopover`/`DomHandleLayer`）在 Task 3 才迁，**故这 4 个 style 文件随消费者一起放到 Task 3 迁移**——避免它们的 DOM 操纵函数被迫进 `@novasheet/core` 公共 API。barrel 不导出任何 `ensure*/apply*Style`。
 
 > 命名：`WebHost.ts → Host.ts`，但内部导出名 `WebHost`/`WebPointerEvent`/`WebKeyboardEvent`/`WebHostOptions`/`WebHostFactory` **本 Task 暂不改**（减小一次 churn；后续可选改名 Task）。
 
@@ -130,10 +131,6 @@ git mv packages/web/src/scroll/NativeScroller.ts packages/core/src/dom/scroll/Na
 git mv packages/web/src/scroll/ScrollMapper.ts packages/core/src/dom/scroll/ScrollMapper.ts
 git mv packages/web/src/host/WebHost.ts packages/core/src/dom/host/Host.ts
 git mv packages/web/src/host/scrollbar-style.ts packages/core/src/dom/host/scrollbar-style.ts
-git mv packages/web/src/host/cell-editor-style.ts packages/core/src/dom/host/cell-editor-style.ts
-git mv packages/web/src/host/context-menu-style.ts packages/core/src/dom/host/context-menu-style.ts
-git mv packages/web/src/host/filter-popover-style.ts packages/core/src/dom/host/filter-popover-style.ts
-git mv packages/web/src/host/resize-handle-style.ts packages/core/src/dom/host/resize-handle-style.ts
 git mv packages/web/src/host/DomGridHost.ts packages/core/src/dom/host/DomGridHost.ts
 ```
 
@@ -182,6 +179,8 @@ git commit -m "refactor(core): scroll/host DOM 原语迁入 core/dom，web 改�
 - `packages/web/src/interaction/{FilterPopover,RangeOverlayRects}.ts` → `packages/core/src/dom/overlay/`
 - `packages/web/src/handle/{HideToggleHandle,HideColToggleHandle}.ts` → `packages/core/src/dom/interaction/handle/`
 - `packages/web/src/overlay/*` → `packages/core/src/dom/overlay/*`
+- `packages/web/src/host/{cell-editor-style,context-menu-style,filter-popover-style,resize-handle-style}.ts` → `packages/core/src/dom/host/`（**随其消费者一起迁，见 Task 2 订正**；消费者 `DomCellEditor`/`DomContextMenuLayer`/`FilterPopover`/`DomHandleLayer` 改走 core 内相对 import，barrel 不导出这些 style 函数）
+- `packages/web/tests/host/resize-handle-style.test.ts` → `packages/core/tests/dom/host/resize-handle-style.test.ts`
 - `packages/web/src/clipboard/WebClipboardAdapter.ts` → `packages/core/src/dom/clipboard/DomClipboardAdapter.ts`（类同时改名 `WebClipboardAdapter → DomClipboardAdapter`）
 
 - [ ] **Step 1: git mv 全部上述文件**
@@ -203,8 +202,15 @@ git mv packages/web/src/overlay/ColumnReorderOverlay.ts packages/core/src/dom/ov
 git mv packages/web/src/overlay/RowReorderOverlay.ts packages/core/src/dom/overlay/RowReorderOverlay.ts
 git mv packages/web/src/overlay/ColumnWidthPopover.ts packages/core/src/dom/overlay/ColumnWidthPopover.ts
 git mv packages/web/src/overlay/RowHeightPopover.ts packages/core/src/dom/overlay/RowHeightPopover.ts
+git mv packages/web/src/host/cell-editor-style.ts packages/core/src/dom/host/cell-editor-style.ts
+git mv packages/web/src/host/context-menu-style.ts packages/core/src/dom/host/context-menu-style.ts
+git mv packages/web/src/host/filter-popover-style.ts packages/core/src/dom/host/filter-popover-style.ts
+git mv packages/web/src/host/resize-handle-style.ts packages/core/src/dom/host/resize-handle-style.ts
+git mv packages/web/tests/host/resize-handle-style.test.ts packages/core/tests/dom/host/resize-handle-style.test.ts
 git mv packages/web/src/clipboard/WebClipboardAdapter.ts packages/core/src/dom/clipboard/DomClipboardAdapter.ts
 ```
+
+> 这 4 个 style 文件的消费者（`DomCellEditor`/`DomContextMenuLayer`/`FilterPopover`/`DomHandleLayer`）本 Task 也迁入 core，故它们对 style 的 import 改为 core 内相对路径（`'../host/cell-editor-style'` 等）；`core/src/dom/index.ts` **不**导出任何 `ensure*/apply*Style` 函数。`resize-handle-style.test.ts` 的 import 改为 `'../../../src/dom/host/resize-handle-style'`。
 
 - [ ] **Step 2: 修正已移动文件的 import**
 
