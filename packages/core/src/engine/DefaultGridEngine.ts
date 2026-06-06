@@ -16,7 +16,7 @@ import type {
   TextWrapMode,
 } from '../features/format/CellFormat'
 import type { MergeRegion } from '../features/merge/MergeStore'
-import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from '../features/edit/CellEdit'
+import { EditController } from '../features/edit/EditController'
 import { CellEditModel } from '../features/edit/CellEditModel'
 import { parseSelectionNavigationKey } from '../features/selection/SelectionNavigation'
 import type {
@@ -97,7 +97,14 @@ export class DefaultGridEngine implements GridEngine {
     isColHidden: (id) => this.columnStructure.isColHidden(id),
   })
   private readonly selection = new DefaultSelectionState()
-  private cellEdit = new CellEditModel()
+  private readonly editController = new EditController(new CellEditModel(), {
+    getData: () => this.data,
+    resolveEditCell: (cell) =>
+      resolveViewMergeRegion(this.formatState.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
+        ?.anchor ?? cell,
+    viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
+    pushUndo: (command) => this.undoStack.push(command),
+  })
   private undoStack = new UndoStack()
   /**
    * undo 派发：全 21 kind 经 `UndoRegistry` 路由到各域 undo handler（无中心 switch）。
@@ -348,69 +355,27 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   beginCellEdit(cell: CellAddress): boolean {
-    // view→raw→view 翻译：合并格编辑落到 view 坐标的 anchor（sort/filter/隐藏列下亦正确）。
-    const region = resolveViewMergeRegion(this.formatState.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
-    const editCell = region?.anchor ?? cell
-    const field = this.fieldAt(editCell.colIndex)
-    if (!field || !isEditableFieldType(field.type)) return false
-    if (!isMutableDataSource(this.data)) return false
-
-    const value = this.data.getCell(editCell.rowIndex, field.id)
-    this.cellEdit.begin(editCell, field.id, field.type, formatCellForEdit(value, field.type))
-    return true
+    return this.editController.beginCellEdit(cell)
   }
 
   updateCellEditDraft(draft: string): void {
-    this.cellEdit.setDraft(draft)
+    this.editController.updateDraft(draft)
   }
 
   cancelCellEdit(): void {
-    this.cellEdit.clear()
+    this.editController.cancel()
   }
 
   commitCellEdit(): boolean {
-    const session = this.cellEdit.getSession()
-    if (!session) return false
-    if (!isMutableDataSource(this.data)) return false
-
-    const parsed = parseCellEditInput(session.draft, session.fieldType)
-    if (parsed === undefined) return false
-
-    const before = this.data.getCell(session.cell.rowIndex, session.fieldId) ?? null
-    const underlyingRow = this.coords.viewRowToRaw(session.cell.rowIndex)
-    this.data.updateCell(session.cell.rowIndex, session.fieldId, parsed)
-    this.undoStack.push({
-      kind: 'editCell',
-      rowIndex: underlyingRow,
-      fieldId: session.fieldId,
-      before,
-      after: parsed,
-    })
-    this.cellEdit.clear()
-    return true
+    return this.editController.commit()
   }
 
   isCellEditing(): boolean {
-    return this.cellEdit.isEditing()
+    return this.editController.isEditing()
   }
 
   clearRange(range: CellRange): void {
-    if (!isMutableDataSource(this.data)) return
-    const fields = this.data.getSchema().fields
-    const before: { rowIndex: number; fieldId: string; value: CellValue }[] = []
-    for (let r = range.startRow; r <= range.endRow; r++) {
-      for (let c = range.startCol; c <= range.endCol; c++) {
-        const field = fields[c]
-        if (!field) continue
-        const v = this.data.getCell(r, field.id)
-        if (v === null || v === undefined) continue
-        before.push({ rowIndex: this.coords.viewRowToRaw(r), fieldId: field.id, value: v })
-        this.data.updateCell(r, field.id, null)
-      }
-    }
-    if (before.length > 0) {
-      this.undoStack.push({ kind: 'clearRange', range, before })
-    }
+    this.editController.clearRange(range)
   }
 
   navigateSelection(key: string, shiftKey: boolean): boolean {
@@ -471,7 +436,7 @@ export class DefaultGridEngine implements GridEngine {
       colsAxis,
       viewport: vpSnap,
       selection: this.selection.getSelection(),
-      cellEdit: this.cellEdit.getSession() ?? undefined,
+      cellEdit: this.editController.getSession() ?? undefined,
       collapsedRowGaps,
       collapsedColGaps,
       cellFormats,
@@ -1099,7 +1064,7 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   private finishActiveEdit(): void {
-    if (!this.cellEdit.isEditing()) return
+    if (!this.editController.isEditing()) return
     if (!this.commitCellEdit()) this.cancelCellEdit()
   }
 
@@ -1109,9 +1074,5 @@ export class DefaultGridEngine implements GridEngine {
 
   private getRawColumnIndexForViewIndex(viewColIndex: number): number {
     return this.coords.viewColToRaw(viewColIndex)
-  }
-
-  private fieldAt(colIndex: number) {
-    return this.data.getSchema().fields[colIndex]
   }
 }
