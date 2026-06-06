@@ -570,7 +570,7 @@ Detailed test migration:
 | `tests/helpers/recording-context.test.ts` | `packages/web-canvas2d` | Move with helper.                                                                                                               |
 | `tests/helpers/global-stub.ts`            | shared or duplicated    | Prefer `packages/web/tests/helpers/global-stub.ts` and `packages/web-canvas2d/tests/helpers/global-stub.ts` initially.          |
 | `tests/setup.ts`                          | split                   | Remove core dependency on global DOM setup. Add package-local setup files only for web/web-canvas2d tests.                      |
-| `tests/_probe.test.ts`                    | re-evaluate             | Keep only if it documents a current invariant; otherwise delete or move to the package owning the probed invariant.             |
+| `tests/_probe.test.ts`                    | **已删除（2026-06）**   | 边界断言已迁入 `tests/kernel/geometry/ChunkedAxis.test.ts`「探针边界」describe。 |
 
 Test setup after refactor:
 

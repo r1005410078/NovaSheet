@@ -12,8 +12,7 @@ dispatch，handler 在 engine 组装时固定注册，并按固定顺序同步�
 - handler 不允许再 dispatch 新事件；跨领域更新由 `GridEventPipeline` 固定顺序调用。
 - event 可以用于 debug trace、monitoring、devtools timeline，但 observer 只能观察，不能 mutation。
 - undo 仍以 `UndoCommand` 的 before/after 快照为准，`GridDomainEvent` 只辅助表达事实。
-- `GridOperation` / `GridTransaction` 是可序列化协议层对象；`GridDomainEvent`
-  是本地应用 operation 后产生的同步事实。
+- `GridOperation` 是可序列化协议层对象；`GridDomainEvent` 是本地应用 operation 后产生的同步事实。
 
 ## 模块边界
 
@@ -25,7 +24,7 @@ dispatch，handler 在 engine 组装时固定注册，并按固定顺序同步�
 ## 推荐流程
 
 ```txt
-Command / GridTransaction
+Command / remote payload
   -> domain plan
   -> coordinator 执行核心 mutation
   -> GridDomainEvent

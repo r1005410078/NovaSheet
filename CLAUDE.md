@@ -178,8 +178,8 @@ Subagent prompts must:
 | Web orchestrator                  | `packages/web/src/runtime/WebGridRuntime.ts`                              |
 | Tests                             | each `packages/<pkg>/tests/` mirrors its `src/`（core: `tests/kernel/`、`tests/features/`、`tests/engine/`） |
 | RecordingContext helper           | `packages/web-canvas2d/tests/helpers/recording-context.ts`                |
-| global-stub helper                | `packages/web/tests/helpers/global-stub.ts` (+ duplicate in web-canvas2d) |
-| Probe tests                       | `packages/core/tests/_probe.test.ts`                                      |
+| global-stub helper                | `packages/core/tests/helpers/global-stub.ts`（raf.test）+ `packages/web-canvas2d/tests/helpers/global-stub.ts` |
+| Probe tests                       | `packages/core/tests/kernel/geometry/ChunkedAxis.test.ts`（轴边界）；`_probe-types-4-5/4-6.test.ts`（类型守卫） |
 
 ---
 
