@@ -149,9 +149,11 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     setBorders: mock((_range, _preset, _border) => false),
     setTextWrap: mock((_range, _mode) => false),
     getCellFormat: mock((_rowIndex: number, _colIndex: number) => undefined),
+    getViewCellFormat: mock((_viewRow: number, _viewCol: number) => undefined),
     mergeCells: mock((_range: CellRange) => false),
     unmergeCells: mock((_range: CellRange) => false),
     getMergeRegion: mock((_rowIndex: number, _colIndex: number) => null),
+    getViewMergeRegion: mock((_viewRow: number, _viewCol: number) => null),
   } satisfies GridEngine
 
   return Object.assign(engine, options.overrides)

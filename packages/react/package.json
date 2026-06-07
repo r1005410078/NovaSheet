@@ -1,0 +1,66 @@
+{
+  "name": "@novasheet/react",
+  "version": "0.1.0",
+  "description": "React adapter package for NovaSheet.",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://r1005410078.github.io/NovaSheet/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r1005410078/NovaSheet.git",
+    "directory": "packages/react"
+  },
+  "bugs": {
+    "url": "https://github.com/r1005410078/NovaSheet/issues"
+  },
+  "keywords": [
+    "spreadsheet",
+    "grid",
+    "react",
+    "canvas",
+    "data-grid",
+    "typescript"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun run build.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@novasheet/canvas2d": "^0.1.0",
+    "@novasheet/core": "^0.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.575.0",
+    "tailwind-merge": "^3.6.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.3.0",
+    "react-dom": ">=18.3.0"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^20.9.0",
+    "@types/bun": "^1.3.14",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "happy-dom": "^20.9.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3"
+  }
+}

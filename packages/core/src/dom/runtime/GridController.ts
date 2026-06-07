@@ -1,4 +1,5 @@
-import type { BorderPreset, BorderStyle, TextWrapMode } from '../../kernel/protocol/FormatTypes'
+import type { BorderPreset, BorderStyle, TextWrapMode, CellFormat } from '../../kernel/protocol/FormatTypes'
+import type { MergeRegion } from '../../kernel/coords/MergeRegion'
 import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { ContextMenuItem } from '../../features/context-menu/ContextMenuModel'
 import type { DataSource } from '../../kernel/data/DataSource'
@@ -130,6 +131,10 @@ export interface GridController {
   mergeCells(range: CellRange): boolean
   /** Phase 5-A — 取消 view `range` 触及的合并区域；移除任意区域则刷新并返回 true。 */
   unmergeCells(range: CellRange): boolean
+  /** 解析 view 坐标的单元格格式；无格式返回 undefined。 */
+  getViewCellFormat(viewRow: number, viewCol: number): CellFormat | undefined
+  /** 返回覆盖 view 坐标单元格的合并区域；无则返回 null。 */
+  getViewMergeRegion(viewRow: number, viewCol: number): MergeRegion | null
   getSortLayer(): SortLayer
   getFilterLayer(): FilterLayer
   getViewPipeline(): ViewPipeline

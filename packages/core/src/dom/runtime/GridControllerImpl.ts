@@ -20,7 +20,7 @@ import { SortLayer } from '../../features/view/SortLayer'
 import { ViewPipeline } from '../../features/view/ViewPipeline'
 import { FrameScheduler } from '../../kernel/util/raf'
 import type { BorderPreset, BorderStyle, TextWrapMode } from '../../kernel/protocol/FormatTypes'
-import type { CellRange } from '../../kernel/coords/SelectionTypes'
+import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
 import type {
   ContextMenuItem,
   ContextMenuAction,
@@ -31,7 +31,6 @@ import type { Field } from '../../kernel/data/Schema'
 import type { FilterSpec } from '../../features/view/FilterLayer'
 import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
 import type { GridEngineOptions } from '../../engine/GridEngine'
-import type { GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { PasteSkippedCell } from '../../features/clipboard/types'
 import type { SortSpec } from '../../features/view/SortLayer'
 import type { Theme } from '../../kernel/theme/Theme'
@@ -151,6 +150,7 @@ export class GridControllerImpl implements GridController {
           onUndo?: (event: UndoEvent) => void
           onRedo?: (event: RedoEvent) => void
           onFill?: (event: FillEvent) => void
+          onSelectionChange?: (selection: GridSelection) => void
         }
       | undefined,
     backend: RenderBackendFactory,
@@ -277,6 +277,7 @@ export class GridControllerImpl implements GridController {
     if (gridOptions?.onUndo) this.runtime.setOnUndo(gridOptions.onUndo)
     if (gridOptions?.onRedo) this.runtime.setOnRedo(gridOptions.onRedo)
     if (gridOptions?.onFill) this.runtime.setOnFill(gridOptions.onFill)
+    if (gridOptions?.onSelectionChange) this.runtime.setOnSelectionChange(gridOptions.onSelectionChange)
 
     this.runtime.attach()
   }
@@ -504,6 +505,14 @@ export class GridControllerImpl implements GridController {
 
   unmergeCells(range: CellRange): boolean {
     return this.runtime.unmergeCells(range)
+  }
+
+  getViewCellFormat(viewRow: number, viewCol: number) {
+    return this.engine.getViewCellFormat(viewRow, viewCol)
+  }
+
+  getViewMergeRegion(viewRow: number, viewCol: number) {
+    return this.engine.getViewMergeRegion(viewRow, viewCol)
   }
 
   getSortLayer(): SortLayer {

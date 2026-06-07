@@ -39,10 +39,12 @@ describe('DefaultGridEngine format APIs', () => {
 
     expect(engine.setBorders(range, 'outer', border)).toBe(true)
     expect(engine.getCellFormat(0, 0)?.borders?.top?.color).toBe('#d93025')
+    expect(engine.getViewCellFormat(0, 0)?.borders?.top?.color).toBe('#d93025')
     expect(engine.getCellFormat(0, 0)?.borders?.left?.width).toBe('medium')
 
     expect(engine.setBorders(range, 'clear', null)).toBe(true)
     expect(engine.getCellFormat(0, 0)?.borders).toBeUndefined()
+    expect(engine.getViewCellFormat(0, 0)?.borders).toBeUndefined()
   })
 
   it('Phase 5-B：setBorders 接受 dashed/dotted/double，写入并可 undo/redo', () => {

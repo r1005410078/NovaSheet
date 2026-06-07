@@ -1,4 +1,5 @@
 import type { StorybookConfig } from '@storybook/html-vite'
+import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
 
 const config: StorybookConfig = {
@@ -26,6 +27,8 @@ const config: StorybookConfig = {
       config.base = raw ? (raw.endsWith('/') ? raw : `${raw}/`) : '/'
     }
 
+    config.plugins = [...(config.plugins ?? []), tailwindcss()]
+
     return {
       ...config,
       resolve: {
@@ -39,6 +42,9 @@ const config: StorybookConfig = {
           ),
           '@novasheet/canvas2d': fileURLToPath(
             new URL('../../../packages/canvas2d/src/index.ts', import.meta.url),
+          ),
+          '@novasheet/react': fileURLToPath(
+            new URL('../../../packages/react/src/index.ts', import.meta.url),
           ),
         },
       },

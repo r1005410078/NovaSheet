@@ -1,6 +1,8 @@
 import type { Preview } from '@storybook/html'
 import { DocsPage } from '@storybook/addon-docs/blocks'
 
+import './preview.css'
+
 const preview: Preview = {
   tags: ['autodocs'],
   parameters: {

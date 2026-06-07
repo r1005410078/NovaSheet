@@ -62,6 +62,8 @@ export interface GridOptions extends GridEngineOptions {
   onHideColsChange?: (event: { hidden: readonly string[] }) => void
   /** Phase 4.7 — 列拖拽/程序化重排完成时触发。 */
   onColumnsMoved?: (event: { fieldIds: readonly string[]; beforeFieldId: string | null }) => void
+  /** 选区变化时触发（含点击、键盘导航、程序化 setSelection）。 */
+  onSelectionChange?: (selection: GridSelection) => void
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -101,6 +103,7 @@ export class Grid {
         onUndo: options.onUndo,
         onRedo: options.onRedo,
         onFill: options.onFill,
+        onSelectionChange: options.onSelectionChange,
       },
       options.backend,
     )
@@ -338,6 +341,16 @@ export class Grid {
   /** Phase 5-A — 取消 view `range` 触及的合并区域；移除任意区域返回 true 并重绘。 */
   unmergeCells(range: CellRange): boolean {
     return this.delegate.unmergeCells(range)
+  }
+
+  /** 解析 view 坐标的单元格格式；无格式返回 undefined。 */
+  getViewCellFormat(viewRow: number, viewCol: number) {
+    return this.delegate.getViewCellFormat(viewRow, viewCol)
+  }
+
+  /** 返回覆盖 view 坐标单元格的合并区域；无则返回 null。 */
+  getViewMergeRegion(viewRow: number, viewCol: number) {
+    return this.delegate.getViewMergeRegion(viewRow, viewCol)
   }
 
   getSortLayer(): SortLayer {

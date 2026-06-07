@@ -12,16 +12,20 @@
   },
   "dependencies": {
     "@novasheet/canvas2d": "workspace:*",
-    "@novasheet/core": "workspace:*"
+    "@novasheet/core": "workspace:*",
+    "@novasheet/react": "workspace:*"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.0",
     "@storybook/addon-docs": "10.4.0",
     "@storybook/html": "^10.4.0",
     "@storybook/html-vite": "^10.4.0",
     "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "storybook": "^10.4.0",
+    "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "vite": "^5.4.0"
   }

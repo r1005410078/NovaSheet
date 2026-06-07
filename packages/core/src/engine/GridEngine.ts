@@ -319,6 +319,9 @@ export interface GridFormatting {
 
   /** Phase 5-A — 解析单个单元格格式（raw 坐标）；无格式返回 undefined。 */
   getCellFormat(rowIndex: number, colIndex: number): CellFormat | undefined
+
+  /** 解析 view 坐标的单元格格式；无格式返回 undefined。 */
+  getViewCellFormat(viewRow: number, viewCol: number): CellFormat | undefined
 }
 
 /** 单元格合并能力。 */
@@ -338,6 +341,9 @@ export interface GridMerging {
 
   /** Phase 5-A — 返回覆盖单元格的合并区域（**raw 坐标**，与 `getCellFormat` 一致）；无则返回 null。 */
   getMergeRegion(rowIndex: number, colIndex: number): MergeRegion | null
+
+  /** 返回覆盖 view 坐标单元格的合并区域；无则返回 null。 */
+  getViewMergeRegion(viewRow: number, viewCol: number): MergeRegion | null
 }
 
 /** 渲染帧读取能力。 */

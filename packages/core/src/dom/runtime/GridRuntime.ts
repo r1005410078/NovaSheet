@@ -285,6 +285,10 @@ export class GridRuntime {
   private onRedo?: (event: RedoEvent) => void
   /** fill handle 提交成功后的通知回调。 */
   private onFill?: (event: FillEvent) => void
+  /** 选区变化通知回调。 */
+  private onSelectionChange?: (selection: GridSelection) => void
+  /** 上次已通知的选区签名，避免重复触发。 */
+  private lastSelectionChangeSignature = ''
   /**
    * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
    * 非 multiline 编辑置 null。
@@ -496,6 +500,11 @@ export class GridRuntime {
   /** 注册 fill handle 提交通知回调。 */
   setOnFill(cb: (event: FillEvent) => void): void {
     this.onFill = cb
+  }
+
+  /** 注册选区变化通知回调。 */
+  setOnSelectionChange(cb: (selection: GridSelection) => void): void {
+    this.onSelectionChange = cb
   }
 
   /** 返回当前 undo 栈是否可撤销。 */
@@ -1728,6 +1737,7 @@ export class GridRuntime {
       const frame = this.getRenderFrame()
       this.renderer.render(frame)
       this.syncSelectionOverlay(frame)
+      this.notifySelectionChange(frame)
       this.syncResizeHandles()
       this.syncFillHandle()
       this.syncHideToggleHandles()
@@ -1741,6 +1751,7 @@ export class GridRuntime {
     const frame = this.getRenderFrame()
     this.renderer.render(frame)
     this.syncSelectionOverlay(frame)
+    this.notifySelectionChange(frame)
     this.syncResizeHandles()
     this.syncFillHandle()
     this.syncHideToggleHandles()
@@ -1828,6 +1839,16 @@ export class GridRuntime {
       rangeRects: computeRangeOverlayRects(frame, visualRange),
       activeRect,
     })
+  }
+
+  /** 选区签名变化时通知外部（工具栏状态同步等）。 */
+  private notifySelectionChange(frame: ReturnType<GridEngine['getFrame']>): void {
+    if (!this.onSelectionChange) return
+    const selection = frame.selection ?? this.engine.getSelection()
+    const signature = selectionChangeSignature(selection)
+    if (signature === this.lastSelectionChangeSignature) return
+    this.lastSelectionChangeSignature = signature
+    this.onSelectionChange(selection)
   }
 
   /** 当前驱动边缘自动滚动的拖拽种类；活跃拖拽 / 填充柄优先于普通选区。 */
@@ -2158,6 +2179,13 @@ export class GridRuntime {
     this.host.scrollTo(nextTop, nextLeft)
     this.handleHostScroll(nextTop, nextLeft)
   }
+}
+
+function selectionChangeSignature(selection: GridSelection): string {
+  if (!selection.activeCell || !selection.selectedRange) return 'empty'
+  const active = selection.activeCell
+  const range = selection.selectedRange
+  return `${active.rowIndex}:${active.colIndex}|${range.startRow}-${range.endRow},${range.startCol}-${range.endCol}`
 }
 
 /** 计算 pointer 在 viewport 边缘区域内对应的自动滚动速度。 */

@@ -5,7 +5,8 @@
     "moduleResolution": "Bundler",
     "paths": {
       "@novasheet/core": ["./packages/core/src/index.ts"],
-      "@novasheet/canvas2d": ["./packages/canvas2d/src/index.ts"]
+      "@novasheet/canvas2d": ["./packages/canvas2d/src/index.ts"],
+      "@novasheet/react": ["./packages/react/src/index.ts"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,

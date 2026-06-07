@@ -863,6 +863,14 @@ export class DefaultGridEngine implements GridEngine {
     return this.formatState.resolveCellFormat(rowIndex, colIndex)
   }
 
+  /** 解析 view 坐标的单元格格式；无格式返回 undefined。 */
+  getViewCellFormat(viewRow: number, viewCol: number): CellFormat | undefined {
+    const rawRow = this.coords.viewRowToRaw(viewRow)
+    const rawCol = this.coords.viewColToRaw(viewCol)
+    if (rawCol < 0) return undefined
+    return this.formatState.resolveCellFormat(rawRow, rawCol)
+  }
+
   /**
    * Phase 5-A — 合并 view `range`。
    * 把 view range 翻译为 raw range（排序/筛选打乱行序时 null → 返回 false）；
@@ -888,6 +896,11 @@ export class DefaultGridEngine implements GridEngine {
   /** Phase 5-A — 返回覆盖单元格的合并区域。坐标为 **raw** 空间（与 `getCellFormat` 一致）。 */
   getMergeRegion(rowIndex: number, colIndex: number): MergeRegion | null {
     return this.formatState.getMergeRegionAt(rowIndex, colIndex)
+  }
+
+  /** 返回覆盖 view 坐标单元格的合并区域；无则返回 null。 */
+  getViewMergeRegion(viewRow: number, viewCol: number): MergeRegion | null {
+    return resolveViewMergeRegion(this.formatState.mergeStore, this.coords, viewRow, viewCol)
   }
 
   private applyMoveColsCommand(
