@@ -8,10 +8,15 @@ export type { GridOptions } from './Grid'
 
 // 数据层
 export { InMemoryDataSource } from './kernel/data/InMemoryDataSource'
+export { SparseExcelDataSource } from './kernel/data/SparseExcelDataSource'
 export type { CellValue, Field, FieldType, Row, Schema } from './kernel/data/Schema'
 export type { DataSource, DataSourceEvent, DataSourceListener } from './kernel/data/DataSource'
 export { isMutableDataSource } from './kernel/data/MutableDataSource'
 export type { MutableDataSource, RemovedFieldSnapshot } from './kernel/data/MutableDataSource'
+export type {
+  SparseExcelDataSourceOptions,
+  SparseExcelWorkspaceSize,
+} from './kernel/data/SparseExcelDataSource'
 
 // 主题层
 export { denseGridTheme } from './kernel/theme/denseGridTheme'
