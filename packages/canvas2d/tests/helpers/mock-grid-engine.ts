@@ -82,6 +82,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
   const engine = {
     setData: mock((_data: DataSource) => {}),
     setViewData: mock((_data: DataSource, _options?: Parameters<GridEngine['setViewData']>[1]) => {}),
+    resizeExcelWorkspace: mock(() => false),
     setTheme: mock((_theme: Theme) => {}),
     setFrozen,
     setViewportSize: mock((_width: number, _height: number) => {}),

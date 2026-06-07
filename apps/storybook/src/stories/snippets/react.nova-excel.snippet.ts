@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { InMemoryDataSource } from '@novasheet/core'
 import { NovaExcel } from '@novasheet/react'
+import React from 'react'
 
 const data = new InMemoryDataSource({
   schema: {
@@ -20,13 +21,11 @@ const data = new InMemoryDataSource({
 })
 
 export function Sheet() {
-  return (
-    <NovaExcel
-      data={data}
-      className="h-[560px] w-full"
-      onToolbarAction={(action) => {
-        console.log('toolbar', action.id)
-      }}
-    />
-  )
+  return React.createElement(NovaExcel, {
+    data,
+    className: 'h-[560px] w-full',
+    onToolbarAction: (action) => {
+      console.log('toolbar', action.id)
+    },
+  })
 }
