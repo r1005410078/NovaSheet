@@ -14,7 +14,7 @@ describe('scrollbar-style', () => {
   it('将 Theme scrollbar token 写入 scroll-host CSS 变量', () => {
     const host = document.createElement('div')
     applyScrollbarTheme(host, denseGridTheme.scrollbar)
-    expect(host.style.getPropertyValue('--ns-scrollbar-size')).toBe('10px')
+    expect(host.style.getPropertyValue('--ns-scrollbar-size')).toBe('15px')
     expect(host.style.getPropertyValue('--ns-scrollbar-thumb')).toBe(
       denseGridTheme.scrollbar.thumbColor,
     )

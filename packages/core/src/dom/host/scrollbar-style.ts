@@ -19,7 +19,7 @@ const STYLESHEET_ID = 'novasheet-scrollbar-style'
 
 const SCROLLBAR_CSS = `
 [data-novasheet-scroll-host] {
-  scrollbar-width: thin;
+  scrollbar-width: auto;
   scrollbar-color: var(--ns-scrollbar-thumb) var(--ns-scrollbar-track);
 }
 [data-novasheet-scroll-host]::-webkit-scrollbar {
@@ -32,10 +32,12 @@ const SCROLLBAR_CSS = `
 [data-novasheet-scroll-host]::-webkit-scrollbar-thumb {
   background-color: var(--ns-scrollbar-thumb);
   border-radius: var(--ns-scrollbar-radius);
-  border: 2px solid transparent;
+  /* 3px 透明边 + padding-box：拇指在可见轨道通道内留出内缩，呈细 pill（Sheets 风） */
+  border: 3px solid transparent;
   background-clip: padding-box;
 }
-[data-novasheet-scroll-host]::-webkit-scrollbar-thumb:hover {
+[data-novasheet-scroll-host]::-webkit-scrollbar-thumb:hover,
+[data-novasheet-scroll-host]::-webkit-scrollbar-thumb:active {
   background-color: var(--ns-scrollbar-thumb-hover);
 }
 [data-novasheet-scroll-host]::-webkit-scrollbar-corner {

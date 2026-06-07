@@ -86,11 +86,12 @@ export const denseGridTheme: Theme = {
     hideBoundaryDown: 'M0 0 L4 6 L8 0 Z',
   },
   scrollbar: {
-    trackWidth: 10,
-    trackColor: 'transparent',
-    thumbColor: 'rgba(31, 35, 40, 0.28)',
-    thumbHoverColor: 'rgba(31, 35, 40, 0.45)',
-    borderRadius: 5,
+    // Sheets 风：可见浅灰轨道通道 + 灰色 pill 拇指，比 GitHub 风更宽更明显。
+    trackWidth: 15,
+    trackColor: '#f8f9fa',
+    thumbColor: '#bdc1c6',
+    thumbHoverColor: '#9aa0a6',
+    borderRadius: 8,
   },
   frozenSeparator: {
     color: '#d0d7de',

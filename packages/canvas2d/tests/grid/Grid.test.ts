@@ -211,8 +211,8 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
-    expect(host.style.getPropertyValue('--ns-scrollbar-size')).toBe('10px')
-    expect(host.style.getPropertyValue('--ns-scrollbar-thumb')).toBe('rgba(31, 35, 40, 0.28)')
+    expect(host.style.getPropertyValue('--ns-scrollbar-size')).toBe('15px')
+    expect(host.style.getPropertyValue('--ns-scrollbar-thumb')).toBe('#bdc1c6')
     grid.destroy()
   })
 
