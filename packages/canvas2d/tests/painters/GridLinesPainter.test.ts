@@ -145,4 +145,35 @@ describe('GridLinesPainter — 网格线', () => {
     expect(ops).toContainEqual({ op: 'moveTo', args: [99.5, 32] })
     expect(ops).toContainEqual({ op: 'lineTo', args: [99.5, 60] })
   })
+
+  it('填充格跳过自身边线（fill 盖住网格线，与 Sheets 一致）', () => {
+    const rowsAxis = new ChunkedAxis({ count: 2, defaultSize: 28 })
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    const params = {
+      rowsAxis,
+      colsAxis,
+      rowRange: [0, 1] as [number, number],
+      colRange: [0, 1] as [number, number],
+      rect: { x: 0, y: 0, width: 200, height: 200 },
+      scrollOffsetX: 0,
+      scrollOffsetY: 0,
+    }
+
+    // 基线：无填充，row0 底边整段从 x=0 起。
+    const base = createRecordingContext()
+    new GridLinesPainter(denseGridTheme).paint(base.ctx, params)
+    expect(base.ops).toContainEqual({ op: 'moveTo', args: [0, 28.5] })
+
+    // 填充 (0,0)：row0 底边在 col0 段被跳过，整段改从 col1 起点 x=100。
+    const filled = createRecordingContext()
+    new GridLinesPainter(denseGridTheme).paint(filled.ctx, {
+      ...params,
+      filledCells: { has: (r, c) => r === 0 && c === 0 },
+    })
+    expect(filled.ops).not.toContainEqual({ op: 'moveTo', args: [0, 28.5] })
+    expect(filled.ops).toContainEqual({ op: 'moveTo', args: [100, 28.5] })
+    // 左边线（col0 右边 x=100.5）在 row0 段被跳过，改从 row1 起点 y=28 起。
+    expect(filled.ops).not.toContainEqual({ op: 'moveTo', args: [100.5, 0] })
+    expect(filled.ops).toContainEqual({ op: 'moveTo', args: [100.5, 28] })
+  })
 })

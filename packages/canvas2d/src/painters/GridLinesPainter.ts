@@ -37,6 +37,17 @@ export interface GridLinesPaintParams {
    * 仅保留合并区域外框边界，使合并单元格内部不再出现默认网格线。
    */
   merges?: MergeLookup
+  /**
+   * 有填充背景的单元格查找。可选；提供时跳过填充格自身的网格线段，
+   * 使填充块内部不再透出默认网格线（与 Google Sheets 一致——填充色盖住网格线）。
+   * 一条边线只要其任一侧单元格有填充即跳过。
+   */
+  filledCells?: FilledCellLookup
+}
+
+/** 填充格查找——`has(row, col)` 返回该单元格是否有填充背景。 */
+export interface FilledCellLookup {
+  has(row: number, col: number): boolean
 }
 
 /** 返回 [from, to] 在去除 skips 覆盖区间后的互补线段（skips 为空时即整段）。 */
@@ -77,6 +88,7 @@ export class GridLinesPainter {
     const { rowsAxis, colsAxis, rowRange, colRange, rect } = params
     const { scrollOffsetX, scrollOffsetY } = params
     const merges = params.merges
+    const filledCells = params.filledCells
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
 
     ctx.strokeStyle = this.theme.colors.gridLine
@@ -107,6 +119,14 @@ export class GridLinesPainter {
           skips.push([startX, endX])
         }
       }
+      // 填充格：行 r 底边落在填充格上侧（r,c）或下侧（r+1,c）则跳过该列段。
+      if (filledCells) {
+        for (let c = colRange[0]; c <= colRange[1]; c++) {
+          if (!filledCells.has(r, c) && !filledCells.has(r + 1, c)) continue
+          const cx = rect.x + colsAxis.indexToPosition(c) - scrollOffsetX
+          skips.push([cx, cx + colsAxis.getSize(c)])
+        }
+      }
       for (const [x1, x2] of complementSegments(rect.x, rect.x + rect.width, skips)) {
         ctx.moveTo(x1, y)
         ctx.lineTo(x2, y)
@@ -132,6 +152,14 @@ export class GridLinesPainter {
             rowsAxis.getSize(range.endRow) -
             scrollOffsetY
           skips.push([startY, endY])
+        }
+      }
+      // 填充格：列 c 右边落在填充格左侧（r,c）或右侧（r,c+1）则跳过该行段。
+      if (filledCells) {
+        for (let r = rowRange[0]; r <= rowRange[1]; r++) {
+          if (!filledCells.has(r, c) && !filledCells.has(r, c + 1)) continue
+          const ry = rect.y + rowsAxis.indexToPosition(r) - scrollOffsetY
+          skips.push([ry, ry + rowsAxis.getSize(r)])
         }
       }
       for (const [y1, y2] of complementSegments(rect.y, rect.y + rect.height, skips)) {

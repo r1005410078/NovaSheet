@@ -70,11 +70,12 @@ import type {
 } from '@novasheet/core'
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { MergeLookup, mergedRectSize } from '../paint/merge-lookup'
+import { buildFilledCellLookup } from '../paint/filled-lookup'
 import { CellPainter } from '../painters/CellPainter'
 import { EmptyStatePainter } from '../painters/EmptyStatePainter'
 import { FormatBorderPainter } from '../painters/FormatBorderPainter'
 import { FormatFillPainter } from '../painters/FormatFillPainter'
-import { GridLinesPainter } from '../painters/GridLinesPainter'
+import { GridLinesPainter, type FilledCellLookup } from '../painters/GridLinesPainter'
 import { HeaderPainter } from '../painters/HeaderPainter'
 import { RowHeaderPainter } from '../painters/RowHeaderPainter'
 import { CANVAS2D_PAINT_LAYERS, type Canvas2DPaintLayer } from './PaintLayer'
@@ -119,6 +120,8 @@ interface Canvas2DPaintFrameContext {
   excelChrome: boolean
   /** 每帧唯一实例，content 与 grid layer 共用，避免重复构造。 */
   merges: MergeLookup
+  /** 每帧唯一实例：有填充背景的单元格查找，grid layer 跳过其网格线。 */
+  filledCells: FilledCellLookup
 }
 
 /**
@@ -294,6 +297,7 @@ export class Canvas2DRenderer implements RenderBackend {
   private paintFrame(frame: RenderFrame): void {
     const { viewport: snapshot, data, theme, rowsAxis, colsAxis } = frame
     const { contentRect, regions } = snapshot
+    const merges = new MergeLookup(frame.mergeRegions ?? [])
     const ctx: Canvas2DPaintFrameContext = {
       frame,
       snapshot,
@@ -306,7 +310,8 @@ export class Canvas2DRenderer implements RenderBackend {
       colsAxis,
       isEmpty: data.getRowCount() === 0,
       excelChrome: snapshot.rowHeaderWidth > 0,
-      merges: new MergeLookup(frame.mergeRegions ?? []),
+      merges,
+      filledCells: buildFilledCellLookup(frame.cellFormats ?? [], merges),
     }
 
     for (const layer of CANVAS2D_PAINT_LAYERS) this.paintLayer(layer, ctx)
@@ -420,7 +425,8 @@ export class Canvas2DRenderer implements RenderBackend {
     const { contentRect, regions, paintOrder, rowsAxis, colsAxis, snapshot, theme } = ctx
 
     if (!ctx.isEmpty) {
-      for (const region of paintOrder) this.paintGridLinesRegion(region, rowsAxis, colsAxis, ctx.merges)
+      for (const region of paintOrder)
+        this.paintGridLinesRegion(region, rowsAxis, colsAxis, ctx.merges, ctx.filledCells)
       this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
 
       // 自定义边框：在默认格线之上绘制，确保用户颜色/宽度覆盖默认格线。
@@ -747,6 +753,7 @@ export class Canvas2DRenderer implements RenderBackend {
     rowsAxis: Axis,
     colsAxis: Axis,
     merges: MergeLookup,
+    filledCells: FilledCellLookup,
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -760,6 +767,7 @@ export class Canvas2DRenderer implements RenderBackend {
       scrollOffsetX,
       scrollOffsetY,
       merges,
+      filledCells,
     })
   }
 
