@@ -56,15 +56,17 @@ business apps       React applications
 
 | 入口 | 用途 |
 | --- | --- |
-| `NovaSheetGrid` | React 版表格入口；内部组合 core `Grid` 与 `canvas2dBackend`，React 项目无需手动注入 backend。 |
+| `NovaSheetGrid` | React 版**普通表格**入口；不含工具栏，内部组合 core `Grid` 与 `canvas2dBackend`。 |
+| `NovaExcel` | **开箱即用 Excel 组件**：`NovaSheetGrid` + `NovaSheetToolbar` + 内置 action 编排；默认 `excelHeaders: true`。 |
+| `useNovaExcelToolbar` | 低层 hook；从 `NovaExcel` 抽出的 toolbar ↔ Grid 编排，供自定义布局复用。 |
 | `useNovaSheetGrid` | 低层 hook；返回 `containerRef` / `gridRef`，用于自定义布局。 |
-| `NovaSheetGridRef` | React ref handle；暴露 core `Grid` facade 和常用 imperative 方法。 |
-| `NovaSheetToolbar` | 紧凑电子表格工具栏；首版只展示已接入的 Grid / clipboard / format 入口。 |
+| `NovaSheetGridRef` / `NovaExcelRef` | React ref handle；暴露 core `Grid` facade 和常用 imperative 方法。 |
+| `NovaSheetToolbar` | 紧凑电子表格工具栏；可单独使用，由业务层接 `onAction`。 |
 | `defaultToolbarItems` | 默认工具栏 item 顺序；用于测试、定制和业务侧 diff。 |
 | `ToolbarAction` / `ToolbarActionId` | 工具栏 action 协议；业务层按 `id` 决定是否调用 `Grid` facade 或打开自定义面板。 |
 | `NovaSheetToolbarState` | 受控展示状态，例如 `zoom`、`textWrap`。 |
 
-`NovaSheetGrid` 是 React 项目的默认使用方式。它在 mount 时创建 core `Grid`，在 unmount
+`NovaSheetGrid` 是**不含工具栏**的 React 表格入口。它在 mount 时创建 core `Grid`，在 unmount
 时调用 `destroy()`；`data`、`theme`、`frozen` 更新时走现有 `Grid` facade，不重新创建
 实例。
 
@@ -72,21 +74,30 @@ business apps       React applications
 import { InMemoryDataSource } from '@novasheet/core'
 import { NovaSheetGrid } from '@novasheet/react'
 
-const data = new InMemoryDataSource({
-  schema: {
-    fields: [
-      { id: 'name', name: 'Name', type: 'text', width: 160 },
-      { id: 'score', name: 'Score', type: 'number', width: 100 },
-    ],
-  },
-  rows: [
-    { name: 'Ada', score: 10 },
-    { name: 'Grace', score: 20 },
-  ],
-})
+const data = new InMemoryDataSource({ /* schema + rows */ })
 
-export function Sheet() {
+export function PlainGrid() {
   return <NovaSheetGrid data={data} className="h-[480px] w-full" />
+}
+```
+
+`NovaExcel` 面向需要 Excel 风格、开箱即用的场景：内置工具栏与 Grid 之间的 undo/redo、
+clipboard、fill、borders、merge、text-wrap 编排；默认开启 `excelHeaders`。
+
+```tsx
+import { InMemoryDataSource } from '@novasheet/core'
+import { NovaExcel } from '@novasheet/react'
+
+const data = new InMemoryDataSource({ /* schema + rows */ })
+
+export function ExcelSheet() {
+  return (
+    <NovaExcel
+      data={data}
+      className="h-[560px] w-full"
+      onToolbarAction={(action) => console.log(action.id)}
+    />
+  )
 }
 ```
 

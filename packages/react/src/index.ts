@@ -1,3 +1,11 @@
+export { NovaExcel } from './excel/NovaExcel'
+export { useNovaExcelToolbar } from './excel/useNovaExcelToolbar'
+export type { NovaExcelProps, NovaExcelRef } from './excel/types'
+export type {
+  UseNovaExcelToolbarOptions,
+  UseNovaExcelToolbarResult,
+  NovaExcelToolbarGrid,
+} from './excel/useNovaExcelToolbar'
 export { NovaSheetGrid } from './grid/NovaSheetGrid'
 export { useNovaSheetGrid } from './grid/useNovaSheetGrid'
 export type { NovaSheetGridProps, NovaSheetGridRef } from './grid/types'
