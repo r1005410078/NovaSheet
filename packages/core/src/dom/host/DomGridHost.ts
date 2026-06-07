@@ -214,9 +214,12 @@ export class DomGridHost implements WebHost {
     event.preventDefault()
     if (!this.onContextMenu) return
     const rect = this.scrollHost.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    if (this.isScrollbarPointer({ x, y })) return
     this.onContextMenu({
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      x,
+      y,
       shiftKey: event.shiftKey,
       button: event.button,
       clientX: event.clientX,
@@ -239,7 +242,9 @@ export class DomGridHost implements WebHost {
   }
 
   private handlePointerUp = (event: PointerEvent): void => {
+    const local = this.toLocalPointerEvent(event)
     this.scrollHost.releasePointerCapture?.(event.pointerId)
+    if (this.isScrollbarPointer(local)) return
     this.onPointerUp?.()
   }
 
@@ -258,12 +263,42 @@ export class DomGridHost implements WebHost {
     }
   }
 
+  /** 经典滚动条用 client/offset 差；overlay 模式回退 theme trackWidth 右侧/底边条带。 */
+  private resolveScrollbarStripThickness(): { vertical: number; horizontal: number } {
+    const offsetW = this.scrollHost.offsetWidth
+    const offsetH = this.scrollHost.offsetHeight
+    const clientW = this.scrollHost.clientWidth
+    const clientH = this.scrollHost.clientHeight
+    const classicV = Math.max(0, offsetW - clientW)
+    const classicH = Math.max(0, offsetH - clientH)
+    const fallback = this.readScrollbarTrackWidth()
+    return {
+      vertical: classicV > 0 ? classicV : fallback,
+      horizontal: classicH > 0 ? classicH : fallback,
+    }
+  }
+
+  private readScrollbarTrackWidth(): number {
+    const css = this.scrollHost.style.getPropertyValue('--ns-scrollbar-size')
+    if (css) {
+      const parsed = Number.parseFloat(css)
+      if (Number.isFinite(parsed) && parsed > 0) return parsed
+    }
+    return this.pendingScrollbar?.trackWidth ?? 15
+  }
+
   private isScrollbarPointer(point: { x: number; y: number }): boolean {
     const clientWidth = this.scrollHost.clientWidth
     const clientHeight = this.scrollHost.clientHeight
-    return (
-      (clientWidth > 0 && point.x >= clientWidth) || (clientHeight > 0 && point.y >= clientHeight)
-    )
+    if (clientWidth > 0 && point.x >= clientWidth) return true
+    if (clientHeight > 0 && point.y >= clientHeight) return true
+
+    const { vertical, horizontal } = this.resolveScrollbarStripThickness()
+    const offsetWidth = this.scrollHost.offsetWidth
+    const offsetHeight = this.scrollHost.offsetHeight
+    if (vertical > 0 && offsetWidth > 0 && point.x >= offsetWidth - vertical) return true
+    if (horizontal > 0 && offsetHeight > 0 && point.y >= offsetHeight - horizontal) return true
+    return false
   }
 
   private watchDpr(): void {

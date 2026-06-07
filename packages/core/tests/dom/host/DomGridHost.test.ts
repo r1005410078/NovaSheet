@@ -116,6 +116,51 @@ describe('DomGridHost — pointer events', () => {
     host.destroy()
     document.body.removeChild(container)
   })
+
+  it('overlay 滚动条（client 满宽）时右侧 track 条带不转发表格 pointer 事件', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', { value: 400 })
+    Object.defineProperty(container, 'clientHeight', { value: 300 })
+    document.body.appendChild(container)
+
+    const onPointerDown = mock(() => {})
+    const host = new DomGridHost({
+      container,
+      scheduler: new FrameScheduler(),
+      onScroll: () => {},
+      onResize: () => {},
+      onPointerDown,
+    })
+    host.attach()
+
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLDivElement
+    scrollHost.getBoundingClientRect = () =>
+      ({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 300,
+        right: 400,
+        bottom: 300,
+        toJSON: () => ({}),
+      }) as DOMRect
+    Object.defineProperty(scrollHost, 'clientWidth', { value: 400, configurable: true })
+    Object.defineProperty(scrollHost, 'clientHeight', { value: 300, configurable: true })
+    Object.defineProperty(scrollHost, 'offsetWidth', { value: 400, configurable: true })
+    Object.defineProperty(scrollHost, 'offsetHeight', { value: 300, configurable: true })
+
+    scrollHost.dispatchEvent(new PointerEvent('pointerdown', { clientX: 392, clientY: 120 }))
+    scrollHost.dispatchEvent(new PointerEvent('pointerdown', { clientX: 120, clientY: 292 }))
+    scrollHost.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 150 }))
+
+    expect(onPointerDown).toHaveBeenCalledTimes(1)
+    expect(onPointerDown).toHaveBeenCalledWith({ x: 200, y: 150, shiftKey: false, button: 0 })
+
+    host.destroy()
+    document.body.removeChild(container)
+  })
 })
 
 describe('DomGridHost — contextmenu', () => {
