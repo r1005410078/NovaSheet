@@ -24,6 +24,7 @@ import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { Viewport } from '../kernel/geometry/Viewport'
 import type { RenderFrame } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
+import type { ExcelWorkspaceSize } from '../features/excel-workspace'
 
 /**
  * `DefaultGridEngine` 构造参数。
@@ -101,6 +102,9 @@ export interface GridDataAccess {
 
   /** 返回当前 engine 持有的数据源；sort/filter 后可能是 composed view data。 */
   getData(): DataSource
+
+  /** Excel workspace 专用：调整逻辑工作区尺寸并重建行列轴；不进入 undo 栈。 */
+  resizeExcelWorkspace(size: ExcelWorkspaceSize): boolean
 }
 
 /** 布局、滚动、尺寸与主题能力。 */

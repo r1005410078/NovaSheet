@@ -67,7 +67,7 @@ describe('NativeScroller — 原生滚动', () => {
     expect(rafs).toHaveLength(1)
     expect(onScroll).not.toHaveBeenCalled()
     flushFrame()
-    expect(onScroll).toHaveBeenCalledWith(200, 50)
+    expect(onScroll).toHaveBeenCalledWith(200, 50, { kind: 'scrollbar', atMs: expect.any(Number) })
   })
 
   it('同帧多次 scroll 合并为一次回调', () => {
@@ -84,7 +84,7 @@ describe('NativeScroller — 原生滚动', () => {
     expect(rafs).toHaveLength(1)
     flushFrame()
     expect(onScroll).toHaveBeenCalledTimes(1)
-    expect(onScroll).toHaveBeenCalledWith(300, 0) // last write wins via host's current state
+    expect(onScroll).toHaveBeenCalledWith(300, 0, { kind: 'scrollbar', atMs: expect.any(Number) }) // last write wins via host's current state
   })
 
   it('scrollTo 设置 scrollTop/scrollLeft', () => {
@@ -97,6 +97,37 @@ describe('NativeScroller — 原生滚动', () => {
     scroller.scrollTo(150, 75)
     expect(host.scrollTop).toBe(150)
     expect(host.scrollLeft).toBe(75)
+  })
+
+  it('wheel 后的 scroll 回调携带 wheel intent', () => {
+    const host = makeScrollHost(0, 0)
+    const onScroll = mock(() => {})
+    const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
+    scroller.attach()
+    host.dispatchEvent(new WheelEvent('wheel', { deltaX: 4, deltaY: 120 }))
+    ;(host as unknown as { scrollTop: number }).scrollTop = 240
+    host.dispatchEvent(new Event('scroll'))
+    flushFrame()
+    expect(onScroll).toHaveBeenCalledWith(240, 0, {
+      kind: 'wheel',
+      atMs: expect.any(Number),
+      deltaX: 4,
+      deltaY: 120,
+    })
+  })
+
+  it('scrollTo 触发的 scroll 回调携带 programmatic intent', () => {
+    const host = makeScrollHost(0, 0)
+    const onScroll = mock(() => {})
+    const scroller = new NativeScroller(host, new FrameScheduler(), onScroll)
+    scroller.attach()
+    scroller.scrollTo(150, 75)
+    host.dispatchEvent(new Event('scroll'))
+    flushFrame()
+    expect(onScroll).toHaveBeenCalledWith(150, 75, {
+      kind: 'programmatic',
+      atMs: expect.any(Number),
+    })
   })
 
   it('未 attach 就 destroy 不抛错', () => {

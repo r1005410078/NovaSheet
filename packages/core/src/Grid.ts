@@ -14,6 +14,7 @@ import type {
   Theme,
 } from './index'
 import type { GridEngineOptions } from './engine/GridEngine'
+import type { ExcelWorkspacePolicy } from './features/excel-workspace'
 import type { FilterLayer } from './features/view/FilterLayer'
 import type { SortLayer } from './features/view/SortLayer'
 import type { ViewPipeline } from './features/view/ViewPipeline'
@@ -64,6 +65,8 @@ export interface GridOptions extends GridEngineOptions {
   onColumnsMoved?: (event: { fieldIds: readonly string[]; beforeFieldId: string | null }) => void
   /** 选区变化时触发（含点击、键盘导航、程序化 setSelection）。 */
   onSelectionChange?: (selection: GridSelection) => void
+  /** Excel workspace auto-grow/shrink；默认关闭。 */
+  excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -104,6 +107,7 @@ export class Grid {
         onRedo: options.onRedo,
         onFill: options.onFill,
         onSelectionChange: options.onSelectionChange,
+        excelWorkspace: options.excelWorkspace,
       },
       options.backend,
     )

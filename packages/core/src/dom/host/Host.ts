@@ -1,5 +1,6 @@
 import type { FrameScheduler } from '../../kernel/util/raf'
 import type { ThemeScrollbar } from '../../kernel/theme/Theme'
+import type { NativeScrollSource } from '../scroll/NativeScroller'
 
 export interface WebPointerEvent {
   /** scrollHost 本地坐标，单位 CSS px。 */
@@ -36,7 +37,7 @@ export interface WebHostOptions {
   /** 与 Grid 共享的 `FrameScheduler`，供 `NativeScroller` 合并 scroll RAF。 */
   scheduler: FrameScheduler
   /** 原生 scroll 事件（经 `NativeScroller` RAF 节流后回调）。 */
-  onScroll: (scrollTop: number, scrollLeft: number) => void
+  onScroll: (scrollTop: number, scrollLeft: number, source: NativeScrollSource) => void
   /** 容器尺寸变化（`ResizeObserver`）。 */
   onResize: (cssWidth: number, cssHeight: number, dpr: number) => void
   /** DPR 变化（窗口拖到另一块屏幕等）。 */

@@ -31,6 +31,7 @@ import type { Field } from '../../kernel/data/Schema'
 import type { FilterSpec } from '../../features/view/FilterLayer'
 import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
 import type { GridEngineOptions } from '../../engine/GridEngine'
+import type { ExcelWorkspacePolicy } from '../../features/excel-workspace'
 import type { PasteSkippedCell } from '../../features/clipboard/types'
 import type { SortSpec } from '../../features/view/SortLayer'
 import type { Theme } from '../../kernel/theme/Theme'
@@ -151,6 +152,7 @@ export class GridControllerImpl implements GridController {
           onRedo?: (event: RedoEvent) => void
           onFill?: (event: FillEvent) => void
           onSelectionChange?: (selection: GridSelection) => void
+          excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
         }
       | undefined,
     backend: RenderBackendFactory,
@@ -228,6 +230,7 @@ export class GridControllerImpl implements GridController {
       viewPipeline: this.pipeline,
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
+      excelWorkspace: gridOptions?.excelWorkspace,
       onSurfaceResize: (w, h) => this.handle.resizeSurface(w, h),
     })
 

@@ -13,11 +13,21 @@
 
 import type { FrameScheduler } from '../../kernel/util/raf'
 
-export type ScrollListener = (scrollTop: number, scrollLeft: number) => void
+export type NativeScrollSource =
+  | { readonly kind: 'wheel'; readonly atMs: number; readonly deltaX: number; readonly deltaY: number }
+  | { readonly kind: 'scrollbar'; readonly atMs: number }
+  | { readonly kind: 'programmatic'; readonly atMs: number }
+
+export type ScrollListener = (
+  scrollTop: number,
+  scrollLeft: number,
+  source: NativeScrollSource,
+) => void
 
 export class NativeScroller {
   private destroyed = false
   private listenerAttached = false
+  private pendingSource: NativeScrollSource | null = null
 
   /**
    * 创建一个原生滚动事件适配器。
@@ -52,6 +62,7 @@ export class NativeScroller {
     // passive: true 表示这个监听器只观察滚动，不会调用 preventDefault() 阻止浏览器滚动。
     // NativeScroller 只读取 scrollTop/scrollLeft，因此可以让浏览器放心走原生滚动路径。
     this.scrollHost.addEventListener('scroll', this.handler, { passive: true })
+    this.scrollHost.addEventListener('wheel', this.handleWheel, { passive: true })
     this.listenerAttached = true
   }
 
@@ -74,6 +85,7 @@ export class NativeScroller {
     this.scheduler.cancel('scroll:read')
     if (this.listenerAttached) {
       this.scrollHost.removeEventListener('scroll', this.handler)
+      this.scrollHost.removeEventListener('wheel', this.handleWheel)
       this.listenerAttached = false
     }
   }
@@ -89,7 +101,17 @@ export class NativeScroller {
    * ```
    */
   scrollTo(scrollTop: number, scrollLeft: number): void {
+    this.pendingSource = { kind: 'programmatic', atMs: Date.now() }
     this.scrollHost.scrollTo({ top: scrollTop, left: scrollLeft })
+  }
+
+  private handleWheel = (event: WheelEvent): void => {
+    this.pendingSource = {
+      kind: 'wheel',
+      atMs: Date.now(),
+      deltaX: event.deltaX,
+      deltaY: event.deltaY,
+    }
   }
 
   /**
@@ -109,7 +131,9 @@ export class NativeScroller {
   private handler = (): void => {
     this.scheduler.schedule('scroll:read', () => {
       if (this.destroyed) return
-      this.onScroll(this.scrollHost.scrollTop, this.scrollHost.scrollLeft)
+      const source = this.pendingSource ?? { kind: 'scrollbar', atMs: Date.now() }
+      this.pendingSource = null
+      this.onScroll(this.scrollHost.scrollTop, this.scrollHost.scrollLeft, source)
     })
   }
 }

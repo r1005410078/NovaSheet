@@ -18,6 +18,23 @@ export type {
   SparseExcelWorkspaceSize,
 } from './kernel/data/SparseExcelDataSource'
 
+// Excel workspace domain
+export {
+  DEFAULT_EXCEL_WORKSPACE_POLICY,
+  ExcelWorkspaceController,
+  decideExcelWorkspaceResize,
+} from './features/excel-workspace'
+export type {
+  ExcelWorkspaceControllerOptions,
+  ExcelWorkspaceDecision,
+  ExcelWorkspaceDecisionInput,
+  ExcelWorkspacePolicy,
+  ExcelWorkspacePort,
+  ExcelWorkspaceScrollIntent,
+  ExcelWorkspaceSize,
+  ExcelWorkspaceVisibleRange,
+} from './features/excel-workspace'
+
 // 主题层
 export { denseGridTheme } from './kernel/theme/denseGridTheme'
 export type {

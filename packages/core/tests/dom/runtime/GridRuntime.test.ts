@@ -1,5 +1,12 @@
 import { describe, expect, it, mock, spyOn } from 'bun:test'
-import { FilterLayer, InMemoryDataSource, SortLayer, ViewPipeline } from '@novasheet/core'
+import {
+  DEFAULT_EXCEL_WORKSPACE_POLICY,
+  FilterLayer,
+  InMemoryDataSource,
+  SortLayer,
+  SparseExcelDataSource,
+  ViewPipeline,
+} from '@novasheet/core'
 import type {
   CellAddress,
   DataSource,
@@ -18,6 +25,7 @@ function makeEngine(): GridEngine {
   return {
     setData: mock(() => {}),
     setViewData: mock(() => {}),
+    resizeExcelWorkspace: mock(() => false),
     setTheme: mock(() => {}),
     setFrozen: mock(() => {}),
     setViewportSize: mock(() => {}),
@@ -225,6 +233,120 @@ describe('GridRuntime.replaceRenderer — 更换渲染器', () => {
     expect(first.destroy).toHaveBeenCalledTimes(1)
     expect(installed).toBe(second)
     expect(second.destroy).not.toHaveBeenCalled()
+  })
+})
+
+describe('GridRuntime excelWorkspace — wheel auto grow', () => {
+  it('wheel scroll at materialized bottom edge resizes workspace through engine', () => {
+    const data = new SparseExcelDataSource()
+    data.updateCell(999, 'A', 'edge')
+    const engine = makeEngine()
+    const resizeExcelWorkspace = mock((size: { rowCount: number; colCount: number }) => {
+      data.resizeWorkspace(size)
+      return true
+    })
+    engine.getData = mock(() => data as never)
+    engine.resizeExcelWorkspace = resizeExcelWorkspace
+    engine.getFrame = mock(() => ({
+      data,
+      theme: { metrics: { headerHeight: 32 } } as Theme,
+      rowsAxis: {
+        getCount: () => data.getRowCount(),
+        positionToIndex: (pos: number) => Math.floor(pos / 28),
+        indexToPosition: (i: number) => i * 28,
+        getSize: () => 28,
+        getVisibleRange: () => [970, data.getRowCount() - 1],
+      } as never,
+      colsAxis: {
+        getCount: () => data.getSchema().fields.length,
+        getTotalSize: () => data.getSchema().fields.length * 96,
+        positionToIndex: (pos: number) => Math.floor(pos / 96),
+        indexToPosition: (i: number) => i * 96,
+        getSize: () => 96,
+        getVisibleRange: () => [0, 25],
+      } as never,
+      viewport: {
+        contentRect: { width: 400, height: 300 },
+        scrollX: 0,
+        scrollY: 0,
+        rowHeaderWidth: 0,
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            colBand: 'center',
+            rowRange: [970, data.getRowCount() - 1],
+            colRange: [0, 25],
+            rect: { x: 0, y: 32, width: 400, height: 268 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+    }))
+    const host = makeHost()
+    const runtime = new GridRuntime({
+      engine,
+      host,
+      renderer: makeRenderer(),
+      excelWorkspace: { policy: DEFAULT_EXCEL_WORKSPACE_POLICY },
+    })
+
+    runtime.handleHostScroll(10_000, 0, {
+      kind: 'wheel',
+      atMs: Date.now(),
+      deltaX: 0,
+      deltaY: 120,
+    })
+
+    expect(resizeExcelWorkspace).toHaveBeenCalledWith({ rowCount: 1_200, colCount: 26 })
+    expect(host.setScrollSize).toHaveBeenCalled()
+  })
+
+  it('scrollbar drag at materialized bottom edge does not grow workspace', () => {
+    const data = new SparseExcelDataSource()
+    data.updateCell(999, 'A', 'edge')
+    const engine = makeEngine()
+    const resizeExcelWorkspace = mock(() => true)
+    engine.getData = mock(() => data as never)
+    engine.resizeExcelWorkspace = resizeExcelWorkspace
+    engine.getFrame = mock(() => ({
+      data,
+      theme: { metrics: { headerHeight: 32 } } as Theme,
+      rowsAxis: {} as never,
+      colsAxis: {} as never,
+      viewport: {
+        contentRect: { width: 400, height: 300 },
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            colBand: 'center',
+            rowRange: [970, 999],
+            colRange: [0, 25],
+            rect: { x: 0, y: 32, width: 400, height: 268 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+    }))
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      excelWorkspace: true,
+    })
+
+    runtime.handleHostScroll(10_000, 0, { kind: 'scrollbar', atMs: Date.now() })
+
+    expect(resizeExcelWorkspace).not.toHaveBeenCalled()
   })
 })
 

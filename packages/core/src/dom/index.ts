@@ -1,5 +1,5 @@
 export { NativeScroller } from './scroll/NativeScroller'
-export type { ScrollListener } from './scroll/NativeScroller'
+export type { NativeScrollSource, ScrollListener } from './scroll/NativeScroller'
 export { ScrollMapper, SAFE_MAX } from './scroll/ScrollMapper'
 export { DomGridHost } from './host/DomGridHost'
 export type {

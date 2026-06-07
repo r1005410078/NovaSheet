@@ -2,6 +2,7 @@ import type { CellValue, Field } from '../kernel/data/Schema'
 import type { DataSource } from '../kernel/data/DataSource'
 import { isMutableDataSource } from '../kernel/data/MutableDataSource'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
+import type { ExcelWorkspaceSize } from '../features/excel-workspace'
 import type { ApplyPasteSource, PasteTargetRect } from '../features/clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../features/clipboard/types'
 import { PasteController } from '../features/clipboard/PasteController'
@@ -310,6 +311,13 @@ export class DefaultGridEngine implements GridEngine {
       return
     }
     if (options.clearSelection !== false) this.selectionController.clear()
+  }
+
+  resizeExcelWorkspace(size: ExcelWorkspaceSize): boolean {
+    if (!isExcelWorkspaceDataSource(this.rawData)) return false
+    this.rawData.resizeWorkspace(size)
+    this.rebuildData(this.rawData)
+    return true
   }
 
   private rebuildData(data: DataSource): void {
@@ -980,4 +988,12 @@ export class DefaultGridEngine implements GridEngine {
   private getRawColumnIndexForViewIndex(viewColIndex: number): number {
     return this.coords.viewColToRaw(viewColIndex)
   }
+}
+
+interface ExcelWorkspaceResizableDataSource extends DataSource {
+  resizeWorkspace(size: ExcelWorkspaceSize): void
+}
+
+function isExcelWorkspaceDataSource(data: DataSource): data is ExcelWorkspaceResizableDataSource {
+  return typeof (data as ExcelWorkspaceResizableDataSource).resizeWorkspace === 'function'
 }
