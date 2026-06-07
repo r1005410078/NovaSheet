@@ -1,11 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource } from '@novasheet/core'
+import { SparseExcelDataSource } from '@novasheet/core'
 import { NovaExcel } from '@novasheet/react'
 import React from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 
-import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
 import novaExcelSrc from './snippets/react.nova-excel.snippet.ts?raw'
 
@@ -13,22 +12,30 @@ const meta: Meta = {
   title: 'Table/React',
   parameters: { layout: 'fullscreen' },
   ...docsMeta(
-    '`NovaExcel` bundles NovaSheetGrid, NovaSheetToolbar, and built-in action wiring for an Excel-style out-of-the-box experience. Use `NovaSheetGrid` when you need a plain grid without toolbar chrome.',
+    '`NovaExcel` bundles NovaSheetGrid, NovaSheetToolbar, and built-in action wiring. Defaults to `SparseExcelDataSource` + `excelWorkspace: true` (A–Z × 1000 sparse infinite cells). Use `NovaSheetGrid` for a plain grid without toolbar.',
   ),
 }
 export default meta
 
 type Story = StoryObj
 
+function createDemoData(): SparseExcelDataSource {
+  const data = new SparseExcelDataSource()
+  data.updateCell(0, 'A', 'NovaSheet')
+  data.updateCell(1, 'A', 'Excel workspace')
+  data.updateCell(2, 'B', 'A-Z x 1000')
+  data.updateCell(999, 'A', 'edge content')
+  return data
+}
+
 export const NovaExcelOutOfTheBox: Story = {
   name: 'NovaExcel (out of the box)',
   ...docsStory(
     novaExcelSrc,
-    'Single import: toolbar actions, selection sync, undo/redo, fill, borders, merge, and text-wrap are wired internally. Default `excelHeaders: true` shows A/B column labels and row numbers.',
+    'Single import with `SparseExcelDataSource` + `excelWorkspace: true` (defaults). Toolbar actions, selection sync, undo/redo, fill, borders, merge, and text-wrap are wired internally. Scroll to row 1000 edge content to trigger workspace auto-grow.',
   ),
   render: () => {
-    const schema = basicTextSchema()
-    const data = new InMemoryDataSource({ schema, rows: generateRows(schema, 100) })
+    const data = createDemoData()
 
     const host = document.createElement('div')
     host.style.width = '100%'
@@ -37,6 +44,8 @@ export const NovaExcelOutOfTheBox: Story = {
 
     const root = createRoot(host)
     ;(host as unknown as HTMLElement & { __reactRoot: typeof root }).__reactRoot = root
+    ;(host as unknown as HTMLElement & { __excelWorkspaceData: SparseExcelDataSource }).__excelWorkspaceData =
+      data
     flushSync(() => {
       root.render(
         React.createElement(NovaExcel, {

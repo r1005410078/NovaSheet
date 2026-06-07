@@ -1,3 +1,4 @@
+import { SparseExcelDataSource } from '@novasheet/core'
 import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react'
 import type { ReactElement } from 'react'
 
@@ -10,6 +11,7 @@ import { useNovaExcelToolbar } from './useNovaExcelToolbar'
 
 /**
  * Opinionated Excel-style spreadsheet: NovaSheetGrid + built-in toolbar wiring.
+ * Defaults to `SparseExcelDataSource` + `excelWorkspace: true` (infinite sparse cells).
  * Use {@link NovaSheetGrid} when you need a plain grid without toolbar chrome.
  */
 export const NovaExcel = forwardRef<NovaExcelRef, NovaExcelProps>(function NovaExcel(
@@ -21,14 +23,22 @@ export const NovaExcel = forwardRef<NovaExcelRef, NovaExcelProps>(function NovaE
     gridClassName,
     toolbarClassName,
     excelHeaders = true,
+    excelWorkspace = true,
     showToolbar = true,
     toolbarZoom = '100%',
     onToolbarAction,
     onSelectionChange,
     onUndo,
     onRedo,
+    data,
     ...gridProps
   } = props
+
+  const defaultDataRef = useRef<SparseExcelDataSource | null>(null)
+  if (data === undefined && defaultDataRef.current === null) {
+    defaultDataRef.current = new SparseExcelDataSource()
+  }
+  const resolvedData = data ?? defaultDataRef.current!
 
   const gridRef = useRef<NovaSheetGridRef>(null)
 
@@ -93,7 +103,9 @@ export const NovaExcel = forwardRef<NovaExcelRef, NovaExcelProps>(function NovaE
         <NovaSheetGrid
           {...gridProps}
           ref={gridRef}
+          data={resolvedData}
           excelHeaders={excelHeaders}
+          excelWorkspace={excelWorkspace}
           className={cn('h-full w-full', gridClassName)}
           onSelectionChange={(selection) => {
             onSelectionChange?.(selection)

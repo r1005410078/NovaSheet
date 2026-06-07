@@ -57,7 +57,7 @@ business apps       React applications
 | 入口 | 用途 |
 | --- | --- |
 | `NovaSheetGrid` | React 版**普通表格**入口；不含工具栏，内部组合 core `Grid` 与 `canvas2dBackend`。 |
-| `NovaExcel` | **开箱即用 Excel 组件**：`NovaSheetGrid` + `NovaSheetToolbar` + 内置 action 编排；默认 `excelHeaders: true`。 |
+| `NovaExcel` | **开箱即用 Excel 组件**：`NovaSheetGrid` + `NovaSheetToolbar` + 内置 action 编排；默认 `SparseExcelDataSource` + `excelHeaders: true` + `excelWorkspace: true`（A–Z × 1000 无限稀疏单元格）。 |
 | `useNovaExcelToolbar` | 低层 hook；从 `NovaExcel` 抽出的 toolbar ↔ Grid 编排，供自定义布局复用。 |
 | `useNovaSheetGrid` | 低层 hook；返回 `containerRef` / `gridRef`，用于自定义布局。 |
 | `NovaSheetGridRef` / `NovaExcelRef` | React ref handle；暴露 core `Grid` facade 和常用 imperative 方法。 |
@@ -81,14 +81,17 @@ export function PlainGrid() {
 }
 ```
 
-`NovaExcel` 面向需要 Excel 风格、开箱即用的场景：内置工具栏与 Grid 之间的 undo/redo、
+`NovaExcel` 面向需要 Excel 风格、开箱即用的场景：默认 `SparseExcelDataSource`（省略 `data` 时自动创建）
++ `excelWorkspace: true` 无限单元格模式；内置工具栏与 Grid 之间的 undo/redo、
 clipboard、fill、borders、merge、text-wrap 编排；默认开启 `excelHeaders`。
 
 ```tsx
-import { InMemoryDataSource } from '@novasheet/core'
+import { SparseExcelDataSource } from '@novasheet/core'
 import { NovaExcel } from '@novasheet/react'
 
-const data = new InMemoryDataSource({ /* schema + rows */ })
+const data = new SparseExcelDataSource()
+data.updateCell(0, 'A', 'NovaSheet')
+data.updateCell(999, 'A', 'edge content')
 
 export function ExcelSheet() {
   return (
@@ -98,6 +101,11 @@ export function ExcelSheet() {
       onToolbarAction={(action) => console.log(action.id)}
     />
   )
+}
+
+// 或省略 data，使用内部 SparseExcelDataSource + excelWorkspace
+export function BlankExcel() {
+  return <NovaExcel className="h-[560px] w-full" />
 }
 ```
 

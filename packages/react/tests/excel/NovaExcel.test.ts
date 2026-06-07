@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '@novasheet/core'
+import { InMemoryDataSource, SparseExcelDataSource } from '@novasheet/core'
 import React from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client'
 import { NovaExcel } from '../../src'
 import type { NovaExcelRef } from '../../src'
 
-function createData(): InMemoryDataSource {
+function createDenseData(): InMemoryDataSource {
   return new InMemoryDataSource({
     schema: {
       fields: [
@@ -22,13 +22,19 @@ function createData(): InMemoryDataSource {
   })
 }
 
+function createSparseData(): SparseExcelDataSource {
+  const data = new SparseExcelDataSource()
+  data.updateCell(0, 'A', 'hello')
+  return data
+}
+
 describe('NovaExcel', () => {
   it('renders toolbar and grid shell', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
     flushSync(() => {
-      root.render(React.createElement(NovaExcel, { data: createData() }))
+      root.render(React.createElement(NovaExcel, { data: createDenseData() }))
     })
 
     expect(container.querySelector('[data-novasheet-react-excel]')).not.toBeNull()
@@ -39,12 +45,41 @@ describe('NovaExcel', () => {
     root.unmount()
   })
 
+  it('mounts with internal sparse workspace when data is omitted', () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    flushSync(() => {
+      root.render(React.createElement(NovaExcel, {}))
+    })
+
+    expect(container.querySelector('[data-novasheet-react-excel]')).not.toBeNull()
+    expect(container.querySelector('canvas')).not.toBeNull()
+
+    root.unmount()
+  })
+
+  it('accepts SparseExcelDataSource with excel workspace', () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const data = createSparseData()
+
+    flushSync(() => {
+      root.render(React.createElement(NovaExcel, { data }))
+    })
+
+    expect(data.getRowCount()).toBe(1_000)
+    expect(data.getCell(0, 'A')).toBe('hello')
+
+    root.unmount()
+  })
+
   it('hides toolbar when showToolbar is false', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
     flushSync(() => {
-      root.render(React.createElement(NovaExcel, { data: createData(), showToolbar: false }))
+      root.render(React.createElement(NovaExcel, { data: createDenseData(), showToolbar: false }))
     })
 
     expect(container.querySelector('[role="toolbar"]')).toBeNull()
@@ -59,7 +94,7 @@ describe('NovaExcel', () => {
     const ref = React.createRef<NovaExcelRef>()
 
     flushSync(() => {
-      root.render(React.createElement(NovaExcel, { data: createData(), ref }))
+      root.render(React.createElement(NovaExcel, { data: createDenseData(), ref }))
     })
 
     expect(ref.current?.grid).toBeDefined()
