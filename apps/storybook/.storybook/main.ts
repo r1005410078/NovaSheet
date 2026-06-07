@@ -32,10 +32,13 @@ const config: StorybookConfig = {
         ...config.resolve,
         alias: {
           ...config.resolve.alias,
-          // Storybook dev should consume core source directly so edits in packages/core/src
-          // trigger Vite HMR. The package export points at dist/, which only changes after build.
+          // Storybook dev should consume package source directly so edits in packages/*/src
+          // trigger Vite HMR. Package exports point at dist/, which only changes after build.
           '@novasheet/core': fileURLToPath(
             new URL('../../../packages/core/src/index.ts', import.meta.url),
+          ),
+          '@novasheet/canvas2d': fileURLToPath(
+            new URL('../../../packages/canvas2d/src/index.ts', import.meta.url),
           ),
         },
       },
