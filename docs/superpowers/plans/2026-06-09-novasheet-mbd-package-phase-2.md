@@ -80,6 +80,10 @@
 - [x] `bun test packages/react` 全绿
 - [x] `bun run --filter @novasheet/react typecheck` 绿
 
+### Task 6: 根 lint 门禁（后续）
+
+- [x] 根 `lint` 串联 `lint:mbd` + `lint:scenario-coverage --fail-on-missing`
+
 ---
 
 ## 风险点（STOP+ASK）

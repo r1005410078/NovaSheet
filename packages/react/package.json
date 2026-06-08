@@ -40,7 +40,7 @@
     "test:watch": "bun test --watch",
     "typecheck": "tsc --noEmit",
     "lint:boundary": "bun scripts/check-react-boundary.ts",
-    "lint:scenario-coverage": "bun scripts/check-scenario-coverage.ts"
+    "lint:scenario-coverage": "bun scripts/check-scenario-coverage.ts --fail-on-missing"
   },
   "dependencies": {
     "@novasheet/canvas2d": "^0.1.0",
