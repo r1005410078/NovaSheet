@@ -14,5 +14,15 @@ describe('ExcelWorkspace Storybook stories', () => {
     expect(host.querySelector('canvas')).not.toBeNull()
     expect(host.__excelWorkspaceData.getRowCount()).toBe(1_000)
     expect(host.__excelWorkspaceData.getSchema().fields).toHaveLength(26)
+
+    ;(
+      host as unknown as {
+        __grid: { destroy(): void }
+        __reactRoot?: { unmount(): void }
+      }
+    ).__reactRoot ??= {
+      unmount: () => (host as unknown as { __grid: { destroy(): void } }).__grid.destroy(),
+    }
+    ;(host as unknown as { __reactRoot: { unmount(): void } }).__reactRoot.unmount()
   })
 })
