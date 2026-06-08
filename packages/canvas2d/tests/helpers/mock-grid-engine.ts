@@ -108,7 +108,13 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     getTheme: mock(() => theme),
     getRowsAxis: mock(() => rowsAxis),
     getColsAxis: mock(() => colsAxis),
-    getViewport: mock(() => frame.viewport as unknown as Viewport),
+    getViewport: mock(
+      () =>
+        ({
+          ...frame.viewport,
+          getRowHeaderWidth: () => frame.viewport.rowHeaderWidth,
+        }) as unknown as Viewport,
+    ),
     getData: mock(() => data),
     undo: mock(() => undefined),
     redo: mock(() => undefined),

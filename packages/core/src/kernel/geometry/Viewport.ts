@@ -183,6 +183,11 @@ export class Viewport {
     this._version++
   }
 
+  /** 已解析的行号 gutter 宽度（Excel 模式 > 0，否则 0）。轻量读取，避免 snapshot() 分配。 */
+  getRowHeaderWidth(): number {
+    return this.rowHeaderWidth
+  }
+
   /**
    * 不可变快照。每帧绘制开始时调用一次；FrozenRegions 内部根据 viewport 状态实时切分绘制区域。
    * version 取 viewport 自身 + 两个 axis 的最大值——

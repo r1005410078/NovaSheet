@@ -95,7 +95,7 @@ function makeEngine(): GridEngine {
       ({
         indexToPosition: () => 0,
       }) as never,
-    getViewport: mock(() => ({}) as never),
+    getViewport: mock(() => ({ getRowHeaderWidth: () => 0 }) as never),
     getData: mock(() => ({}) as never),
     undo: mock(() => undefined),
     redo: mock(() => undefined),
@@ -177,6 +177,7 @@ function makeExcelHeaderRuntime(options: { rowHeaderWidth?: number; columnWidth?
   })
   const engine = makeEngine()
   engine.getData = mock(() => data as never)
+  engine.getViewport = mock(() => ({ getRowHeaderWidth: () => rowHeaderWidth }) as never)
   engine.getFrame = mock(() => ({
     data,
     theme: { metrics: { headerHeight: 32 } } as Theme,
@@ -216,8 +217,9 @@ function makeExcelHeaderRuntime(options: { rowHeaderWidth?: number; columnWidth?
     collapsedRowGaps: [],
     collapsedColGaps: [],
   }))
-  const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-  return { engine, runtime }
+  const host = makeHost()
+  const runtime = new GridRuntime({ engine, host, renderer: makeRenderer() })
+  return { engine, runtime, host }
 }
 
 describe('GridRuntime.replaceRenderer — 更换渲染器', () => {
@@ -449,6 +451,14 @@ describe('GridRuntime.handleHostPointerDown — 点击选择', () => {
       { rowIndex: 1, colIndex: 1 } satisfies CellAddress,
       { extend: true },
     )
+  })
+
+  it('水平 spacer 含行号 gutter（与垂直加 headerH 对称，消除右缘缺口）', () => {
+    // gutter=48，列总宽 200（base mock），headerH=32，行总高 280。
+    const { runtime, host } = makeExcelHeaderRuntime({ rowHeaderWidth: 48 })
+    runtime.attach()
+    // 水平 spacer = colsTotal(200) + gutter(48) = 248；垂直 = rowsTotal(280) + headerH(32) = 312。
+    expect(host.setScrollSize).toHaveBeenCalledWith(248, 312)
   })
 
   it('Excel 行头左键选中整行', () => {

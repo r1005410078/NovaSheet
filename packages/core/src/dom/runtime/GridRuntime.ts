@@ -2044,10 +2044,7 @@ export class GridRuntime {
         0,
         this.scrollMapper.computeSpacerSize(this.engine.getRowsTotalSize() + headerH) - height,
       ),
-      maxLeft: Math.max(
-        0,
-        this.scrollMapper.computeSpacerSize(this.engine.getColsTotalSize()) - width,
-      ),
+      maxLeft: Math.max(0, this.scrollMapper.computeSpacerSize(this.getColsContentWidth()) - width),
     }
   }
 
@@ -2058,7 +2055,7 @@ export class GridRuntime {
   ): { logicalX: number; logicalY: number } {
     const headerH = this.engine.getTheme().metrics.headerHeight
     const contentH = this.engine.getRowsTotalSize()
-    const contentW = this.engine.getColsTotalSize()
+    const contentW = this.getColsContentWidth()
     const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
     const { width: clientW, height: clientH } = this.host.getContainerSize()
@@ -2079,7 +2076,7 @@ export class GridRuntime {
 
   /** 将逻辑 X 滚动坐标映射回 DOM scrollLeft。 */
   private logicalToScrollX(logicalX: number): number {
-    const contentW = this.engine.getColsTotalSize()
+    const contentW = this.getColsContentWidth()
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
     const { width: clientW } = this.host.getContainerSize()
     return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, clientW)
@@ -2092,10 +2089,19 @@ export class GridRuntime {
     this.engine.setScroll(logicalX, logicalY)
   }
 
+  /**
+   * 水平内容总宽 = 列总宽 + 行号 gutter。与垂直轴加 `headerH` 对称：
+   * gutter（Excel 模式行号列）是固定不滚动的左侧偏移，必须计入 spacer/滚动数学，
+   * 否则原生横向滚动条会比真实可滚列区短 gutter px（右缘缺口、最右列滚不到）。
+   */
+  private getColsContentWidth(): number {
+    return this.engine.getColsTotalSize() + this.engine.getViewport().getRowHeaderWidth()
+  }
+
   /** 按内容尺寸与 header 尺寸更新 host scroll spacer。 */
   private resizeSpacer(): void {
     const headerH = this.engine.getTheme().metrics.headerHeight
-    const w = this.scrollMapper.computeSpacerSize(this.engine.getColsTotalSize())
+    const w = this.scrollMapper.computeSpacerSize(this.getColsContentWidth())
     const h = this.scrollMapper.computeSpacerSize(this.engine.getRowsTotalSize() + headerH)
     this.host.setScrollSize(w, h)
   }
