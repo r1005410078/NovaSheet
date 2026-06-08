@@ -216,6 +216,19 @@ describe('Grid — 浏览器门面', () => {
     grid.destroy()
   })
 
+  it('scroll-host 右下角使用主题色填充滚动条 corner 缺口', () => {
+    const el = document.createElement('div')
+    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const corner = el.querySelector('[data-novasheet-scrollbar-corner]') as HTMLElement | null
+    expect(corner).not.toBeNull()
+    expect(corner!.style.right).toBe('0px')
+    expect(corner!.style.bottom).toBe('0px')
+    expect(corner!.style.width).toBe('15px')
+    expect(corner!.style.height).toBe('15px')
+    expect(corner!.style.background).toBe('#f8f9fa')
+    grid.destroy()
+  })
+
   it('scroll-host z-index 高于 canvas，原生滚动条可见', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })

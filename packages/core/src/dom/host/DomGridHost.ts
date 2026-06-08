@@ -25,6 +25,7 @@ export class DomGridHost implements WebHost {
   private onContextMenu?: WebHostOptions['onContextMenu']
   private scrollHost!: HTMLDivElement
   private scrollSpacer!: HTMLDivElement
+  private scrollbarCorner!: HTMLDivElement
   private nativeScroller!: NativeScroller
   private resizeObserver: ResizeObserver | null = null
   private dprMedia: MediaQueryList | null = null
@@ -84,6 +85,19 @@ export class DomGridHost implements WebHost {
     this.scrollHost.appendChild(this.scrollSpacer)
     this.container.appendChild(this.scrollHost)
 
+    this.scrollbarCorner = document.createElement('div')
+    this.scrollbarCorner.setAttribute('data-novasheet-scrollbar-corner', '')
+    Object.assign(this.scrollbarCorner.style, {
+      position: 'absolute',
+      right: '0px',
+      bottom: '0px',
+      width: '0px',
+      height: '0px',
+      zIndex: '2',
+      pointerEvents: 'none',
+    })
+    this.container.appendChild(this.scrollbarCorner)
+
     this.nativeScroller = new NativeScroller(this.scrollHost, this.scheduler, this.onScroll)
     this.nativeScroller.attach()
     this.scrollHost.addEventListener('pointerdown', this.handlePointerDown)
@@ -111,6 +125,12 @@ export class DomGridHost implements WebHost {
     this.pendingScrollbar = scrollbar
     if (this.scrollHost) {
       applyScrollbarTheme(this.scrollHost, scrollbar)
+    }
+    if (this.scrollbarCorner) {
+      const size = `${scrollbar.trackWidth}px`
+      this.scrollbarCorner.style.width = size
+      this.scrollbarCorner.style.height = size
+      this.scrollbarCorner.style.background = scrollbar.trackColor
     }
   }
 
@@ -176,6 +196,9 @@ export class DomGridHost implements WebHost {
 
     if (this.scrollHost?.parentNode === this.container) {
       this.container.removeChild(this.scrollHost)
+    }
+    if (this.scrollbarCorner?.parentNode === this.container) {
+      this.container.removeChild(this.scrollbarCorner)
     }
 
     this.container.style.position = this.originalPosition
