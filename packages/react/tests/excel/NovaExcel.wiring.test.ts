@@ -5,19 +5,23 @@ import type { NovaExcelRef } from '../../src'
 import type { ToolbarAction } from '../../src/features/toolbar'
 import {
   clickAction,
+  clickBody,
   clickControl,
+  clickElement,
   createDenseData,
   flushGridSelectionEffects,
+  flushReactEffects,
   isToolbarFillDefault,
+  runGridUpdate,
   isToolbarFillRed,
   mountNovaExcel,
   selectSingleCell,
   toolbarFillSwatchBackground,
 } from './helpers'
 
-function mountWiringExcel(onToolbarAction = mock((_action: ToolbarAction) => {})) {
+async function mountWiringExcel(onToolbarAction = mock((_action: ToolbarAction) => {})) {
   const ref = React.createRef<NovaExcelRef>()
-  const mounted = mountNovaExcel({
+  const mounted = await mountNovaExcel({
     data: createDenseData(),
     ref,
     onToolbarAction,
@@ -27,10 +31,12 @@ function mountWiringExcel(onToolbarAction = mock((_action: ToolbarAction) => {})
 
 describe('NovaExcel L3b toolbar wiring', () => {
   it('excel.L3b.undo-redo dispatches grid.undo and grid.redo', async () => {
-    const { container, ref, onToolbarAction, unmount } = mountWiringExcel()
+    const { container, ref, onToolbarAction, unmount } = await mountWiringExcel()
 
-    ref.current!.grid.insertRows(0, 1)
-    ref.current!.grid.insertRows(0, 1)
+    runGridUpdate(() => {
+      ref.current!.grid.insertRows(0, 1)
+      ref.current!.grid.insertRows(0, 1)
+    })
     await flushGridSelectionEffects()
 
     const undoSpy = spyOn(ref.current!.grid, 'undo')
@@ -42,6 +48,7 @@ describe('NovaExcel L3b toolbar wiring', () => {
 
     await Promise.resolve()
     clickAction(container, 'redo')
+    await flushReactEffects()
     expect(redoSpy).toHaveBeenCalled()
     expect(onToolbarAction).toHaveBeenCalledWith({ id: 'redo' })
 
@@ -49,18 +56,18 @@ describe('NovaExcel L3b toolbar wiring', () => {
   })
 
   it('excel.L3b.clipboard dispatches grid.copy cut and paste', async () => {
-    const { container, ref, unmount } = mountWiringExcel()
+    const { container, ref, unmount } = await mountWiringExcel()
 
     const copySpy = spyOn(ref.current!.grid, 'copy').mockResolvedValue(true)
     const cutSpy = spyOn(ref.current!.grid, 'cut').mockResolvedValue(true)
     const pasteSpy = spyOn(ref.current!.grid, 'paste').mockResolvedValue(true)
 
     clickAction(container, 'copy')
-    await Promise.resolve()
+    await flushReactEffects()
     clickAction(container, 'cut')
-    await Promise.resolve()
+    await flushReactEffects()
     clickAction(container, 'paste')
-    await Promise.resolve()
+    await flushReactEffects()
 
     expect(copySpy).toHaveBeenCalled()
     expect(cutSpy).toHaveBeenCalled()
@@ -70,17 +77,16 @@ describe('NovaExcel L3b toolbar wiring', () => {
   })
 
   it('excel.L3b.fill-color dispatches grid.setFillColor', async () => {
-    const { container, ref, onToolbarAction, unmount } = mountWiringExcel()
+    const { container, ref, onToolbarAction, unmount } = await mountWiringExcel()
 
     const setFillColorSpy = spyOn(ref.current!.grid, 'setFillColor').mockReturnValue(true)
 
     clickAction(container, 'fill-color')
-    await Promise.resolve()
+    await flushReactEffects()
 
-    const redSwatch = document.body.querySelector<HTMLButtonElement>('[data-fill-color="#ea4335"]')
-    expect(redSwatch).not.toBeNull()
-    redSwatch!.click()
-    await Promise.resolve()
+    expect(document.body.querySelector('[data-fill-color="#ea4335"]')).not.toBeNull()
+    clickBody('[data-fill-color="#ea4335"]')
+    await flushReactEffects()
 
     expect(setFillColorSpy).toHaveBeenCalled()
     expect(onToolbarAction).toHaveBeenCalledWith({ id: 'fill-color', color: '#ea4335' })
@@ -89,17 +95,16 @@ describe('NovaExcel L3b toolbar wiring', () => {
   })
 
   it('excel.L3b.borders dispatches grid.setBorders', async () => {
-    const { container, ref, onToolbarAction, unmount } = mountWiringExcel()
+    const { container, ref, onToolbarAction, unmount } = await mountWiringExcel()
 
     const setBordersSpy = spyOn(ref.current!.grid, 'setBorders').mockReturnValue(true)
 
     clickAction(container, 'borders')
-    await Promise.resolve()
+    await flushReactEffects()
 
-    const allPreset = document.body.querySelector<HTMLButtonElement>('[data-border-preset="all"]')
-    expect(allPreset).not.toBeNull()
-    allPreset!.click()
-    await Promise.resolve()
+    expect(document.body.querySelector('[data-border-preset="all"]')).not.toBeNull()
+    clickBody('[data-border-preset="all"]')
+    await flushReactEffects()
 
     expect(setBordersSpy).toHaveBeenCalled()
     expect(onToolbarAction).toHaveBeenCalledWith(
@@ -109,14 +114,16 @@ describe('NovaExcel L3b toolbar wiring', () => {
     unmount()
   })
 
-  it('excel.L3b.merge-cells dispatches grid.mergeCells', () => {
-    const { container, ref, onToolbarAction, unmount } = mountWiringExcel()
+  it('excel.L3b.merge-cells dispatches grid.mergeCells', async () => {
+    const { container, ref, onToolbarAction, unmount } = await mountWiringExcel()
 
     const mergeSpy = spyOn(ref.current!.grid, 'mergeCells').mockReturnValue(true)
 
-    container
-      .querySelector<HTMLButtonElement>('[data-action-id="merge-cells"][data-action-part="primary"]')!
-      .click()
+    clickElement(
+      container.querySelector<HTMLButtonElement>(
+        '[data-action-id="merge-cells"][data-action-part="primary"]',
+      )!,
+    )
 
     expect(mergeSpy).toHaveBeenCalled()
     expect(onToolbarAction).toHaveBeenCalledWith({ id: 'merge-cells', mode: 'all' })
@@ -125,17 +132,19 @@ describe('NovaExcel L3b toolbar wiring', () => {
   })
 
   it('excel.L3b.unmerge-cells dispatches grid.unmergeCells', async () => {
-    const { container, ref, onToolbarAction, unmount } = mountWiringExcel()
+    const { container, ref, onToolbarAction, unmount } = await mountWiringExcel()
 
     const unmergeSpy = spyOn(ref.current!.grid, 'unmergeCells').mockReturnValue(true)
 
-    container
-      .querySelector<HTMLButtonElement>('[data-action-id="merge-cells"][data-action-part="menu"]')!
-      .click()
-    await Promise.resolve()
+    clickElement(
+      container.querySelector<HTMLButtonElement>(
+        '[data-action-id="merge-cells"][data-action-part="menu"]',
+      )!,
+    )
+    await flushReactEffects()
 
-    document.body.querySelector<HTMLButtonElement>('[data-merge-mode="unmerge"]')!.click()
-    await Promise.resolve()
+    clickBody('[data-merge-mode="unmerge"]')
+    await flushReactEffects()
 
     expect(unmergeSpy).toHaveBeenCalled()
     expect(onToolbarAction).toHaveBeenCalledWith({ id: 'unmerge-cells' })
@@ -143,8 +152,8 @@ describe('NovaExcel L3b toolbar wiring', () => {
     unmount()
   })
 
-  it('excel.L3b.text-wrap dispatches grid.setTextWrap', () => {
-    const { container, ref, onToolbarAction, unmount } = mountWiringExcel()
+  it('excel.L3b.text-wrap dispatches grid.setTextWrap', async () => {
+    const { container, ref, onToolbarAction, unmount } = await mountWiringExcel()
 
     const setTextWrapSpy = spyOn(ref.current!.grid, 'setTextWrap').mockReturnValue(true)
 
@@ -157,14 +166,14 @@ describe('NovaExcel L3b toolbar wiring', () => {
   })
 
   it('excel.L3b.default-range-on-format applies format with default range', async () => {
-    const { container, ref, unmount } = mountWiringExcel()
+    const { container, ref, unmount } = await mountWiringExcel()
 
     const setFillColorSpy = spyOn(ref.current!.grid, 'setFillColor').mockReturnValue(true)
 
     clickAction(container, 'fill-color')
-    await Promise.resolve()
-    document.body.querySelector<HTMLButtonElement>('[data-fill-color="#ea4335"]')!.click()
-    await Promise.resolve()
+    await flushReactEffects()
+    clickBody('[data-fill-color="#ea4335"]')
+    await flushReactEffects()
 
     expect(setFillColorSpy).toHaveBeenCalledWith(
       { startRow: 0, endRow: 1, startCol: 0, endCol: 1 },
@@ -174,8 +183,8 @@ describe('NovaExcel L3b toolbar wiring', () => {
     unmount()
   })
 
-  it('excel.L3b.undo-disabled disables undo when canUndo is false', () => {
-    const { container, ref, unmount } = mountWiringExcel()
+  it('excel.L3b.undo-disabled disables undo when canUndo is false', async () => {
+    const { container, ref, unmount } = await mountWiringExcel()
 
     expect(ref.current!.grid.canUndo()).toBe(false)
 
@@ -188,7 +197,7 @@ describe('NovaExcel L3b toolbar wiring', () => {
   it('excel.L3b.selection-sync refreshes toolbar after selection change', async () => {
     const onSelectionChange = mock(() => {})
     const ref = React.createRef<NovaExcelRef>()
-    const { container, unmount } = mountNovaExcel({
+    const { container, unmount } = await mountNovaExcel({
       data: createDenseData(),
       ref,
       onSelectionChange,
@@ -197,9 +206,9 @@ describe('NovaExcel L3b toolbar wiring', () => {
     selectSingleCell(ref.current!.grid, 0, 0)
     await flushGridSelectionEffects()
     clickAction(container, 'fill-color')
-    await Promise.resolve()
-    document.body.querySelector<HTMLButtonElement>('[data-fill-color="#ea4335"]')!.click()
-    await Promise.resolve()
+    await flushReactEffects()
+    clickBody('[data-fill-color="#ea4335"]')
+    await flushReactEffects()
     expect(isToolbarFillRed(toolbarFillSwatchBackground(container))).toBe(true)
 
     selectSingleCell(ref.current!.grid, 1, 1)

@@ -1,19 +1,23 @@
 import { describe, expect, it } from 'bun:test'
 import React from 'react'
-import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 
 import { NovaSheetToolbar, defaultToolbarItems } from '../../../src'
 import type { ToolbarAction } from '../../../src'
+import {
+  clickBody,
+  clickElement,
+  flushReactEffects,
+  mountReactRoot,
+  unmountReactRoot,
+} from '../../helpers/dom'
 
 describe('NovaSheetToolbar', () => {
   it('renders the default compact spreadsheet toolbar controls', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(React.createElement(NovaSheetToolbar))
-    })
+    await mountReactRoot(root, React.createElement(NovaSheetToolbar))
 
     const toolbar = container.querySelector('[role="toolbar"]')
     expect(toolbar).not.toBeNull()
@@ -32,16 +36,14 @@ describe('NovaSheetToolbar', () => {
     expect(container.querySelector('[data-control-id="zoom"]')?.textContent).toContain('100%')
     expect(container.querySelector('[data-control-id="text-wrap"]')?.textContent).toContain('溢出')
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
-  it('shows Chinese native hover hints for toolbar controls', () => {
+  it('shows Chinese native hover hints for toolbar controls', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(React.createElement(NovaSheetToolbar))
-    })
+    await mountReactRoot(root, React.createElement(NovaSheetToolbar))
 
     const menuSearch = container.querySelector<HTMLInputElement>('input[aria-label="菜单搜索"]')
     const fillButton = container.querySelector<HTMLButtonElement>('[data-action-id="fill-color"]')
@@ -53,7 +55,7 @@ describe('NovaSheetToolbar', () => {
     expect(bordersButton?.getAttribute('title')).toBe('边框')
     expect(textWrapButton?.getAttribute('title')).toBe('文本换行')
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
   it('dispatches typed toolbar actions from command buttons', async () => {
@@ -61,20 +63,19 @@ describe('NovaSheetToolbar', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(
-        React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
-      )
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
+    )
 
     const copyButton = container.querySelector<HTMLButtonElement>('[data-action-id="copy"]')
     expect(copyButton).not.toBeNull()
 
-    copyButton!.click()
+    clickElement(copyButton!)
 
     expect(actions).toEqual([{ id: 'copy' }])
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
   it('opens a fill color palette and dispatches the selected swatch', async () => {
@@ -82,18 +83,17 @@ describe('NovaSheetToolbar', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(
-        React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
-      )
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
+    )
 
     const fillButton = container.querySelector<HTMLButtonElement>('[data-action-id="fill-color"]')
     expect(fillButton).not.toBeNull()
     expect(container.querySelector('[data-novasheet-fill-palette]')).toBeNull()
 
-    fillButton!.click()
-    await Promise.resolve()
+    clickElement(fillButton!)
+    await flushReactEffects()
 
     expect(document.body.querySelector('[data-novasheet-fill-palette]')).not.toBeNull()
     expect(document.body.querySelector('[data-novasheet-fill-palette]')?.textContent).toContain('重置')
@@ -105,13 +105,13 @@ describe('NovaSheetToolbar', () => {
     )
     expect(redSwatch).not.toBeNull()
 
-    redSwatch!.click()
-    await Promise.resolve()
+    clickElement(redSwatch!)
+    await flushReactEffects()
 
     expect(actions).toEqual([{ id: 'fill-color', color: '#ea4335' }])
     expect(document.body.querySelector('[data-novasheet-fill-palette]')).toBeNull()
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
   it('opens a border palette and dispatches the selected preset', async () => {
@@ -119,26 +119,23 @@ describe('NovaSheetToolbar', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(
-        React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
-      )
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
+    )
 
     const bordersButton = container.querySelector<HTMLButtonElement>('[data-action-id="borders"]')
     expect(bordersButton).not.toBeNull()
     expect(document.body.querySelector('[data-novasheet-border-palette]')).toBeNull()
 
-    bordersButton!.click()
-    await Promise.resolve()
+    clickElement(bordersButton!)
+    await flushReactEffects()
 
     expect(document.body.querySelector('[data-novasheet-border-palette]')).not.toBeNull()
 
-    const allPreset = document.body.querySelector<HTMLButtonElement>('[data-border-preset="all"]')
-    expect(allPreset).not.toBeNull()
-
-    allPreset!.click()
-    await Promise.resolve()
+    expect(document.body.querySelector('[data-border-preset="all"]')).not.toBeNull()
+    clickBody('[data-border-preset="all"]')
+    await flushReactEffects()
 
     expect(actions).toEqual([
       {
@@ -149,7 +146,7 @@ describe('NovaSheetToolbar', () => {
     ])
     expect(document.body.querySelector('[data-novasheet-border-palette]')).toBeNull()
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
   it('reapplies the last border preset when only the color changes', async () => {
@@ -157,33 +154,32 @@ describe('NovaSheetToolbar', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(
-        React.createElement(NovaSheetToolbar, {
-          state: {
-            borderStyle: { color: '#000000', width: 'thin', lineStyle: 'solid' },
-            lastBorderPreset: 'all',
-          },
-          onAction: (action) => actions.push(action),
-        }),
-      )
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, {
+        state: {
+          borderStyle: { color: '#000000', width: 'thin', lineStyle: 'solid' },
+          lastBorderPreset: 'all',
+        },
+        onAction: (action) => actions.push(action),
+      }),
+    )
 
     const bordersButton = container.querySelector<HTMLButtonElement>('[data-action-id="borders"]')
-    bordersButton!.click()
-    await Promise.resolve()
+    clickElement(bordersButton!)
+    await flushReactEffects()
 
     const colorToggle = document.body.querySelector<HTMLButtonElement>(
       '[data-novasheet-border-palette] button[title="边框颜色"]',
     )
     expect(colorToggle).not.toBeNull()
-    colorToggle!.click()
-    await Promise.resolve()
+    clickElement(colorToggle!)
+    await flushReactEffects()
 
     const redSwatch = document.body.querySelector<HTMLButtonElement>('[data-fill-color="#ea4335"]')
     expect(redSwatch).not.toBeNull()
-    redSwatch!.click()
-    await Promise.resolve()
+    clickElement(redSwatch!)
+    await flushReactEffects()
 
     expect(actions).toEqual([
       {
@@ -194,7 +190,7 @@ describe('NovaSheetToolbar', () => {
     ])
     expect(document.body.querySelector('[data-novasheet-border-palette]')).not.toBeNull()
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
   it('opens a merge menu and dispatches merge all or unmerge', async () => {
@@ -202,11 +198,10 @@ describe('NovaSheetToolbar', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(
-        React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
-      )
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
+    )
 
     const mergeMenuButton = container.querySelector<HTMLButtonElement>(
       '[data-action-id="merge-cells"][data-action-part="menu"]',
@@ -215,49 +210,46 @@ describe('NovaSheetToolbar', () => {
     expect(mergeMenuButton?.getAttribute('title')).toBe('合并单元格 菜单')
     expect(document.body.querySelector('[data-novasheet-merge-menu]')).toBeNull()
 
-    mergeMenuButton!.click()
-    await Promise.resolve()
+    clickElement(mergeMenuButton!)
+    await flushReactEffects()
 
     expect(document.body.querySelector('[data-novasheet-merge-menu]')).not.toBeNull()
 
-    const mergeAll = document.body.querySelector<HTMLButtonElement>('[data-merge-mode="all"]')
-    expect(mergeAll).not.toBeNull()
-    mergeAll!.click()
-    await Promise.resolve()
+    clickBody('[data-merge-mode="all"]')
+    await flushReactEffects()
 
     expect(actions).toEqual([{ id: 'merge-cells', mode: 'all' }])
     expect(document.body.querySelector('[data-novasheet-merge-menu]')).toBeNull()
 
-    mergeMenuButton!.click()
-    await Promise.resolve()
+    clickElement(mergeMenuButton!)
+    await flushReactEffects()
 
-    const unmerge = document.body.querySelector<HTMLButtonElement>('[data-merge-mode="unmerge"]')
-    expect(unmerge).not.toBeNull()
-    unmerge!.click()
-    await Promise.resolve()
+    clickBody('[data-merge-mode="unmerge"]')
+    await flushReactEffects()
 
     expect(actions).toEqual([
       { id: 'merge-cells', mode: 'all' },
       { id: 'unmerge-cells' },
     ])
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
-  it('dispatches merge-all from split-button primary click only', () => {
+  it('dispatches merge-all from split-button primary click only', async () => {
     const actions: ToolbarAction[] = []
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(
-        React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
-      )
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, { onAction: (action) => actions.push(action) }),
+    )
 
-    container
-      .querySelector<HTMLButtonElement>('[data-action-id="merge-cells"][data-action-part="primary"]')!
-      .click()
+    clickElement(
+      container.querySelector<HTMLButtonElement>(
+        '[data-action-id="merge-cells"][data-action-part="primary"]',
+      )!,
+    )
 
     expect(actions).toEqual([{ id: 'merge-cells', mode: 'all' }])
     expect(
@@ -265,23 +257,22 @@ describe('NovaSheetToolbar', () => {
     ).toBeNull()
     expect(container.querySelector('[data-action-id="borders"][data-action-part="primary"]')).toBeNull()
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
-  it('renders controlled state and suppresses disabled actions', () => {
+  it('renders controlled state and suppresses disabled actions', async () => {
     const actions: ToolbarAction[] = []
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(
-        React.createElement(NovaSheetToolbar, {
-          state: { zoom: '125%', textWrap: '换行' },
-          disabledActionIds: ['undo'],
-          onAction: (action) => actions.push(action),
-        }),
-      )
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, {
+        state: { zoom: '125%', textWrap: '换行' },
+        disabledActionIds: ['undo'],
+        onAction: (action) => actions.push(action),
+      }),
+    )
 
     expect(container.querySelector('[data-control-id="zoom"]')?.textContent).toContain('125%')
     expect(container.querySelector('[data-control-id="text-wrap"]')?.textContent).toContain('换行')
@@ -289,20 +280,18 @@ describe('NovaSheetToolbar', () => {
     const undoButton = container.querySelector<HTMLButtonElement>('[data-action-id="undo"]')
     expect(undoButton?.disabled).toBe(true)
 
-    undoButton!.click()
+    clickElement(undoButton!)
 
     expect(actions).toEqual([])
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
-  it('uses Tailwind class names instead of inline styles for toolbar primitives', () => {
+  it('uses Tailwind class names instead of inline styles for toolbar primitives', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(React.createElement(NovaSheetToolbar))
-    })
+    await mountReactRoot(root, React.createElement(NovaSheetToolbar))
 
     const toolbar = container.querySelector<HTMLElement>('[role="toolbar"]')
     const scrollRow = toolbar?.firstElementChild as HTMLElement | null
@@ -318,7 +307,7 @@ describe('NovaSheetToolbar', () => {
     expect(menuSearch?.getAttribute('style')).toBeNull()
     expect(menuSearch?.className).toContain('rounded-full')
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 })
 

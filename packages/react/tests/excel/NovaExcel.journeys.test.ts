@@ -4,9 +4,13 @@ import React from 'react'
 import type { NovaExcelRef } from '../../src'
 import {
   clickAction,
+  clickBody,
+  clickElement,
   createDenseData,
   flushGridSelectionEffects,
+  flushReactEffects,
   isToolbarFillRed,
+  runGridUpdate,
   mountNovaExcel,
   toolbarFillSwatchBackground,
 } from './helpers'
@@ -15,7 +19,7 @@ describe('NovaExcel L3c user journeys', () => {
   it('excel.L3c.fill-reflects-toolbar updates toolbar after fill color', async () => {
     const onToolbarAction = mock(() => {})
     const ref = React.createRef<NovaExcelRef>()
-    const { container, unmount } = mountNovaExcel({
+    const { container, unmount } = await mountNovaExcel({
       data: createDenseData(),
       ref,
       onToolbarAction,
@@ -24,9 +28,9 @@ describe('NovaExcel L3c user journeys', () => {
     expect(isToolbarFillRed(toolbarFillSwatchBackground(container))).toBe(false)
 
     clickAction(container, 'fill-color')
-    await Promise.resolve()
-    document.body.querySelector<HTMLButtonElement>('[data-fill-color="#ea4335"]')!.click()
-    await Promise.resolve()
+    await flushReactEffects()
+    clickBody('[data-fill-color="#ea4335"]')
+    await flushReactEffects()
 
     expect(onToolbarAction).toHaveBeenCalledWith({ id: 'fill-color', color: '#ea4335' })
     expect(isToolbarFillRed(toolbarFillSwatchBackground(container))).toBe(true)
@@ -36,27 +40,30 @@ describe('NovaExcel L3c user journeys', () => {
 
   it('excel.L3c.undo-button-state toggles undo disabled after undo stack changes', async () => {
     const ref = React.createRef<NovaExcelRef>()
-    const { container, unmount } = mountNovaExcel({ data: createDenseData(), ref })
+    const { container, unmount } = await mountNovaExcel({ data: createDenseData(), ref })
 
     const undoButton = () =>
       container.querySelector<HTMLButtonElement>('[data-action-id="undo"]')
 
     expect(undoButton()?.disabled).toBe(true)
 
-    ref.current!.grid.insertRows(0, 1)
+    runGridUpdate(() => {
+      ref.current!.grid.insertRows(0, 1)
+    })
     await flushGridSelectionEffects()
+    await flushReactEffects()
     expect(undoButton()?.disabled).toBe(false)
 
-    undoButton()!.click()
+    clickElement(undoButton()!)
     await flushGridSelectionEffects()
     expect(undoButton()?.disabled).toBe(true)
 
     unmount()
   })
 
-  it('excel.L3c.no-toolbar-grid-ref keeps ref usable without toolbar', () => {
+  it('excel.L3c.no-toolbar-grid-ref keeps ref usable without toolbar', async () => {
     const ref = React.createRef<NovaExcelRef>()
-    const { unmount } = mountNovaExcel({ data: createDenseData(), showToolbar: false, ref })
+    const { unmount } = await mountNovaExcel({ data: createDenseData(), showToolbar: false, ref })
 
     expect(() => ref.current!.scrollToCell(0, 'name')).not.toThrow()
     expect(ref.current!.grid).toBeDefined()
@@ -64,9 +71,9 @@ describe('NovaExcel L3c user journeys', () => {
     unmount()
   })
 
-  it('excel.L3c.sparse-ref-grid exposes grid on sparse default mount', () => {
+  it('excel.L3c.sparse-ref-grid exposes grid on sparse default mount', async () => {
     const ref = React.createRef<NovaExcelRef>()
-    const { unmount } = mountNovaExcel({ ref })
+    const { unmount } = await mountNovaExcel({ ref })
 
     expect(ref.current?.grid).toBeDefined()
 
@@ -78,7 +85,7 @@ describe('NovaExcel L3c user journeys', () => {
     const onRedo = mock(() => {})
     const onToolbarAction = mock(() => {})
     const ref = React.createRef<NovaExcelRef>()
-    const { container, unmount } = mountNovaExcel({
+    const { container, unmount } = await mountNovaExcel({
       data: createDenseData(),
       ref,
       onUndo,
@@ -86,13 +93,16 @@ describe('NovaExcel L3c user journeys', () => {
       onToolbarAction,
     })
 
-    ref.current!.grid.insertRows(0, 1)
-    ref.current!.grid.insertRows(0, 1)
+    runGridUpdate(() => {
+      ref.current!.grid.insertRows(0, 1)
+      ref.current!.grid.insertRows(0, 1)
+    })
     await flushGridSelectionEffects()
+    await flushReactEffects()
     onToolbarAction.mockClear()
 
     clickAction(container, 'undo')
-    await Promise.resolve()
+    await flushReactEffects()
     clickAction(container, 'redo')
 
     expect(onToolbarAction).toHaveBeenCalledWith({ id: 'undo' })

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
+import { renderStoryHost, unmountReactRoot } from '../react-test-helpers'
 import { NovaExcelOutOfTheBox } from './NovaExcel.stories'
 
 describe('NovaExcel Storybook stories', () => {
@@ -7,10 +8,11 @@ describe('NovaExcel Storybook stories', () => {
     const render = NovaExcelOutOfTheBox.render
     expect(render).toBeDefined()
 
-    const host = render!({}, {} as never) as HTMLElement & {
+    const host = (await renderStoryHost(
+      () => render!({}, {} as never) as HTMLElement,
+    )) as HTMLElement & {
       __excelWorkspaceData: { getRowCount(): number; getSchema(): { fields: readonly unknown[] } }
     }
-    await Promise.resolve()
 
     expect(host.querySelector('[data-novasheet-react-excel]')).not.toBeNull()
     expect(host.querySelector('[data-novasheet-react-grid]')).not.toBeNull()
@@ -19,6 +21,6 @@ describe('NovaExcel Storybook stories', () => {
     expect(host.__excelWorkspaceData.getRowCount()).toBe(1_000)
     expect(host.__excelWorkspaceData.getSchema().fields).toHaveLength(26)
 
-    ;(host as unknown as { __reactRoot: { unmount(): void } }).__reactRoot.unmount()
+    unmountReactRoot((host as unknown as { __reactRoot: { unmount(): void } }).__reactRoot)
   })
 })

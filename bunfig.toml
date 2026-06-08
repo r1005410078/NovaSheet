@@ -11,4 +11,5 @@ registry = "https://registry.npmjs.org/"
 preload = [
   "./packages/core/tests/setup.ts",
   "./packages/canvas2d/tests/setup.ts",
+  "./packages/react/tests/setup.ts",
 ]

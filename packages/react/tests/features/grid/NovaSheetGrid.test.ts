@@ -2,11 +2,11 @@ import { describe, expect, it } from 'bun:test'
 import { InMemoryDataSource } from '@novasheet/core'
 import type { Grid } from '@novasheet/core'
 import React from 'react'
-import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 
 import { NovaSheetGrid } from '../../../src'
 import type { NovaSheetGridRef } from '../../../src'
+import { mountReactRoot, unmountReactRoot } from '../../helpers/dom'
 
 function createData(): InMemoryDataSource {
   return new InMemoryDataSource({
@@ -24,44 +24,39 @@ function createData(): InMemoryDataSource {
 }
 
 describe('NovaSheetGrid', () => {
-  it('mounts a core Grid with the default canvas2d backend', () => {
+  it('mounts a core Grid with the default canvas2d backend', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(React.createElement(NovaSheetGrid, { data: createData() }))
-    })
+    await mountReactRoot(root, React.createElement(NovaSheetGrid, { data: createData() }))
 
     expect(container.querySelector('[data-novasheet-react-grid]')).not.toBeNull()
     expect(container.querySelector('canvas')).not.toBeNull()
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
-  it('destroys the Grid when the React component unmounts', () => {
+  it('destroys the Grid when the React component unmounts', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
-    flushSync(() => {
-      root.render(React.createElement(NovaSheetGrid, { data: createData() }))
-    })
+    await mountReactRoot(root, React.createElement(NovaSheetGrid, { data: createData() }))
     expect(container.querySelector('canvas')).not.toBeNull()
 
-    flushSync(() => {
-      root.unmount()
-    })
+    unmountReactRoot(root)
 
     expect(container.querySelector('canvas')).toBeNull()
   })
 
-  it('exposes the core Grid facade through ref', () => {
+  it('exposes the core Grid facade through ref', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
     const ref = React.createRef<NovaSheetGridRef>()
 
-    flushSync(() => {
-      root.render(React.createElement(NovaSheetGrid, { data: createData(), ref }))
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetGrid, { data: createData(), ref }),
+    )
 
     expect(ref.current?.grid).toBeDefined()
     expect(typeof ref.current?.refresh).toBe('function')
@@ -71,29 +66,31 @@ describe('NovaSheetGrid', () => {
 
     ref.current!.setColumnWidth('name', 180)
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 
-  it('updates data through the existing Grid instance', () => {
+  it('updates data through the existing Grid instance', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
     const ref = React.createRef<NovaSheetGridRef>()
     const firstData = createData()
     const nextData = createData()
 
-    flushSync(() => {
-      root.render(React.createElement(NovaSheetGrid, { data: firstData, ref }))
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetGrid, { data: firstData, ref }),
+    )
     const firstGrid = ref.current!.grid
     const firstCanvas = container.querySelector('canvas')
 
-    flushSync(() => {
-      root.render(React.createElement(NovaSheetGrid, { data: nextData, ref }))
-    })
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetGrid, { data: nextData, ref }),
+    )
 
     expect(ref.current!.grid).toBe(firstGrid)
     expect(container.querySelector('canvas')).toBe(firstCanvas)
 
-    root.unmount()
+    unmountReactRoot(root)
   })
 })

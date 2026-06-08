@@ -7,6 +7,10 @@ import { act } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
 
+import { clickElement, clickBody, flushReactEffects } from '../helpers/dom'
+
+export { clickElement, clickBody, flushReactEffects }
+
 export function createDenseData(): InMemoryDataSource {
   return new InMemoryDataSource({
     schema: {
@@ -29,15 +33,18 @@ export interface MountedNovaExcel {
 }
 
 /** Mount NovaExcel in a detached container; caller must call `unmount()`. */
-export function mountNovaExcel(
+export async function mountNovaExcel(
   props: Omit<NovaExcelProps, 'ref'> & { ref?: React.RefObject<NovaExcelRef> } = {},
-): MountedNovaExcel & { unmount: () => void } {
+): Promise<MountedNovaExcel & { unmount: () => void }> {
   const container = document.createElement('div')
   const root = createRoot(container)
   const ref = props.ref ?? React.createRef<NovaExcelRef>()
 
-  flushSync(() => {
-    root.render(React.createElement(NovaExcel, { ...props, ref }))
+  await act(async () => {
+    flushSync(() => {
+      root.render(React.createElement(NovaExcel, { ...props, ref }))
+    })
+    await Promise.resolve()
   })
 
   return {
@@ -45,7 +52,9 @@ export function mountNovaExcel(
     root,
     ref,
     unmount: () => {
-      flushSync(() => root.unmount())
+      act(() => {
+        flushSync(() => root.unmount())
+      })
       for (const selector of [
         '[data-novasheet-fill-palette]',
         '[data-novasheet-border-palette]',
@@ -60,7 +69,14 @@ export function mountNovaExcel(
 export function clickAction(container: ParentNode, actionId: string): void {
   const button = container.querySelector<HTMLButtonElement>(`[data-action-id="${actionId}"]`)
   if (!button) throw new Error(`action button not found: ${actionId}`)
-  button.click()
+  clickElement(button)
+}
+
+/** Run a grid mutation that may synchronously notify React (onRowsInserted, onSelectionChange, …). */
+export function runGridUpdate(update: () => void): void {
+  act(() => {
+    update()
+  })
 }
 
 /** Set a single-cell selection; range end indices are inclusive (core convention). */
@@ -83,7 +99,7 @@ export function selectSingleCell(grid: Grid, rowIndex: number, colIndex: number)
 export function clickControl(container: ParentNode, controlId: string): void {
   const control = container.querySelector<HTMLElement>(`[data-control-id="${controlId}"]`)
   if (!control) throw new Error(`toolbar control not found: ${controlId}`)
-  control.click()
+  clickElement(control)
 }
 
 /** Inline `backgroundColor` on the fill-color toolbar swatch bar (FillColorIcon). */
