@@ -5,9 +5,9 @@ import type { NovaExcelRef } from '../../src'
 import {
   clickAction,
   createDenseData,
+  flushGridSelectionEffects,
   isToolbarFillRed,
   mountNovaExcel,
-  syncToolbarViaFill,
   toolbarFillSwatchBackground,
 } from './helpers'
 
@@ -43,11 +43,12 @@ describe('NovaExcel L3c user journeys', () => {
 
     expect(undoButton()?.disabled).toBe(true)
 
-    await syncToolbarViaFill(container)
+    ref.current!.grid.insertRows(0, 1)
+    await flushGridSelectionEffects()
     expect(undoButton()?.disabled).toBe(false)
 
     undoButton()!.click()
-    await Promise.resolve()
+    await flushGridSelectionEffects()
     expect(undoButton()?.disabled).toBe(true)
 
     unmount()
@@ -87,7 +88,7 @@ describe('NovaExcel L3c user journeys', () => {
 
     ref.current!.grid.insertRows(0, 1)
     ref.current!.grid.insertRows(0, 1)
-    await syncToolbarViaFill(container)
+    await flushGridSelectionEffects()
     onToolbarAction.mockClear()
 
     clickAction(container, 'undo')

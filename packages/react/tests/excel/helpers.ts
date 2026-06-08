@@ -80,14 +80,6 @@ export function selectSingleCell(grid: Grid, rowIndex: number, colIndex: number)
   })
 }
 
-/** Toolbar actions call syncToolbarState; use after programmatic grid mutations in tests. */
-export async function syncToolbarViaFill(container: ParentNode): Promise<void> {
-  clickAction(container, 'fill-color')
-  await Promise.resolve()
-  document.body.querySelector<HTMLButtonElement>('[data-fill-color="#ea4335"]')!.click()
-  await Promise.resolve()
-}
-
 export function clickControl(container: ParentNode, controlId: string): void {
   const control = container.querySelector<HTMLElement>(`[data-control-id="${controlId}"]`)
   if (!control) throw new Error(`toolbar control not found: ${controlId}`)
@@ -116,7 +108,7 @@ export function isToolbarFillDefault(background: string): boolean {
 /** Grid selection changes notify via FrameScheduler → rAF; flush before toolbar DOM assertions. */
 export async function flushGridSelectionEffects(): Promise<void> {
   await act(async () => {
-    await new Promise<void>((resolve) => requestAnimationFrame(resolve))
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     await Promise.resolve()
   })
 }

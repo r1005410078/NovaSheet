@@ -12,7 +12,6 @@ import {
   isToolbarFillRed,
   mountNovaExcel,
   selectSingleCell,
-  syncToolbarViaFill,
   toolbarFillSwatchBackground,
 } from './helpers'
 
@@ -32,7 +31,7 @@ describe('NovaExcel L3b toolbar wiring', () => {
 
     ref.current!.grid.insertRows(0, 1)
     ref.current!.grid.insertRows(0, 1)
-    await syncToolbarViaFill(container)
+    await flushGridSelectionEffects()
 
     const undoSpy = spyOn(ref.current!.grid, 'undo')
     const redoSpy = spyOn(ref.current!.grid, 'redo')
@@ -196,7 +195,11 @@ describe('NovaExcel L3b toolbar wiring', () => {
     })
 
     selectSingleCell(ref.current!.grid, 0, 0)
-    await syncToolbarViaFill(container)
+    await flushGridSelectionEffects()
+    clickAction(container, 'fill-color')
+    await Promise.resolve()
+    document.body.querySelector<HTMLButtonElement>('[data-fill-color="#ea4335"]')!.click()
+    await Promise.resolve()
     expect(isToolbarFillRed(toolbarFillSwatchBackground(container))).toBe(true)
 
     selectSingleCell(ref.current!.grid, 1, 1)
