@@ -36,7 +36,7 @@
 | --- | --- | --- |
 | **TDD** | **继续** — `kernel/`、`features/`、`engine/` 驱动实现 | 不适用 |
 | **行为测试** | **暂缓** — 不扩 Grid 门面 E2E / `acceptance` | **`tests/excel/` 主战场** |
-| **场景结构覆盖率** | — | **`lint:scenario-coverage`**（读 mbd 导出的 manifest，非 mbd CLI） |
+| **场景结构覆盖率** | — | **`lint:scenario-coverage`**（读 mbd 导出的 manifest，非 mbd CLI；missing 与 orphan 均 fail） |
 
 完整分层见：[`docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md`](../../../docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md)（含 Phase 0 节与附录 C）。场景 MD 由 [`@novasheet/mbd`](../../../docs/superpowers/specs/2026-06-09-novasheet-mbd-package-design.md) 导出 `scenarios.manifest.json`；**场景结构覆盖率**由本包 `lint:scenario-coverage`（实现期，`scripts/check-scenario-coverage.ts` 读 manifest）计算，**不在 mbd 包**。
 
@@ -57,6 +57,7 @@
 1. **引擎语义**（paste 写入、undo 还原 rowCount、sort×delete）→ Core TDD 或未来 L2；**不写进** `tests/excel/` 深断言
 2. **产品组合**（toolbar 是否调对 `grid.*`、回调是否触发、UI 状态是否同步）→ **`tests/excel/`**
 3. 跨端 DOM 契约以规格附录为准；`data-novasheet-react-excel` 实现期统一为 `data-novasheet-excel`
+4. 程序化 Grid mutation 后的 toolbar 同步由 `NovaExcel` 的 compose 回调负责（先调用用户回调，再触发 toolbar state sync）
 
 ## 新增 Public API 流程
 

@@ -10,6 +10,7 @@
 ## Phase 0 — 当前执行范围
 
 核心库 API 与 decomposition 仍在演进，**产品行为先在 `NovaExcel` 组合层用大行为测试定型**；等功能冻结后再启用本文 §4–§7 的 L0–L2 中央合规（`packages/acceptance`）。
+截至 2026-06-10，excel 行为测试 21 条场景 bootstrap 已完成，且 toolbar 同步、orphan lint、测试卫生巩固已按 `2026-06-10-novasheet-react-behavioral-testing-consolidation-design.md` 落地。
 
 ### 两类测试，不可混用
 

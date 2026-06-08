@@ -91,6 +91,6 @@
 | 风险 | 处理 |
 | --- | --- |
 | toolbar undo 不触发 `onUndo` prop | 实测 `grid.undo()` 经 runtime 会触发 `onUndo`；已通过 |
-| 程序化 mutation 后 undo 按钮态不同步 | 测试用 `syncToolbarViaFill` 触发 toolbar sync；产品侧待后续改进 |
+| 程序化 mutation 后 undo 按钮态不同步 | **已解决**：`syncToolbarViaFill` 已移除，改为 NovaExcel compose 回调同步 toolbar；详见 `2026-06-10-novasheet-react-behavioral-testing-consolidation-design.md` |
 | fill/borders 需 palette 交互 | 复用 `NovaSheetToolbar.test.ts` 点击模式 |
 | `it` title 与 manifest id 不一致 | 以 manifest 为准，coverage 脚本精确前缀匹配 |
