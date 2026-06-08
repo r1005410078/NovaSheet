@@ -5,6 +5,7 @@ import type { ReactElement } from 'react'
 import { NovaSheetGrid, type NovaSheetGridRef } from '@/features/grid'
 import { NovaSheetToolbar } from '@/features/toolbar'
 import { cn } from '@/lib/utils'
+import { composeGridCallback } from './composeGridCallback'
 import type { NovaExcelProps, NovaExcelRef } from './types'
 import { useNovaExcelToolbar } from './useNovaExcelToolbar'
 
@@ -29,6 +30,14 @@ export const NovaExcel = forwardRef<NovaExcelRef, NovaExcelProps>(function NovaE
     onSelectionChange,
     onUndo,
     onRedo,
+    onCopy,
+    onCut,
+    onPaste,
+    onFill,
+    onRowsInserted,
+    onRowsDeleted,
+    onColumnsInserted,
+    onColumnsDeleted,
     data,
     ...gridProps
   } = props
@@ -54,6 +63,7 @@ export const NovaExcel = forwardRef<NovaExcelRef, NovaExcelProps>(function NovaE
       getGrid,
       onToolbarAction,
     })
+  const syncIfToolbar = showToolbar ? syncToolbarState : () => {}
 
   useImperativeHandle(
     ref,
@@ -106,17 +116,25 @@ export const NovaExcel = forwardRef<NovaExcelRef, NovaExcelProps>(function NovaE
           excelHeaders={excelHeaders}
           excelWorkspace={excelWorkspace}
           className={cn('h-full w-full', gridClassName)}
+          onCopy={onCopy}
+          onCut={composeGridCallback(onCut, syncIfToolbar)}
+          onPaste={composeGridCallback(onPaste, syncIfToolbar)}
+          onFill={composeGridCallback(onFill, syncIfToolbar)}
+          onRowsInserted={composeGridCallback(onRowsInserted, syncIfToolbar)}
+          onRowsDeleted={composeGridCallback(onRowsDeleted, syncIfToolbar)}
+          onColumnsInserted={composeGridCallback(onColumnsInserted, syncIfToolbar)}
+          onColumnsDeleted={composeGridCallback(onColumnsDeleted, syncIfToolbar)}
           onSelectionChange={(selection) => {
             onSelectionChange?.(selection)
-            syncToolbarState()
+            syncIfToolbar()
           }}
           onUndo={(event) => {
             onUndo?.(event)
-            syncToolbarState()
+            syncIfToolbar()
           }}
           onRedo={(event) => {
             onRedo?.(event)
-            syncToolbarState()
+            syncIfToolbar()
           }}
         />
       </div>
