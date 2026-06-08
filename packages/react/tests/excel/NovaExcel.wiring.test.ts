@@ -7,9 +7,13 @@ import {
   clickAction,
   clickControl,
   createDenseData,
+  flushGridSelectionEffects,
+  isToolbarFillDefault,
+  isToolbarFillRed,
   mountNovaExcel,
   selectSingleCell,
   syncToolbarViaFill,
+  toolbarFillSwatchBackground,
 } from './helpers'
 
 function mountWiringExcel(onToolbarAction = mock((_action: ToolbarAction) => {})) {
@@ -191,10 +195,16 @@ describe('NovaExcel L3b toolbar wiring', () => {
       onSelectionChange,
     })
 
-    await syncToolbarViaFill(container)
     selectSingleCell(ref.current!.grid, 0, 0)
+    await syncToolbarViaFill(container)
+    expect(isToolbarFillRed(toolbarFillSwatchBackground(container))).toBe(true)
+
+    selectSingleCell(ref.current!.grid, 1, 1)
+    await flushGridSelectionEffects()
 
     expect(onSelectionChange).toHaveBeenCalled()
+    expect(isToolbarFillDefault(toolbarFillSwatchBackground(container))).toBe(true)
+    expect(container.querySelector('[data-action-id="text-wrap"]')?.textContent).toContain('溢出')
 
     const undoButton = container.querySelector<HTMLButtonElement>('[data-action-id="undo"]')
     expect(undoButton?.disabled).toBe(false)

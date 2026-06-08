@@ -46,6 +46,13 @@ export function mountNovaExcel(
     ref,
     unmount: () => {
       flushSync(() => root.unmount())
+      for (const selector of [
+        '[data-novasheet-fill-palette]',
+        '[data-novasheet-border-palette]',
+        '[data-novasheet-merge-menu]',
+      ]) {
+        document.body.querySelector(selector)?.remove()
+      }
     },
   }
 }
@@ -85,4 +92,31 @@ export function clickControl(container: ParentNode, controlId: string): void {
   const control = container.querySelector<HTMLElement>(`[data-control-id="${controlId}"]`)
   if (!control) throw new Error(`toolbar control not found: ${controlId}`)
   control.click()
+}
+
+/** Inline `backgroundColor` on the fill-color toolbar swatch bar (FillColorIcon). */
+export function toolbarFillSwatchBackground(container: ParentNode): string {
+  const fillButton = container.querySelector('[data-action-id="fill-color"]')
+  if (!fillButton) return ''
+  for (const span of fillButton.querySelectorAll('span')) {
+    const bg = (span as HTMLElement).style.backgroundColor
+    if (bg) return bg
+  }
+  return ''
+}
+
+export function isToolbarFillRed(background: string): boolean {
+  return /^(#ea4335|rgb\(234,\s*67,\s*53\))$/i.test(background)
+}
+
+export function isToolbarFillDefault(background: string): boolean {
+  return background === '' || /^(#fff2cc|rgb\(255,\s*242,\s*204\))$/i.test(background)
+}
+
+/** Grid selection changes notify via FrameScheduler → rAF; flush before toolbar DOM assertions. */
+export async function flushGridSelectionEffects(): Promise<void> {
+  await act(async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(resolve))
+    await Promise.resolve()
+  })
 }

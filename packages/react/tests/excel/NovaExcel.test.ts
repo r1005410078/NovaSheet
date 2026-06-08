@@ -19,10 +19,16 @@ describe('NovaExcel L3a shell', () => {
   })
 
   it('excel.L3a.sparse-default mounts internal sparse workspace when data omitted', () => {
-    const { container, unmount } = mountNovaExcel()
+    const ref = React.createRef<NovaExcelRef>()
+    const { container, unmount } = mountNovaExcel({ ref })
 
     expect(container.querySelector('[data-novasheet-react-excel]')).not.toBeNull()
     expect(container.querySelector('canvas')).not.toBeNull()
+
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLElement
+    expect(scrollHost.scrollLeft).toBe(0)
+    ref.current!.scrollToCell(0, 'Z')
+    expect(scrollHost.scrollLeft).toBeGreaterThan(0)
 
     unmount()
   })

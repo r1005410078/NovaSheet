@@ -2,7 +2,14 @@ import { describe, expect, it, mock } from 'bun:test'
 import React from 'react'
 
 import type { NovaExcelRef } from '../../src'
-import { clickAction, createDenseData, mountNovaExcel, syncToolbarViaFill } from './helpers'
+import {
+  clickAction,
+  createDenseData,
+  isToolbarFillRed,
+  mountNovaExcel,
+  syncToolbarViaFill,
+  toolbarFillSwatchBackground,
+} from './helpers'
 
 describe('NovaExcel L3c user journeys', () => {
   it('excel.L3c.fill-reflects-toolbar updates toolbar after fill color', async () => {
@@ -14,12 +21,15 @@ describe('NovaExcel L3c user journeys', () => {
       onToolbarAction,
     })
 
+    expect(isToolbarFillRed(toolbarFillSwatchBackground(container))).toBe(false)
+
     clickAction(container, 'fill-color')
     await Promise.resolve()
     document.body.querySelector<HTMLButtonElement>('[data-fill-color="#ea4335"]')!.click()
     await Promise.resolve()
 
     expect(onToolbarAction).toHaveBeenCalledWith({ id: 'fill-color', color: '#ea4335' })
+    expect(isToolbarFillRed(toolbarFillSwatchBackground(container))).toBe(true)
 
     unmount()
   })
