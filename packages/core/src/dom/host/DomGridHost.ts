@@ -126,17 +126,31 @@ export class DomGridHost implements WebHost {
     if (this.scrollHost) {
       applyScrollbarTheme(this.scrollHost, scrollbar)
     }
-    if (this.scrollbarCorner) {
-      const size = `${scrollbar.trackWidth}px`
-      this.scrollbarCorner.style.width = size
-      this.scrollbarCorner.style.height = size
-      this.scrollbarCorner.style.background = scrollbar.trackColor
-    }
+    this.updateScrollbarCorner()
+  }
+
+  /**
+   * 角元素只在**两个经典滚动条都真实占用布局空间时**显示，按实测厚度尺寸。
+   * overlay 滚动条（macOS 自动隐藏）或单轴/无溢出时实测为 0 → 角隐藏，
+   * 避免一个常驻不透明色块盖住画布右下角（trackColor 不透明时尤其明显）。
+   */
+  private updateScrollbarCorner(): void {
+    if (!this.scrollbarCorner || !this.scrollHost) return
+    const vScrollbar = this.scrollHost.offsetWidth - this.scrollHost.clientWidth
+    const hScrollbar = this.scrollHost.offsetHeight - this.scrollHost.clientHeight
+    const show = vScrollbar > 0 && hScrollbar > 0
+    this.scrollbarCorner.style.width = show ? `${vScrollbar}px` : '0px'
+    this.scrollbarCorner.style.height = show ? `${hScrollbar}px` : '0px'
+    this.scrollbarCorner.style.background = show
+      ? (this.pendingScrollbar?.trackColor ?? 'transparent')
+      : 'transparent'
   }
 
   setScrollSize(width: number, height: number): void {
     this.scrollSpacer.style.width = `${width}px`
     this.scrollSpacer.style.height = `${height}px`
+    // spacer 变化可能令滚动条出现/消失 → 重算角可见性。
+    this.updateScrollbarCorner()
   }
 
   scrollTo(scrollTop: number, scrollLeft: number): void {
@@ -210,6 +224,8 @@ export class DomGridHost implements WebHost {
     const { width, height } = this.getContainerSize()
     this.currentDpr = window.devicePixelRatio || 1
     this.onResize(width, height, this.currentDpr)
+    // 容器尺寸变化可能令滚动条出现/消失 → 重算角可见性。
+    this.updateScrollbarCorner()
   }
 
   private handlePointerDown = (event: PointerEvent): void => {

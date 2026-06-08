@@ -163,6 +163,70 @@ describe('DomGridHost — pointer events', () => {
   })
 })
 
+describe('DomGridHost — 滚动条交汇角', () => {
+  const scrollbarTheme = {
+    trackWidth: 15,
+    trackColor: '#f8f9fa',
+    thumbColor: '#bdc1c6',
+    thumbHoverColor: '#9aa0a6',
+    borderRadius: 8,
+  }
+
+  function makeAttachedHost() {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const host = new DomGridHost({
+      container,
+      scheduler: new FrameScheduler(),
+      onScroll: () => {},
+      onResize: () => {},
+    })
+    host.attach()
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLDivElement
+    const corner = container.querySelector('[data-novasheet-scrollbar-corner]') as HTMLDivElement
+    return { container, host, scrollHost, corner }
+  }
+
+  function stubScrollbars(scrollHost: HTMLElement, vScrollbar: number, hScrollbar: number) {
+    Object.defineProperty(scrollHost, 'offsetWidth', { value: 400, configurable: true })
+    Object.defineProperty(scrollHost, 'clientWidth', { value: 400 - vScrollbar, configurable: true })
+    Object.defineProperty(scrollHost, 'offsetHeight', { value: 300, configurable: true })
+    Object.defineProperty(scrollHost, 'clientHeight', { value: 300 - hScrollbar, configurable: true })
+  }
+
+  it('两个经典滚动条都存在时按实测厚度显示角并填主题色', () => {
+    const { container, host, scrollHost, corner } = makeAttachedHost()
+    stubScrollbars(scrollHost, 15, 15)
+    host.applyScrollbarTheme(scrollbarTheme)
+    expect(corner.style.width).toBe('15px')
+    expect(corner.style.height).toBe('15px')
+    expect(corner.style.background).toBe('#f8f9fa')
+    host.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('overlay / 无溢出（实测厚度为 0）时角隐藏，不盖画布右下角', () => {
+    const { container, host, scrollHost, corner } = makeAttachedHost()
+    stubScrollbars(scrollHost, 0, 0)
+    host.applyScrollbarTheme(scrollbarTheme)
+    expect(corner.style.width).toBe('0px')
+    expect(corner.style.height).toBe('0px')
+    expect(corner.style.background).toBe('transparent')
+    host.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('仅单轴滚动条时角隐藏', () => {
+    const { container, host, scrollHost, corner } = makeAttachedHost()
+    stubScrollbars(scrollHost, 15, 0)
+    host.applyScrollbarTheme(scrollbarTheme)
+    expect(corner.style.width).toBe('0px')
+    expect(corner.style.background).toBe('transparent')
+    host.destroy()
+    document.body.removeChild(container)
+  })
+})
+
 describe('DomGridHost — contextmenu', () => {
   it('contextmenu on scroll-host invokes onContextMenu with local coords + clientX/Y', () => {
     const container = document.createElement('div')

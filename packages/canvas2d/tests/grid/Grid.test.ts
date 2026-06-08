@@ -216,16 +216,18 @@ describe('Grid — 浏览器门面', () => {
     grid.destroy()
   })
 
-  it('scroll-host 右下角使用主题色填充滚动条 corner 缺口', () => {
+  it('scroll-host 右下角存在 corner 元素，无实际滚动条时隐藏（不盖画布）', () => {
     const el = document.createElement('div')
     const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
     const corner = el.querySelector('[data-novasheet-scrollbar-corner]') as HTMLElement | null
     expect(corner).not.toBeNull()
     expect(corner!.style.right).toBe('0px')
     expect(corner!.style.bottom).toBe('0px')
-    expect(corner!.style.width).toBe('15px')
-    expect(corner!.style.height).toBe('15px')
-    expect(corner!.style.background).toBe('#f8f9fa')
+    // happy-dom 无布局 → offsetWidth==clientWidth → 测不到经典滚动条 → 角隐藏。
+    // 仅当两轴经典滚动条都真实占位时才显示（见 DomGridHost 单测）。
+    expect(corner!.style.width).toBe('0px')
+    expect(corner!.style.height).toBe('0px')
+    expect(corner!.style.background).toBe('transparent')
     grid.destroy()
   })
 
