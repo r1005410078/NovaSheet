@@ -39,7 +39,8 @@
     "version-packages": "changeset version",
     "release": "bun run lint && bun run typecheck && bun test && bun run build && changeset publish",
     "storybook": "bun run --filter @novasheet/storybook storybook",
-    "build-storybook": "bun run --filter @novasheet/storybook build-storybook"
+    "build-storybook": "bun run --filter @novasheet/storybook build-storybook",
+    "sync:mbd-manifest": "bun run --filter @novasheet/mbd mbd manifest"
   },
   "trustedDependencies": [
     "esbuild"
