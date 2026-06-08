@@ -25,6 +25,7 @@ export interface ScenarioCoverageOptions {
   readonly manifestPath: string
   readonly testRoots: readonly string[]
   readonly failOnMissing?: boolean
+  readonly failOnOrphans?: boolean
   readonly warnOrphans?: boolean
 }
 
@@ -134,6 +135,11 @@ export async function runScenarioCoverageCheck(
     console.warn(`warning: ${report.orphan.length} orphan scenario id(s) in tests`)
   }
 
+  if (options.failOnOrphans && report.orphan.length > 0) {
+    console.error(`${report.orphan.length} orphan scenario id(s) exist in tests`)
+    return 1
+  }
+
   if (report.missing.length > 0) {
     const message = `${report.missing.length} manifest scenario(s) lack matching test titles`
     if (options.failOnMissing) {
@@ -153,10 +159,12 @@ function packageRoot(): string {
 if ((import.meta as { main?: boolean }).main) {
   const root = packageRoot()
   const failOnMissing = process.argv.includes('--fail-on-missing')
+  const failOnOrphans = process.argv.includes('--fail-on-orphan')
   const code = await runScenarioCoverageCheck({
     manifestPath: join(root, 'tests/excel/scenarios.manifest.json'),
     testRoots: [join(root, 'tests/excel')],
     failOnMissing,
+    failOnOrphans,
   })
   process.exit(code)
 }

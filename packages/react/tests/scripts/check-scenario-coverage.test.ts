@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'bun:test'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import type { ScenarioManifest } from '@novasheet/mbd'
 
 import {
   computeScenarioCoverage,
+  runScenarioCoverageCheck,
   scanScenarioIdsFromSource,
 } from '../../scripts/check-scenario-coverage'
 
@@ -81,5 +85,58 @@ describe('computeScenarioCoverage', () => {
 
     expect(report.missing).toEqual(['excel.L3b.undo-redo'])
     expect(report.structuralRate).toBe(0.5)
+  })
+})
+
+describe('runScenarioCoverageCheck', () => {
+  it('returns 1 when failOnOrphans is enabled and orphan ids exist', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'scenario-coverage-'))
+    const manifestPath = join(root, 'scenarios.manifest.json')
+    const testsRoot = join(root, 'tests')
+    const testFilePath = join(testsRoot, 'orphan.test.ts')
+
+    try {
+      mkdirSync(testsRoot, { recursive: true })
+
+      writeFileSync(
+        manifestPath,
+        JSON.stringify({
+          version: 1,
+          generatedAt: '2026-06-10T00:00:00.000Z',
+          source: 'scenarios/**/*.md',
+          titleConvention: {
+            description: 'test',
+            idPattern: '^excel\\.L3[abc]\\.[a-z0-9-]+$',
+            examples: [],
+          },
+          scenarios: [
+            {
+              id: 'excel.L3a.default-mount',
+              layer: 'L3a',
+              summary: 'mount',
+              tags: [],
+              sourceFile: 'L3a-default-mount.md',
+              given: [],
+              when: [],
+              then: [],
+            },
+          ],
+        }),
+      )
+      writeFileSync(
+        testFilePath,
+        "it('excel.L3b.orphan-case orphan id', () => {})\n",
+      )
+
+      const exitCode = await runScenarioCoverageCheck({
+        manifestPath,
+        testRoots: [testsRoot],
+        failOnOrphans: true,
+      })
+
+      expect(exitCode).toBe(1)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })
