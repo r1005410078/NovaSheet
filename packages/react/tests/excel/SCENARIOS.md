@@ -32,6 +32,10 @@
 - **summary**: 默认挂载 excel/grid/toolbar/canvas
 - **status**: draft
 
+### User Story
+
+作为业务开发者，当我把 NovaExcel 放进页面时，我希望开箱即见完整的 Excel 壳层（表格、工具栏、画布），以便确认组件已正确挂载并可继续交互。
+
 ### Given
 
 - 渲染 NovaExcel，dense data
@@ -49,6 +53,10 @@
 - **layer**: L3a
 - **summary**: showToolbar false 隐藏 toolbar
 - **status**: draft
+
+### User Story
+
+作为集成方，当我需要自定义工具栏或嵌入只读表格时，我希望关闭内置 toolbar 后表格区域仍正常显示，以便用自有 UI 驱动同一套 Grid。
 
 ### Given
 
@@ -69,6 +77,10 @@
 - **summary**: onSelectionChange 等回调
 - **status**: draft
 
+### User Story
+
+作为集成方，当我监听 `onSelectionChange` 等 props 回调时，我希望用户或程序改变选区后回调能触发，以便同步外部状态栏或协同编辑逻辑。
+
 ### Given
 
 - NovaExcel 传入 onSelectionChange
@@ -86,6 +98,10 @@
 - **layer**: L3a
 - **summary**: ref 暴露 grid 与 scrollToCell
 - **status**: draft
+
+### User Story
+
+作为业务开发者，当我持有 NovaExcel 的 ref 时，我希望能直接调用底层 Grid 与滚动 API，以便在外部按钮或自动化脚本里驱动表格。
 
 ### Given
 
@@ -106,6 +122,10 @@
 - **summary**: 无 data 时使用 SparseExcelDataSource
 - **status**: draft
 
+### User Story
+
+作为用户，当我打开空白工作簿且未传入数据源时，我希望看到可滚动的 A–Z × 1000 行稀疏工作区，以便像 Excel 一样从空表开始录入。
+
 ### Given
 
 - 渲染 NovaExcel，不传 data
@@ -124,6 +144,10 @@
 - **layer**: L3a
 - **summary**: Strict Mode 双挂载
 - **status**: draft
+
+### User Story
+
+作为 React 应用开发者，在 Strict Mode 下开发时，我希望 NovaExcel 经历双次挂载/卸载后不留泄漏、ref 仍可用，以便与 React 18 开发模式兼容。
 
 ### Given
 
@@ -144,6 +168,10 @@
 - **summary**: setBorders 接线
 - **status**: draft
 
+### User Story
+
+作为表格用户，当选中区域需要框线时，我想从工具栏选择边框预设，以便为选区设置边框样式并调用 `setBorders`。
+
 ### Given
 
 - NovaExcel 已挂载，有选区
@@ -161,6 +189,10 @@
 - **layer**: L3b
 - **summary**: copy/cut/paste 接线
 - **status**: draft
+
+### User Story
+
+作为表格用户，当选中单元格后我想用工具栏复制、剪切或粘贴，以便在表内或与应用剪贴板之间搬运数据，而无需自己调用 Grid API。
 
 ### Given
 
@@ -180,6 +212,10 @@
 - **summary**: 无选区时默认选区后 format
 - **status**: draft
 
+### User Story
+
+作为表格用户，当我尚未明确框选却直接点填色或边框时，我希望组件先落到合理默认选区再执行格式操作，以免无反应或静默失败。
+
 ### Given
 
 - NovaExcel 无显式选区
@@ -197,6 +233,10 @@
 - **layer**: L3b
 - **summary**: setFillColor 接线
 - **status**: draft
+
+### User Story
+
+作为表格用户，当选中要突出显示的单元格区域时，我想从工具栏选填色，以便快速套用背景色并触发引擎的 `setFillColor`。
 
 ### Given
 
@@ -216,6 +256,10 @@
 - **summary**: mergeCells 接线
 - **status**: draft
 
+### User Story
+
+作为表格用户，当选中多块单元格需要合并标题或表头时，我想点工具栏合并，以便调用 `mergeCells` 形成单个合并区域。
+
 ### Given
 
 - NovaExcel 已挂载，有选区
@@ -233,6 +277,10 @@
 - **layer**: L3b
 - **summary**: 选区变化同步 toolbar state
 - **status**: draft
+
+### User Story
+
+作为表格用户，当我点击不同单元格时，我希望工具栏上的填色、换行等状态随当前格格式更新，以便一眼看出正在编辑的单元格样式。
 
 ### Given
 
@@ -253,6 +301,10 @@
 - **summary**: setTextWrap 循环接线
 - **status**: draft
 
+### User Story
+
+作为表格用户，当单元格文字过长时，我想在工具栏循环切换溢出/换行/裁剪，以便控制文本在格内的显示方式并调用 `setTextWrap`。
+
 ### Given
 
 - NovaExcel 已挂载，有选区
@@ -270,6 +322,10 @@
 - **layer**: L3b
 - **summary**: canUndo false 时 undo disabled
 - **status**: draft
+
+### User Story
+
+作为表格用户，在没有任何可撤销操作时，我希望撤销按钮呈禁用态，以免误点无效操作并混淆当前编辑历史。
 
 ### Given
 
@@ -289,6 +345,10 @@
 - **summary**: undo/redo 接线
 - **status**: draft
 
+### User Story
+
+作为表格用户，当我误改了内容或格式时，我想点工具栏撤销/重做，让 NovaExcel 调用底层 Grid 的 undo/redo，以便一步回退或恢复，并收到 `onToolbarAction` 通知。
+
 ### Given
 
 - NovaExcel 已挂载，spy grid.undo/redo
@@ -307,6 +367,10 @@
 - **layer**: L3b
 - **summary**: unmergeCells 接线
 - **status**: draft
+
+### User Story
+
+作为表格用户，当合并区域需要拆回独立单元格时，我想点工具栏取消合并，以便调用 `unmergeCells` 恢复可单独编辑的格子。
 
 ### Given
 
