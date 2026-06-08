@@ -1,0 +1,404 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-08T03:44:46.277Z",
+  "source": "packages/react/tests/excel/scenarios/**/*.md",
+  "titleConvention": {
+    "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
+    "idPattern": "^excel\\.L3[abc]\\.[a-z0-9-]+$",
+    "examples": [
+      "excel.L3b.undo-redo dispatches grid.undo",
+      "test('excel.L3b.undo-redo', ...)"
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "excel.L3a.default-mount",
+      "layer": "L3a",
+      "summary": "默认挂载 excel/grid/toolbar/canvas",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3a-default-mount.md",
+      "given": [
+        "渲染 NovaExcel，dense data"
+      ],
+      "when": [
+        "挂载完成"
+      ],
+      "then": [
+        "存在 data-novasheet-react-excel、grid、toolbar、canvas"
+      ]
+    },
+    {
+      "id": "excel.L3a.no-toolbar",
+      "layer": "L3a",
+      "summary": "showToolbar false 隐藏 toolbar",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3a-no-toolbar.md",
+      "given": [
+        "渲染 NovaExcel，showToolbar: false"
+      ],
+      "when": [
+        "挂载完成"
+      ],
+      "then": [
+        "无 toolbar DOM",
+        "grid/canvas 仍在"
+      ]
+    },
+    {
+      "id": "excel.L3a.props-callbacks",
+      "layer": "L3a",
+      "summary": "onSelectionChange 等回调",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3a-props-callbacks.md",
+      "given": [
+        "NovaExcel 传入 onSelectionChange"
+      ],
+      "when": [
+        "触发选区变化"
+      ],
+      "then": [
+        "onSelectionChange 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3a.ref-exposes-grid",
+      "layer": "L3a",
+      "summary": "ref 暴露 grid 与 scrollToCell",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3a-ref-exposes-grid.md",
+      "given": [
+        "NovaExcel 已挂载，持有 ref"
+      ],
+      "when": [
+        "读取 ref.current"
+      ],
+      "then": [
+        "ref.current.grid 存在",
+        "ref.current.scrollToCell 为函数"
+      ]
+    },
+    {
+      "id": "excel.L3a.sparse-default",
+      "layer": "L3a",
+      "summary": "无 data 时使用 SparseExcelDataSource",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3a-sparse-default.md",
+      "given": [
+        "渲染 NovaExcel，不传 data"
+      ],
+      "when": [
+        "挂载完成"
+      ],
+      "then": [
+        "canvas 可见",
+        "内部使用 SparseExcelDataSource"
+      ]
+    },
+    {
+      "id": "excel.L3a.strict-mode-remount",
+      "layer": "L3a",
+      "summary": "Strict Mode 双挂载",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3a-strict-mode-remount.md",
+      "given": [
+        "React StrictMode 包裹 NovaExcel"
+      ],
+      "when": [
+        "双次挂载后"
+      ],
+      "then": [
+        "canvas 不泄漏",
+        "ref 仍可用"
+      ]
+    },
+    {
+      "id": "excel.L3b.borders",
+      "layer": "L3b",
+      "summary": "setBorders 接线",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-borders.md",
+      "given": [
+        "NovaExcel 已挂载，有选区"
+      ],
+      "when": [
+        "toolbar 设置边框"
+      ],
+      "then": [
+        "grid.setBorders 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3b.clipboard",
+      "layer": "L3b",
+      "summary": "copy/cut/paste 接线",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-clipboard.md",
+      "given": [
+        "NovaExcel 已挂载，有选区"
+      ],
+      "when": [
+        "点击 copy / cut / paste"
+      ],
+      "then": [
+        "grid.copy / cut / paste 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3b.default-range-on-format",
+      "layer": "L3b",
+      "summary": "无选区时默认选区后 format",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-default-range-on-format.md",
+      "given": [
+        "NovaExcel 无显式选区"
+      ],
+      "when": [
+        "执行 format 操作"
+      ],
+      "then": [
+        "使用默认选区后仍调用写 API"
+      ]
+    },
+    {
+      "id": "excel.L3b.fill-color",
+      "layer": "L3b",
+      "summary": "setFillColor 接线",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-fill-color.md",
+      "given": [
+        "NovaExcel 已挂载，有选区"
+      ],
+      "when": [
+        "toolbar 设置填色"
+      ],
+      "then": [
+        "grid.setFillColor 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3b.merge-cells",
+      "layer": "L3b",
+      "summary": "mergeCells 接线",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-merge-cells.md",
+      "given": [
+        "NovaExcel 已挂载，有选区"
+      ],
+      "when": [
+        "点击 merge"
+      ],
+      "then": [
+        "grid.mergeCells 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3b.selection-sync",
+      "layer": "L3b",
+      "summary": "选区变化同步 toolbar state",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-selection-sync.md",
+      "given": [
+        "NovaExcel 已挂载"
+      ],
+      "when": [
+        "改变选区"
+      ],
+      "then": [
+        "onSelectionChange 触发",
+        "toolbar state 同步"
+      ]
+    },
+    {
+      "id": "excel.L3b.text-wrap",
+      "layer": "L3b",
+      "summary": "setTextWrap 循环接线",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-text-wrap.md",
+      "given": [
+        "NovaExcel 已挂载，有选区"
+      ],
+      "when": [
+        "循环切换 text-wrap"
+      ],
+      "then": [
+        "grid.setTextWrap 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3b.undo-disabled",
+      "layer": "L3b",
+      "summary": "canUndo false 时 undo disabled",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-undo-disabled.md",
+      "given": [
+        "grid.canUndo() 为 false"
+      ],
+      "when": [
+        "读取 toolbar state"
+      ],
+      "then": [
+        "undo 在 disabledActionIds"
+      ]
+    },
+    {
+      "id": "excel.L3b.undo-redo",
+      "layer": "L3b",
+      "summary": "undo/redo 接线",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-undo-redo.md",
+      "given": [
+        "NovaExcel 已挂载，spy grid.undo/redo"
+      ],
+      "when": [
+        "点击 undo / redo"
+      ],
+      "then": [
+        "grid.undo / grid.redo 被调用",
+        "onToolbarAction 触发"
+      ]
+    },
+    {
+      "id": "excel.L3b.unmerge-cells",
+      "layer": "L3b",
+      "summary": "unmergeCells 接线",
+      "tags": [
+        "toolbar"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-unmerge-cells.md",
+      "given": [
+        "NovaExcel 已挂载，合并选区"
+      ],
+      "when": [
+        "点击 unmerge"
+      ],
+      "then": [
+        "grid.unmergeCells 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3c.external-on-undo-on-redo",
+      "layer": "L3c",
+      "summary": "onUndo/onRedo 与 toolbar 联动",
+      "userStory": "作为集成方，我希望在外部监听 onUndo/onRedo 时，与工具栏撤销重做保持同一触发路径。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3c-external-on-undo-on-redo.md",
+      "given": [
+        "传入 onUndo/onRedo"
+      ],
+      "when": [
+        "toolbar 点 undo/redo"
+      ],
+      "then": [
+        "onUndo/onRedo 各触发"
+      ]
+    },
+    {
+      "id": "excel.L3c.fill-reflects-toolbar",
+      "layer": "L3c",
+      "summary": "填色后 toolbar 反映",
+      "userStory": "作为表格用户，当我为选区填色后，我希望工具栏能显示当前填色状态，以便确认操作已生效。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3c-fill-reflects-toolbar.md",
+      "given": [
+        "NovaExcel 有选区"
+      ],
+      "when": [
+        "设置填色"
+      ],
+      "then": [
+        "toolbar fillColor 更新",
+        "onToolbarAction 触发"
+      ]
+    },
+    {
+      "id": "excel.L3c.no-toolbar-grid-ref",
+      "layer": "L3c",
+      "summary": "无 toolbar 时 ref 仍可用",
+      "userStory": "作为开发者，当我隐藏工具栏只保留表格时，仍希望通过 ref 调用 scrollToCell 等 API。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3c-no-toolbar-grid-ref.md",
+      "given": [
+        "showToolbar: false"
+      ],
+      "when": [
+        "调用 ref.scrollToCell"
+      ],
+      "then": [
+        "不报错"
+      ]
+    },
+    {
+      "id": "excel.L3c.sparse-ref-grid",
+      "layer": "L3c",
+      "summary": "稀疏默认工作区 ref.grid",
+      "userStory": "作为用户，打开空白工作簿时，我仍希望能通过 ref 访问 grid 开始编辑。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3c-sparse-ref-grid.md",
+      "given": [
+        "无 data prop"
+      ],
+      "when": [
+        "读取 ref.current.grid"
+      ],
+      "then": [
+        "grid 可用"
+      ]
+    },
+    {
+      "id": "excel.L3c.undo-button-state",
+      "layer": "L3c",
+      "summary": "undo 按钮启用/禁用",
+      "userStory": "作为表格用户，当我做了可撤销的操作后，撤销按钮应变可点；撤销后若无可撤销项，按钮应变灰。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3c-undo-button-state.md",
+      "given": [
+        "NovaExcel 已挂载"
+      ],
+      "when": [
+        "可撤销操作后点 undo"
+      ],
+      "then": [
+        "undo 先 enabled 后按状态 disabled"
+      ]
+    }
+  ]
+}
