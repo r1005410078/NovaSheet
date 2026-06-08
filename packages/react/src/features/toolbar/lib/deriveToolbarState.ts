@@ -6,7 +6,7 @@ import type {
   TextWrapMode,
 } from '@novasheet/core'
 
-import type { NovaSheetToolbarState } from './types'
+import type { NovaSheetToolbarState } from '../types'
 
 /** deriveToolbarStateFromGrid 与 useNovaSheetToolbarState 所需的最小 Grid 读能力。 */
 export interface ToolbarStateGridAccess {

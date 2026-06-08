@@ -3,8 +3,8 @@ import React from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 
-import { NovaSheetToolbar, defaultToolbarItems } from '../../src'
-import type { ToolbarAction } from '../../src'
+import { NovaSheetToolbar, defaultToolbarItems } from '../../../src'
+import type { ToolbarAction } from '../../../src'
 
 describe('NovaSheetToolbar', () => {
   it('renders the default compact spreadsheet toolbar controls', async () => {

@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from 'react'
 
-import { Button } from '../ui/button'
-import { TOOLBAR_ICON_SM_CLASS } from './icon-class'
+import { Button } from '@/components/button'
+import { TOOLBAR_ICON_SM_CLASS } from '../lib/icon-class'
 import { ChevronDown } from 'lucide-react'
 
 export function SplitPopoverButton({

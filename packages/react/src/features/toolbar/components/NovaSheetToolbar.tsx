@@ -12,25 +12,25 @@ import {
 import { createPortal } from 'react-dom'
 import { ChevronDown, Eraser, Search } from 'lucide-react'
 
-import { cn } from '../lib/utils'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
+import { Button } from '@/components/button'
+import { Input } from '@/components/input'
+import { cn } from '@/lib/utils'
 import { BorderPalette } from './BorderPalette'
 import { MergeMenu } from './MergeMenu'
 import { SplitPopoverButton } from './SplitPopoverButton'
-import { primaryMergeToolbarAction } from './toolbar-primary-actions'
 import {
   ToolbarColorPalette,
   ToolbarColorPaletteCustom,
 } from './ColorPalette'
 import { defaultToolbarItems, FillColorIcon } from './items'
-import { TOOLBAR_ICON_CLASS, TOOLBAR_ICON_SM_CLASS } from './icon-class'
+import { TOOLBAR_ICON_CLASS, TOOLBAR_ICON_SM_CLASS } from '../lib/icon-class'
+import { primaryMergeToolbarAction } from '../lib/toolbar-primary-actions'
 import type {
   NovaSheetToolbarProps,
   ToolbarActionId,
   ToolbarItem,
   ToolbarPopoverId,
-} from './types'
+} from '../types'
 
 type CommandToolbarActionId = Exclude<ToolbarActionId, 'fill-color' | 'borders' | 'merge-cells'>
 

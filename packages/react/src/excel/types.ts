@@ -5,8 +5,8 @@ import type {
   RedoEvent,
   UndoEvent,
 } from '@novasheet/core'
-import type { NovaSheetGridProps, NovaSheetGridRef } from '../grid/types'
-import type { ToolbarAction } from '../toolbar/types'
+import type { NovaSheetGridProps, NovaSheetGridRef } from '@/features/grid'
+import type { ToolbarAction } from '@/features/toolbar'
 
 export type NovaExcelRef = NovaSheetGridRef
 

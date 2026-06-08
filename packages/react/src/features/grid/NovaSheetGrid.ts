@@ -4,7 +4,7 @@ import React, {
 } from 'react'
 import type { ReactElement } from 'react'
 
-import { cn } from '../lib/utils'
+import { cn } from '@/lib/utils'
 import type { NovaSheetGridProps, NovaSheetGridRef } from './types'
 import { useNovaSheetGrid } from './useNovaSheetGrid'
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { DefaultGridEngine, InMemoryDataSource } from '@novasheet/core'
 
-import { deriveToolbarStateFromGrid, type ToolbarStateGridAccess } from '../../src/toolbar/deriveToolbarState'
+import { deriveToolbarStateFromGrid, type ToolbarStateGridAccess } from '../../../src/features/toolbar'
 
 function makeEngine() {
   const data = new InMemoryDataSource({

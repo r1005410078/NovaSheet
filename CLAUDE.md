@@ -187,6 +187,7 @@ Subagent prompts must:
 | RecordingContext helper           | `packages/canvas2d/tests/helpers/recording-context.ts`                |
 | global-stub helper                | `packages/core/tests/helpers/global-stub.ts`（raf.test）+ `packages/canvas2d/tests/helpers/global-stub.ts` |
 | Probe tests                       | `packages/core/tests/kernel/geometry/ChunkedAxis.test.ts`（轴边界）；`_probe-types-4-5/4-6.test.ts`（类型守卫） |
+| React 包架构（Bulletproof 适配）  | `packages/react/docs/project-structure.md`、`packages/react/docs/project-standards.md` |
 
 ---
 

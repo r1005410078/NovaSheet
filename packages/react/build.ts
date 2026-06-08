@@ -25,7 +25,11 @@ const common = {
   external: [...EXTERNALS],
 } satisfies Parameters<typeof Bun.build>[0]
 
-const esmResult = await Bun.build({ ...common, format: 'esm' })
+const alias = { '@': `${ROOT}src` }
+
+const esmResult = await Bun.build({ ...common, format: 'esm', alias } as Parameters<
+  typeof Bun.build
+>[0])
 if (!esmResult.success) {
   console.error('ESM build failed:', esmResult.logs)
   process.exit(1)
@@ -35,7 +39,8 @@ const cjsResult = await Bun.build({
   ...common,
   format: 'cjs',
   naming: '[name].cjs',
-})
+  alias,
+} as Parameters<typeof Bun.build>[0])
 if (!cjsResult.success) {
   console.error('CJS build failed:', cjsResult.logs)
   process.exit(1)

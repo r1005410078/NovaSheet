@@ -2,10 +2,9 @@ import { SparseExcelDataSource } from '@novasheet/core'
 import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react'
 import type { ReactElement } from 'react'
 
-import { NovaSheetGrid } from '../grid/NovaSheetGrid'
-import type { NovaSheetGridRef } from '../grid/types'
-import { cn } from '../lib/utils'
-import { NovaSheetToolbar } from '../toolbar/NovaSheetToolbar'
+import { NovaSheetGrid, type NovaSheetGridRef } from '@/features/grid'
+import { NovaSheetToolbar } from '@/features/toolbar'
+import { cn } from '@/lib/utils'
 import type { NovaExcelProps, NovaExcelRef } from './types'
 import { useNovaExcelToolbar } from './useNovaExcelToolbar'
 

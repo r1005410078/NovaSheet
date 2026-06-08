@@ -1,7 +1,7 @@
 import { CirclePlus, Pipette } from 'lucide-react'
 
-import { fillPaletteRows, standardFillColors } from './colors'
-import { TOOLBAR_ICON_CLASS } from './icon-class'
+import { fillPaletteRows, standardFillColors } from '../lib/colors'
+import { TOOLBAR_ICON_CLASS } from '../lib/icon-class'
 
 export function ColorSwatch({
   color,

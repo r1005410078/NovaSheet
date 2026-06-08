@@ -5,8 +5,8 @@ import React from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 
-import { NovaSheetGrid } from '../../src'
-import type { NovaSheetGridRef } from '../../src'
+import { NovaSheetGrid } from '../../../src'
+import type { NovaSheetGridRef } from '../../../src'
 
 function createData(): InMemoryDataSource {
   return new InMemoryDataSource({

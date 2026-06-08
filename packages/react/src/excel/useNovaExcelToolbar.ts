@@ -7,9 +7,8 @@ import type {
 } from '@novasheet/core'
 import { useCallback, useEffect } from 'react'
 
-import type { ToolbarStateGridAccess } from '../toolbar/deriveToolbarState'
-import type { ToolbarAction, ToolbarActionId } from '../toolbar/types'
-import { useNovaSheetToolbarState } from '../toolbar/useNovaSheetToolbarState'
+import type { ToolbarAction, ToolbarActionId, ToolbarStateGridAccess } from '@/features/toolbar'
+import { useNovaSheetToolbarState } from '@/features/toolbar'
 
 const INITIAL_RANGE: CellRange = { startRow: 0, endRow: 1, startCol: 0, endCol: 1 }
 

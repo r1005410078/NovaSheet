@@ -2,9 +2,9 @@ import type { BorderLineStyle, BorderPreset, BorderStyle } from '@novasheet/core
 import { ChevronDown, PenLine } from 'lucide-react'
 import { useEffect, useState, type Ref } from 'react'
 
-import { cn } from '../lib/utils'
+import { cn } from '@/lib/utils'
+import { TOOLBAR_ICON_CLASS, TOOLBAR_ICON_SM_CLASS } from '../lib/icon-class'
 import { ToolbarColorPalette } from './ColorPalette'
-import { TOOLBAR_ICON_CLASS, TOOLBAR_ICON_SM_CLASS } from './icon-class'
 import { BORDER_PRESET_ROWS, BorderPresetGlyph } from './border-presets'
 
 const LINE_STYLES: readonly { readonly value: BorderLineStyle; readonly label: string }[] = [

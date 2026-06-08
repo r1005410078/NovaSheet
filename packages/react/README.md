@@ -41,6 +41,20 @@ business apps       React applications
 
 `@novasheet/react` 可以依赖 `@novasheet/core` 与 `@novasheet/canvas2d`。反向依赖禁止：core 和 canvas2d 不得 import React package。
 
+## 架构（Bulletproof 适配）
+
+源码按 [Bulletproof React](https://github.com/alan2207/bulletproof-react) 思想分层，并适配**可发布库**（非 SPA）：
+
+| 层 | 路径 | 内容 |
+| --- | --- | --- |
+| 大组件 | `src/excel/` | `NovaExcel`（grid + toolbar 编排） |
+| Feature | `src/features/grid/` | `NovaSheetGrid`、`useNovaSheetGrid` |
+| Feature | `src/features/toolbar/` | `NovaSheetToolbar`、工具栏状态推导 |
+| 共享 UI | `src/components/` | `Button`、`Input` primitive |
+| 工具 | `src/lib/` | `cn` 等 |
+
+详细规则见 [`docs/project-structure.md`](docs/project-structure.md)、[`docs/project-standards.md`](docs/project-standards.md)。依赖边界由 `bun run lint:react-boundary` 强制。
+
 ## 计划中的公开入口
 
 当前包只建立边界与发布壳，尚未实现 React API。后续 API 应优先保持小而稳定：
@@ -145,8 +159,8 @@ export function SheetToolbar() {
 
 ## 当前状态
 
-`@novasheet/react` 目前是可构建的 workspace package 壳：
+`@novasheet/react` 是可构建、可发布的 React 适配包：
 
-- 有 package manifest、TypeScript 配置和 build script。
-- 已有 `NovaSheetGrid` React 封装、`useNovaSheetGrid` hook、`NovaSheetToolbar` 工具栏组件和 typed action 协议。
-- README 作为包边界文档，后续实现以这里的职责为约束。
+- Bulletproof 分层：`excel`、`features/grid`、`features/toolbar`、`components`、`lib`。
+- 公开 API：`NovaSheetGrid`、`NovaExcel`、`NovaSheetToolbar` 及配套 hooks / types。
+- 边界检查：`bun run lint:react-boundary`（根）或 `bun run --filter @novasheet/react lint:boundary`。

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 
-import { deriveToolbarStateFromGrid, type ToolbarStateGridAccess } from './deriveToolbarState'
-import type { NovaSheetToolbarState } from './types'
+import { deriveToolbarStateFromGrid, type ToolbarStateGridAccess } from '../lib/deriveToolbarState'
+import type { NovaSheetToolbarState } from '../types'
 
 export interface UseNovaSheetToolbarStateResult {
   readonly toolbarState: NovaSheetToolbarState

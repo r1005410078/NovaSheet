@@ -11,8 +11,8 @@ import {
   WrapText,
 } from 'lucide-react'
 
-import { TOOLBAR_ICON_CLASS } from './icon-class'
-import type { ToolbarItem } from './types'
+import { TOOLBAR_ICON_CLASS } from '../lib/icon-class'
+import type { ToolbarItem } from '../types'
 
 const stroke = 1.75
 
