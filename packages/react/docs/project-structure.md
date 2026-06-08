@@ -42,7 +42,7 @@ packages/react/src/
     utils.ts
 ```
 
-测试镜像：`packages/react/tests/` 与 `src/` 同构（`excel/`、`features/`）。
+测试镜像：`packages/react/tests/` 与 `src/` 同构（`excel/`、`features/`）。**Phase 0** 大行为测试集中在 `tests/excel/`（壳层 / 接线 / 用户旅程）；Core 继续 TDD、Core 行为测试暂缓——见 `project-standards.md` 与 `docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md`。
 
 ## 依赖方向（单向流）
 

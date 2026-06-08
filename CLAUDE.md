@@ -188,6 +188,8 @@ Subagent prompts must:
 | global-stub helper                | `packages/core/tests/helpers/global-stub.ts`（raf.test）+ `packages/canvas2d/tests/helpers/global-stub.ts` |
 | Probe tests                       | `packages/core/tests/kernel/geometry/ChunkedAxis.test.ts`（轴边界）；`_probe-types-4-5/4-6.test.ts`（类型守卫） |
 | React 包架构（Bulletproof 适配）  | `packages/react/docs/project-structure.md`、`packages/react/docs/project-standards.md` |
+| 行为测试规格（L0–L4 分层）        | `docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md` — **Phase 0**：Core **TDD 继续**、Core **行为测试暂缓**、`packages/react/tests/excel/` 大行为测试主战场；终态 L0–L2 落点 `packages/acceptance/`（API 冻结后） |
+| MD 场景工具（private）            | `packages/mbd/`（`@novasheet/mbd`）— 仅 `validate` / `manifest`；测试手写、场景覆盖率由 `@novasheet/react` `lint:scenario-coverage`；规格 `docs/superpowers/specs/2026-06-09-novasheet-mbd-package-design.md` |
 
 ---
 
