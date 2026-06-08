@@ -88,10 +88,23 @@ scenarios.manifest.json + SCENARIOS.md
 
 ---
 
+## 新增场景
+
+复制模板（**不要**直接改 `_template.md`）：
+
+```bash
+cp packages/react/tests/excel/scenarios/_template.md \
+   packages/react/tests/excel/scenarios/L3b-my-feature.md
+```
+
+以 `_` 开头的 MD **不会**进入 validate / manifest（作者模板专用）。
+
+---
+
 ## 日常开发
 
 ```text
-1. 改 scenarios/*.md
+1. 改 scenarios/*.md（或从 _template.md 复制）
 2. mbd validate
 3. mbd manifest     → 提交 manifest.json + SCENARIOS.md
 4. 手写 tests/excel/*.test.ts（title 以场景 id 开头）

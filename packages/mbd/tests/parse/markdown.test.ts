@@ -48,4 +48,10 @@ describe('parseScenarioFiles', () => {
       'excel.L3b.undo-redo',
     ])
   })
+
+  it('skips underscore-prefixed markdown files (e.g. _template.md)', async () => {
+    const entries = await parseScenarioFiles(join(FIXTURES, '*.md'), FIXTURES)
+
+    expect(entries.some((e) => e.id.includes('template-fixture'))).toBe(false)
+  })
 })

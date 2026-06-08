@@ -40,6 +40,8 @@
 
 完整分层见：[`docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md`](../../../docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md)（含 Phase 0 节与附录 C）。场景 MD 由 [`@novasheet/mbd`](../../../docs/superpowers/specs/2026-06-09-novasheet-mbd-package-design.md) 导出 `scenarios.manifest.json`；**场景结构覆盖率**由本包 `lint:scenario-coverage`（实现期，`scripts/check-scenario-coverage.ts` 读 manifest）计算，**不在 mbd 包**。
 
+新场景从 `tests/excel/scenarios/_template.md` 复制并重命名（`_` 前缀文件不参与 mbd 扫描）。
+
 ### 行为测试分层（excel-first）
 
 | 子层 | 路径 | 职责 |

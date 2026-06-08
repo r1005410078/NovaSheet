@@ -78,6 +78,9 @@ export async function parseScenarioFiles(
 
   for await (const relativePath of glob.scan({ cwd: scanDir, onlyFiles: true })) {
     if (!relativePath.endsWith('.md')) continue
+    const baseName = relativePath.split('/').pop() ?? relativePath
+    // Underscore-prefixed files (e.g. _template.md) are author aids, not scenarios.
+    if (baseName.startsWith('_')) continue
     const absolutePath = resolve(scanDir, relativePath)
     entries.push(parseScenarioFile(absolutePath, rootDir))
   }
