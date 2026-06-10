@@ -25,6 +25,10 @@ function createDemoData(): SparseExcelDataSource {
   data.updateCell(1, 'A', 'Excel workspace')
   data.updateCell(2, 'B', 'A-Z x 1000')
   data.updateCell(999, 'A', 'edge content')
+  // 数字（文本工作区里存为字符串）——选中后用工具栏「数字格式」套货币/百分比演示 Phase 5-C。
+  data.updateCell(0, 'C', '1234.5')
+  data.updateCell(1, 'C', '0.1357')
+  data.updateCell(2, 'C', '1234567')
   return data
 }
 
@@ -50,6 +54,7 @@ export const NovaExcelOutOfTheBox: Story = {
       root.render(
         React.createElement(NovaExcel, {
           data,
+          locale: 'zh-CN', // CNY 显示为 ¥（en-US 下会是 CN¥）
           className: 'h-full w-full',
         }),
       )
