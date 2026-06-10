@@ -1,4 +1,22 @@
 import type { CellRange } from '../coords/SelectionTypes'
+import type { CellValue, Field } from '../data/Schema'
+
+/** 值格式化描述符（可序列化）。`custom` 指向 GridOptions.formatters 注册表。 */
+export type ValueFormat =
+  | { readonly kind: 'number'; readonly decimals?: number; readonly thousands?: boolean }
+  | { readonly kind: 'currency'; readonly currency: string; readonly decimals?: number; readonly locale?: string }
+  | { readonly kind: 'percent'; readonly decimals?: number }
+  | { readonly kind: 'date'; readonly pattern: string }
+  | { readonly kind: 'custom'; readonly formatterId: string }
+
+/** 自定义 formatter 上下文（纯、同步、无 DOM）。 */
+export interface FormatContext {
+  readonly field: Field
+  readonly locale: string
+}
+
+/** 集成方自定义 formatter：raw value → 显示文本。必须纯 + 同步 + 快 + 只返 string。 */
+export type CellFormatter = (value: CellValue, ctx: FormatContext) => string
 
 export type BorderWidth = 'thin' | 'medium' | 'thick'
 export type BorderLineStyle = 'solid' | 'dashed' | 'dotted' | 'double'
@@ -34,6 +52,7 @@ export interface CellFormat {
   readonly fillColor?: string
   readonly borders?: CellBorders
   readonly textWrap?: TextWrapMode
+  readonly valueFormat?: ValueFormat
 }
 
 export interface ResolvedCellFormat {

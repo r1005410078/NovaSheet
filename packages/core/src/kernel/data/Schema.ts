@@ -33,6 +33,8 @@ export interface Field {
    * 只有 `text` 类型（含 fallback 走 text 路径的类型）会响应 wrap；`number` 仍单行右对齐。
    */
   wrap?: boolean
+  /** 列级默认值格式（Phase 5-C）；被 cell 级 CellFormat.valueFormat 覆盖。 */
+  readonly format?: import('../protocol/FormatTypes').ValueFormat
   /** type-specific 配置，如 singleSelect 的 choices——M2+ 启用 */
   options?: Record<string, unknown>
   /** 新行插入时该字段的默认值；undefined 表示空 */
