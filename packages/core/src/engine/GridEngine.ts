@@ -8,7 +8,7 @@ import type { DataSource } from '../kernel/data/DataSource'
 import type { Field } from '../kernel/data/Schema'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../kernel/undo/UndoCommand'
-import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode } from '../kernel/protocol/FormatTypes'
+import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode, ValueFormat } from '../kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import type { ApplyPasteSource, PasteTargetRect } from '../features/clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../features/clipboard/types'
@@ -323,6 +323,9 @@ export interface GridFormatting {
    *
    * 排序筛选导致 view range 无法映射为连续 raw range 时返回 false。
    */
+  /** 设置 view `range` 值格式（Phase 5-C）。 */
+  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean
+
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean
 
   /** Phase 5-A — 解析单个单元格格式（raw 坐标）；无格式返回 undefined。 */

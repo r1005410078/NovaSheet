@@ -2,6 +2,7 @@ import type {
   BorderPreset,
   BorderStyle,
   TextWrapMode,
+  ValueFormat,
   CellRange,
   ContextMenuItem,
   ContextMenuAction,
@@ -92,6 +93,8 @@ export class Grid {
       frozen: options.frozen, // 冻结配置：engine 计算冻结区域与 viewport。
       defaultRowHeight: options.defaultRowHeight, // 默认行高：初始化 row axis。
       excelHeaders: options.excelHeaders, // 表头模式：A/B/... 列标 + 1-based 行号。
+      formatters: options.formatters, // Phase 5-C — 自定义 formatter 注册表。
+      locale: options.locale, // Phase 5-C — formatter locale。
     }
 
     this.delegate = new GridControllerImpl(
@@ -330,6 +333,11 @@ export class Grid {
   /** Phase 5-A — 为 view `range` 设置基础边框；`preset='clear'` 需 `border=null`；变化时返回 true 并重绘。 */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
     return this.delegate.setBorders(range, preset, border)
+  }
+
+  /** 设置 view `range` 值格式（Phase 5-C）；变化时返回 true 并重绘。 */
+  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
+    return this.delegate.setValueFormat(range, valueFormat)
   }
 
   /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时返回 true 并重绘。 */

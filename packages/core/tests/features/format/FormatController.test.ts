@@ -109,3 +109,21 @@ describe('FormatController — merge', () => {
     expect(pushed[pushed.length - 1]!.kind).toBe('unmerge')
   })
 })
+
+describe('FormatController — setValueFormat', () => {
+  it('setValueFormat 写入 valueFormat 并入栈 format 命令', () => {
+    const { fc, formatState, pushed } = makeController()
+    const r = range(0, 0, 0, 0)
+    const ok = fc.setValueFormat(r, { kind: 'percent' })
+    expect(ok).toBe(true)
+    expect(formatState.formatStore.resolveCell(0, 0)?.valueFormat).toEqual({ kind: 'percent' })
+    expect(pushed).toHaveLength(1)
+    expect(pushed[0]!.kind).toBe('format')
+  })
+
+  it('setValueFormat: view→raw 非连续 → false，不入栈', () => {
+    const { fc, pushed } = makeController({ translateRange: () => null })
+    expect(fc.setValueFormat(range(0, 0, 0, 0), { kind: 'number' })).toBe(false)
+    expect(pushed).toHaveLength(0)
+  })
+})

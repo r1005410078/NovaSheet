@@ -65,7 +65,7 @@ import { hitTestCell } from '../../kernel/interaction/HitTest'
 import { isTypableEditKey } from '../../features/edit/CellEdit'
 import { parseTsvToCells, serializeRowsToTsv } from '../../features/clipboard/TsvFormat'
 import type { PasteSkippedCell } from '../../features/clipboard/types'
-import type { BorderPreset, BorderStyle, TextWrapMode } from '../../kernel/protocol/FormatTypes'
+import type { BorderPreset, BorderStyle, TextWrapMode, ValueFormat } from '../../kernel/protocol/FormatTypes'
 import type { CellAddress, CellRange } from '../../kernel/coords/SelectionTypes'
 import type { MergeRegion } from '../../kernel/coords/MergeRegion'
 import type { FillDirection } from '../../features/fill/FillTarget'
@@ -666,6 +666,14 @@ export class GridRuntime {
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
     if (this.destroyed) return false
     const changed = this.engine.setBorders(range, preset, border)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** 设置 view `range` 值格式（Phase 5-C）；变化时刷新视图。 */
+  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.setValueFormat(range, valueFormat)
     if (changed) this.afterEngineMutation()
     return changed
   }

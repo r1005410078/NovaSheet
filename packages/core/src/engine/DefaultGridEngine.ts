@@ -15,6 +15,7 @@ import type {
   CellFormatter,
   CellFormat,
   TextWrapMode,
+  ValueFormat,
 } from '../kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import { EditController } from '../features/edit/EditController'
@@ -860,6 +861,12 @@ export class DefaultGridEngine implements GridEngine {
    * 设置 view `range` 的文本显示模式（overflow/wrap/clip）。view→raw 翻译，
    * 非连续映射返回 false；快照前后一致也返回 false（沿用 format undo 命令）。
    */
+  /** 设置 view `range` 值格式（Phase 5-C）。 */
+  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
+    this.finishActiveEdit()
+    return this.formatController.setValueFormat(range, valueFormat)
+  }
+
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
     this.finishActiveEdit()
     return this.formatController.setTextWrap(range, mode)

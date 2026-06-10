@@ -19,7 +19,7 @@ import { FilterLayer } from '../../features/view/FilterLayer'
 import { SortLayer } from '../../features/view/SortLayer'
 import { ViewPipeline } from '../../features/view/ViewPipeline'
 import { FrameScheduler } from '../../kernel/util/raf'
-import type { BorderPreset, BorderStyle, TextWrapMode } from '../../kernel/protocol/FormatTypes'
+import type { BorderPreset, BorderStyle, TextWrapMode, ValueFormat } from '../../kernel/protocol/FormatTypes'
 import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
 import type {
   ContextMenuItem,
@@ -496,6 +496,10 @@ export class GridControllerImpl implements GridController {
 
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
     return this.runtime.setBorders(range, preset, border)
+  }
+
+  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
+    return this.runtime.setValueFormat(range, valueFormat)
   }
 
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean {

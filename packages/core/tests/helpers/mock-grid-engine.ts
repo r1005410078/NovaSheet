@@ -154,6 +154,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     moveCols: mock((_fieldIds: readonly string[], _beforeFieldId: string | null) => false),
     setFillColor: mock((_range: CellRange, _color: string | null) => false),
     setBorders: mock((_range, _preset, _border) => false),
+    setValueFormat: mock((_range, _valueFormat) => false),
     setTextWrap: mock((_range, _mode) => false),
     getCellFormat: mock((_rowIndex: number, _colIndex: number) => undefined),
     getViewCellFormat: mock((_viewRow: number, _viewCol: number) => undefined),

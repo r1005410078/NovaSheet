@@ -3,6 +3,7 @@ import type {
   BorderStyle,
   FormatLayer,
   TextWrapMode,
+  ValueFormat,
 } from '../../kernel/protocol/FormatTypes'
 import type { FormatState } from './FormatState'
 import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
@@ -46,6 +47,16 @@ export class FormatController {
     } else {
       this.formatState.formatStore.apply(rawRange, { fillColor: color })
     }
+    return this.commitFormatChange(before, selectionBefore)
+  }
+
+  /** 设置 view `range` 值格式（Phase 5-C）。复用 5-A 写入/undo 路径。 */
+  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
+    const rawRange = this.ctx.translateRange(range)
+    if (!rawRange) return false
+    const selectionBefore = this.ctx.getSelection()
+    const before = this.formatState.formatStore.snapshot()
+    this.formatState.formatStore.apply(rawRange, { valueFormat })
     return this.commitFormatChange(before, selectionBefore)
   }
 

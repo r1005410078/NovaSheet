@@ -1,4 +1,4 @@
-import type { BorderPreset, BorderStyle, TextWrapMode, CellFormat } from '../../kernel/protocol/FormatTypes'
+import type { BorderPreset, BorderStyle, TextWrapMode, CellFormat, ValueFormat } from '../../kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../../kernel/coords/MergeRegion'
 import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { ContextMenuItem } from '../../features/context-menu/ContextMenuModel'
@@ -125,6 +125,8 @@ export interface GridController {
   setFillColor(range: CellRange, color: string | null): boolean
   /** Phase 5-A — 为 view `range` 设置基础边框；`preset='clear'` 需 `border=null`；变化时刷新并返回 true。 */
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean
+  /** 设置 view `range` 值格式（Phase 5-C）；变化时刷新并返回 true。 */
+  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean
   /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时刷新并返回 true。 */
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean
   /** Phase 5-A — 合并 view `range`；成功刷新并返回 true。 */
