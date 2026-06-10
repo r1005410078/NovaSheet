@@ -12,6 +12,7 @@ import { DefaultFormatState } from '../features/format/FormatState'
 import type {
   BorderPreset,
   BorderStyle,
+  CellFormatter,
   CellFormat,
   TextWrapMode,
 } from '../kernel/protocol/FormatTypes'
@@ -88,6 +89,10 @@ export class DefaultGridEngine implements GridEngine {
   private theme: Theme
   private readonly excelHeaders: boolean
   private explicitDefaultRowHeight: number | undefined
+  /** Phase 5-C — 自定义 formatter 注册表。 */
+  private readonly formatters: Readonly<Record<string, CellFormatter>>
+  /** Phase 5-C — formatter locale。 */
+  private readonly locale: string
   /** Layout 领域聚合根：自持 rowsAxis/colsAxis/frozen/viewport，engine 全部委派。 */
   private readonly layout: DefaultLayoutState
   /** 行/列/区 raw↔view 翻译唯一入口；getter 读引擎活状态（data/rawData/columnStructure）。 */
@@ -199,6 +204,8 @@ export class DefaultGridEngine implements GridEngine {
     this.theme = options.theme ?? denseGridTheme
     this.excelHeaders = options.excelHeaders === true
     this.explicitDefaultRowHeight = options.defaultRowHeight
+    this.formatters = options.formatters ?? {}
+    this.locale = options.locale ?? 'en-US'
     this.layout = new DefaultLayoutState({
       theme: this.theme,
       explicitDefaultRowHeight: this.explicitDefaultRowHeight,
@@ -425,6 +432,8 @@ export class DefaultGridEngine implements GridEngine {
       allRowGaps: this.rowStructure.getCollapsedGaps(),
       allColGaps: this.columnStructure.getCollapsedColGaps(),
       frameFormat: this.frameFormat,
+      formatters: this.formatters,
+      locale: this.locale,
     })
   }
 

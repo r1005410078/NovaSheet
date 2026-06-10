@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { assembleRenderFrame } from '../../src/engine/FrameAssembler'
+import { assembleRenderFrame, buildFormatCell } from '../../src/engine/FrameAssembler'
 import type { FrameAssemblerInput } from '../../src/engine/FrameAssembler'
+import type { ResolvedCellFormat } from '../../src/kernel/protocol/FormatTypes'
+import type { Field } from '../../src/kernel/data/Schema'
 import { VisibleFormatResolver } from '../../src/features/format/VisibleFormatResolver'
 import { DefaultFormatState } from '../../src/features/format/FormatState'
 import { CoordinateSpace } from '../../src/kernel/coords/CoordinateSpace'
@@ -12,6 +14,24 @@ import type { ViewportSnapshot } from '../../src/kernel/geometry/Viewport'
 const schema = {
   fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 80 }],
 }
+
+const numField: Field = { id: 'a', name: 'A', type: 'number', width: 100 }
+
+describe('buildFormatCell', () => {
+  it('cell 级 valueFormat 覆盖列默认', () => {
+    const cellFormats: ResolvedCellFormat[] = [
+      { rowIndex: 0, colIndex: 0, format: { valueFormat: { kind: 'currency', currency: 'CNY' } } },
+    ]
+    const field: Field = { ...numField, format: { kind: 'number' } }
+    const fc = buildFormatCell(cellFormats, {}, 'en-US')
+    expect(fc(0, 0, field, 1234.5)).toBe('CN¥1,234.50')   // cell 级 currency 胜
+    expect(fc(1, 0, field, 1234)).toBe('1,234')          // 无 cell 级 → 列默认 number
+  })
+  it('无任何 format → undefined', () => {
+    const fc = buildFormatCell([], {}, 'en-US')
+    expect(fc(0, 0, numField, 5)).toBeUndefined()
+  })
+})
 
 function mockAxis(visible: [number, number], positionAt: (i: number) => number): ChunkedAxis {
   return {
@@ -58,6 +78,8 @@ describe('assembleRenderFrame', () => {
       allRowGaps: [{ atViewRow: 1, hiddenCount: 2, hiddenIds: [5, 6] }],
       allColGaps: [],
       frameFormat,
+      formatters: {},
+      locale: 'en-US',
     }
     const frame = assembleRenderFrame(input)
     expect(frame.collapsedRowGaps).toHaveLength(1)

@@ -6,6 +6,7 @@
  */
 
 import type { DataSource } from '../data/DataSource'
+import type { CellValue, Field } from '../data/Schema'
 import type { GridSelection } from '../coords/SelectionTypes'
 import type { MergeRegion } from '../coords/MergeRegion'
 import type { Axis } from '../geometry/ChunkedAxis'
@@ -54,4 +55,9 @@ export interface RenderFrame {
    * 引擎构帧时已把 raw store 翻译为 view 坐标，painter 无需再翻译。可选，缺省按 `?? []` 读取。
    */
   mergeRegions?: readonly MergeRegion[]
+  /**
+   * Phase 5-C — 值格式化解析器闭包。返回 `undefined` 表示该格无显式 valueFormat，
+   * painter 应回退默认显示路径。引擎构帧时闭合 cell 级 valueFormat + 列默认 + 注册表 + locale。
+   */
+  formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
 }

@@ -1,12 +1,35 @@
 import type { DataSource } from '../kernel/data/DataSource'
+import type { CellValue, Field } from '../kernel/data/Schema'
 import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../kernel/geometry/Viewport'
 import type { RenderFrame, RenderFrameCollapsedColGap } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
 import type { CellEditSession } from '../kernel/render/RenderTypes'
+import type { CellFormatter, ResolvedCellFormat, ValueFormat } from '../kernel/protocol/FormatTypes'
 import type { VisibleFormatResolver } from '../features/format/VisibleFormatResolver'
 import type { GridSelection } from '../kernel/coords/SelectionTypes'
 import type { CollapsedGap } from '../kernel/render/RenderTypes'
+import { formatValue } from '../kernel/protocol/formatValue'
+
+/**
+ * 构 RenderFrame.formatCell 闭包。闭合可见区已解析的 cell 级 valueFormat（VIEW 坐标）
+ * + 列默认（field.format）+ 注册表 + locale。无显式 format 的格返回 undefined。
+ */
+export function buildFormatCell(
+  cellFormats: readonly ResolvedCellFormat[],
+  formatters: Readonly<Record<string, CellFormatter>>,
+  locale: string,
+): (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined {
+  const cellMap = new Map<string, ValueFormat>()
+  for (const cf of cellFormats) {
+    if (cf.format.valueFormat) cellMap.set(`${cf.rowIndex}:${cf.colIndex}`, cf.format.valueFormat)
+  }
+  return (rowIndex, colIndex, field, value) => {
+    const format = cellMap.get(`${rowIndex}:${colIndex}`) ?? field.format
+    if (!format) return undefined
+    return formatValue(value, format, { field, locale }, formatters)
+  }
+}
 
 /** `assembleRenderFrame` 的只读输入；与 `DefaultGridEngine.getFrame` 解耦。 */
 export interface FrameAssemblerInput {
@@ -20,6 +43,8 @@ export interface FrameAssemblerInput {
   readonly allRowGaps: readonly CollapsedGap[]
   readonly allColGaps: readonly Omit<RenderFrameCollapsedColGap, 'xPx'>[]
   readonly frameFormat: VisibleFormatResolver
+  readonly formatters: Readonly<Record<string, CellFormatter>>
+  readonly locale: string
 }
 
 /** 从 layout/structure 快照装配不可变 `RenderFrame`（纯函数，无 engine 副作用）。 */
@@ -58,6 +83,7 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     lastVisibleCol,
     mergeRegions,
   )
+  const formatCell = buildFormatCell(cellFormats, input.formatters, input.locale)
   return {
     data: input.data,
     theme: input.theme,
@@ -70,5 +96,6 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     collapsedColGaps,
     cellFormats,
     mergeRegions,
+    formatCell,
   }
 }
