@@ -126,7 +126,7 @@ cell.valueFormat（已解析，view→raw 由 5-A 管线给出）
 | `percent` | `0.1357` | `13.57%` | `Intl.NumberFormat(locale, { style:'percent', maximumFractionDigits: decimals ?? 0 })` |
 | `date` | `Date`/epoch | `2024-06-09` | v1 固定 token 子集，见 §5.4 |
 
-**类型不匹配兜底**：descriptor 期望 number 但 value 非 number（如 `null`/string）→ 回退内置 `toDisplayString`（不抛）。`null`/`undefined` 仍在 painter 最前短路（不绘制），formatter 不介入。
+**数字解析 + 类型兜底**：number/currency/percent 经 `asFiniteNumber` 解析——`number` 原样、**数字字符串**（如文本工作区 `type:'text'` 字段输入的 `"1234"`）解析为有限数后格式化（修订 2026-06-10：out-of-the-box 文本工作区输入的数字是字符串，不解析则套格式无效，实测 bug）。空白 / 非数字 / `Infinity` / `NaN` → `undefined` 回退默认显示（不抛）。`null`/`undefined` 仍在 painter 最前短路（不绘制）。date 仍只接受 `Date`/epoch `number`（字符串日期解析有 TZ 歧义，留后续）。
 
 ### 5.4 date pattern（v1 封闭 token）
 

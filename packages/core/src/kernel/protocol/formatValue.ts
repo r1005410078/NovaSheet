@@ -8,6 +8,22 @@ function warnOnce(msg: string): void {
   console.warn(`[novasheet] ${msg}`)
 }
 
+/**
+ * 把值解析为有限数：number 原样；数字字符串（如文本工作区输入的 "1234"）解析。
+ * 解析失败（空白 / 非数字 / Infinity / NaN）返回 null，调用方回退 undefined。
+ * 文本工作区（SparseExcelDataSource）字段为 type:'text'，输入数字存为字符串，故须解析。
+ */
+function asFiniteNumber(value: CellValue): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed === '') return null
+    const n = Number(trimmed)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
 function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
@@ -35,28 +51,34 @@ export function formatValue(
   registry: Readonly<Record<string, CellFormatter>>,
 ): string | undefined {
   switch (format.kind) {
-    case 'number':
-      if (typeof value !== 'number') return undefined
+    case 'number': {
+      const n = asFiniteNumber(value)
+      if (n === null) return undefined
       return new Intl.NumberFormat(ctx.locale, {
         useGrouping: format.thousands ?? true,
         minimumFractionDigits: format.decimals,
         maximumFractionDigits: format.decimals,
-      }).format(value)
-    case 'currency':
-      if (typeof value !== 'number') return undefined
+      }).format(n)
+    }
+    case 'currency': {
+      const n = asFiniteNumber(value)
+      if (n === null) return undefined
       return new Intl.NumberFormat(format.locale ?? ctx.locale, {
         style: 'currency',
         currency: format.currency,
         minimumFractionDigits: format.decimals,
         maximumFractionDigits: format.decimals,
-      }).format(value)
-    case 'percent':
-      if (typeof value !== 'number') return undefined
+      }).format(n)
+    }
+    case 'percent': {
+      const n = asFiniteNumber(value)
+      if (n === null) return undefined
       return new Intl.NumberFormat(ctx.locale, {
         style: 'percent',
         minimumFractionDigits: format.decimals ?? 0,
         maximumFractionDigits: format.decimals ?? 0,
-      }).format(value)
+      }).format(n)
+    }
     case 'date': {
       const d = value instanceof Date ? value : typeof value === 'number' ? new Date(value) : null
       if (!d || Number.isNaN(d.getTime())) return undefined

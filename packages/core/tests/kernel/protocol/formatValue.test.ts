@@ -39,3 +39,29 @@ describe('formatValue', () => {
     expect(formatValue(12, { kind: 'custom', formatterId: 'boom' }, ctx, reg)).toBeUndefined()
   })
 })
+
+// 文本工作区（SparseExcelDataSource）字段是 type:'text'，用户输入的数字被存为字符串。
+// 值格式化须解析数字字符串，否则 out-of-the-box 套货币/百分比/千分位无效（实测 bug）。
+describe('formatValue — 数字字符串解析', () => {
+  it('number: 字符串 "1234567" → 千分位', () => {
+    expect(formatValue('1234567', { kind: 'number' }, ctx, noReg)).toBe('1,234,567')
+  })
+  it('currency: 字符串 "1234.5" → CN¥（en-US ctx）', () => {
+    expect(formatValue('1234.5', { kind: 'currency', currency: 'CNY' }, ctx, noReg)).toBe('CN¥1,234.50')
+  })
+  it('percent: 字符串 "0.1357" → 13.57%', () => {
+    expect(formatValue('0.1357', { kind: 'percent', decimals: 2 }, ctx, noReg)).toBe('13.57%')
+  })
+  it('带首尾空白的数字字符串 " 1234 " 仍解析', () => {
+    expect(formatValue(' 1234 ', { kind: 'number', thousands: true }, ctx, noReg)).toBe('1,234')
+  })
+  it('空白字符串 → undefined', () => {
+    expect(formatValue('   ', { kind: 'number' }, ctx, noReg)).toBeUndefined()
+  })
+  it('非数字字符串 "abc" → undefined', () => {
+    expect(formatValue('abc', { kind: 'currency', currency: 'CNY' }, ctx, noReg)).toBeUndefined()
+  })
+  it('Infinity 字符串 → undefined（仅有限数）', () => {
+    expect(formatValue('Infinity', { kind: 'number' }, ctx, noReg)).toBeUndefined()
+  })
+})

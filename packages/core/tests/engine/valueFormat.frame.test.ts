@@ -68,4 +68,22 @@ describe('Phase 5-C value formatting — getFrame().formatCell 端到端', () =>
     const frame = engine.getFrame()
     expect(frame.formatCell?.(0, 0, field, 'hello' as never)).toBeUndefined()
   })
+
+  it('文本字段 + 字符串数字（out-of-the-box 复现）→ setValueFormat 后格式化', () => {
+    // SparseExcelDataSource 字段是 type:'text'，输入的数字存为字符串 "1234.5"。
+    const data = new InMemoryDataSource({
+      schema: { fields: [{ id: 'amt', name: 'Amt', type: 'text', width: 100 }] },
+      rows: [{ amt: '1234.5' }],
+    })
+    const engine = new DefaultGridEngine({ data })
+    engine.setViewportSize(400, 400)
+    const field = data.getSchema().fields[0]!
+    expect(
+      engine.setValueFormat(
+        { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+        { kind: 'currency', currency: 'CNY' },
+      ),
+    ).toBe(true)
+    expect(engine.getFrame().formatCell?.(0, 0, field, '1234.5')).toBe('CN¥1,234.50')
+  })
 })
