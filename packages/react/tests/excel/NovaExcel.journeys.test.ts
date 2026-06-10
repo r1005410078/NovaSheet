@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
 import React from 'react'
+import { InMemoryDataSource } from '@novasheet/core'
 
 import type { NovaExcelRef } from '../../src'
 import {
@@ -76,6 +77,40 @@ describe('NovaExcel L3c user journeys', () => {
     const { unmount } = await mountNovaExcel({ ref })
 
     expect(ref.current?.grid).toBeDefined()
+
+    unmount()
+  })
+
+  it('excel.L3c.currency-display mounts with currency field format and setValueFormat succeeds', async () => {
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'name', name: 'Name', type: 'text', width: 120 },
+          {
+            id: 'amount',
+            name: 'Amount',
+            type: 'number',
+            width: 100,
+            format: { kind: 'currency', currency: 'CNY' },
+          },
+        ],
+      },
+      rows: [
+        { name: 'Alice', amount: 1234.5 },
+        { name: 'Bob', amount: 9876 },
+      ],
+    })
+    const ref = React.createRef<NovaExcelRef>()
+
+    const { unmount } = await mountNovaExcel({ data, locale: 'zh-CN', ref })
+
+    expect(ref.current?.grid).toBeDefined()
+
+    const result = ref.current!.grid.setValueFormat(
+      { startRow: 0, endRow: 0, startCol: 1, endCol: 1 },
+      { kind: 'currency', currency: 'CNY', decimals: 2 },
+    )
+    expect(result).toBe(true)
 
     unmount()
   })
