@@ -56,7 +56,9 @@
  */
 
 import type {
+  CellValue,
   DataSource,
+  Field,
   RenderBackend,
   RenderFrame,
   RenderRegion,
@@ -408,6 +410,7 @@ export class Canvas2DRenderer implements RenderBackend {
         merges,
         textWrapLookup,
         ctx.frame.cellEdit?.cell,
+        ctx.frame.formatCell,
       )
     this.paintHeaders(
       paintOrder,
@@ -625,6 +628,7 @@ export class Canvas2DRenderer implements RenderBackend {
     merges: MergeLookup,
     textWrapLookup: Map<string, TextWrapMode>,
     editingCell?: CellAddress,
+    formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -667,11 +671,14 @@ export class Canvas2DRenderer implements RenderBackend {
           rect: { x: cellX, y: cellY, width: paintWidth, height: rowHeight },
           field,
           textWrap: mode,
+          rowIndex: r,
+          colIndex: c,
+          formatCell,
         })
       }
     }
 
-    this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, textWrapLookup, editingCell)
+    this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, textWrapLookup, editingCell, formatCell)
 
     this.ctx.restore()
   }
@@ -719,6 +726,7 @@ export class Canvas2DRenderer implements RenderBackend {
     merges: MergeLookup,
     textWrapLookup: Map<string, TextWrapMode>,
     editingCell?: CellAddress,
+    formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
   ): void {
     if (merges.isEmpty) return
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
@@ -744,6 +752,9 @@ export class Canvas2DRenderer implements RenderBackend {
         rect: { x: cellX, y: cellY, width, height },
         field,
         textWrap: textWrapLookup.get(`${ar}:${ac}`),
+        rowIndex: ar,
+        colIndex: ac,
+        formatCell,
       })
     }
   }

@@ -280,3 +280,36 @@ describe('CellPainter — 单元格', () => {
     })
   })
 })
+
+describe('CellPainter formatCell（Phase 5-C）', () => {
+  const field: Field = { id: 'a', name: 'A', type: 'number', width: 100 }
+  const rect = { x: 0, y: 0, width: 100, height: 24 }
+
+  it('formatCell 命中时画格式化文本', () => {
+    const { ctx, ops } = createRecordingContext()
+    new CellPainter(denseGridTheme).paint(ctx, {
+      value: 1234.5,
+      rect,
+      field,
+      rowIndex: 0,
+      colIndex: 0,
+      formatCell: () => '¥1,234.50',
+    })
+    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o as { op: 'fillText'; args: [string, number, number, number?] }).args[0])
+    expect(texts).toContain('¥1,234.50')
+  })
+
+  it('formatCell 返回 undefined 时退回默认（number 千分位）', () => {
+    const { ctx, ops } = createRecordingContext()
+    new CellPainter(denseGridTheme).paint(ctx, {
+      value: 1234,
+      rect,
+      field,
+      rowIndex: 0,
+      colIndex: 0,
+      formatCell: () => undefined,
+    })
+    const texts = ops.filter((o) => o.op === 'fillText').map((o) => (o as { op: 'fillText'; args: [string, number, number, number?] }).args[0])
+    expect(texts).toContain('1,234')
+  })
+})

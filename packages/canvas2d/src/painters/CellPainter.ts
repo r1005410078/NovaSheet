@@ -40,6 +40,11 @@ export interface CellPaintParams {
   field: Field
   /** 文本显示模式；缺省回退 `field.wrap?'wrap':'overflow'`（由 RangeStyleStore 解析后传入）。 */
   textWrap?: TextWrapMode
+  /** view 坐标，供 formatCell 查 cell 级 valueFormat（Phase 5-C）。 */
+  rowIndex?: number
+  colIndex?: number
+  /** Phase 5-C — frame 的值格式化解析器；返回 undefined 时回退默认显示路径（零回归）。 */
+  formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
 }
 
 /** CellPainter 构造选项 */
@@ -103,17 +108,24 @@ export class CellPainter {
     ctx.textBaseline = 'middle'
     ctx.textAlign = this.theme.cell.textAlignByType[field.type]
 
+    // Phase 5-C：若 rowIndex/colIndex 已知且 formatCell 存在，尝试获取格式化文本。
+    // 返回 undefined 时各绘制分支回退现有默认路径，保证未格式化格零回归。
+    const formatted =
+      params.rowIndex !== undefined && params.colIndex !== undefined
+        ? params.formatCell?.(params.rowIndex, params.colIndex, field, value)
+        : undefined
+
     // 解析文本显示模式：显式 textWrap 优先，否则回退列级 field.wrap（true→wrap），都无则 overflow。
     const mode: TextWrapMode = params.textWrap ?? (field.wrap === true ? 'wrap' : 'overflow')
     if (field.type === 'number' && typeof value === 'number') {
-      this.paintNumber(ctx, value, rect)
+      this.paintNumber(ctx, value, rect, formatted)
     } else if (mode === 'wrap' && field.type !== 'number' && this.measurer) {
-      this.paintWrapped(ctx, this.toDisplayString(value), rect)
+      this.paintWrapped(ctx, formatted ?? this.toDisplayString(value), rect)
     } else if (field.type === 'text' && typeof value === 'string') {
       // overflow / clip：按 \n 多行、每行硬裁断无省略号（overflow 的溢出由 renderer 扩展 clip 实现）。
-      this.paintLines(ctx, value, rect)
+      this.paintLines(ctx, formatted ?? value, rect)
     } else {
-      this.paintFallback(ctx, value, rect, field)
+      this.paintFallback(ctx, value, rect, field, formatted)
     }
 
     ctx.restore()
@@ -190,11 +202,11 @@ export class CellPainter {
     }
   }
 
-  /** 绘制数字类型单元格（右对齐，千分位格式化） */
-  private paintNumber(ctx: CanvasRenderingContext2D, value: number, rect: QuadrantRect): void {
+  /** 绘制数字类型单元格（右对齐，千分位格式化）。preformatted 非 undefined 时跳过 toLocaleString。 */
+  private paintNumber(ctx: CanvasRenderingContext2D, value: number, rect: QuadrantRect, preformatted?: string): void {
     // 固定用 'en-US' 千分位——与浏览器 locale 解耦，避免不同用户跑出不同结果（影响测试和回归）。
     // 真正的本地化在更高层处理，M2+ 引入 locale-aware 字段时再做。
-    const text = value.toLocaleString('en-US')
+    const text = preformatted ?? value.toLocaleString('en-US')
     const padX = this.theme.metrics.cellPaddingX
     const availableWidth = rect.width - padX * 2
     const display = this.truncate(ctx, text, availableWidth)
@@ -208,6 +220,7 @@ export class CellPainter {
 
   /**
    * 把值字符串化后走 text 路径——M1 里 5 种非 text/number FieldType 的 fallback。
+   * preformatted 非 undefined 时直接用格式化文本，跳过 toDisplayString。
    * 见 CLAUDE.md「Things explicitly NOT in M1」。
    */
   private paintFallback(
@@ -215,9 +228,11 @@ export class CellPainter {
     value: CellValue,
     rect: QuadrantRect,
     _field: Field,
+    preformatted?: string,
   ): void {
     let str: string
-    if (value instanceof Date) str = value.toISOString()
+    if (preformatted !== undefined) str = preformatted
+    else if (value instanceof Date) str = value.toISOString()
     else if (Array.isArray(value)) str = value.join(', ')
     else str = String(value)
     this.paintLines(ctx, str, rect)
