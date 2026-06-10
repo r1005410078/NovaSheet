@@ -3,6 +3,7 @@ import {
   ClipboardPaste,
   Copy,
   Grid2x2,
+  Hash,
   PaintBucket,
   Redo2,
   Scissors,
@@ -25,6 +26,7 @@ const icons = {
   borders: <Grid2x2 aria-hidden className={TOOLBAR_ICON_CLASS} strokeWidth={stroke} />,
   merge: <TableColumnsSplit aria-hidden className={TOOLBAR_ICON_CLASS} strokeWidth={stroke} />,
   wrap: <WrapText aria-hidden className={TOOLBAR_ICON_CLASS} strokeWidth={stroke} />,
+  numberFormat: <Hash aria-hidden className={TOOLBAR_ICON_CLASS} strokeWidth={stroke} />,
 }
 
 /** Spreadsheet-style fill control: Lucide bucket + current swatch bar. */
@@ -58,4 +60,5 @@ export const defaultToolbarItems: readonly ToolbarItem[] = [
   { id: 'borders', kind: 'button', label: '边框', icon: icons.borders },
   { id: 'merge-cells', kind: 'button', label: '合并单元格', icon: icons.merge },
   { id: 'text-wrap', kind: 'select', label: '文本换行', icon: icons.wrap, value: '溢出' },
+  { id: 'value-format', kind: 'button', label: '数字格式', icon: icons.numberFormat },
 ]

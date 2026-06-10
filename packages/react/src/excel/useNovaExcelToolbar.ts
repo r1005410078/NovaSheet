@@ -4,6 +4,7 @@ import type {
   CellRange,
   GridSelection,
   TextWrapMode,
+  ValueFormat,
 } from '@novasheet/core'
 import { useCallback, useEffect } from 'react'
 
@@ -25,6 +26,7 @@ export interface NovaExcelToolbarGrid extends ToolbarStateGridAccess {
   mergeCells(range: CellRange): boolean
   unmergeCells(range: CellRange): boolean
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean
+  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean
 }
 
 export interface UseNovaExcelToolbarOptions {
@@ -126,6 +128,11 @@ export function useNovaExcelToolbar({
         const next: TextWrapMode =
           currentLabel === '溢出' ? 'wrap' : currentLabel === '换行' ? 'clip' : 'overflow'
         applyRangeAction((range) => grid.setTextWrap(range, next))
+        onToolbarAction?.(action)
+        return
+      }
+      if (action.id === 'value-format') {
+        applyRangeAction((range) => grid.setValueFormat(range, action.format))
         onToolbarAction?.(action)
       }
     },

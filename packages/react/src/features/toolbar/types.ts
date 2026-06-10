@@ -1,4 +1,4 @@
-import type { BorderPreset, BorderStyle } from '@novasheet/core'
+import type { BorderPreset, BorderStyle, ValueFormat } from '@novasheet/core'
 import type { ReactNode } from 'react'
 
 export type ToolbarActionId =
@@ -13,12 +13,16 @@ export type ToolbarActionId =
   | 'merge-cells'
   | 'unmerge-cells'
   | 'text-wrap'
+  | 'value-format'
 
 export type ToolbarControlId = ToolbarActionId | 'menu-search'
 
 export type ToolbarAction =
   | {
-      readonly id: Exclude<ToolbarActionId, 'fill-color' | 'borders' | 'merge-cells'>
+      readonly id: Exclude<
+        ToolbarActionId,
+        'fill-color' | 'borders' | 'merge-cells' | 'value-format'
+      >
     }
   | {
       readonly id: 'fill-color'
@@ -32,6 +36,10 @@ export type ToolbarAction =
   | {
       readonly id: 'merge-cells'
       readonly mode: MergeCellsMode
+    }
+  | {
+      readonly id: 'value-format'
+      readonly format: ValueFormat
     }
 
 export interface ToolbarItem {
@@ -63,6 +71,6 @@ export interface NovaSheetToolbarProps {
   readonly onMenuSearchChange?: (value: string) => void
 }
 
-export type ToolbarPopoverId = 'fill-color' | 'borders' | 'merge-cells'
+export type ToolbarPopoverId = 'fill-color' | 'borders' | 'merge-cells' | 'value-format'
 
 export type MergeCellsMode = 'all' | 'vertical' | 'horizontal'

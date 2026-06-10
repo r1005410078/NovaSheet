@@ -325,6 +325,7 @@ describe('defaultToolbarItems', () => {
       'borders',
       'merge-cells',
       'text-wrap',
+      'value-format',
     ])
   })
 })

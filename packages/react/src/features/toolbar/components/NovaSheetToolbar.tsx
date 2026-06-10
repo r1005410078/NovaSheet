@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { BorderPalette } from './BorderPalette'
 import { MergeMenu } from './MergeMenu'
 import { SplitPopoverButton } from './SplitPopoverButton'
+import { ValueFormatMenu } from './ValueFormatMenu'
 import {
   ToolbarColorPalette,
   ToolbarColorPaletteCustom,
@@ -32,7 +33,10 @@ import type {
   ToolbarPopoverId,
 } from '../types'
 
-type CommandToolbarActionId = Exclude<ToolbarActionId, 'fill-color' | 'borders' | 'merge-cells'>
+type CommandToolbarActionId = Exclude<
+  ToolbarActionId,
+  'fill-color' | 'borders' | 'merge-cells' | 'value-format'
+>
 
 function useFixedAnchorPosition(
   anchorRef: RefObject<HTMLElement | null>,
@@ -185,11 +189,13 @@ function ToolbarItemControl({
   const isFillColor = item.id === 'fill-color'
   const isBorders = item.id === 'borders'
   const isMergeCells = item.id === 'merge-cells'
-  const hasPopover = isFillColor || isBorders || isMergeCells
+  const isValueFormat = item.id === 'value-format'
+  const hasPopover = isFillColor || isBorders || isMergeCells || isValueFormat
   const isPopoverOpen =
     (isFillColor && openPopoverId === 'fill-color') ||
     (isBorders && openPopoverId === 'borders') ||
-    (isMergeCells && openPopoverId === 'merge-cells')
+    (isMergeCells && openPopoverId === 'merge-cells') ||
+    (isValueFormat && openPopoverId === 'value-format')
 
   if (isMergeCells) {
     return (
@@ -233,6 +239,10 @@ function ToolbarItemControl({
             setOpenPopoverId((current) => (current === 'borders' ? null : 'borders'))
             return
           }
+          if (isValueFormat) {
+            setOpenPopoverId((current) => (current === 'value-format' ? null : 'value-format'))
+            return
+          }
           onAction?.({ id: actionId as CommandToolbarActionId })
         }}
       >
@@ -242,7 +252,7 @@ function ToolbarItemControl({
           <span aria-hidden>{item.icon}</span>
         ) : null}
         {value ? <span>{value}</span> : null}
-        {item.kind === 'select' || isFillColor || isBorders ? (
+        {item.kind === 'select' || isFillColor || isBorders || isValueFormat ? (
           <span aria-hidden className="inline-flex text-slate-500">
             <ChevronDown aria-hidden className={TOOLBAR_ICON_SM_CLASS} strokeWidth={1.75} />
           </span>
@@ -266,6 +276,7 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
   const fillAnchorRef = useRef<HTMLSpanElement>(null)
   const bordersAnchorRef = useRef<HTMLSpanElement>(null)
   const mergeAnchorRef = useRef<HTMLSpanElement>(null)
+  const valueFormatAnchorRef = useRef<HTMLSpanElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const activeAnchorRef =
     openPopoverId === 'fill-color'
@@ -274,7 +285,9 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
         ? bordersAnchorRef
         : openPopoverId === 'merge-cells'
           ? mergeAnchorRef
-          : { current: null }
+          : openPopoverId === 'value-format'
+            ? valueFormatAnchorRef
+            : { current: null }
   const popoverPosition = useFixedAnchorPosition(activeAnchorRef, openPopoverId !== null)
 
   useEffect(() => {
@@ -286,6 +299,7 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
       if (fillAnchorRef.current?.contains(target)) return
       if (bordersAnchorRef.current?.contains(target)) return
       if (mergeAnchorRef.current?.contains(target)) return
+      if (valueFormatAnchorRef.current?.contains(target)) return
       if (popoverRef.current?.contains(target)) return
       setOpenPopoverId(null)
     }
@@ -330,7 +344,9 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
                     ? bordersAnchorRef
                     : item.id === 'merge-cells'
                       ? mergeAnchorRef
-                      : undefined
+                      : item.id === 'value-format'
+                        ? valueFormatAnchorRef
+                        : undefined
               }
             />
           </Fragment>
@@ -376,6 +392,18 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
                 }
                 onAction?.({ id: 'merge-cells', mode })
               }}
+              onClose={() => setOpenPopoverId(null)}
+            />,
+            document.body,
+          )
+        : null}
+
+      {openPopoverId === 'value-format' && popoverPosition && typeof document !== 'undefined'
+        ? createPortal(
+            <ValueFormatMenu
+              position={popoverPosition}
+              menuRef={popoverRef}
+              onSelect={(format) => onAction?.({ id: 'value-format', format })}
               onClose={() => setOpenPopoverId(null)}
             />,
             document.body,

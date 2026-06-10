@@ -114,6 +114,29 @@ describe('NovaExcel L3b toolbar wiring', () => {
     unmount()
   })
 
+  it('excel.L3b.value-format dispatches grid.setValueFormat', async () => {
+    const { container, ref, onToolbarAction, unmount } = await mountWiringExcel()
+
+    const setValueFormatSpy = spyOn(ref.current!.grid, 'setValueFormat').mockReturnValue(true)
+
+    clickAction(container, 'value-format')
+    await flushReactEffects()
+
+    expect(document.body.querySelector('[data-value-format="currency"]')).not.toBeNull()
+    clickBody('[data-value-format="currency"]')
+    await flushReactEffects()
+
+    expect(setValueFormatSpy).toHaveBeenCalled()
+    expect(onToolbarAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'value-format',
+        format: expect.objectContaining({ kind: 'currency' }),
+      }),
+    )
+
+    unmount()
+  })
+
   it('excel.L3b.merge-cells dispatches grid.mergeCells', async () => {
     const { container, ref, onToolbarAction, unmount } = await mountWiringExcel()
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-10T11:36:19.477Z",
+  "generatedAt": "2026-06-10T12:54:56.381Z",
   "source": "packages/react/tests/excel/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -323,6 +323,28 @@
       ],
       "then": [
         "grid.unmergeCells 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3b.value-format",
+      "layer": "L3b",
+      "summary": "value-format 菜单接线 grid.setValueFormat",
+      "userStory": "作为表格用户，当某列是金额、比例或日期时，我想在工具栏选一个数字格式（货币 / 百分比 / 千分位 / 日期），让选区单元格按该格式显示，而底层数据不变，以便我既看得清又能继续排序与计算。",
+      "tags": [
+        "toolbar",
+        "format"
+      ],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-value-format.md",
+      "given": [
+        "NovaExcel 已挂载，有选区"
+      ],
+      "when": [
+        "打开工具栏 value-format 菜单并选一个格式预设（如货币）"
+      ],
+      "then": [
+        "`grid.setValueFormat` 被调用",
+        "`onToolbarAction({ id: 'value-format', format })` 触发，`format` 为对应的 ValueFormat 描述符"
       ]
     },
     {
