@@ -402,7 +402,7 @@ describe('buildFormatCell', () => {
     ]
     const field: Field = { ...numField, format: { kind: 'number' } }
     const fc = buildFormatCell(cellFormats, {}, 'en-US')
-    expect(fc(0, 0, field, 1234.5)).toBe('¥1,234.50')   // cell 级 currency 胜
+    expect(fc(0, 0, field, 1234.5)).toBe('CN¥1,234.50')  // cell 级 currency 胜（en-US 下 CNY 渲染为 CN¥；zh-CN 才是 ¥）
     expect(fc(1, 0, field, 1234)).toBe('1,234')          // 无 cell 级 → 列默认 number
   })
   it('无任何 format → undefined', () => {
