@@ -130,4 +130,19 @@ describe('RangeStyleStore', () => {
     store.clearFill(asRawRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }))
     expect(store.getLayerCount()).toBe(3)
   })
+
+  it('resolveCell 累积 valueFormat（last-wins）', () => {
+    const store = new RangeStyleStore()
+    const range = asRawRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+    store.apply(range, { valueFormat: { kind: 'number' } })
+    store.apply(range, { valueFormat: { kind: 'currency', currency: 'CNY' } })
+    expect(store.resolveCell(0, 0)?.valueFormat).toEqual({ kind: 'currency', currency: 'CNY' })
+  })
+
+  it('valueFormat-only 单元格 resolveCell 不返回 undefined', () => {
+    const store = new RangeStyleStore()
+    store.apply(asRawRange({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 }), { valueFormat: { kind: 'percent' } })
+    expect(store.resolveCell(1, 1)?.valueFormat).toEqual({ kind: 'percent' })
+    expect(store.resolveCell(0, 0)).toBeUndefined()
+  })
 })

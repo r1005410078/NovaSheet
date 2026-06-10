@@ -82,6 +82,7 @@ export class RangeStyleStore {
     let borders: CellFormat['borders']
     let hasBorders = false
     let textWrap: CellFormat['textWrap']
+    let valueFormat: CellFormat['valueFormat']
 
     for (const layer of this.layers) {
       if (!isCellInRange(rowIndex, colIndex, layer.range)) continue
@@ -113,14 +114,16 @@ export class RangeStyleStore {
           hasBorders = true
         }
         if (layer.patch.textWrap !== undefined) textWrap = layer.patch.textWrap
+        if (layer.patch.valueFormat !== undefined) valueFormat = layer.patch.valueFormat
       }
     }
 
-    if (!fillActive && !hasBorders && textWrap === undefined) return undefined
+    if (!fillActive && !hasBorders && textWrap === undefined && valueFormat === undefined) return undefined
     const result: CellFormat = {
       ...(fillActive ? { fillColor } : {}),
       ...(hasBorders ? { borders } : {}),
       ...(textWrap !== undefined ? { textWrap } : {}),
+      ...(valueFormat !== undefined ? { valueFormat } : {}),
     }
     return result
   }
