@@ -208,7 +208,11 @@ export type {
   FormatLayer,
   ResolvedCellFormat,
   TextWrapMode,
+  ValueFormat,
+  CellFormatter,
+  FormatContext,
 } from './kernel/protocol/FormatTypes'
+export { formatValue } from './kernel/protocol/formatValue'
 export { MergeStore } from './features/merge/MergeStore'
 export type { MergeRegion } from './kernel/coords/MergeRegion'
 export type {
