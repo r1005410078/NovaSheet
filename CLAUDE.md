@@ -11,6 +11,7 @@ Loaded into every agent session — invariants easy to get wrong without context
 
 - **Active branch:** `refactor-default-grid-engine-decomposition`（**未合并 `main`**，纯重构线）。功能线开发前确认基线分支 + read recent commits for delta。
 - **Next milestone:** Phase 5-C number/date/currency，then 5-D conditional formatting — unless redirected.
+- **Backlog（未 spec）:** **单元格自定义类型扩展 API** —— 三轴：显示(canvas painter port，强制 canvas 画星级/进度条/tag/头像/chart)、编辑(DOM/React overlay editor 注册缝，下拉/日期选择器)、formatter(文本，与 5-C 重叠)。现状全闭合(CellPainter 仅 text/number 硬编码、DomCellEditor 仅 input/textarea)；目标 core 开 port、业务层注册、core 此后零改。需 brainstorming 出统一 spec。
 - **Shipped（细节见 git log + `docs/superpowers/specs/`）:** Phase 4 全完成、Phase 5-A/5-B、fill×merge/format、text-wrap 三态 + Alt+Enter 多行、Engine Composer Phase 2、Web 合并进 core（依赖反转）。
 - **易错不变量（仅 format/merge 域）:** `RangeStyleStore`/`MergeStore` 用 **raw** 行列键控；`getFrame()` raw→view，painter 只吃 VIEW 坐标；mutation 经 `viewRangeToRawRange` 转连续 raw 区间，sort/filter 打散时保守 no-op（返 `false`）。
 - **Locked decisions（别轻易翻案，见 spec ADR §A）:** 单 Canvas full visible-region redraw、native scroll + 非线性 `scrollTop`（拒绝自绘滚动条）、`CHUNK_SIZE=1024`、`<handle-layer>` sibling 做 resize hit-zone（M4）。
