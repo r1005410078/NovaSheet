@@ -1,0 +1,12 @@
+menu-search kind=search "菜单搜索"
+undo kind=button "撤销"
+redo kind=button "重做"
+copy kind=button "复制" |sepBefore
+cut kind=button "剪切"
+paste kind=button "粘贴"
+zoom kind=select "缩放" value="100%" |sepBefore
+fill-color kind=button "填充颜色" |sepBefore
+borders kind=button "边框"
+merge-cells kind=button "合并单元格"
+text-wrap kind=select "文本换行" value="溢出"
+value-format kind=button "数字格式"
