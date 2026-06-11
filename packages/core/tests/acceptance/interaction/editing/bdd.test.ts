@@ -10,6 +10,7 @@ import {
   isTypableEditKey,
   parseCellEditInput,
   type CellRange,
+  type CellValue,
   type PasteSkippedCell,
   type Row,
   type Schema,
@@ -22,6 +23,7 @@ import {
   singleCellSelection,
   createClipboardStub,
 } from '../../_helpers/fixtures'
+import { expectGolden } from '../../_helpers/golden'
 
 describe('Core acceptance editing', () => {
 const clipboardSchema: Schema = {
@@ -163,6 +165,44 @@ describe('Core BDD Batch 5 clipboard edit fill scenarios', () => {
     engine.commitFill(source, target!.fill, 'down')
     expect(engine.getData().getCell(2, 'b')).toBe(5)
     expect(engine.getData().getCell(3, 'b')).toBe(7)
+  })
+
+  it('core.L0.fill-series-projection-matrix extrapolates series patterns', () => {
+    // 每条 = 一列源样本 → 向下填充 6 行的投影序列。覆盖 inferProjector 全部分支：
+    // 单样本 clone、等差数、文本尾号（含补零/过零）、日期等步、非等差回退取样循环。
+    const schema: Schema = { fields: [{ id: 'v', name: 'V', type: 'text', width: 100 }] }
+    // Date 用固定毫秒构造，dump 用 ISO（UTC）——序列本身确定，无本地时区抖动。
+    const day = 86_400_000
+    const base = Date.UTC(2024, 0, 1)
+    const cases: ReadonlyArray<readonly [string, readonly CellValue[]]> = [
+      ['单样本 clone', [7]],
+      ['等差 +1', [1, 2]],
+      ['等差 +10', [10, 20]],
+      ['等差递减 -3', [9, 6]],
+      ['文本尾号 +1', ['Item 1', 'Item 2']],
+      ['文本尾号补零保宽', ['Q01', 'Q02']],
+      ['文本尾号过零', ['n -1', 'n 0']],
+      ['日期按日等步', [new Date(base), new Date(base + day)]],
+      ['非等差→回退取样循环', [1, 2, 4]],
+      ['纯文本无尾号→循环重复', ['a', 'b']],
+    ]
+
+    const fmt = (v: CellValue): string =>
+      v instanceof Date ? v.toISOString() : v === null ? 'null' : JSON.stringify(v)
+
+    const lines: string[] = []
+    for (const [label, samples] of cases) {
+      const data = new InMemoryDataSource({
+        schema,
+        rows: samples.map((v) => ({ v })) as Row[],
+      })
+      const source = fillRange(0, samples.length - 1, 0, 0)
+      const fill = fillRange(0, 5, 0, 0) // 投影前 6 行（含源），看完整外推
+      const writes = computeFillWrites({ data, source, fill, direction: 'down' })
+      const seq = writes.map((w) => fmt(w.value)).join(', ')
+      lines.push(`${label}: [${seq}]`)
+    }
+    expectGolden(import.meta.dir, 'core.L0.fill-series-projection-matrix', `${lines.join('\n')}\n`)
   })
 
   it('core.L2.grid-fill-style-propagates copies fill color to target cells', () => {

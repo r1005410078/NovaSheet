@@ -46,7 +46,7 @@ acceptance/
 
 ---
 
-## 测试文件职责（当前 64 条场景）
+## 测试文件职责（当前 65 条场景）
 
 | 测试文件 | 场景数 | Layer | 职责 |
 | --- | ---: | --- | --- |
@@ -59,7 +59,7 @@ acceptance/
 | [`contract/plugin-api/bdd.test.ts`](./contract/plugin-api/bdd.test.ts) | 1 | type-only | 公开类型可导入、可构造 |
 | [`contract/events/bdd.test.ts`](./contract/events/bdd.test.ts) | 1 | L2 | `Grid.on` / `onUndo` / `onRedo` / `onFill` 订阅与退订 |
 | [`interaction/selection/bdd.test.ts`](./interaction/selection/bdd.test.ts) | 3 | L0+L2 | 选区 set/get、结构变更 remap、方向键导航 |
-| [`interaction/editing/bdd.test.ts`](./interaction/editing/bdd.test.ts) | 5 | L0+L2 | 剪贴板 facade、paste skipped、编辑解析、填充柄 |
+| [`interaction/editing/bdd.test.ts`](./interaction/editing/bdd.test.ts) | 6 | L0+L2 | 剪贴板 facade、paste skipped、编辑解析、填充柄、fill-series 外推矩阵 golden |
 | [`interaction/undo/bdd.test.ts`](./interaction/undo/bdd.test.ts) | 1 | L0 | undo 命令 JSON 可序列化 |
 | [`rendering/bdd.test.ts`](./rendering/bdd.test.ts) | 4 | L2 | RenderFrame 黄金快照：基础布局、fill×merge×值格式、冻结象限、hide×sort 视图组合（`GOLDEN_UPDATE=1` 重生成） |
 

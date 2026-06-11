@@ -17,6 +17,7 @@
 | core.L0.datasource-in-memory-read-cell | L0 | draft | InMemoryDataSource 读取单元格与 inclusive getRows |
 | core.L0.datasource-sparse-default-workspace | L0 | implemented | SparseExcelDataSource 默认 A-Z x 1000 且只物化非空单元格 |
 | core.L0.edit-parse-format | L0 | implemented | 单元格编辑解析与可编辑类型判定 |
+| core.L0.fill-series-projection-matrix | L0 | implemented | computeFillWrites 序列外推矩阵与黄金文件一致 |
 | core.L0.format-value-number | L0 | implemented | formatValue 描述符矩阵（number/percent/currency/date）与黄金文件一致 |
 | core.L0.geometry-chunked-axis-boundaries | L0 | implemented | ChunkedAxis 边界索引与 CHUNK_SIZE |
 | core.L0.geometry-column-letter | L0 | implemented | columnIndexToLetter 0-based 列索引转 Excel 字母 |
@@ -396,6 +397,29 @@
 - 仅 text/number 可编辑
 - number 非法输入返回 undefined
 - 可打印字符键可键入
+
+## core.L0.fill-series-projection-matrix
+
+- **layer**: L0
+- **summary**: computeFillWrites 序列外推矩阵与黄金文件一致
+- **status**: implemented
+
+### User Story
+
+作为 Core 使用者，当我拖拽填充柄外推一列样本时，我希望 `computeFillWrites` 对每种序列模式（单样本 clone、等差数、文本尾号含补零/过零、日期等步、非等差回退循环）的投影结果由一份已 review 的黄金矩阵锁定，以便任何外推语义回归立即可见。
+
+### Given
+
+- 单列 schema，每条用例一组源样本
+- 向下填充 6 行（含源行），direction = down
+
+### When
+
+- 逐条 `computeFillWrites`，将投影序列 dump（Date 用 ISO）
+
+### Then
+
+- 输出与 `__goldens__/core.L0.fill-series-projection-matrix.golden.txt` 逐字符一致：
 
 ## core.L0.format-value-number
 
