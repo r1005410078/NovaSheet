@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -95,6 +95,10 @@ describe('runScenarioCoverageCheck', () => {
     const testsRoot = join(root, 'tests')
     const testFilePath = join(testsRoot, 'orphan.test.ts')
 
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
+    const errorSpy = spyOn(console, 'error').mockImplementation(() => {})
+
     try {
       mkdirSync(testsRoot, { recursive: true })
 
@@ -136,6 +140,9 @@ describe('runScenarioCoverageCheck', () => {
 
       expect(exitCode).toBe(1)
     } finally {
+      logSpy.mockRestore()
+      warnSpy.mockRestore()
+      errorSpy.mockRestore()
       rmSync(root, { recursive: true, force: true })
     }
   })

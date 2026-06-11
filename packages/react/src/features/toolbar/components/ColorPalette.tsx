@@ -30,7 +30,7 @@ export function ColorSwatch({
       style={
         translucent
           ? {
-              background: `linear-gradient(${color}, ${color}), ${CHECKERBOARD_BG}`,
+              backgroundImage: `linear-gradient(${color}, ${color}), ${CHECKERBOARD_BG}`,
               backgroundSize: 'auto, 8px 8px',
             }
           : { backgroundColor: color }

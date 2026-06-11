@@ -96,7 +96,10 @@ export function CustomColorPicker({
 
       <label className="flex items-center gap-2">
         <span className="w-10 shrink-0 text-slate-700">透明度</span>
-        <span className="relative h-2 w-full rounded" style={{ background: CHECKERBOARD_BG, backgroundSize: '8px 8px' }}>
+        <span
+          className="relative h-2 w-full rounded"
+          style={{ backgroundImage: CHECKERBOARD_BG, backgroundSize: '8px 8px' }}
+        >
           <input
             type="range"
             aria-label="透明度"
@@ -105,7 +108,7 @@ export function CustomColorPicker({
             step={1}
             value={Math.round(hsva.a * 100)}
             className="absolute inset-0 h-2 w-full"
-            style={{ background: `linear-gradient(to right, transparent, ${opaqueCss})` }}
+            style={{ backgroundImage: `linear-gradient(to right, transparent, ${opaqueCss})` }}
             onChange={(e) => applyHsva({ ...hsva, a: Number(e.target.value) / 100 })}
           />
         </span>
@@ -116,7 +119,7 @@ export function CustomColorPicker({
           aria-hidden
           className="inline-block size-6 shrink-0 rounded-full border border-slate-300"
           style={{
-            background: `linear-gradient(${currentCss}, ${currentCss}), ${CHECKERBOARD_BG}`,
+            backgroundImage: `linear-gradient(${currentCss}, ${currentCss}), ${CHECKERBOARD_BG}`,
             backgroundSize: 'auto, 8px 8px',
           }}
         />
