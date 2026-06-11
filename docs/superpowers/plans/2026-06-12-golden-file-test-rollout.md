@@ -107,13 +107,15 @@
 
 ---
 
-## P2 — 锦上添花（低优先，单独评估再做）
+## P2 — 锦上添花  ✅ 全部完成
 
-| # | 目标 | 落点 | 备注 |
+| # | 目标 | Commit | 落点 |
 | --- | --- | --- | --- |
-| P2-1 | 单 painter op golden（HeaderPainter 列字母/选中态、RowHeaderPainter、EmptyStatePainter） | `canvas2d/tests/painters/` | 复用 `dumpOps`；各 painter 一份 |
-| P2-2 | UndoCommand 全 21 kind JSON 形态清单 | `core/.../interaction/undo/bdd.test.ts` | 现 `core.L0.undo-command-serialization` 仅验单 kind 可序列化；扩为全 kind 代表性实例 → `JSON.stringify` 清单入金 |
-| P2-3 | mbd 生成器契约（fixture 场景 MD → manifest JSON/SCENARIOS.md 输出） | `packages/mbd/tests/` | 防 manifest 格式漂移；需 fixture 场景目录 |
+| P2-1 | 单 painter op golden（HeaderPainter 字段名/列标+选中、RowHeaderPainter 选中、EmptyStatePainter） | `012a563` | `canvas2d/tests/painters/painter-oplog-golden.test.ts`（4 份） |
+| P2-2 | UndoCommand 全 21 kind 字段集清单（含可序列化） | `32751da` | `core.../interaction/undo/__goldens__/core.L0.undo-command-shape-inventory`；落地改为**字段键集** dump（比全 JSON 可维护） |
+| P2-3 | mbd 生成器契约（manifest JSON + markdown 全量输出） | `a226100` | `mbd/tests/export/__goldens__/mbd-manifest-{json,markdown}`；归一 `generatedAt`/`sourceFile` 防抖动 |
+
+**P0/P1/P2 全部完成。** 黄金推广收官。
 
 ---
 
