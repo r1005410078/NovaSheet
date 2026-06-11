@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-10T12:54:56.381Z",
+  "generatedAt": "2026-06-11T00:55:38.792Z",
   "source": "packages/react/tests/excel/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -161,6 +161,25 @@
       ],
       "then": [
         "grid.copy / cut / paste 被调用"
+      ]
+    },
+    {
+      "id": "excel.L3b.custom-fill-color",
+      "layer": "L3b",
+      "summary": "自定义取色器选半透明色后派发 fill-color",
+      "userStory": "作为表格用户，当内置色板没有我要的颜色时，我希望用自定义取色器（含透明度）选色并应用到选区，以便实现半透明填充效果。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3b-custom-fill-color.md",
+      "given": [
+        "NovaExcel 已挂载，监听 onToolbarAction"
+      ],
+      "when": [
+        "打开填充颜色 popover → 点「+」进入取色器 → hex 输入 `#ff000080` → 点确定"
+      ],
+      "then": [
+        "onToolbarAction 收到 `{ id: 'fill-color', color: '#ff000080' }`",
+        "popover 关闭"
       ]
     },
     {
@@ -370,6 +389,24 @@
       ]
     },
     {
+      "id": "excel.L3c.custom-color-persist",
+      "layer": "L3c",
+      "summary": "自定义颜色 swatch 跨卸载重挂留存",
+      "userStory": "作为表格用户，当我添加过自定义颜色后，我希望下次打开调色板时它还在，以便复用同一颜色。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3c-custom-color-persist.md",
+      "given": [
+        "localStorage 干净；NovaExcel 已挂载"
+      ],
+      "when": [
+        "经取色器添加 `#00ff0080` 并应用 → 卸载 → 重新挂载 → 再次打开填充颜色 popover"
+      ],
+      "then": [
+        "自定义区出现 `data-fill-color=\"#00ff0080\"` swatch"
+      ]
+    },
+    {
       "id": "excel.L3c.external-on-undo-on-redo",
       "layer": "L3c",
       "summary": "onUndo/onRedo 与 toolbar 联动",
@@ -385,6 +422,24 @@
       ],
       "then": [
         "onUndo/onRedo 各触发"
+      ]
+    },
+    {
+      "id": "excel.L3c.eyedropper-feature-detect",
+      "layer": "L3c",
+      "summary": "无 EyeDropper API 时吸管不渲染",
+      "userStory": "作为 Firefox/Safari 用户，我不希望看到一个点了没反应的吸管按钮，以便界面诚实反映能力。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3c-eyedropper-feature-detect.md",
+      "given": [
+        "环境无 `window.EyeDropper`（happy-dom 默认）"
+      ],
+      "when": [
+        "打开填充颜色 popover"
+      ],
+      "then": [
+        "自定义区不渲染吸管按钮（`[data-custom-color-eyedropper]` 不存在）"
       ]
     },
     {

@@ -12,6 +12,7 @@
 | excel.L3a.strict-mode-remount | L3a | draft | Strict Mode 双挂载 |
 | excel.L3b.borders | L3b | draft | setBorders 接线 |
 | excel.L3b.clipboard | L3b | draft | copy/cut/paste 接线 |
+| excel.L3b.custom-fill-color | L3b | draft | 自定义取色器选半透明色后派发 fill-color |
 | excel.L3b.default-range-on-format | L3b | draft | 无选区时默认选区后 format |
 | excel.L3b.fill-color | L3b | draft | setFillColor 接线 |
 | excel.L3b.merge-cells | L3b | draft | mergeCells 接线 |
@@ -22,7 +23,9 @@
 | excel.L3b.unmerge-cells | L3b | draft | unmergeCells 接线 |
 | excel.L3b.value-format | L3b | draft | value-format 菜单接线 grid.setValueFormat |
 | excel.L3c.currency-display | L3c | draft | currency 列格式化配置生效且组件无错误 |
+| excel.L3c.custom-color-persist | L3c | draft | 自定义颜色 swatch 跨卸载重挂留存 |
 | excel.L3c.external-on-undo-on-redo | L3c | draft | onUndo/onRedo 与 toolbar 联动 |
+| excel.L3c.eyedropper-feature-detect | L3c | draft | 无 EyeDropper API 时吸管不渲染 |
 | excel.L3c.fill-reflects-toolbar | L3c | draft | 填色后 toolbar 反映 |
 | excel.L3c.no-toolbar-grid-ref | L3c | draft | 无 toolbar 时 ref 仍可用 |
 | excel.L3c.sparse-ref-grid | L3c | draft | 稀疏默认工作区 ref.grid |
@@ -207,6 +210,29 @@
 ### Then
 
 - grid.copy / cut / paste 被调用
+
+## excel.L3b.custom-fill-color
+
+- **layer**: L3b
+- **summary**: 自定义取色器选半透明色后派发 fill-color
+- **status**: draft
+
+### User Story
+
+作为表格用户，当内置色板没有我要的颜色时，我希望用自定义取色器（含透明度）选色并应用到选区，以便实现半透明填充效果。
+
+### Given
+
+- NovaExcel 已挂载，监听 onToolbarAction
+
+### When
+
+- 打开填充颜色 popover → 点「+」进入取色器 → hex 输入 `#ff000080` → 点确定
+
+### Then
+
+- onToolbarAction 收到 `{ id: 'fill-color', color: '#ff000080' }`
+- popover 关闭
 
 ## excel.L3b.default-range-on-format
 
@@ -435,6 +461,28 @@
 - `setValueFormat` 调用返回 `true`（格式写入成功）
 - 全程无运行时抛出
 
+## excel.L3c.custom-color-persist
+
+- **layer**: L3c
+- **summary**: 自定义颜色 swatch 跨卸载重挂留存
+- **status**: draft
+
+### User Story
+
+作为表格用户，当我添加过自定义颜色后，我希望下次打开调色板时它还在，以便复用同一颜色。
+
+### Given
+
+- localStorage 干净；NovaExcel 已挂载
+
+### When
+
+- 经取色器添加 `#00ff0080` 并应用 → 卸载 → 重新挂载 → 再次打开填充颜色 popover
+
+### Then
+
+- 自定义区出现 `data-fill-color="#00ff0080"` swatch
+
 ## excel.L3c.external-on-undo-on-redo
 
 - **layer**: L3c
@@ -456,6 +504,28 @@
 ### Then
 
 - onUndo/onRedo 各触发
+
+## excel.L3c.eyedropper-feature-detect
+
+- **layer**: L3c
+- **summary**: 无 EyeDropper API 时吸管不渲染
+- **status**: draft
+
+### User Story
+
+作为 Firefox/Safari 用户，我不希望看到一个点了没反应的吸管按钮，以便界面诚实反映能力。
+
+### Given
+
+- 环境无 `window.EyeDropper`（happy-dom 默认）
+
+### When
+
+- 打开填充颜色 popover
+
+### Then
+
+- 自定义区不渲染吸管按钮（`[data-custom-color-eyedropper]` 不存在）
 
 ## excel.L3c.fill-reflects-toolbar
 
