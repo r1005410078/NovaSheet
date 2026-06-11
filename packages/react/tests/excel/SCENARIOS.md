@@ -5,6 +5,8 @@
 | id | layer | status | summary |
 | --- | --- | --- | --- |
 | excel.L3a.default-mount | L3a | draft | 默认挂载 excel/grid/toolbar/canvas |
+| excel.L3a.grid-hide-callbacks | L3a | draft | ref 隐藏行列触发隐藏状态回调 |
+| excel.L3a.grid-structural-callbacks | L3a | draft | ref 结构变更触发行列回调 |
 | excel.L3a.no-toolbar | L3a | draft | showToolbar false 隐藏 toolbar |
 | excel.L3a.props-callbacks | L3a | draft | onSelectionChange 等回调 |
 | excel.L3a.ref-exposes-grid | L3a | draft | ref 暴露 grid 与 scrollToCell |
@@ -28,6 +30,7 @@
 | excel.L3c.eyedropper-feature-detect | L3c | draft | 无 EyeDropper API 时吸管不渲染 |
 | excel.L3c.fill-reflects-toolbar | L3c | draft | 填色后 toolbar 反映 |
 | excel.L3c.no-toolbar-grid-ref | L3c | draft | 无 toolbar 时 ref 仍可用 |
+| excel.L3c.redo-button-state | L3c | draft | redo 按钮启用/禁用 |
 | excel.L3c.sparse-ref-grid | L3c | draft | 稀疏默认工作区 ref.grid |
 | excel.L3c.undo-button-state | L3c | draft | undo 按钮启用/禁用 |
 
@@ -52,6 +55,56 @@
 ### Then
 
 - 存在 data-novasheet-react-excel、grid、toolbar、canvas
+
+## excel.L3a.grid-hide-callbacks
+
+- **layer**: L3a
+- **summary**: ref 隐藏行列触发隐藏状态回调
+- **status**: draft
+
+### User Story
+
+作为集成方，当我通过 NovaExcel ref 隐藏或取消隐藏行列时，我希望隐藏状态回调能反映当前隐藏集合，以便外部 UI 与 Grid 的可见性状态保持同步。
+
+### Given
+
+- NovaExcel 已挂载，持有 ref
+- 传入 onHideChange / onHideColsChange
+
+### When
+
+- 通过 ref.current.grid 调用 hideRows / unhideRows / hideCols / unhideCols
+
+### Then
+
+- onHideChange 收到当前 hidden row id 集合
+- onHideColsChange 收到当前 hidden field id 集合
+
+## excel.L3a.grid-structural-callbacks
+
+- **layer**: L3a
+- **summary**: ref 结构变更触发行列回调
+- **status**: draft
+
+### User Story
+
+作为集成方，当我通过 NovaExcel ref 调用底层 Grid 的行列结构 API 时，我希望对应 props 回调被触发，以便外部状态栏、审计日志或协同层能观察到结构变更。
+
+### Given
+
+- NovaExcel 已挂载，持有 ref
+- 传入 onRowsInserted / onRowsDeleted / onColumnsInserted / onColumnsDeleted
+
+### When
+
+- 通过 ref.current.grid 调用 insertRows / deleteRows / insertCols / deleteCols
+
+### Then
+
+- onRowsInserted 收到插入位置、数量与新行 id
+- onRowsDeleted 收到删除的 row id
+- onColumnsInserted 收到插入位置、数量与新字段
+- onColumnsDeleted 收到删除的 field id
 
 ## excel.L3a.no-toolbar
 
@@ -571,6 +624,31 @@
 ### Then
 
 - 不报错
+
+## excel.L3c.redo-button-state
+
+- **layer**: L3c
+- **summary**: redo 按钮启用/禁用
+- **status**: draft
+
+### User Story
+
+作为表格用户，当我撤销了一个可重做操作后，我希望重做按钮变为可点；当我重做完成且无可重做项时，按钮应变灰。
+
+### Given
+
+- NovaExcel 已挂载
+- 已产生一个可撤销操作
+
+### When
+
+- 点击 undo 后再点击 redo
+
+### Then
+
+- redo 初始 disabled
+- undo 后 redo enabled
+- redo 后 redo disabled
 
 ## excel.L3c.sparse-ref-grid
 

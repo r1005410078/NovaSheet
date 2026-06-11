@@ -63,6 +63,35 @@ describe('NovaExcel L3c user journeys', () => {
     unmount()
   })
 
+  it('excel.L3c.redo-button-state toggles redo disabled after undo and redo', async () => {
+    const ref = React.createRef<NovaExcelRef>()
+    const { container, unmount } = await mountNovaExcel({ data: createDenseData(), ref })
+
+    const redoButton = () =>
+      container.querySelector<HTMLButtonElement>('[data-action-id="redo"]')
+
+    expect(redoButton()?.disabled).toBe(true)
+
+    runGridUpdate(() => {
+      ref.current!.grid.insertRows(0, 1)
+    })
+    await flushGridSelectionEffects()
+    await flushReactEffects()
+    expect(redoButton()?.disabled).toBe(true)
+
+    clickAction(container, 'undo')
+    await flushGridSelectionEffects()
+    await flushReactEffects()
+    expect(redoButton()?.disabled).toBe(false)
+
+    clickElement(redoButton()!)
+    await flushGridSelectionEffects()
+    await flushReactEffects()
+    expect(redoButton()?.disabled).toBe(true)
+
+    unmount()
+  })
+
   it('excel.L3c.no-toolbar-grid-ref keeps ref usable without toolbar', async () => {
     const ref = React.createRef<NovaExcelRef>()
     const { unmount } = await mountNovaExcel({ data: createDenseData(), showToolbar: false, ref })

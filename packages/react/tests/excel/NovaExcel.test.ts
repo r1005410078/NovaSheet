@@ -2,10 +2,11 @@ import { describe, expect, it, mock } from 'bun:test'
 import React, { act } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
+import type { Field } from '@novasheet/core'
 
 import { NovaExcel, type NovaExcelRef } from '../../src'
 import { unmountReactRoot } from '../helpers/dom'
-import { createDenseData, mountNovaExcel, selectSingleCell } from './helpers'
+import { createDenseData, mountNovaExcel, runGridUpdate, selectSingleCell } from './helpers'
 
 describe('NovaExcel L3a shell', () => {
   it('excel.L3a.default-mount renders excel grid toolbar and canvas', async () => {
@@ -93,6 +94,86 @@ describe('NovaExcel L3a shell', () => {
     selectSingleCell(ref.current!.grid, 1, 0)
 
     expect(onSelectionChange).toHaveBeenCalled()
+
+    unmount()
+  })
+
+  it('excel.L3a.grid-structural-callbacks forwards row and column mutation callbacks', async () => {
+    const onRowsInserted = mock(() => {})
+    const onRowsDeleted = mock(() => {})
+    const onColumnsInserted = mock(() => {})
+    const onColumnsDeleted = mock(() => {})
+    const ref = React.createRef<NovaExcelRef>()
+    const { unmount } = await mountNovaExcel({
+      data: createDenseData(),
+      ref,
+      onRowsInserted,
+      onRowsDeleted,
+      onColumnsInserted,
+      onColumnsDeleted,
+    })
+
+    let newRowIds: readonly number[] = []
+    runGridUpdate(() => {
+      newRowIds = ref.current!.grid.insertRows(1, 1)
+    })
+    const newRowId = newRowIds[0]
+    expect(newRowId).toBeDefined()
+    expect(onRowsInserted).toHaveBeenCalledWith({ at: 1, count: 1, newIds: newRowIds })
+
+    runGridUpdate(() => {
+      ref.current!.grid.deleteRows([newRowId!])
+    })
+    expect(onRowsDeleted).toHaveBeenCalledWith({ removed: [newRowId] })
+
+    let newFields: readonly Field[] = []
+    runGridUpdate(() => {
+      newFields = ref.current!.grid.insertCols(1, 1)
+    })
+    const newField = newFields[0]
+    expect(newField).toBeDefined()
+    expect(onColumnsInserted).toHaveBeenCalledWith({ at: 1, count: 1, newFields })
+
+    runGridUpdate(() => {
+      ref.current!.grid.deleteCols([newField!.id])
+    })
+    expect(onColumnsDeleted).toHaveBeenCalledWith({
+      removed: [{ index: 0, fieldId: newField!.id }],
+    })
+
+    unmount()
+  })
+
+  it('excel.L3a.grid-hide-callbacks forwards hidden row and column state callbacks', async () => {
+    const onHideChange = mock(() => {})
+    const onHideColsChange = mock(() => {})
+    const ref = React.createRef<NovaExcelRef>()
+    const { unmount } = await mountNovaExcel({
+      data: createDenseData(),
+      ref,
+      onHideChange,
+      onHideColsChange,
+    })
+
+    runGridUpdate(() => {
+      ref.current!.grid.hideRows([1])
+    })
+    expect(onHideChange).toHaveBeenCalledWith({ hidden: [1] })
+
+    runGridUpdate(() => {
+      ref.current!.grid.unhideRows([1])
+    })
+    expect(onHideChange).toHaveBeenLastCalledWith({ hidden: [] })
+
+    runGridUpdate(() => {
+      ref.current!.grid.hideCols(['score'])
+    })
+    expect(onHideColsChange).toHaveBeenCalledWith({ hidden: ['score'] })
+
+    runGridUpdate(() => {
+      ref.current!.grid.unhideCols(['score'])
+    })
+    expect(onHideColsChange).toHaveBeenLastCalledWith({ hidden: [] })
 
     unmount()
   })

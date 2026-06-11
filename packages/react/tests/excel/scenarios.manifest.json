@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-11T00:55:38.792Z",
+  "generatedAt": "2026-06-11T22:04:09.615Z",
   "source": "packages/react/tests/excel/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -27,6 +27,48 @@
       ],
       "then": [
         "存在 data-novasheet-react-excel、grid、toolbar、canvas"
+      ]
+    },
+    {
+      "id": "excel.L3a.grid-hide-callbacks",
+      "layer": "L3a",
+      "summary": "ref 隐藏行列触发隐藏状态回调",
+      "userStory": "作为集成方，当我通过 NovaExcel ref 隐藏或取消隐藏行列时，我希望隐藏状态回调能反映当前隐藏集合，以便外部 UI 与 Grid 的可见性状态保持同步。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3a-grid-hide-callbacks.md",
+      "given": [
+        "NovaExcel 已挂载，持有 ref",
+        "传入 onHideChange / onHideColsChange"
+      ],
+      "when": [
+        "通过 ref.current.grid 调用 hideRows / unhideRows / hideCols / unhideCols"
+      ],
+      "then": [
+        "onHideChange 收到当前 hidden row id 集合",
+        "onHideColsChange 收到当前 hidden field id 集合"
+      ]
+    },
+    {
+      "id": "excel.L3a.grid-structural-callbacks",
+      "layer": "L3a",
+      "summary": "ref 结构变更触发行列回调",
+      "userStory": "作为集成方，当我通过 NovaExcel ref 调用底层 Grid 的行列结构 API 时，我希望对应 props 回调被触发，以便外部状态栏、审计日志或协同层能观察到结构变更。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3a-grid-structural-callbacks.md",
+      "given": [
+        "NovaExcel 已挂载，持有 ref",
+        "传入 onRowsInserted / onRowsDeleted / onColumnsInserted / onColumnsDeleted"
+      ],
+      "when": [
+        "通过 ref.current.grid 调用 insertRows / deleteRows / insertCols / deleteCols"
+      ],
+      "then": [
+        "onRowsInserted 收到插入位置、数量与新行 id",
+        "onRowsDeleted 收到删除的 row id",
+        "onColumnsInserted 收到插入位置、数量与新字段",
+        "onColumnsDeleted 收到删除的 field id"
       ]
     },
     {
@@ -477,6 +519,27 @@
       ],
       "then": [
         "不报错"
+      ]
+    },
+    {
+      "id": "excel.L3c.redo-button-state",
+      "layer": "L3c",
+      "summary": "redo 按钮启用/禁用",
+      "userStory": "作为表格用户，当我撤销了一个可重做操作后，我希望重做按钮变为可点；当我重做完成且无可重做项时，按钮应变灰。",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "packages/react/tests/excel/scenarios/L3c-redo-button-state.md",
+      "given": [
+        "NovaExcel 已挂载",
+        "已产生一个可撤销操作"
+      ],
+      "when": [
+        "点击 undo 后再点击 redo"
+      ],
+      "then": [
+        "redo 初始 disabled",
+        "undo 后 redo enabled",
+        "redo 后 redo disabled"
       ]
     },
     {
