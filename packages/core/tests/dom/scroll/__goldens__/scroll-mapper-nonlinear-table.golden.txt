@@ -1,0 +1,30 @@
+== identity（content ≤ SAFE_MAX）: content=100000 spacer=100000 viewport=800 ==
+scrollTop=-100 → logical=0 → back=0
+scrollTop=0 → logical=0 → back=0
+scrollTop=1 → logical=1 → back=1
+scrollTop=28 → logical=28 → back=28.0000
+scrollTop=100 → logical=100 → back=100
+scrollTop=49600 → logical=49600 → back=49600
+scrollTop=99199 → logical=99199 → back=99199
+scrollTop=99200 → logical=99200 → back=99200
+scrollTop=99700 → logical=99200 → back=99200
+== clamped（1M 行 × 28px = 28M）: content=28000000 spacer=6000000 viewport=800 ==
+scrollTop=-100 → logical=0 → back=0
+scrollTop=0 → logical=0 → back=0
+scrollTop=1 → logical=4.6672 → back=1
+scrollTop=28 → logical=130.6804 → back=28
+scrollTop=100 → logical=466.7156 → back=100.0000
+scrollTop=2999600 → logical=13999600 → back=2999600
+scrollTop=5999199 → logical=27999195.3328 → back=5999199
+scrollTop=5999200 → logical=27999200 → back=5999200
+scrollTop=5999700 → logical=27999200 → back=5999200
+== degenerate（viewport ≥ content）: content=500 spacer=500 viewport=800 ==
+scrollTop=-100 → logical=0 → back=0
+scrollTop=0 → logical=0 → back=0
+scrollTop=1 → logical=0 → back=0
+scrollTop=28 → logical=0 → back=0
+scrollTop=100 → logical=0 → back=0
+scrollTop=-150 → logical=0 → back=0
+scrollTop=-301 → logical=0 → back=0
+scrollTop=-300 → logical=0 → back=0
+scrollTop=200 → logical=0 → back=0

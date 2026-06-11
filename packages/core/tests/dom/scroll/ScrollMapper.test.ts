@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { ScrollMapper, SAFE_MAX } from '../../../src/dom/scroll/ScrollMapper'
+import { expectGolden } from '../../acceptance/_helpers/golden'
 
 describe('ScrollMapper — 滚动映射', () => {
   describe('computeSpacerSize — spacer 尺寸', () => {
@@ -85,6 +86,44 @@ describe('ScrollMapper — 滚动映射', () => {
       const s = m.logicalToScroll(y, 6_000_000, 28_000_000, 500)
       const back = m.scrollToLogical(s, 6_000_000, 28_000_000, 500)
       expect(back).toBeCloseTo(y, -1)
+    })
+  })
+
+  describe('非线性映射采样表（黄金文件）', () => {
+    it('identity / 超限 / 退化三档采样与黄金文件一致', () => {
+      // SAFE_MAX 封顶是 locked decision（spec §6.2）：直通段、压缩段（1M 行 × 28px）、
+      // 退化段的正反向映射 + 往返漂移一并锁进采样表，比例公式回归立即可见。
+      const m = new ScrollMapper()
+      const fmt = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(4))
+      const lines: string[] = []
+
+      const table = (title: string, content: number, viewport: number): void => {
+        const spacer = m.computeSpacerSize(content)
+        const maxScroll = spacer - viewport
+        lines.push(`== ${title}: content=${content} spacer=${spacer} viewport=${viewport} ==`)
+        const samples = [
+          -100,
+          0,
+          1,
+          28,
+          100,
+          Math.floor(maxScroll / 2),
+          maxScroll - 1,
+          maxScroll,
+          maxScroll + 500,
+        ]
+        for (const scrollTop of samples) {
+          const logical = m.scrollToLogical(scrollTop, spacer, content, viewport)
+          const back = m.logicalToScroll(logical, spacer, content, viewport)
+          lines.push(`scrollTop=${scrollTop} → logical=${fmt(logical)} → back=${fmt(back)}`)
+        }
+      }
+
+      table('identity（content ≤ SAFE_MAX）', 100_000, 800)
+      table('clamped（1M 行 × 28px = 28M）', 28_000_000, 800)
+      table('degenerate（viewport ≥ content）', 500, 800)
+
+      expectGolden(import.meta.dir, 'scroll-mapper-nonlinear-table', `${lines.join('\n')}\n`)
     })
   })
 })
