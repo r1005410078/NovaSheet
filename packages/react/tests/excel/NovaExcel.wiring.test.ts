@@ -248,7 +248,7 @@ describe('NovaExcel L3b toolbar wiring', () => {
     unmount()
   })
 
-  it.todo('excel.L3b.custom-fill-color applies translucent color from custom picker', async () => {
+  it('excel.L3b.custom-fill-color applies translucent color from custom picker', async () => {
     const { container, onToolbarAction, unmount } = await mountWiringExcel()
     clickAction(container, 'fill-color')
     await flushReactEffects()

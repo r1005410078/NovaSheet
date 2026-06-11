@@ -16,6 +16,7 @@ import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import { cn } from '@/lib/utils'
 import { BorderPalette } from './BorderPalette'
+import { CustomColorPicker } from './CustomColorPicker'
 import { MergeMenu } from './MergeMenu'
 import { SplitPopoverButton } from './SplitPopoverButton'
 import { ValueFormatMenu } from './ValueFormatMenu'
@@ -23,6 +24,7 @@ import {
   ToolbarColorPalette,
   ToolbarColorPaletteCustom,
 } from './ColorPalette'
+import { useCustomColors } from '../lib/use-custom-colors'
 import { defaultToolbarItems, FillColorIcon } from './items'
 import { TOOLBAR_ICON_CLASS, TOOLBAR_ICON_SM_CLASS } from '../lib/icon-class'
 import { primaryMergeToolbarAction } from '../lib/toolbar-primary-actions'
@@ -92,6 +94,9 @@ function FillColorPalette({
   readonly onAction: NovaSheetToolbarProps['onAction']
   readonly onClose: () => void
 }): JSX.Element {
+  const [view, setView] = useState<'palette' | 'picker'>('palette')
+  const { colors: customColors, add: addCustomColor } = useCustomColors()
+
   const dispatchColor = (color: string | null): void => {
     onAction?.({ id: 'fill-color', color })
     onClose()
@@ -106,45 +111,58 @@ function FillColorPalette({
       className="fixed z-[10000] w-[260px] rounded bg-white p-3 text-[13px] text-slate-800 shadow-lg ring-1 ring-slate-200"
       style={{ top: position.top, left: position.left }}
     >
-      <button
-        type="button"
-        className="mb-2 flex h-7 w-full items-center gap-2 rounded px-1.5 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-        title="重置填充颜色"
-        onClick={() => dispatchColor(null)}
-      >
-        <Eraser aria-hidden className={TOOLBAR_ICON_CLASS} strokeWidth={1.75} />
-        <span>重置</span>
-      </button>
+      {view === 'picker' ? (
+        <CustomColorPicker
+          initialColor={selectedColor ?? '#000000'}
+          onConfirm={(color) => {
+            addCustomColor(color)
+            dispatchColor(color)
+          }}
+          onCancel={() => setView('palette')}
+        />
+      ) : (
+        <>
+          <button
+            type="button"
+            className="mb-2 flex h-7 w-full items-center gap-2 rounded px-1.5 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            title="重置填充颜色"
+            onClick={() => dispatchColor(null)}
+          >
+            <Eraser aria-hidden className={TOOLBAR_ICON_CLASS} strokeWidth={1.75} />
+            <span>重置</span>
+          </button>
 
-      <ToolbarColorPalette selectedColor={selectedColor} onSelect={dispatchColor} />
+          <ToolbarColorPalette selectedColor={selectedColor} onSelect={dispatchColor} />
 
-      <div className="my-3 h-px bg-slate-300" />
+          <div className="my-3 h-px bg-slate-300" />
 
-      <ToolbarColorPaletteCustom
-        onSelect={dispatchColor}
-        onOpenPicker={() => {}}
-        customColors={[]}
-        selectedColor={selectedColor}
-      />
+          <ToolbarColorPaletteCustom
+            onSelect={dispatchColor}
+            onOpenPicker={() => setView('picker')}
+            customColors={customColors}
+            selectedColor={selectedColor}
+          />
 
-      <div className="my-3 h-px bg-slate-300" />
+          <div className="my-3 h-px bg-slate-300" />
 
-      <button
-        type="button"
-        className="block h-8 w-full rounded px-1.5 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-        title="条件格式"
-        onClick={onClose}
-      >
-        条件格式
-      </button>
-      <button
-        type="button"
-        className="block h-8 w-full rounded px-1.5 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-        title="交替颜色"
-        onClick={onClose}
-      >
-        交替颜色
-      </button>
+          <button
+            type="button"
+            className="block h-8 w-full rounded px-1.5 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            title="条件格式"
+            onClick={onClose}
+          >
+            条件格式
+          </button>
+          <button
+            type="button"
+            className="block h-8 w-full rounded px-1.5 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            title="交替颜色"
+            onClick={onClose}
+          >
+            交替颜色
+          </button>
+        </>
+      )}
     </div>
   )
 }

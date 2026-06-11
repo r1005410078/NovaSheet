@@ -149,7 +149,7 @@ describe('NovaExcel L3c user journeys', () => {
     unmount()
   })
 
-  it.todo('excel.L3c.custom-color-persist keeps custom swatch across remount', async () => {
+  it('excel.L3c.custom-color-persist keeps custom swatch across remount', async () => {
     localStorage.clear()
     const first = await mountNovaExcel({ data: createDenseData() })
     clickAction(first.container, 'fill-color')
@@ -174,7 +174,7 @@ describe('NovaExcel L3c user journeys', () => {
     second.unmount()
   })
 
-  it.todo('excel.L3c.eyedropper-feature-detect hides eyedropper without EyeDropper API', async () => {
+  it('excel.L3c.eyedropper-feature-detect hides eyedropper without EyeDropper API', async () => {
     delete (globalThis as { EyeDropper?: unknown }).EyeDropper
     const { container, unmount } = await mountNovaExcel({ data: createDenseData() })
     clickAction(container, 'fill-color')
