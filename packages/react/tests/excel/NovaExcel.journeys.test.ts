@@ -10,6 +10,7 @@ import {
   createDenseData,
   flushGridSelectionEffects,
   flushReactEffects,
+  setInputValue,
   isToolbarFillRed,
   runGridUpdate,
   mountNovaExcel,
@@ -145,6 +146,40 @@ describe('NovaExcel L3c user journeys', () => {
     expect(onUndo).toHaveBeenCalled()
     expect(onRedo).toHaveBeenCalled()
 
+    unmount()
+  })
+
+  it.todo('excel.L3c.custom-color-persist keeps custom swatch across remount', async () => {
+    localStorage.clear()
+    const first = await mountNovaExcel({ data: createDenseData() })
+    clickAction(first.container, 'fill-color')
+    await flushReactEffects()
+    clickBody('[data-custom-color-add]')
+    await flushReactEffects()
+    const hexInput = document.body.querySelector<HTMLInputElement>(
+      '[data-novasheet-color-picker] input[aria-label="十六进制颜色"]',
+    )
+    setInputValue(hexInput!, '#00ff0080')
+    await flushReactEffects()
+    clickBody('[data-novasheet-color-picker-confirm]')
+    await flushReactEffects()
+    first.unmount()
+
+    const second = await mountNovaExcel({ data: createDenseData() })
+    clickAction(second.container, 'fill-color')
+    await flushReactEffects()
+    expect(
+      document.body.querySelector('[data-novasheet-fill-palette] [data-fill-color="#00ff0080"]'),
+    ).not.toBeNull()
+    second.unmount()
+  })
+
+  it.todo('excel.L3c.eyedropper-feature-detect hides eyedropper without EyeDropper API', async () => {
+    delete (globalThis as { EyeDropper?: unknown }).EyeDropper
+    const { container, unmount } = await mountNovaExcel({ data: createDenseData() })
+    clickAction(container, 'fill-color')
+    await flushReactEffects()
+    expect(document.body.querySelector('[data-custom-color-eyedropper]')).toBeNull()
     unmount()
   })
 })

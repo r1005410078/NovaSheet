@@ -7,9 +7,9 @@ import { act } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
 
-import { clickElement, clickBody, flushReactEffects } from '../helpers/dom'
+import { clickElement, clickBody, flushReactEffects, setInputValue } from '../helpers/dom'
 
-export { clickElement, clickBody, flushReactEffects }
+export { clickElement, clickBody, flushReactEffects, setInputValue }
 
 export function createDenseData(): InMemoryDataSource {
   return new InMemoryDataSource({

@@ -39,3 +39,13 @@ export async function flushReactEffects(): Promise<void> {
     await Promise.resolve()
   })
 }
+
+/** React 受控 input 需经 native setter 改值再派发 input 事件才能触发 onChange。 */
+export function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+  act(() => {
+    if (setter) setter.call(input, value)
+    else input.value = value
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}

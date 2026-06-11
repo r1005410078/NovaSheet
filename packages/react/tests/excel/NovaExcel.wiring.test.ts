@@ -11,6 +11,7 @@ import {
   createDenseData,
   flushGridSelectionEffects,
   flushReactEffects,
+  setInputValue,
   isToolbarFillDefault,
   runGridUpdate,
   isToolbarFillRed,
@@ -244,6 +245,27 @@ describe('NovaExcel L3b toolbar wiring', () => {
     const undoButton = container.querySelector<HTMLButtonElement>('[data-action-id="undo"]')
     expect(undoButton?.disabled).toBe(false)
 
+    unmount()
+  })
+
+  it.todo('excel.L3b.custom-fill-color applies translucent color from custom picker', async () => {
+    const { container, onToolbarAction, unmount } = await mountWiringExcel()
+    clickAction(container, 'fill-color')
+    await flushReactEffects()
+    clickBody('[data-custom-color-add]')
+    await flushReactEffects()
+
+    const hexInput = document.body.querySelector<HTMLInputElement>(
+      '[data-novasheet-color-picker] input[aria-label="十六进制颜色"]',
+    )
+    expect(hexInput).not.toBeNull()
+    setInputValue(hexInput!, '#ff000080')
+    await flushReactEffects()
+    clickBody('[data-novasheet-color-picker-confirm]')
+    await flushReactEffects()
+
+    expect(onToolbarAction).toHaveBeenCalledWith({ id: 'fill-color', color: '#ff000080' })
+    expect(document.body.querySelector('[data-novasheet-fill-palette]')).toBeNull()
     unmount()
   })
 })
