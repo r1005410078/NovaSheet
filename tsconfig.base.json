@@ -7,7 +7,8 @@
       "@novasheet/core": ["./packages/core/src/index.ts"],
       "@novasheet/canvas2d": ["./packages/canvas2d/src/index.ts"],
       "@novasheet/react": ["./packages/react/src/index.ts"],
-      "@novasheet/mbd": ["./packages/mbd/src/index.ts"]
+      "@novasheet/mbd": ["./packages/mbd/src/index.ts"],
+      "@/*": ["./packages/react/src/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
