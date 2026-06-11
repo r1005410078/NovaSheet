@@ -26,7 +26,7 @@ export function ColorSwatch({
       type="button"
       aria-label={label}
       data-fill-color={color}
-      className="inline-flex size-5 items-center justify-center justify-self-center rounded-full border border-slate-300 text-[11px] leading-none text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+      className="inline-flex size-5 items-center justify-center justify-self-center rounded-full border border-slate-300 text-[11px] leading-none text-slate-900 shadow-sm transition-[transform,box-shadow] duration-150 ease-out hover:scale-110 hover:shadow-md hover:ring-2 hover:ring-slate-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
       style={
         translucent
           ? {
@@ -55,10 +55,7 @@ export function SwatchRows({
   return (
     <div className="grid gap-1">
       {rows.map((row, rowIndex) => (
-        <div
-          key={rowIndex}
-          className={row.length === 10 ? 'grid grid-cols-10 gap-1' : 'grid grid-cols-8 gap-1'}
-        >
+        <div key={rowIndex} className="grid grid-cols-10 gap-1">
           {row.map((swatch) => (
             <ColorSwatch
               key={`${swatch.label}-${swatch.color}`}
@@ -68,6 +65,11 @@ export function SwatchRows({
               onSelect={onSelect}
             />
           ))}
+          {row.length < 10
+            ? Array.from({ length: 10 - row.length }, (_, i) => (
+                <div key={`spacer-${i}`} aria-hidden className="size-5" />
+              ))
+            : null}
         </div>
       ))}
     </div>

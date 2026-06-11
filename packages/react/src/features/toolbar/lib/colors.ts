@@ -3,6 +3,34 @@ export interface ToolbarColorSwatch {
   readonly label: string
 }
 
+/** Google Docs/Sheets/Slides 标准填充色板（10 列 × 8 行）。 */
+const HUE_LABELS = [
+  '红莓',
+  '红',
+  '橙',
+  '黄',
+  '绿',
+  '青',
+  '天蓝',
+  '蓝',
+  '紫',
+  '洋红',
+] as const
+
+const LIGHT_SHADE_LABELS = ['浅色 1', '浅色 2', '浅色 3'] as const
+const DARK_SHADE_LABELS = ['深色 1', '深色 2', '深色 3'] as const
+
+function hueRow(
+  colors: readonly string[],
+  shadeLabel: string,
+): readonly ToolbarColorSwatch[] {
+  return colors.map((color, i) => ({
+    color,
+    label: `${HUE_LABELS[i]!} ${shadeLabel}`,
+  }))
+}
+
+/** 与 Google Workspace 标准色板 hex 对齐（kierandixon.com / SO #54936833）。 */
 export const fillPaletteRows: readonly (readonly ToolbarColorSwatch[])[] = [
   [
     { color: '#000000', label: '黑色' },
@@ -10,84 +38,117 @@ export const fillPaletteRows: readonly (readonly ToolbarColorSwatch[])[] = [
     { color: '#666666', label: '深灰 3' },
     { color: '#999999', label: '深灰 2' },
     { color: '#b7b7b7', label: '深灰 1' },
-    { color: '#cccccc', label: '浅灰 1' },
-    { color: '#d9d9d9', label: '浅灰 2' },
-    { color: '#efefef', label: '浅灰 3' },
-    { color: '#f3f3f3', label: '浅灰 4' },
+    { color: '#cccccc', label: '灰色' },
+    { color: '#d9d9d9', label: '浅灰 1' },
+    { color: '#efefef', label: '浅灰 2' },
+    { color: '#f3f3f3', label: '浅灰 3' },
     { color: '#ffffff', label: '白色' },
   ],
-  [
-    { color: '#cc0000', label: '红色 1' },
-    { color: '#e69138', label: '橙色 1' },
-    { color: '#f1c232', label: '黄色 1' },
-    { color: '#ffff00', label: '亮黄色' },
-    { color: '#00ff00', label: '亮绿色' },
-    { color: '#00ffff', label: '青色' },
-    { color: '#4a86e8', label: '蓝色 1' },
-    { color: '#0000ff', label: '亮蓝色' },
-    { color: '#9900ff', label: '紫色 1' },
-    { color: '#ff00ff', label: '洋红' },
-  ],
-  [
-    { color: '#f4cccc', label: '红色 2' },
-    { color: '#fce5cd', label: '橙色 2' },
-    { color: '#fff2cc', label: '黄色 2' },
-    { color: '#d9ead3', label: '绿色 2' },
-    { color: '#d0e0e3', label: '青色 2' },
-    { color: '#cfe2f3', label: '蓝色 2' },
-    { color: '#d9d2e9', label: '紫色 2' },
-    { color: '#ead1dc', label: '粉色 2' },
-  ],
-  [
-    { color: '#ea9999', label: '红色 3' },
-    { color: '#f9cb9c', label: '橙色 3' },
-    { color: '#ffe599', label: '黄色 3' },
-    { color: '#b6d7a8', label: '绿色 3' },
-    { color: '#a2c4c9', label: '青色 3' },
-    { color: '#9fc5e8', label: '蓝色 3' },
-    { color: '#b4a7d6', label: '紫色 3' },
-    { color: '#d5a6bd', label: '粉色 3' },
-  ],
-  [
-    { color: '#e06666', label: '红色 4' },
-    { color: '#f6b26b', label: '橙色 4' },
-    { color: '#ffd966', label: '黄色 4' },
-    { color: '#93c47d', label: '绿色 4' },
-    { color: '#76a5af', label: '青色 4' },
-    { color: '#6fa8dc', label: '蓝色 4' },
-    { color: '#8e7cc3', label: '紫色 4' },
-    { color: '#c27ba0', label: '粉色 4' },
-  ],
-  [
-    { color: '#cc4125', label: '红色 5' },
-    { color: '#e69138', label: '橙色 5' },
-    { color: '#f1c232', label: '黄色 5' },
-    { color: '#6aa84f', label: '绿色 5' },
-    { color: '#45818e', label: '青色 5' },
-    { color: '#3d85c6', label: '蓝色 5' },
-    { color: '#674ea7', label: '紫色 5' },
-    { color: '#a64d79', label: '粉色 5' },
-  ],
-  [
-    { color: '#a61c00', label: '红色 6' },
-    { color: '#b45f06', label: '橙色 6' },
-    { color: '#bf9000', label: '黄色 6' },
-    { color: '#38761d', label: '绿色 6' },
-    { color: '#134f5c', label: '青色 6' },
-    { color: '#0b5394', label: '蓝色 6' },
-    { color: '#351c75', label: '紫色 6' },
-    { color: '#741b47', label: '粉色 6' },
-  ],
-  [
-    { color: '#85200c', label: '红色 7' },
-    { color: '#783f04', label: '橙色 7' },
-    { color: '#7f6000', label: '黄色 7' },
-    { color: '#274e13', label: '绿色 7' },
-    { color: '#0c343d', label: '青色 7' },
-    { color: '#073763', label: '蓝色 7' },
-    { color: '#20124d', label: '紫色 7' },
-    { color: '#4c1130', label: '粉色 7' },
-  ],
+  hueRow(
+    [
+      '#980000',
+      '#ff0000',
+      '#ff9900',
+      '#ffff00',
+      '#00ff00',
+      '#00ffff',
+      '#4a86e8',
+      '#0000ff',
+      '#9900ff',
+      '#ff00ff',
+    ],
+    '亮色',
+  ),
+  hueRow(
+    [
+      '#e6b8af',
+      '#f4cccc',
+      '#fce5cd',
+      '#fff2cc',
+      '#d9ead3',
+      '#d0e0e3',
+      '#c9daf8',
+      '#cfe2f3',
+      '#d9d2e9',
+      '#ead1dc',
+    ],
+    LIGHT_SHADE_LABELS[0]!,
+  ),
+  hueRow(
+    [
+      '#dd7e6b',
+      '#ea9999',
+      '#f9cb9c',
+      '#ffe599',
+      '#b6d7a8',
+      '#a2c4c9',
+      '#a4c2f4',
+      '#9fc5e8',
+      '#b4a7d6',
+      '#d5a6bd',
+    ],
+    LIGHT_SHADE_LABELS[1]!,
+  ),
+  hueRow(
+    [
+      '#cc4125',
+      '#e06666',
+      '#f6b26b',
+      '#ffd966',
+      '#93c47d',
+      '#76a5af',
+      '#6d9eeb',
+      '#6fa8dc',
+      '#8e7cc3',
+      '#c27ba0',
+    ],
+    LIGHT_SHADE_LABELS[2]!,
+  ),
+  hueRow(
+    [
+      '#a61c00',
+      '#cc0000',
+      '#e69138',
+      '#f1c232',
+      '#6aa84f',
+      '#45818e',
+      '#3c78d8',
+      '#3d85c6',
+      '#674ea7',
+      '#a64d79',
+    ],
+    DARK_SHADE_LABELS[0]!,
+  ),
+  hueRow(
+    [
+      '#85200c',
+      '#990000',
+      '#b45f06',
+      '#bf9000',
+      '#38761d',
+      '#134f5c',
+      '#1155cc',
+      '#0b5394',
+      '#351c75',
+      '#741b47',
+    ],
+    DARK_SHADE_LABELS[1]!,
+  ),
+  hueRow(
+    [
+      '#5b0f00',
+      '#660000',
+      '#783f04',
+      '#7f6000',
+      '#274e13',
+      '#0c343d',
+      '#1c4587',
+      '#073763',
+      '#20124d',
+      '#4c1130',
+    ],
+    DARK_SHADE_LABELS[2]!,
+  ),
 ]
 
 export const standardFillColors: readonly ToolbarColorSwatch[] = [

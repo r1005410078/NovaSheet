@@ -35,6 +35,20 @@ describe('ToolbarColorPalette', () => {
     unmount()
   })
 
+  it('8 色行与 10 色行共用 grid-cols-10，列垂直对齐', async () => {
+    const { container, unmount } = await mountEl(
+      React.createElement(ToolbarColorPalette, { selectedColor: null, onSelect: () => {} }),
+    )
+    const rowEls = container.querySelectorAll('.grid.grid-cols-10.gap-1')
+    // Google 标准色板：8 行 × 10 列
+    expect(rowEls.length).toBe(8)
+    for (const row of rowEls) {
+      expect(row.children.length).toBe(10)
+      expect(row.querySelectorAll('[data-fill-color]').length).toBe(10)
+    }
+    unmount()
+  })
+
   it('selectedColor 经规范化比较命中 swatch（rgba 等价形式）', async () => {
     const { container, unmount } = await mountEl(
       React.createElement(ToolbarColorPalette, {
