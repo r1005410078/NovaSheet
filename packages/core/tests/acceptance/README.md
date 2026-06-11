@@ -46,12 +46,12 @@ acceptance/
 
 ---
 
-## 测试文件职责（当前 65 条场景）
+## 测试文件职责（当前 66 条场景）
 
 | 测试文件 | 场景数 | Layer | 职责 |
 | --- | ---: | --- | --- |
 | [`functional/data-ops/bdd.test.ts`](./functional/data-ops/bdd.test.ts) | 13 | L0+L2 | DataSource / Workspace / `formatValue`；View pipeline 排序、筛选、hide 组合、format/merge raw 键 |
-| [`e2e/engine/bdd.test.ts`](./e2e/engine/bdd.test.ts) | 2 | L1 | `DefaultGridEngine` headless oracle：`getFrame`、`moveRows` undo/redo |
+| [`e2e/engine/bdd.test.ts`](./e2e/engine/bdd.test.ts) | 3 | L1 | `DefaultGridEngine` headless oracle：`getFrame` golden、`moveRows` undo/redo、结构 mutation 事件流 golden |
 | [`e2e/grid/bdd.test.ts`](./e2e/grid/bdd.test.ts) | 20 | L2 | `Grid` 门面旅程：生命周期、data/theme、布局/冻结/滚动、autofit、行列结构、表头菜单、格式、合并 |
 | [`properties/spatial.test.ts`](./properties/spatial.test.ts) | 4 | L0 | 坐标 / range / scroll / hit-test 不变量 |
 | [`properties/inventory.test.ts`](./properties/inventory.test.ts) | 7 | L0 | 主题 token（golden）、几何原语、resize handle、context menu 清单（golden）、文本换行；frozen-regions 几何已并入 rendering 冻结象限 golden |

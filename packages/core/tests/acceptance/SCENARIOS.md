@@ -32,6 +32,7 @@
 | core.L0.workspace-autogrow-scroll-intent | L0 | implemented | Excel workspace 只在有效 wheel 边缘意图下自动增长 |
 | core.L1.engine-frame-initial-visible-range | L1 | implemented | DefaultGridEngine 初始 frame 快照与黄金文件一致 |
 | core.L1.engine-rows-move-undo-redo | L1 | implemented | DefaultGridEngine moveRows 移动连续行块并支持 undo/redo |
+| core.L1.engine-structural-event-stream | L1 | implemented | 结构 mutation + undo/redo 的 DataSource 事件流与黄金文件一致 |
 | core.L2.grid-autofit-wrap-rows | L2 | implemented | Grid autofitRows 使用 wrap 字段和 measurer 更新行高 |
 | core.L2.grid-clipboard-copy-cut-paste-roundtrip | L2 | implemented | Grid copy/cut/paste 通过 facade 完成选区往返 |
 | core.L2.grid-clipboard-paste-skipped-readonly-type | L2 | implemented | 粘贴类型不匹配时 Grid 触发 onPasteSkipped |
@@ -755,6 +756,29 @@
 - 移动后行顺序为 `r1,r2,r0`
 - undo 后行顺序恢复为 `r0,r1,r2`
 - redo 后再次为 `r1,r2,r0`
+
+## core.L1.engine-structural-event-stream
+
+- **layer**: L1
+- **summary**: 结构 mutation + undo/redo 的 DataSource 事件流与黄金文件一致
+- **status**: implemented
+
+### User Story
+
+作为订阅 `DataSource` 的渲染器或缓存层，当引擎执行行/列结构变更及其 undo/redo 时，我希望发出的 `DataSourceEvent` 序列由一份已 review 的黄金流锁定，以便据此重建本地缓存的订阅方在事件契约漂移时立即得到信号。
+
+### Given
+
+- 每个 op 用独立 `DefaultGridEngine`（fresh `newFieldCounter`，事件流确定）
+- 直接 `subscribe` 原始 `InMemoryDataSource` 捕获事件
+
+### When
+
+- 依次执行 insertRows / deleteRows / moveRows / insertCols / deleteCols / moveCols，每个后接 undo + redo
+
+### Then
+
+- 整段事件流与 `__goldens__/core.L1.engine-structural-event-stream.golden.txt` 一致：
 
 ## core.L2.grid-autofit-wrap-rows
 

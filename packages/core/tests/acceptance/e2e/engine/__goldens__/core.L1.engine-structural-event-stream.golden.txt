@@ -1,0 +1,43 @@
+== insertRows(at=1,count=2) + undo + redo ==
+rowsInserted at=1 count=2
+rowCountChanged newCount=5
+rowsDeleted removed=[1,2]
+rowCountChanged newCount=3
+rowsInserted at=1 count=2
+rowCountChanged newCount=5
+== deleteRows([r0,r1]) + undo + redo ==
+rowsDeleted removed=[0,1]
+rowCountChanged newCount=1
+rowsInserted at=1 count=1
+rowCountChanged newCount=2
+rowsChanged [1..1]
+rowsChanged [1..1]
+rowsChanged [1..1]
+rowsChanged [1..1]
+rowsInserted at=0 count=1
+rowCountChanged newCount=3
+rowsChanged [0..0]
+rowsChanged [0..0]
+rowsChanged [0..0]
+rowsChanged [0..0]
+rowsDeleted removed=[0,1]
+rowCountChanged newCount=1
+== moveRows([r1,r2]→front) + undo + redo ==
+rowsMoved rowIds=[1,2] before=0
+rowsMoved rowIds=[0,1] before=null
+rowsMoved rowIds=[1,2] before=0
+== insertCols(before=1,count=1) + undo + redo ==
+colsInserted at=1 field=field_1
+colsDeleted removed=[1:field_1]
+colsInserted at=1 field=field_1
+== deleteCols([b]) + undo + redo ==
+colsDeleted removed=[1:b]
+colsInserted at=1 field=b
+rowsChanged [0..0]
+rowsChanged [1..1]
+rowsChanged [2..2]
+colsDeleted removed=[1:b]
+== moveCols([c]→front) + undo + redo ==
+colsMoved fieldIds=[c] before=a
+colsMoved fieldIds=[c] before=d
+colsMoved fieldIds=[c] before=a
