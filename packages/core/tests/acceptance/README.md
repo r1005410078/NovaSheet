@@ -46,7 +46,7 @@ acceptance/
 
 ---
 
-## 测试文件职责（当前 63 条场景）
+## 测试文件职责（当前 64 条场景）
 
 | 测试文件 | 场景数 | Layer | 职责 |
 | --- | ---: | --- | --- |
@@ -55,7 +55,7 @@ acceptance/
 | [`e2e/grid/bdd.test.ts`](./e2e/grid/bdd.test.ts) | 20 | L2 | `Grid` 门面旅程：生命周期、data/theme、布局/冻结/滚动、autofit、行列结构、表头菜单、格式、合并 |
 | [`properties/spatial.test.ts`](./properties/spatial.test.ts) | 4 | L0 | 坐标 / range / scroll / hit-test 不变量 |
 | [`properties/inventory.test.ts`](./properties/inventory.test.ts) | 7 | L0 | 主题 token（golden）、几何原语、resize handle、context menu 清单（golden）、文本换行；frozen-regions 几何已并入 rendering 冻结象限 golden |
-| [`contract/file-format/bdd.test.ts`](./contract/file-format/bdd.test.ts) | 2 | L0 | TSV 往返、paste×merge 线性格式冲突 |
+| [`contract/file-format/bdd.test.ts`](./contract/file-format/bdd.test.ts) | 3 | L0 | TSV 往返（serialize golden）、parse 类型矩阵 golden、paste×merge 线性格式冲突 |
 | [`contract/plugin-api/bdd.test.ts`](./contract/plugin-api/bdd.test.ts) | 1 | type-only | 公开类型可导入、可构造 |
 | [`contract/events/bdd.test.ts`](./contract/events/bdd.test.ts) | 1 | L2 | `Grid.on` / `onUndo` / `onRedo` / `onFill` 订阅与退订 |
 | [`interaction/selection/bdd.test.ts`](./interaction/selection/bdd.test.ts) | 3 | L0+L2 | 选区 set/get、结构变更 remap、方向键导航 |
