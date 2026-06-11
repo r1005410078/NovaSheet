@@ -29,12 +29,20 @@
 | `9f240ad` | ScrollMapper 非线性映射采样表 | `core/tests/dom/scroll/__goldens__/scroll-mapper-nonlinear-table.golden.txt` |
 | `62b82b3` | view compose 整帧（hide×sort raw 键控格式） | `core/.../rendering/__goldens__/core.L2.render-frame-golden-view-compose.golden.txt` |
 | 早前 | theme/menu/formatValue/TSV/engine-frame/public-api 6 处点断言黄金化 + rendering 3 份 frame golden | 见 `find packages -name '*.golden.txt'` |
+| `5e4894d` | P1-3 TSV parse 类型矩阵 | `core.../file-format/__goldens__/core.L0.clipboard-tsv-parse-matrix` |
+| `92561c5` | P1-2 fill-series 外推矩阵 | `core.../editing/__goldens__/core.L0.fill-series-projection-matrix` |
+| `3533ab3` | P1-1 结构 mutation 事件流 | `core.../engine/__goldens__/core.L1.engine-structural-event-stream` |
+| `776740e` | P1-4 react 工具栏动作面 + 色板清单 | `react/.../toolbar/__goldens__/toolbar-{action-inventory,fill-palette}` |
+
+**P1 全部完成。** 剩 P2（低优先，下方）。
 
 ---
 
-## P1 — 契约清单类（本文档主体，按 ROI 排序）
+## P1 — 契约清单类（✅ 全部完成，保留原文供回溯）
 
-### Task P1-1: mutation 事件流黄金（row/col CommandHandler）
+### Task P1-1: mutation 事件流黄金（row/col CommandHandler）  ✅ 已完成 `3533ab3`
+
+> 落地与计划微调：观测缝从内部 `*CommandHandler` 改为**公开的 `DataSource.subscribe`/`DataSourceEvent`**（真契约而非白盒），id `core.L1.engine-structural-event-stream`，落点 `e2e/engine/bdd.test.ts`，dumper 行内 `dumpEvent`（未单建 `_helpers/event-dump.ts`）。
 
 **动机：** `*CommandHandler.execute(op)→event→dispatch` 是 event-source 结构域唯一写缝（架构不变量 #3）。事件载荷字段多、undo/redo 往返易回归，点断言覆盖不全。
 
@@ -48,7 +56,9 @@
 - [ ] **Step 3** 场景 MD `core.L2.structure-command-event-stream`（tags `[structure, event, golden]`）+ lint:mbd + manifest。
 - [ ] **Step 4** commit `test(core): 结构命令事件流黄金——row/col mutation execute→event 契约`。
 
-### Task P1-2: fill-series 矩阵黄金
+### Task P1-2: fill-series 矩阵黄金  ✅ 已完成 `92561c5`
+
+> id `core.L0.fill-series-projection-matrix`，新增独立场景 MD（未改 down-right 场景）。
 
 **动机：** `FillSeries` 的数字递增、日期步进、文本+数字后缀等模式分支多，现仅 2 条场景抽查。
 
@@ -62,7 +72,9 @@
 - [ ] **Step 3** 更新现有 `L2-grid-fill-series-down-right.md` 的 Then 指向黄金 + tags `golden`；lint:mbd + manifest。
 - [ ] **Step 4** commit `test(core): fill-series 外推矩阵黄金`。
 
-### Task P1-3: clipboard parse 矩阵黄金
+### Task P1-3: clipboard parse 矩阵黄金  ✅ 已完成 `5e4894d`
+
+> id `core.L0.clipboard-tsv-parse-matrix`，新增独立场景 MD。
 
 **动机：** TSV **serialize** 已入金（`core.L0.clipboard-tsv-roundtrip`），**parse** 侧仍点断言。parse 对 text/number/checkbox/date 各类型 + 空值/前导零/科学计数等边角分支多。
 
@@ -75,7 +87,9 @@
 - [ ] **Step 3** 复用 `core.L0.clipboard-tsv-roundtrip` 场景 Then 追加 parse 矩阵描述，或新增 `core.L0.clipboard-tsv-parse-matrix`；lint:mbd + manifest。
 - [ ] **Step 4** commit `test(core): TSV parse 类型矩阵黄金`。
 
-### Task P1-4: react 工具栏面 + 色板清单黄金
+### Task P1-4: react 工具栏面 + 色板清单黄金  ✅ 已完成 `776740e`
+
+> 落地与计划微调：改为**纯数据清单**（`defaultToolbarItems` + `fillPaletteRows`/`standardFillColors`）两份黄金，避免 happy-dom DOM 脆性；未做 DOM 面/L3 场景。helper 已复制到 `packages/react/tests/helpers/golden.ts`。落点 `tests/features/toolbar/inventory.golden.test.ts`。
 
 **动机：** `fillPaletteRows`（80 swatch）+ `standardFillColors`（8）+ 工具栏 `data-action-id`/title/aria 清单，改一个 hex 或动作现在无测试可见。**需先把 golden helper 引入 react 包。**
 
