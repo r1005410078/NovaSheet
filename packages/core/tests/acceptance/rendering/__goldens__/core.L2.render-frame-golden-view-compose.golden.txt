@@ -1,0 +1,30 @@
+==== sort desc ====
+== viewport ==
+content=400x300 scroll=(0,0) header=32 rowHeader=0
+== regions ==
+main rect=(0,32,400,268) rows=[0,3] cols=[0,1] offset=(0,0) z=10
+== cells (formatted) ==
+r0: delta | 500.0%
+r1: Echo | 400.0%
+r2: Gamma | 3
+r3: Beta | 2
+== merges ==
+== cellFormats ==
+r0c0 fillColor="#fff2cc"
+r0c1 fillColor="#fff2cc" valueFormat={"kind":"percent","decimals":1}
+r1c1 valueFormat={"kind":"percent","decimals":1}
+==== sort asc（fill 跟随 raw 行移位）====
+== viewport ==
+content=400x300 scroll=(0,0) header=32 rowHeader=0
+== regions ==
+main rect=(0,32,400,268) rows=[0,3] cols=[0,1] offset=(0,0) z=10
+== cells (formatted) ==
+r0: Beta | 2
+r1: Gamma | 3
+r2: Echo | 400.0%
+r3: delta | 500.0%
+== merges ==
+== cellFormats ==
+r2c1 valueFormat={"kind":"percent","decimals":1}
+r3c0 fillColor="#fff2cc"
+r3c1 fillColor="#fff2cc" valueFormat={"kind":"percent","decimals":1}

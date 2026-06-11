@@ -65,6 +65,7 @@
 | core.L2.render-frame-golden-base | L2 | implemented | 基础网格 RenderFrame 文本快照与黄金文件一致 |
 | core.L2.render-frame-golden-format-merge-value | L2 | implemented | fill+merge+值格式叠加后的 RenderFrame 快照与黄金文件一致 |
 | core.L2.render-frame-golden-frozen-quadrants | L2 | implemented | 冻结行列后的 region 象限几何快照与黄金文件一致 |
+| core.L2.render-frame-golden-view-compose | L2 | implemented | hide×sort 组合视图下 raw 键控格式的整帧黄金快照 |
 | core.type.public-api-inventory | type-only | implemented | index.ts 公开 type 导出由 typecheck 覆盖 |
 
 ## core.L0.cell-hit-test
@@ -1588,6 +1589,29 @@
 ### Then
 
 - regions 段含 main 之外的冻结象限（topLeft/topCenter/middleLeft），rect 与 ranges 与黄金文件一致
+
+## core.L2.render-frame-golden-view-compose
+
+- **layer**: L2
+- **summary**: hide×sort 组合视图下 raw 键控格式的整帧黄金快照
+- **status**: implemented
+
+### User Story
+
+作为 Core 维护者，当视图被 hide+sort 打散后再施加格式时，我希望整帧快照锁定 raw→view 的翻译结果（格式跟随 raw 行移动、frame cellFormats 以 view 坐标发出），以便这条全项目最易错的不变量有黄金契约罩着。
+
+### Given
+
+- 5 行 name/score 数据，hideRows 隐藏 1 行
+- score 降序排序后：对 view 行 0 设置 fillColor（raw 键控）、view 行 0–1 设置 percent 值格式
+
+### When
+
+- 捕获降序态 frame；再切换为升序排序，捕获第二帧
+
+### Then
+
+- 两段 `dumpFrame` 与 `__goldens__/core.L2.render-frame-golden-view-compose.golden.txt` 一致：
 
 ## core.type.public-api-inventory
 

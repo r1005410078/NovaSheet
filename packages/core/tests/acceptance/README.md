@@ -46,7 +46,7 @@ acceptance/
 
 ---
 
-## 测试文件职责（当前 62 条场景）
+## 测试文件职责（当前 63 条场景）
 
 | 测试文件 | 场景数 | Layer | 职责 |
 | --- | ---: | --- | --- |
@@ -61,7 +61,7 @@ acceptance/
 | [`interaction/selection/bdd.test.ts`](./interaction/selection/bdd.test.ts) | 3 | L0+L2 | 选区 set/get、结构变更 remap、方向键导航 |
 | [`interaction/editing/bdd.test.ts`](./interaction/editing/bdd.test.ts) | 5 | L0+L2 | 剪贴板 facade、paste skipped、编辑解析、填充柄 |
 | [`interaction/undo/bdd.test.ts`](./interaction/undo/bdd.test.ts) | 1 | L0 | undo 命令 JSON 可序列化 |
-| [`rendering/bdd.test.ts`](./rendering/bdd.test.ts) | 3 | L2 | RenderFrame 黄金快照：基础布局、fill×merge×值格式、冻结象限（`GOLDEN_UPDATE=1` 重生成） |
+| [`rendering/bdd.test.ts`](./rendering/bdd.test.ts) | 4 | L2 | RenderFrame 黄金快照：基础布局、fill×merge×值格式、冻结象限、hide×sort 视图组合（`GOLDEN_UPDATE=1` 重生成） |
 
 ---
 
