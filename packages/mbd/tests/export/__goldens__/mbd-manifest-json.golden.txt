@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "generatedAt": "<generatedAt>",
+  "source": "tests/fixtures/*.md",
+  "titleConvention": {
+    "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
+    "idPattern": "^excel\\.L3[abc]\\.[a-z0-9-]+$",
+    "examples": [
+      "excel.L3b.undo-redo dispatches grid.undo",
+      "test('excel.L3b.undo-redo', ...)"
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "excel.L3a.default-mount",
+      "layer": "L3a",
+      "summary": "默认挂载 excel/grid/toolbar/canvas",
+      "tags": [],
+      "status": "draft",
+      "sourceFile": "L3a-default-mount.md",
+      "given": [
+        "渲染 `<NovaExcel data={denseFixture} />`"
+      ],
+      "when": [
+        "挂载完成"
+      ],
+      "then": [
+        "存在 `data-novasheet-react-excel`、grid、toolbar、canvas"
+      ]
+    },
+    {
+      "id": "excel.L3b.undo-redo",
+      "layer": "L3b",
+      "summary": "toolbar 点 undo 调用 grid.undo",
+      "userStory": "作为表格用户，当我误改了单元格内容或套用了错误格式时，我想点击工具栏撤销按钮一步步回退，以便恢复上一步状态，而不必手动逐项改回。\n\n撤销后，工具栏按钮的可用状态也应与当前能否继续撤销/重做保持一致，避免我以为还能撤销却按钮已灰掉。",
+      "tags": [
+        "toolbar",
+        "undo"
+      ],
+      "status": "draft",
+      "sourceFile": "L3b-undo-redo.md",
+      "given": [
+        "NovaExcel 已挂载，dense data"
+      ],
+      "when": [
+        "点击 `[data-action-id=\"undo\"]`"
+      ],
+      "then": [
+        "`grid.undo` 被调用",
+        "`onToolbarAction({ id: 'undo' })` 触发"
+      ]
+    }
+  ]
+}

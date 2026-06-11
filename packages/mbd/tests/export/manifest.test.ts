@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'bun:test'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildManifest } from '../../src/export/build-manifest'
 import { renderManifestMarkdown } from '../../src/export/manifest-md'
 import { parseScenarioFiles } from '../../src/parse/markdown'
 import type { MbdConfig } from '../../src/types'
+import { expectGolden } from '../helpers/golden'
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures')
+const HERE = dirname(fileURLToPath(import.meta.url))
 
 const config: MbdConfig = {
   scenarios: 'tests/fixtures/*.md',
@@ -44,5 +46,21 @@ describe('renderManifestMarkdown', () => {
     expect(md).toContain('excel.L3b.undo-redo')
     expect(md).toContain('### User Story')
     expect(md).toContain('### Given')
+  })
+})
+
+describe('mbd 生成器输出契约（黄金）', () => {
+  it('fixture 场景的 JSON manifest + markdown 全量输出与黄金一致', async () => {
+    const scenarios = await parseScenarioFiles(join(FIXTURES, '*.md'), FIXTURES)
+    const manifest = buildManifest(scenarios, config, 'tests/fixtures/*.md')
+    // 归一非确定字段：generatedAt 时间戳每次跑都变、sourceFile 含机器相关绝对路径前缀。
+    const normalized = {
+      ...manifest,
+      generatedAt: '<generatedAt>',
+      scenarios: manifest.scenarios.map((s) => ({ ...s, sourceFile: basename(s.sourceFile) })),
+    }
+    expectGolden(HERE, 'mbd-manifest-json', `${JSON.stringify(normalized, null, 2)}\n`)
+    // markdown 不含 generatedAt（@generated 注释无时间戳），直接入金。
+    expectGolden(HERE, 'mbd-manifest-markdown', renderManifestMarkdown(manifest))
   })
 })
