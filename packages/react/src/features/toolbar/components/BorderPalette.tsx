@@ -3,8 +3,10 @@ import { ChevronDown, PenLine } from 'lucide-react'
 import { useEffect, useState, type Ref } from 'react'
 
 import { cn } from '@/lib/utils'
+import { useCustomColors } from '../lib/use-custom-colors'
 import { TOOLBAR_ICON_CLASS, TOOLBAR_ICON_SM_CLASS } from '../lib/icon-class'
-import { ToolbarColorPalette } from './ColorPalette'
+import { ToolbarColorPalette, ToolbarColorPaletteCustom } from './ColorPalette'
+import { CustomColorPicker } from './CustomColorPicker'
 import { BORDER_PRESET_ROWS, BorderPresetGlyph } from './border-presets'
 
 const LINE_STYLES: readonly { readonly value: BorderLineStyle; readonly label: string }[] = [
@@ -69,7 +71,9 @@ export function BorderPalette({
   const [draft, setDraft] = useState<BorderStyle>(borderStyle ?? DEFAULT_BORDER)
   const [lastPreset, setLastPreset] = useState<ActiveBorderPreset | null>(lastBorderPreset ?? null)
   const [colorOpen, setColorOpen] = useState(false)
+  const [colorView, setColorView] = useState<'palette' | 'picker'>('palette')
   const [styleOpen, setStyleOpen] = useState(false)
+  const { colors: customColors, add: addCustomColor } = useCustomColors()
 
   useEffect(() => {
     if (borderStyle) setDraft(borderStyle)
@@ -96,6 +100,12 @@ export function BorderPalette({
     const preset = lastPreset ?? lastBorderPreset ?? null
     if (!preset) return
     onApply(preset, nextDraft)
+  }
+
+  const applyDraftColor = (color: string): void => {
+    reapplyWithDraft({ ...draft, color })
+    setColorOpen(false)
+    setColorView('palette')
   }
 
   return (
@@ -169,13 +179,27 @@ export function BorderPalette({
 
       {colorOpen ? (
         <div className="border-t border-slate-200 p-3" data-novasheet-border-color-palette="">
-          <ToolbarColorPalette
-            selectedColor={draft.color}
-            onSelect={(color) => {
-              reapplyWithDraft({ ...draft, color })
-              setColorOpen(false)
-            }}
-          />
+          {colorView === 'picker' ? (
+            <CustomColorPicker
+              initialColor={draft.color}
+              onConfirm={(color) => {
+                addCustomColor(color)
+                applyDraftColor(color)
+              }}
+              onCancel={() => setColorView('palette')}
+            />
+          ) : (
+            <>
+              <ToolbarColorPalette selectedColor={draft.color} onSelect={applyDraftColor} />
+              <div className="my-3 h-px bg-slate-300" />
+              <ToolbarColorPaletteCustom
+                onSelect={applyDraftColor}
+                onOpenPicker={() => setColorView('picker')}
+                customColors={customColors}
+                selectedColor={draft.color}
+              />
+            </>
+          )}
         </div>
       ) : null}
 

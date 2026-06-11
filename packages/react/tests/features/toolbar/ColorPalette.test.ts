@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, mock } from 'bun:test'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { BorderPalette } from '../../../src/features/toolbar/components/BorderPalette'
 import {
   ToolbarColorPalette,
   ToolbarColorPaletteCustom,
@@ -10,6 +11,7 @@ import {
   clickElement,
   flushReactEffects,
   mountReactRoot,
+  setInputValue,
   unmountReactRoot,
 } from '../../helpers/dom'
 
@@ -101,6 +103,44 @@ describe('ToolbarColorPaletteCustom', () => {
     clickElement(container.querySelector<HTMLElement>('[data-custom-color-eyedropper]')!)
     await flushReactEffects()
     expect(onSelect).toHaveBeenCalledWith('#123456')
+    unmount()
+  })
+})
+
+describe('BorderPalette — 自定义颜色', () => {
+  it('color 子面板含自定义区，取色器确定后 reapply 并收起', async () => {
+    localStorage.clear()
+    const onApply = mock((_preset: unknown, _border: unknown) => {})
+    const { container, unmount } = await mountEl(
+      React.createElement(BorderPalette, {
+        position: { top: 0, left: 0 },
+        paletteRef: (() => {}) as React.Ref<HTMLDivElement>,
+        lastBorderPreset: 'all' as const,
+        onApply,
+        onClose: () => {},
+      }),
+    )
+    clickElement(container.querySelector<HTMLElement>('[title="边框颜色"]')!)
+    await flushReactEffects()
+    clickElement(container.querySelector<HTMLElement>('[data-custom-color-add]')!)
+    await flushReactEffects()
+
+    const hexInput = container.querySelector<HTMLInputElement>(
+      '[data-novasheet-color-picker] input[aria-label="十六进制颜色"]',
+    )
+    expect(hexInput).not.toBeNull()
+    setInputValue(hexInput!, '#33445580')
+    await flushReactEffects()
+    clickElement(
+      container.querySelector<HTMLElement>('[data-novasheet-color-picker-confirm]')!,
+    )
+    await flushReactEffects()
+
+    expect(onApply).toHaveBeenCalledWith(
+      'all',
+      expect.objectContaining({ color: '#33445580' }),
+    )
+    expect(container.querySelector('[data-novasheet-border-color-palette]')).toBeNull()
     unmount()
   })
 })
