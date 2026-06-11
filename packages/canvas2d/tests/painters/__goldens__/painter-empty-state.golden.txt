@@ -1,0 +1,120 @@
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #eef1f5
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #d4a855
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #e8c478
+  fillPath
+  set:strokeStyle = #d4a855
+  set:lineWidth = 1.5
+  strokePath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #f5deaa
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #e8c478
+  fillPath
+  set:strokeStyle = #d4a855
+  set:lineWidth = 1.5
+  strokePath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #d4a855
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #d4a855
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #ffffff
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #4a3728
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #24292f
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #24292f
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #ffffff
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #ffffff
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #ffc9c9
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #ffc9c9
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:fillStyle = #f48484
+  fillPath
+restore
+save
+  translate(120, 38)
+  scale(1, 1)
+  set:strokeStyle = #8b6914
+  set:lineWidth = 1.5
+  set:lineCap = round
+  strokePath
+restore
+save
+  set:textAlign = center
+  set:textBaseline = top
+  set:font = 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+  set:fillStyle = #1f2328
+  fillText("暂无数据", 160, 128)
+  set:font = 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+  set:fillStyle = #656d76
+  fillText("添加行后，内容将显示在这里", 160, 148)
+restore

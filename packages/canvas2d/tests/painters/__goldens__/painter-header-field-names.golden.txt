@@ -1,0 +1,23 @@
+save
+  beginPath
+  rect(0, 0, 320, 32)
+  clip
+  set:fillStyle = #f6f8fa
+  fillRect(0, 0, 320, 32)
+  set:textBaseline = middle
+  set:textAlign = left
+  set:fillStyle = #656d76
+  fillText("Name", 8, 16, 104)
+  set:fillStyle = #656d76
+  fillText("Age", 128, 16, 104)
+  set:strokeStyle = #eaeef2
+  set:lineWidth = 1
+  beginPath
+  moveTo(120.5, 0)
+  lineTo(120.5, 32)
+  moveTo(240.5, 0)
+  lineTo(240.5, 32)
+  moveTo(0, 31.5)
+  lineTo(320, 31.5)
+  stroke
+restore
