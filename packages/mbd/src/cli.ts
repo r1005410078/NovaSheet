@@ -43,7 +43,7 @@ async function main(): Promise<void> {
 
   const { config, rootDir } = await loadConfig(configPath)
   const scenarios = await parseScenarioFiles(config.scenarios, rootDir)
-  const errors = validateScenarios(scenarios, config.idPattern)
+  const errors = validateScenarios(scenarios, config.idPattern, config.validLayers)
 
   if (errors.length > 0) {
     for (const error of errors) {

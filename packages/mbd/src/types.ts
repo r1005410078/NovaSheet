@@ -30,6 +30,7 @@ export interface MbdConfig {
   readonly scenarios: string
   readonly tests?: readonly string[]
   readonly idPattern?: RegExp
+  readonly validLayers?: readonly string[]
   readonly manifest: {
     readonly json: string
     readonly markdown: string

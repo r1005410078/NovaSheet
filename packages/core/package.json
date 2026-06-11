@@ -35,6 +35,8 @@
   ],
   "scripts": {
     "build": "bun run build.ts",
+    "lint:mbd": "bun run --filter @novasheet/mbd mbd validate --config ../../packages/core/mbd.config.ts",
+    "manifest:mbd": "bun run --filter @novasheet/mbd mbd manifest --config ../../packages/core/mbd.config.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "typecheck": "tsc --noEmit"
