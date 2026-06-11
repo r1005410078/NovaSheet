@@ -399,6 +399,7 @@ export class Canvas2DRenderer implements RenderBackend {
           scrollOffsetY: region.scrollOffsetY,
           cellFormats,
           merges,
+          gridLine: { color: theme.colors.gridLine, width: theme.metrics.borderWidth },
         })
       }
     }

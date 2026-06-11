@@ -77,6 +77,51 @@ describe('Canvas2DRenderer — format fill 阶段', () => {
     expect(fillTextIdx).toBeGreaterThan(fillStyleIdx)
   })
 
+  it('半透明 fillColor 在填充前以 theme.gridLine 色描出底层格线', () => {
+    const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      cellFormats: [{ rowIndex: 0, colIndex: 0, format: { fillColor: 'rgba(255,242,204,0.4)' } }],
+    })
+
+    const fillIdx = ops.findIndex(
+      (o) => o.op === 'set:fillStyle' && o.value === 'rgba(255,242,204,0.4)',
+    )
+    const strokeStyleIdx = ops.findIndex(
+      (o) => o.op === 'set:strokeStyle' && o.value === denseGridTheme.colors.gridLine,
+    )
+    expect(fillIdx).toBeGreaterThanOrEqual(0)
+    expect(strokeStyleIdx).toBeGreaterThanOrEqual(0)
+    expect(strokeStyleIdx).toBeLessThan(fillIdx)
+  })
+
+  it('不透明 fillColor 填充前不描格线（既有行为不变）', () => {
+    const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      cellFormats: [{ rowIndex: 0, colIndex: 0, format: { fillColor: '#fff2cc' } }],
+    })
+
+    const fillIdx = ops.findIndex((o) => o.op === 'set:fillStyle' && o.value === '#fff2cc')
+    const strokeBefore = ops.slice(0, fillIdx).some((o) => o.op === 'stroke')
+    expect(fillIdx).toBeGreaterThanOrEqual(0)
+    expect(strokeBefore).toBe(false)
+  })
+
   it('无 cellFormats 时不影响正常渲染', () => {
     const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
 
