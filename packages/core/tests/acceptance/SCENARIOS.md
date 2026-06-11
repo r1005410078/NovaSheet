@@ -29,6 +29,7 @@
 | core.L0.text-measure-wrap | L0 | implemented | tokenize 与 wrapText 换行契约 |
 | core.L0.theme-dense-grid-tokens | L0 | implemented | denseGridTheme 整棵 token 树与黄金文件一致 |
 | core.L0.undo-command-serialization | L0 | implemented | UndoCommand JSON 序列化 round-trip smoke |
+| core.L0.undo-command-shape-inventory | L0 | implemented | 全 21 个 UndoCommand kind 的字段集与黄金文件一致 |
 | core.L0.workspace-autogrow-scroll-intent | L0 | implemented | Excel workspace 只在有效 wheel 边缘意图下自动增长 |
 | core.L1.engine-frame-initial-visible-range | L1 | implemented | DefaultGridEngine 初始 frame 快照与黄金文件一致 |
 | core.L1.engine-rows-move-undo-redo | L1 | implemented | DefaultGridEngine moveRows 移动连续行块并支持 undo/redo |
@@ -680,6 +681,28 @@
 ### Then
 
 - 深等于原命令
+
+## core.L0.undo-command-shape-inventory
+
+- **layer**: L0
+- **summary**: 全 21 个 UndoCommand kind 的字段集与黄金文件一致
+- **status**: implemented
+
+### User Story
+
+作为 Core 维护者，当 undo 历史被持久化或跨版本读取时，我希望每个 `UndoCommand` kind 的字段集由一份已 review 的黄金清单锁定，以便任何字段增删改（影响序列化格式与回放兼容）显式过 review。
+
+### Given
+
+- 每个 kind 一个最小代表实例（全字段齐全，fill 含可选 format/merge）
+
+### When
+
+- 逐实例 `assertSerializable`（JSON 往返无损）并取排序后的字段键集
+
+### Then
+
+- 21 行 `kind: field, …` 与 `__goldens__/core.L0.undo-command-shape-inventory.golden.txt` 一致；每个 kind 均 JSON 可序列化
 
 ## core.L0.workspace-autogrow-scroll-intent
 

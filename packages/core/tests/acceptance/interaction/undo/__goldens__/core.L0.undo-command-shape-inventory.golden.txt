@@ -1,0 +1,21 @@
+editCell: after, before, fieldId, rowIndex
+clearRange: before, range
+paste: after, before, target
+fill: after, before, fill, formatAfter, formatBefore, mergeAfter, mergeBefore, result, source
+resizeRow: after, before, rowIndex
+resizeColumn: after, before, colIndex
+insertRows: at, count, formatAfter, formatBefore, mergeAfter, mergeBefore, newIds, selectionAfter, selectionBefore
+deleteRows: deletedHeights, formatAfter, formatBefore, mergeAfter, mergeBefore, selectionAfter, selectionBefore, snapshots
+hideRows: selectionAfter, selectionBefore, underlyingRowIds
+unhideRows: selectionAfter, selectionBefore, underlyingRowIds
+resizeRowsMulti: newHeight, oldHeights, rowIds, selectionAfter, selectionBefore
+moveRows: beforeRowId, formatAfter, formatBefore, inverseBeforeRowId, inverseRowIds, mergeAfter, mergeBefore, rowIds, selectionAfter, selectionBefore
+insertCols: at, count, formatAfter, formatBefore, frozenAfter, frozenBefore, mergeAfter, mergeBefore, newFields, selectionAfter, selectionBefore
+deleteCols: deletedWidths, formatAfter, formatBefore, frozenAfter, frozenBefore, mergeAfter, mergeBefore, selectionAfter, selectionBefore, snapshots
+hideCols: fieldIds, selectionAfter, selectionBefore
+unhideCols: fieldIds, selectionAfter, selectionBefore
+resizeColumnsMulti: fieldIds, newWidth, oldWidths, selectionAfter, selectionBefore
+moveCols: beforeFieldId, fieldIds, formatAfter, formatBefore, inverseBeforeFieldId, mergeAfter, mergeBefore, selectionAfter, selectionBefore
+format: after, before, selectionAfter, selectionBefore
+merge: after, before, selectionAfter, selectionBefore
+unmerge: after, before, selectionAfter, selectionBefore
