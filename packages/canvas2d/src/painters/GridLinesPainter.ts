@@ -43,6 +43,11 @@ export interface GridLinesPaintParams {
    * 一条边线只要其任一侧单元格有填充即跳过。
    */
   filledCells?: FilledCellLookup
+  /**
+   * 溢出文字穿越查找。可选；`has(row, col)` 为 true 表示 row 行内 col 与 col+1 之间的
+   * 列边界被该行溢出文字穿越，对应竖线段跳过（与 Excel 一致——溢出段的边界线整段隐藏）。
+   */
+  overflowCrossings?: FilledCellLookup
 }
 
 /** 填充格查找——`has(row, col)` 返回该单元格是否有填充背景。 */
@@ -89,6 +94,7 @@ export class GridLinesPainter {
     const { scrollOffsetX, scrollOffsetY } = params
     const merges = params.merges
     const filledCells = params.filledCells
+    const overflowCrossings = params.overflowCrossings
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
 
     ctx.strokeStyle = this.theme.colors.gridLine
@@ -155,9 +161,13 @@ export class GridLinesPainter {
         }
       }
       // 填充格：列 c 右边落在填充格左侧（r,c）或右侧（r,c+1）则跳过该行段。
-      if (filledCells) {
+      // 溢出穿越：row r 的文字横穿 c|c+1 边界时同样跳过该行段。
+      if (filledCells || overflowCrossings) {
         for (let r = rowRange[0]; r <= rowRange[1]; r++) {
-          if (!filledCells.has(r, c) && !filledCells.has(r, c + 1)) continue
+          const filled =
+            filledCells !== undefined && (filledCells.has(r, c) || filledCells.has(r, c + 1))
+          const crossed = overflowCrossings !== undefined && overflowCrossings.has(r, c)
+          if (!filled && !crossed) continue
           const ry = rect.y + rowsAxis.indexToPosition(r) - scrollOffsetY
           skips.push([ry, ry + rowsAxis.getSize(r)])
         }

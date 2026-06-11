@@ -146,6 +146,36 @@ describe('GridLinesPainter — 网格线', () => {
     expect(ops).toContainEqual({ op: 'lineTo', args: [99.5, 60] })
   })
 
+  it('溢出文字穿越的列边界竖线段被跳过（与 Excel 一致）', () => {
+    const rowsAxis = new ChunkedAxis({ count: 2, defaultSize: 28 })
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    const params = {
+      rowsAxis,
+      colsAxis,
+      rowRange: [0, 1] as [number, number],
+      colRange: [0, 1] as [number, number],
+      rect: { x: 0, y: 0, width: 200, height: 200 },
+      scrollOffsetX: 0,
+      scrollOffsetY: 0,
+    }
+
+    // 基线：col0 右边竖线 x=100.5 整段从 y=0 起。
+    const base = createRecordingContext()
+    new GridLinesPainter(denseGridTheme).paint(base.ctx, params)
+    expect(base.ops).toContainEqual({ op: 'moveTo', args: [100.5, 0] })
+
+    // row0 的 col0|col1 边界被溢出文字穿越：该竖线 row0 段跳过，从 row1 顶 y=28 起。
+    const crossed = createRecordingContext()
+    new GridLinesPainter(denseGridTheme).paint(crossed.ctx, {
+      ...params,
+      overflowCrossings: { has: (r, c) => r === 0 && c === 0 },
+    })
+    expect(crossed.ops).not.toContainEqual({ op: 'moveTo', args: [100.5, 0] })
+    expect(crossed.ops).toContainEqual({ op: 'moveTo', args: [100.5, 28] })
+    // 水平线不受影响：row0 底边整段仍在。
+    expect(crossed.ops).toContainEqual({ op: 'moveTo', args: [0, 28.5] })
+  })
+
   it('填充格跳过自身边线（fill 盖住网格线，与 Sheets 一致）', () => {
     const rowsAxis = new ChunkedAxis({ count: 2, defaultSize: 28 })
     const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })

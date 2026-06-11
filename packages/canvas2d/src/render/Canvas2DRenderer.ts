@@ -124,6 +124,11 @@ interface Canvas2DPaintFrameContext {
   merges: MergeLookup
   /** 每帧唯一实例：有填充背景的单元格查找，grid layer 跳过其网格线。 */
   filledCells: FilledCellLookup
+  /**
+   * content pass 收集、grid pass 消费：`"row:col"` 表示 row 行溢出文字穿越了
+   * col 与 col+1 之间的列边界，对应竖线段不绘制（依赖 content 层先于 grid 层）。
+   */
+  overflowCrossings: Set<string>
 }
 
 /**
@@ -314,6 +319,7 @@ export class Canvas2DRenderer implements RenderBackend {
       excelChrome: snapshot.rowHeaderWidth > 0,
       merges,
       filledCells: buildFilledCellLookup(frame.cellFormats ?? [], merges),
+      overflowCrossings: new Set<string>(),
     }
 
     for (const layer of CANVAS2D_PAINT_LAYERS) this.paintLayer(layer, ctx)
@@ -409,6 +415,7 @@ export class Canvas2DRenderer implements RenderBackend {
         colsAxis,
         merges,
         textWrapLookup,
+        ctx.overflowCrossings,
         ctx.frame.cellEdit?.cell,
         ctx.frame.formatCell,
       )
@@ -428,8 +435,19 @@ export class Canvas2DRenderer implements RenderBackend {
     const { contentRect, regions, paintOrder, rowsAxis, colsAxis, snapshot, theme } = ctx
 
     if (!ctx.isEmpty) {
+      const crossings = ctx.overflowCrossings
+      const overflowCrossings = {
+        has: (row: number, col: number) => crossings.has(`${row}:${col}`),
+      }
       for (const region of paintOrder)
-        this.paintGridLinesRegion(region, rowsAxis, colsAxis, ctx.merges, ctx.filledCells)
+        this.paintGridLinesRegion(
+          region,
+          rowsAxis,
+          colsAxis,
+          ctx.merges,
+          ctx.filledCells,
+          overflowCrossings,
+        )
       this.paintFrozenSeparators(regions, contentRect, theme, snapshot.scrollX, snapshot.scrollY)
 
       // 自定义边框：在默认格线之上绘制，确保用户颜色/宽度覆盖默认格线。
@@ -627,6 +645,7 @@ export class Canvas2DRenderer implements RenderBackend {
     colsAxis: Axis,
     merges: MergeLookup,
     textWrapLookup: Map<string, TextWrapMode>,
+    overflowCrossings: Set<string>,
     editingCell?: CellAddress,
     formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
   ): void {
@@ -664,7 +683,18 @@ export class Canvas2DRenderer implements RenderBackend {
           value.length > 0 &&
           !value.includes('\n')
         ) {
-          paintWidth += this.overflowExtra(r, c, value, colWidth, colRange, schema, data, merges, colsAxis)
+          paintWidth += this.overflowExtra(
+            r,
+            c,
+            value,
+            colWidth,
+            colRange,
+            schema,
+            data,
+            merges,
+            colsAxis,
+            overflowCrossings,
+          )
         }
         this.cellPainter.paint(this.ctx, {
           value,
@@ -686,6 +716,9 @@ export class Canvas2DRenderer implements RenderBackend {
   /**
    * overflow 模式下，文本超出本格可用宽度时，沿右侧扫描连续空格（非空/合并/列边界即停），
    * 返回可溢出的额外宽度（px）。`ctx.measureText` 已用一帧统一字体，量度准确。
+   *
+   * 同时把文字实际穿越的列边界记入 `crossings`（`"row:col"` = row 行 col|col+1 边界），
+   * grid layer 据此跳过被压住的竖线段。被非空邻格截停的边界不算穿越——该处保留格线。
    */
   private overflowExtra(
     r: number,
@@ -697,16 +730,22 @@ export class Canvas2DRenderer implements RenderBackend {
     data: DataSource,
     merges: MergeLookup,
     colsAxis: Axis,
+    crossings: Set<string>,
   ): number {
     const padX = this.theme.metrics.cellPaddingX
-    if (this.ctx.measureText(text).width <= colWidth - padX * 2) return 0
+    // 文字左端从 padX 起绘制；textRight 为相对本格左边的文字右端坐标。
+    const textRight = padX + this.ctx.measureText(text).width
+    if (textRight <= colWidth - padX) return 0
     let extra = 0
+    let boundary = colWidth
     for (let nc = c + 1; nc <= colRange[1]; nc++) {
       const nf = schema.fields[nc]
       if (!nf || merges.regionAt(r, nc)) break
       const nv = data.getCell(r, nf.id)
       if (nv !== null && nv !== undefined && String(nv).length > 0) break
+      if (textRight > boundary) crossings.add(`${r}:${nc - 1}`)
       extra += colsAxis.getSize(nc)
+      boundary += colsAxis.getSize(nc)
     }
     return extra
   }
@@ -765,6 +804,7 @@ export class Canvas2DRenderer implements RenderBackend {
     colsAxis: Axis,
     merges: MergeLookup,
     filledCells: FilledCellLookup,
+    overflowCrossings: FilledCellLookup,
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -779,6 +819,7 @@ export class Canvas2DRenderer implements RenderBackend {
       scrollOffsetY,
       merges,
       filledCells,
+      overflowCrossings,
     })
   }
 
