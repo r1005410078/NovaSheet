@@ -5,7 +5,7 @@
 - **分支**：`refactor-default-grid-engine-decomposition`
 - **定位**：把 BDD **外环** / TDD **内环**显式钉进 superpowers 管线的**流程规范**
 - **前置**：
-  - [`2026-06-08-novasheet-behavioral-testing-design.md`](./2026-06-08-novasheet-behavioral-testing-design.md)（L0–L4 行为测试架构 + Phase 0 excel-first）
+  - [`2026-06-08-novasheet-behavioral-testing-design.md`](./2026-06-08-novasheet-behavioral-testing-design.md)（L0–L4 行为测试架构 + Phase 1 Core L0–L2 分批启动）
   - [`2026-06-09-novasheet-mbd-package-design.md`](./2026-06-09-novasheet-mbd-package-design.md)（MD 场景制品 + manifest + 覆盖率）
 
 ---
@@ -20,15 +20,15 @@ NovaSheet 已具备完整的 **BDD 制品层**（`@novasheet/mbd` 的 `scenarios
 
 1. **不引入新工具 / 新 CLI**——复用 `@novasheet/mbd`、`lint:scenario-coverage`
 2. **不加 CI 门禁**——不强制 PR 必须带场景（纪律靠流程，不靠 gate 阻断）
-3. **不现在扩覆盖**——不建 `packages/acceptance`、不改 behavioral-testing 的 Phase 0 切换信号
+3. **不一次性扩全量覆盖**——Core L0–L2 由 `2026-06-11-novasheet-core-public-api-bdd-roadmap.md` 分批落地
 4. **不替换、不削弱 TDD**——内环仍是红→绿→重构
 5. **不把方法论塞进 CLAUDE.md 全文**——CLAUDE.md 只放 load-bearing 指针（见 §6）
 
 ### 方法论 vs 活跃落点（关键区分）
 
-本文档**描述全分层 L0–L4 的方法**；但**当前实际活跃的层由 behavioral-testing 规格 Phase 0 决定**（excel-first，Core 行为层 L0–L2 暂缓）。两者不冲突：
+本文档**描述全分层 L0–L4 的方法**；当前实际活跃层由 behavioral-testing 规格 Phase 1 决定：Core L0–L2 分批启动，Excel L3 继续维护。两者不冲突：
 
-> 方法论是"怎么做"的稳定规范，覆盖所有层；Phase 0 是"现在做哪层"的范围闸门。新功能开发前先看 behavioral-testing Phase 0 确认活跃层。
+> 方法论是"怎么做"的稳定规范，覆盖所有层；Phase 1 路线是"现在按什么批次做"的范围闸门。新功能开发前先看 behavioral-testing Phase 1 与 Core BDD 路线计划确认活跃层。
 
 ---
 
@@ -76,16 +76,16 @@ TDD 内环（实现单元，inside-out，红绿重构）                        
 
 ## 4. 分层映射 L0–L4
 
-| 层 | 外环（BDD） | 内环（TDD） | Phase 0 活跃 |
+| 层 | 外环（BDD） | 内环（TDD） | Phase 1 活跃 |
 | --- | --- | --- | --- |
-| **L0** 场景规格 | `scenarios/*.md` 本身——纯外环制品（mbd 解析、跨端真相） | — | ✅（excel 场景） |
-| **L1** 引擎 oracle | 同一场景驱动 `EngineRunner`（headless） | `engine/`、`features/` 单元红绿 | ⏸ runner 暂缓；TDD 照常 |
-| **L2** Grid 门面 | 场景驱动 `GridRunner` 行为测试 | `dom/runtime` 接线 TDD | ⏸ 暂缓 |
-| **L3** excel 适配 | mbd 场景 → 行为测试（**当前主战场**） | 组件 / hook TDD | ✅ |
+| **L0** 场景规格 | `packages/core/tests/bdd/scenarios/*.md` + L3 `scenarios/*.md` | — | ✅（Core + Excel） |
+| **L1** 引擎 oracle | Core MBD 场景 + 手写 `bun:test` 调 `DefaultGridEngine` | `engine/`、`features/` 单元红绿 | ✅（分批启动） |
+| **L2** Grid 门面 | Core MBD 场景 + 手写 `bun:test` 调 `Grid` facade | `dom/runtime` 接线 TDD | ✅（分批启动） |
+| **L3** excel 适配 | MBD 场景 → 行为测试 | 组件 / hook TDD | ✅（持续维护） |
 | **L4** 渲染白盒 | **不 BDD-front** | painter `RecordingContext` 纯 TDD | ✅（纯 TDD） |
 
 - **L4 与 kernel 算法是纯 TDD**——painter ctx 序列、`ChunkedAxis` 数学是实现细节，非用户行为，不写场景。
-- **L1 的内环（Core TDD）从不暂缓**——Phase 0 暂缓的是 L1/L2 **行为 oracle / runner**，不是引擎单元测试。
+- **L1/L2 BDD 与 Core TDD 并行**——场景锁公开契约，单元测试继续锁算法、领域边界和异常路径。
 
 ---
 
@@ -93,7 +93,7 @@ TDD 内环（实现单元，inside-out，红绿重构）                        
 
 ```text
 1. 写 / 改 scenarios/*.md   →  mbd validate && mbd manifest      （外环契约定稿）
-2. 写失败行为测试            →  it('excel.L3x.…') 见红            （外环红）
+2. 写失败行为测试            →  it('core.Lx.…') / it('excel.L3x.…') 见红 （外环红）
 3. writing-plans 拆内环任务  →  subagent 逐个 TDD 红→绿→重构      （内环）
 4. 内环全绿                 →  行为测试自然转绿 → coverage 不退化 （外环绿）
 5. 外环重构 + finishing-a-development-branch
@@ -123,7 +123,7 @@ TDD 内环（实现单元，inside-out，红绿重构）                        
 
 | 文档 / 包 | 关系 |
 | --- | --- |
-| `2026-06-08-novasheet-behavioral-testing-design.md` | 提供 L0–L4 **架构** + Phase 0 范围；本文档提供**流程**，不复制其层定义 |
+| `2026-06-08-novasheet-behavioral-testing-design.md` | 提供 L0–L4 **架构** + Phase 1 范围；本文档提供**流程**，不复制其层定义 |
 | `2026-06-09-novasheet-mbd-package-design.md` | 提供场景**制品格式 + 工具**；本文档规定何时写、谁消费 |
 | `@novasheet/mbd` | 外环契约的解析 / manifest / 覆盖率工具 |
 | `CLAUDE.md` | 本方法论的 load-bearing 入口（§6） |
@@ -152,7 +152,7 @@ TDD 内环（实现单元，inside-out，红绿重构）                        
 
 ### ADR-C：是否对全分层 L0–L4 立即铺开
 
-**决策**：方法论**描述**全分层；**落点**仍由 behavioral-testing Phase 0 管（excel-first）。本文档不改 Phase 0 切换信号。
+**决策**：方法论**描述**全分层；**落点**由 behavioral-testing Phase 1 和 Core BDD 路线计划管。Core L0–L2 已启动但分批落地，Excel L3 持续维护，L4 仍纯 TDD。
 
 ---
 

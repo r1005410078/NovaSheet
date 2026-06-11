@@ -1,50 +1,49 @@
 # NovaSheet 行为测试终态 — 设计
 
 - **日期**：2026-06-08
-- **状态**：设计（**Phase 0 执行中** — excel-first；L0–L2 暂缓）
+- **状态**：设计（**Phase 1 执行中** — Core L0–L2 分批启动，Excel L3 继续维护）
 - **分支**：`refactor-default-grid-engine-decomposition`（延续 decomposition；暂不合 `main`）
 - **相关**：`packages/canvas2d/tests/integration/Phase45–47.scenarios.test.ts`、`packages/core/src/Grid.ts`、`packages/react/docs/project-standards.md`
 
 ---
 
-## Phase 0 — 当前执行范围
+## Phase 1 — 当前执行范围
 
-核心库 API 与 decomposition 仍在演进，**产品行为先在 `NovaExcel` 组合层用大行为测试定型**；等功能冻结后再启用本文 §4–§7 的 L0–L2 中央合规（`packages/acceptance`）。
-截至 2026-06-10，excel 行为测试 21 条场景 bootstrap 已完成，且 toolbar 同步、orphan lint、测试卫生巩固已按 `2026-06-10-novasheet-react-behavioral-testing-consolidation-design.md` 落地。
+Core 公开 API 进入 BDD 分批覆盖阶段：Core L0/L1/L2 场景统一放在 `packages/core/tests/bdd/scenarios/*.md`，由 `@novasheet/mbd` 解析/manifest，手写 `bun:test` 覆盖 `Grid` / `DefaultGridEngine` / `DataSource` / view / format / undo 等公开可观测行为。Excel L3 继续维护为组合层烟测，不再承担 Core 深层行为断言。
+截至 2026-06-11，Core BDD 路线计划见 `docs/superpowers/plans/2026-06-11-novasheet-core-public-api-bdd-roadmap.md`。
 
 ### 两类测试，不可混用
 
 | 类型 | Core | Excel（`packages/react/tests/excel/`） |
 | --- | --- | --- |
 | **TDD**（单元 / 领域 / 引擎） | **继续** — `kernel/`、`features/`、`engine/` 红→绿→重构 | 不适用（组合层用行为测驱动） |
-| **行为测试**（端到端 / 用户旅程） | **暂缓** — 不扩 L0–L2、不新建 `acceptance`、不把 Phase45 当当前投入重点 | **主战场** — 壳层、接线、用户旅程 |
+| **行为测试**（端到端 / 用户旅程） | **启动** — 分批建设 `packages/core/tests/bdd`，L0/L1/L2 覆盖公开 API 契约 | **继续维护** — 壳层、接线、用户旅程 |
 
 ```text
 Core 实现  ←—— TDD（细、快、白盒）———————————— 持续进行
-Core 行为  ←—— 门面 E2E / L0–L2 / acceptance —— Phase 0 暂缓，API 冻结后启用
-Excel 行为 ←—— NovaExcel 大组件旅程 / 接线 ——— Phase 0 现在做
+Core 行为  ←—— Core MBD 场景 / 手写 bun:test 行为测试 —— Phase 1 分批启动
+Excel 行为 ←—— NovaExcel 大组件旅程 / 接线 ————————— 持续维护
 ```
 
-### Phase 0 断言边界
+### Phase 1 断言边界
 
-| 测（excel 可观测） | 不测（留给 Core TDD 或未来 L2） |
+| 测（Core L0–L2 可观测） | 不测（继续留给 Core TDD / L4） |
 | --- | --- |
-| toolbar 点击 → 调用 `grid.*`（可 spy） | paste 后 `data.getCell` 是否正确 |
-| `onToolbarAction` / `onUndo` / `onRedo` / `onSelectionChange` | undo 后 `rowCount` 是否还原 |
-| `disabledActionIds`、`toolbarState` 与 Grid 同步 | sort × delete 的 ViewPipeline |
-| props、ref、StrictMode、DOM 契约 | merge 区域几何、ChunkedAxis 数学 |
-| 用户旅程中的 **UI 状态**（如填色后 toolbar 显示红色） | painter `RecordingContext` 序列 |
+| `Grid` / `DefaultGridEngine` 公开 API 后的数据、选区、undo、view、format 观测 | `ChunkedAxis` 二分 / 分块数学细节 |
+| `DataSource` 公开读写、事件、schema、稀疏工作区行为 | painter `RecordingContext` 序列 |
+| row/column structure、clipboard、fill、format、merge、sort/filter 的公开观测结果 | DOM drag 命中、像素级绘制 |
+| Grid 门面回调 / 事件 / destroy 幂等 / scroll facade 基本契约 | React hook 内部状态、toolbar 私有实现 |
 
-**底线**：现有 `packages/core/tests`（~900 `it`）保持绿并随功能 **TDD 增长**；`lint:architecture` 继续跑。Phase 0 是**暂缓 Core 行为层加深**，不是放弃 Core 测试。
+**底线**：现有 `packages/core/tests`（~900 `it`）保持绿并随功能 **TDD 增长**；`lint:architecture` 继续跑。BDD 不替换 kernel / features / engine 单元测试，只把公开可观测契约提升为场景化测试。
 
-### Phase 0 → Phase 2 切换信号
+### Phase 1 分批启动信号
 
-满足 **2–3 条** 后启动 L0–L2 / `packages/acceptance`：
+Core L0–L2 立即启动，但按批次提交，避免一次性大改压垮维护：
 
-- MVP 功能列表 closed（如 Phase 5-C/D 或自定里程碑）
-- `Grid` 公开 API 一季内无 breaking rename
-- decomposition 合入 `main` 且稳定
-- excel 行为测试连续 2–4 周无「为迁就 core bug 而改期望」
+- 第 0 批只建 `packages/core/tests/bdd` 骨架和 3–5 条 smoke 场景。
+- 第 1–2 批锁结构 / view / selection / undo 这些最容易 regression 的 API。
+- 第 3–5 批再覆盖 clipboard / fill / format / merge / DOM Grid 门面。
+- 每批都必须 Core `mbd validate` / `manifest`、BDD 测试红绿、`bun test packages/core/tests/bdd`、全仓关键 gates 通过。
 
 ### Phase 0 excel 行为测试分层
 
@@ -70,11 +69,11 @@ NovaSheet 是 Canvas 表格引擎 + 多端适配（React 已 ship，Vue / Flutte
 | **WPT** | 中央 HTML/JS 场景；Chromium / Firefox / WebKit 各自 import 对齐 |
 | **SWC / esbuild** | 换实现不换验收；同一 Jest 用例 + 生态 interop 矩阵 |
 
-**本规格目标**：为 NovaSheet 定义 **中央行为合规套件（L0）+ 分层 runner（L1–L4）**，支撑：
+**本规格目标**：为 NovaSheet 定义 **中央行为合规套件（L0）+ 分层测试（L1–L4）**，支撑：
 
 1. 引擎重构 / 换语言（如 Dart）时，L1 oracle 不变
 2. 换渲染后端时，L2 Grid 契约不变
-3. 扩 Vue / Flutter 时，共享 L0 YAML，各端仅写 L3 冒烟
+3. 扩 Vue / Flutter 时，共享 MBD 场景语义，各端仅写 L3 冒烟
 
 ### 现状基线
 
@@ -91,21 +90,21 @@ NovaSheet 是 Canvas 表格引擎 + 多端适配（React 已 ship，Vue / Flutte
 
 ## 2. 非目标
 
-1. **不替换、不削弱 Core TDD**——`kernel/`、`features/`、`engine/` 单元测试继续红→绿驱动实现；Phase 0 仅 **暂缓 Core 行为测试（L0–L2）加深**
+1. **不替换、不削弱 Core TDD**——`kernel/`、`features/`、`engine/` 单元测试继续红→绿驱动实现；Phase 1 只新增公开契约 BDD，不复制白盒细节
 2. **不替换**现有 `canvas2d/tests` 渲染白盒（L4）——中央场景将来是 **收敛门面行为**，不是削减 painter / DOM mock 覆盖
 3. **默认不引入** Playwright 作为 PR 门禁（scroll / DPR / 系统剪贴板权限留给可选 nightly 或手测）
 4. **不共享** React / Vue / Flutter 的 `.test.ts` 源码
-5. **Phase 0 不创建** `packages/acceptance` 代码（API 冻结后见 §11 阶段 2）
+5. **不一次性迁移所有旧 E2E**——`packages/core/tests/bdd` 分批建设；Phase45–47 在 L2 覆盖稳定后再薄包装或下线
 6. **不把** painter `RecordingContext` 指令序列上升为跨端契约
-7. **Phase 0 不在 excel 行为测试中断言引擎深层语义**（rowCount 还原、view pipeline 重算等）
+7. **Excel 行为测试不再承载 Core 深层语义**（rowCount 还原、view pipeline 重算等下沉到 L1/L2）
 
 ---
 
 ## 3. 设计原则
 
 1. **测行为不测实现**——断言数据、选区、undo 栈、view 格式；不断言 painter ctx 序列或 React hook 内部
-2. **规格与实现解耦**——场景为语言无关 YAML；各端写 adapter runner
-3. **旧实现当 oracle**——`DefaultGridEngine` headless 为 L1 基准；`Grid` + injectable backend 为 L2 契约；同场景 **双跑 diff**
+2. **规格与实现解耦**——场景为 MBD Markdown；测试代码手写，不再新增自定义解析层
+3. **旧实现当 oracle**——`DefaultGridEngine` headless 为 L1 基准；`Grid` + injectable backend 为 L2 契约；必要场景对齐二者公开观测
 4. **分层验收**——DOM 命中层（hide-toggle handle）与 API 层（`invokeRowHeaderContextMenuAction`）分开标注
 5. **YAGNI**——P0 先迁移现有 10 条 E2E；P1 补 clipboard / format / fill 缺口；P2 随 milestone 追加
 
@@ -116,16 +115,16 @@ NovaSheet 是 Canvas 表格引擎 + 多端适配（React 已 ship，Vue / Flutte
 ```mermaid
 flowchart TB
   subgraph L0 [L0_Spec]
-    yaml["scenarios/*.yaml"]
-    fixtures["fixtures/*.json"]
+    md["packages/core/tests/bdd/scenarios/*.md"]
+    manifest["scenarios.manifest.json"]
   end
 
   subgraph L1 [L1_EngineOracle]
-    engineRunner["EngineRunner\nDefaultGridEngine headless"]
+    engineTest["bun:test\nDefaultGridEngine headless"]
   end
 
   subgraph L2 [L2_GridContract]
-    gridRunner["GridRunner\nGrid + injectable backend"]
+    gridTest["bun:test\nGrid + injectable backend"]
   end
 
   subgraph L3 [L3_AdapterSmoke]
@@ -139,203 +138,101 @@ flowchart TB
     futureRender["future WebGL etc"]
   end
 
-  yaml --> engineRunner
-  yaml --> gridRunner
-  fixtures --> engineRunner
-  fixtures --> gridRunner
-  gridRunner --> reactSmoke
-  engineRunner -.->|"diff same scenario"| gridRunner
-  gridRunner -.->|"subset wiring"| reactSmoke
+  md --> manifest
+  md --> engineTest
+  md --> gridTest
+  gridTest --> reactSmoke
+  engineTest -.->|"align public observation"| gridTest
+  gridTest -.->|"subset wiring"| reactSmoke
   painters --> L4
 ```
 
 | 层 | 名称 | 入口 | 断言对象 | 跨端 | 现有测试归属 |
 | --- | --- | --- | --- | --- | --- |
-| **L0** | 中央场景规格 | YAML + fixture | 无（纯数据） | 是 | 新建（本规格定义） |
-| **L1** | 引擎 oracle | `DefaultGridEngine` | `data.getRowCount()`、`canUndo`、`getViewCellFormat`、`getViewPipeline().getComposed()` | 是 | Core **TDD** 在 `engine/`、`features/`；**行为 oracle 暂缓**（Phase 0） |
-| **L2** | Grid 门面契约 | `new Grid(el, { backend })` | 仅 `Grid` 公开 API + `DataSource` 观测 | 是 | Phase45–47 保留；**扩写暂缓**（Phase 0） |
-| **L3** | 框架组合行为 | `NovaExcel` / 未来 Vue·Flutter | DOM 契约、ref、StrictMode、toolbar→`grid.*` 接线、用户旅程（浅断言） | 否 | **`packages/react/tests/excel/`（Phase 0 主战场）**；`features/` 仅孤立 UI / 纯函数 |
+| **L0** | 中央场景规格 | MBD Markdown + manifest | 无（纯数据） | 是 | `packages/core/tests/bdd/scenarios/` |
+| **L1** | 引擎 oracle | `DefaultGridEngine` | `data.getRowCount()`、`canUndo`、`getViewCellFormat`、`getViewPipeline().getComposed()` | 是 | **Phase 1 启动**；Core TDD 继续保留 |
+| **L2** | Grid 门面契约 | `new Grid(el, { backend })` | 仅 `Grid` 公开 API + `DataSource` 观测 | 是 | **Phase 1 启动**；Phase45–47 后续迁移 |
+| **L3** | 框架组合行为 | `NovaExcel` / 未来 Vue·Flutter | DOM 契约、ref、StrictMode、toolbar→`grid.*` 接线、用户旅程（浅断言） | 否 | `packages/react/tests/excel/` 持续维护；`features/` 仅孤立 UI / 纯函数 |
 | **L4** | 渲染白盒 | `Canvas2DRenderer` / painters | `RecordingContext` 指令序列 | 否 | `packages/canvas2d/tests/painters/` |
 
 **铁律**：L0–L2 **禁止** `delegate.engine` / `canvas2dDelegate` 穿透。现有 `Grid.test.ts` 白盒回归可保留，但不得进入中央场景目录。
 
 ---
 
-## 5. L0 场景规格（YAML 契约）
+## 5. L0 场景规格（MBD Markdown 契约）
 
 ### 5.1 目录结构（实现期创建）
 
 ```text
-packages/acceptance/
-  scenarios/
-    structural/     # insert/delete/hide rows&cols, moveCols
-    view/           # sort, filter, composed rowCount
-    clipboard/      # copy/cut/paste + undo
-    format/         # fill, border, textWrap, merge
-    fill/           # fill handle commit + undo
-  fixtures/
-    sparse-5x3.json
-    sparse-5x1.json
-    sort-active.json
-    cols-4x10.json
-  schema/
-    scenario.schema.json   # 可选 JSON Schema 校验
-  src/
-    run-scenario.ts
-    adapters/
-      engine-runner.ts
-      grid-runner.ts
-  tests/
-    run-scenarios.test.ts
+packages/core/
+  mbd.config.ts
+  tests/bdd/
+    scenarios/
+      L0-*.md
+      L1-*.md
+      L2-*.md
+    core-bdd.test.ts
+    scenarios.manifest.json
+    SCENARIOS.md
 ```
 
 ### 5.2 单场景结构
 
-```yaml
-id: structural.insert-rows-undo
-layer: [engine, grid]       # 适用 runner；见 §5.5
-tags: [phase-4.5, undo]
-given:
-  fixture: sparse-5x3
-  selection: null
-  # 可选：frozen, sortSpec, hiddenRows, hiddenCols
-steps:
-  - when:
-      action: insertRows
-      args: { beforeRow: 2, count: 2 }
-    then:
-      - assert: data.rowCount
-        equals: 7
-      - assert: grid.canUndo
-        equals: true
-  - when:
-      action: undo
-    then:
-      - assert: data.rowCount
-        equals: 5
-      - assert: grid.canUndo
-        equals: false
+```markdown
+---
+id: core.L1.engine-frame-initial-visible-range
+title: Engine frame exposes the initial visible range
+layer: L1
+area: engine
+---
+
+## User Story
+
+作为 Core 维护者，我需要 headless engine frame 暴露稳定的初始可见区。
+
+## Given
+
+- dense 2x2 datasource
+
+## When
+
+- 调用 `DefaultGridEngine.getFrame()`
+
+## Then
+
+- rows/cols/cells 均可通过公开 frame 观测
 ```
 
 **字段约定**：
 
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
-| `id` | 是 | 全局唯一，`domain.snake-case` |
-| `layer` | 是 | `engine` \| `grid` \| `dom-hit` 数组 |
-| `tags` | 否 | milestone / 域标签，供过滤 CI |
-| `given.fixture` | 是 | `fixtures/` 下 JSON 文件名（无扩展名） |
-| `given.selection` | 否 | `GridSelection` 或 `null` |
-| `steps` | 是 | 有序 when/then 序列；支持多段 undo 链 |
+| `id` | 是 | 全局唯一；Core 使用 `core.L[012].slug` |
+| `layer` | 是 | `L0` / `L1` / `L2` |
+| `area` | 是 | `engine` / `grid` / `datasource` / `format` 等领域标签 |
+| `title` | 是 | 人读标题；测试 title 仍必须以 `id` 开头 |
+| `## User Story` | 是 | 行为意图 |
+| `## Given/When/Then` | 是 | 行为契约，供人读与 review；测试代码手写实现断言 |
 
-### 5.3 Action 词汇表（封闭枚举）
+### 5.3 Layer 标注约定
 
-| 分类 | action | args 形状 | L1 映射 | L2 映射 |
-| --- | --- | --- | --- | --- |
-| 结构 | `insertRows` | `{ beforeRow, count }` | engine 结构 API | `grid.insertRows` |
-| 结构 | `deleteRows` | `{ rowIds: number[] }` | 同上 | `grid.deleteRows` |
-| 结构 | `hideRows` | `{ rowIds: number[] }` | 同上 | `grid.hideRows` |
-| 结构 | `unhideRows` | `{ rowIds: number[] }` | 同上 | `grid.unhideRows` |
-| 结构 | `insertCols` | `{ beforeFieldIndex, count }` | 同上 | `grid.insertCols` |
-| 结构 | `deleteCols` | `{ fieldIds: string[] }` | 同上 | `grid.deleteCols` |
-| 结构 | `hideCols` | `{ fieldIds: string[] }` | 同上 | `grid.hideCols` |
-| 结构 | `unhideCols` | `{ fieldIds: string[] }` | 同上 | `grid.unhideCols` |
-| 结构 | `moveCols` | `{ fieldIds, beforeFieldId }` | 同上 | `grid.moveCols` |
-| 编辑 | `setSelection` | `GridSelection` | selection controller | `grid.setSelection` |
-| 编辑 | `copy` | `{}` | clipboard controller | `grid.copy()` |
-| 编辑 | `cut` | `{}` | 同上 | `grid.cut()` |
-| 编辑 | `paste` | `{}` | 同上 | `grid.paste()` |
-| 格式 | `setFillColor` | `{ range, color }` | format controller | `grid.setFillColor` |
-| 格式 | `setBorders` | `{ range, preset, border }` | 同上 | `grid.setBorders` |
-| 格式 | `setTextWrap` | `{ range, mode }` | 同上 | `grid.setTextWrap` |
-| 格式 | `mergeCells` | `{ range }` | merge controller | `grid.mergeCells` |
-| 格式 | `unmergeCells` | `{ range }` | 同上 | `grid.unmergeCells` |
-| 视图 | `sortBy` | `{ fieldId, direction }` | `getSortLayer().setSpec` | 同上 |
-| 视图 | `clearSort` | `{}` | `setSpec(null)` | 同上 |
-| 菜单 | `invokeRowHeaderContextMenuAction` | `{ id, targetRowIndex }` | N/A（L1 直调领域） | `grid.invokeRowHeaderContextMenuAction` |
-| 菜单 | `invokeColumnHeaderContextMenuAction` | `{ id, targetColIndex }` | N/A | `grid.invokeColumnHeaderContextMenuAction` |
-| 控制 | `undo` / `redo` | `{}` | undo stack | `grid.undo` / `grid.redo` |
-| 控制 | `refresh` | `{}` | invalidate | `grid.refresh` |
-| 控制 | `scrollToCell` | `{ rowIndex, fieldId }` | N/A | `grid.scrollToCell` |
-| 控制 | `autofitRows` | `{ rows?, maxHeight? }` | autofit API | `grid.autofitRows` |
-| 控制 | `setFrozen` | `Partial<FrozenConfig>` | layout | `grid.setFrozen` |
-
-L1 对「仅 Grid 门面存在」的 action（`scrollToCell`、菜单代理）通过 **等效领域调用** 执行，规格实现期在 `EngineRunner` 文档化映射表。
-
-### 5.4 Assert 词汇表
-
-| 断言键 | 来源 API | 参数 | 用途 |
-| --- | --- | --- | --- |
-| `data.rowCount` | `DataSource.getRowCount()` | — | 结构变更 |
-| `data.cell` | `DataSource.getCell(row, fieldId)` | `{ row, fieldId }` | 编辑 / 粘贴 |
-| `data.fieldCount` | `getSchema().fields.length` | — | 列结构 |
-| `schema.fieldOrder` | `fields.map(f => f.id)` | — | 列重排 |
-| `grid.canUndo` | `Grid.canUndo()` | — | undo 链 |
-| `grid.canRedo` | `Grid.canRedo()` | — | redo 链 |
-| `grid.hiddenRows` | `getHiddenRows()` | — | 行隐藏 |
-| `grid.hiddenCols` | `getHiddenCols()` | — | 列隐藏 |
-| `grid.selection` | `getSelection()` | — | 选区 |
-| `grid.viewFormat` | `getViewCellFormat(r, c)` | `{ row, col, path? }` | Phase 5 格式 |
-| `grid.viewMerge` | `getViewMergeRegion(r, c)` | `{ row, col }` | 合并区域 |
-| `view.composedRowCount` | `getViewPipeline().getComposed().getRowCount()` | — | sort/filter 视图 |
-| `view.sortSpec` | `getSortLayer().getSpec()` | — | 排序状态 |
-| `menu.contains` | `getRowHeaderContextMenuItems` / 列头等价 | `{ id, ctx }` | 菜单项出现 |
-| `grid.frozenConfig` | **待公开** `getFrozenConfig()` | — | frozen 观测（见 §7.1 缺口） |
-
-**ObservationSnapshot**：runner 每步 `then` 执行后序列化为 JSON 对象，供 L1/L2 双跑 diff 与可选 baseline 存储（typescript-go 模式）。
-
-### 5.5 Layer 标注约定
-
-| `layer` 值 | 含义 | CI 默认 |
+| `layer` 值 | 含义 | 测试实现 |
 | --- | --- | --- |
-| `engine` | 仅需 L1 headless，无 DOM | 跑 |
-| `grid` | 需 L2 挂载 Grid（container 固定 300×300 或场景注明尺寸） | 跑 |
-| `dom-hit` | 需真实布局 / 指针命中（hide-toggle handle 等） | 不跑；Storybook 手测或 Playwright nightly |
+| `L0` | public pure / datasource 输入输出契约 | `bun:test` 直接调用公开函数或 datasource |
+| `L1` | headless engine 契约 | `bun:test` 直接调用 `DefaultGridEngine` |
+| `L2` | `Grid` facade 契约 | `bun:test` 挂载 `Grid` + mock backend |
 
 **happy-dom 限制**（沿用 Phase45 注释策略）：容器默认宽高为 0 时 viewport 可见范围为 `[0,0]`，`syncHideToggleHandles` 不创建 DOM。hide → unhide 链路在 L2 通过 `invokeRowHeaderContextMenuAction('unhide-rows')` 或公共 `unhideRows` API 验收，不测 handle 点击。
 
 ---
 
-## 6. L1 / L2 Runner 语义
+## 6. L1 / L2 测试语义
 
-```mermaid
-sequenceDiagram
-  participant CI
-  participant Runner as ScenarioRunner
-  participant L1 as EngineRunner
-  participant L2 as GridRunner
-  participant Oracle as DiffReporter
-
-  CI->>Runner: load scenarios/*.yaml
-  Runner->>L1: run if layer includes engine
-  Runner->>L2: run if layer includes grid
-  L1-->>Oracle: ObservationSnapshot
-  L2-->>Oracle: ObservationSnapshot
-  Oracle-->>CI: fail on diff
-```
-
-### 6.1 EngineRunner（L1）
-
-- **构造**：`new DefaultGridEngine({ data: loadFixture(), theme: denseGridTheme, frozen: given.frozen })`
-- **执行**：YAML `action` → 领域 write seam / engine 方法（不经 DOM、不经 `GridController`）
-- **输出**：`ObservationSnapshot`（JSON）
-- **角色**：跨语言 oracle；未来 Dart 引擎对齐同一 YAML
-
-### 6.2 GridRunner（L2）
-
-- **构造**：`new Grid(container, { backend, data, theme, frozen })`；`backend` 参数化，默认 `canvas2dBackend`
-- **容器**：`300×300`（或场景 `given.containerSize`）；每场景 `grid.destroy()` + `container.remove()`
-- **执行**：仅 `Grid` 公开 API + `DataSource` 观测
-- **禁止**：`delegate.engine`、`canvas2dDelegate`、`engineOf`
-
-### 6.3 双跑规则
-
-| 条件 | 行为 |
-| --- | --- |
-| `layer` 含 `engine` 且含 `grid` | 同一 fixture + 同一 `steps`，L1 与 L2 每步 `then` 观测 **必须一致** |
-| 不一致 | 标为 **contract drift**；优先修 Grid 转发层或 **补公开观测 API**，禁止静默改场景期望 |
-| 仅 `grid` | 只跑 L2（如依赖 DOM 挂载的菜单路径） |
-| 仅 `engine` | 只跑 L1（纯视图管道，无需 backend） |
+- **L1 构造**：`new DefaultGridEngine({ data, theme, frozen })`；不经 DOM、不经 `GridController`。
+- **L2 构造**：`new Grid(container, { backend, data, theme, frozen })`；每场景 `grid.destroy()` + `container.remove()`。
+- **断言来源**：只断言公开 API 可观测结果，例如 `DataSource`、`Grid.canUndo()`、`Grid.getSelection()`、`getViewCellFormat()`、`getViewPipeline()`。
+- **禁止**：`delegate.engine`、`canvas2dDelegate`、`engineOf`。
+- **contract drift**：L1/L2 公开观测不一致时，优先修 Grid 转发层或补公开观测 API，禁止静默改场景期望。
 
 ---
 
@@ -371,7 +268,7 @@ sequenceDiagram
 
 | 域 | 触发条件 |
 | --- | --- |
-| 5-C number/date format | Phase 5-C spec 冻结后追加 YAML |
+| 5-C number/date format | Phase 5-C spec 冻结后追加 MBD 场景 |
 | 5-D conditional formatting | 同上 |
 | excel-workspace auto-grow | workspace policy 公开后 |
 | dom-hit hide-toggle | Playwright 可选 job |
@@ -382,12 +279,12 @@ sequenceDiagram
 
 | 问题 | 决策 |
 | --- | --- |
-| Core TDD vs Core 行为？ | **TDD 继续**（`kernel/`、`features/`、`engine/`）；**行为测试（L0–L2）Phase 0 暂缓** |
+| Core TDD vs Core 行为？ | **TDD 继续**（`kernel/`、`features/`、`engine/`）；**行为测试（L0–L2）Phase 1 分批启动** |
 | 删除 `core/tests` / `canvas2d/tests`？ | **否**——Core TDD 与 L4 继续增长 |
-| `Phase45.scenarios.test.ts` 去向？ | Phase 0 **保留不动**；API 冻结后迁移 YAML，薄包装或删除 |
-| `Grid.test.ts` delegate 用法？ | 保留白盒回归；新场景不得复制；**非 Phase 0 投入重点** |
-| `makeMockGridEngine` duplicate？ | 仅 core/canvas2d DOM 交互单测；**不进入 acceptance** |
-| React excel 行为测试？ | **Phase 0 主战场**——壳层 + 接线 + 浅旅程；见附录 C |
+| `Phase45.scenarios.test.ts` 去向？ | Phase 1 **保留不动**；L2 覆盖稳定后迁移到 MBD 场景，薄包装或删除 |
+| `Grid.test.ts` delegate 用法？ | 保留白盒回归；新场景不得复制；新 L2 场景只走公开 `Grid` |
+| `makeMockGridEngine` duplicate？ | 仅 core/canvas2d DOM 交互单测；**不进入 Core BDD 场景** |
+| React excel 行为测试？ | **持续维护**——壳层 + 接线 + 浅旅程；Core 深断言下沉 L1/L2；见附录 C |
 | `tests/features/toolbar/`？ | 孤立 `NovaSheetToolbar` UI + `deriveToolbarState` 纯函数；**不扩** merge→undo 数据链 |
 | `deriveToolbarStateFromGrid`？ | 纯函数单测留 `features/toolbar`；未来可升为 `ExcelToolbarOrchestrator` |
 
@@ -399,9 +296,9 @@ sequenceDiagram
 
 | 共享 | 各端独有 |
 | --- | --- |
-| L0 YAML + fixtures | L3 挂载冒烟（5–15 条 / 端） |
-| `ObservationSnapshot` 形状 | DOM / Widget 探针命名 |
-| L2 `GridRunner`（TS） | Dart `GridRunner`（Flutter，build 时 copy YAML 或 submodule） |
+| L0/L1/L2 MBD 场景 | L3 挂载冒烟（5–15 条 / 端） |
+| 公开观测语义 | DOM / Widget 探针命名 |
+| L2 `Grid` facade 测试语义（TS） | Dart facade 行为测试（Flutter，复用场景语义） |
 
 ### 9.2 DOM 契约（统一命名，实现期迁移）
 
@@ -424,14 +321,14 @@ sequenceDiagram
 
 ```text
 bun test                          # 现有全量（保持）
-bun test packages/acceptance      # 未来：L0+L1+L2 场景 runner
+bun test packages/core/tests/bdd  # Phase 1：Core L0+L1+L2 BDD 测试
 bun run lint:architecture         # kernel / react boundary
 ```
 
 | 门禁 | 内容 |
 | --- | --- |
 | 默认 PR | 全量 `bun test` + lint + typecheck + build |
-| acceptance 包合入后 | `packages/acceptance` 绿 + P0 场景 100% |
+| Core BDD 合入后 | `packages/core/tests/bdd` 绿 + Core 场景 100% |
 | 可选 nightly | Playwright `dom-hit` 子集 |
 | Baseline | L1 `ObservationSnapshot` 受控 accept；首次引入需 review |
 
@@ -441,48 +338,49 @@ bun run lint:architecture         # kernel / react boundary
 
 | 阶段 | 交付 | 依赖 |
 | --- | --- | --- |
-| **0. excel-first（当前）** | `tests/excel/` L3a/L3b/L3c；Core **TDD** 照常；**不**建 `acceptance` | 本文档 Phase 0 节 |
+| **0. excel-first（完成）** | `tests/excel/` L3a/L3b/L3c；Core **TDD** 照常 | `2026-06-10-novasheet-react-behavioral-testing-consolidation-design.md` |
 | **1. 规格** | 本文档 + react standards + CLAUDE.md 索引 | ✅ |
-| **2. 基础设施** | `packages/acceptance`、EngineRunner、GridRunner、P0 YAML | §Phase 0 切换信号满足 |
+| **2. Core BDD 基础设施（当前）** | `packages/core/tests/bdd`、`mbd.config.ts`、smoke MBD 场景 | `2026-06-11-novasheet-core-public-api-bdd-roadmap.md` |
 | **3. 场景补全** | P1 clipboard/format/fill；Phase45–47 薄包装下线；excel 深断言**下沉**到 L2 | 阶段 2 绿 |
-| **4. 跨端** | Vue L3 冒烟；`data-novasheet-excel` 统一；Flutter YAML copy | 阶段 3 + 各端包存在 |
+| **4. 跨端** | Vue L3 冒烟；`data-novasheet-excel` 统一；Flutter 复用场景语义 | 阶段 3 + 各端包存在 |
 
-实现 plan（待撰写）：`docs/superpowers/plans/2026-06-08-novasheet-behavioral-testing.md`（阶段 2 启动时再写）
+实现 plan：`docs/superpowers/plans/2026-06-11-novasheet-core-public-api-bdd-roadmap.md`
 
 ---
 
 ## 12. ADR
 
-### ADR-A：中央 YAML vs Gherkin (.feature)
+### ADR-A：MBD Markdown vs Gherkin (.feature)
 
 | 方案 | 优点 | 缺点 |
 | --- | --- | --- |
-| **YAML 场景表**（采纳） | 与 TS fixture 天然契合；runner 无 Cucumber 依赖；bun 生态轻量 | 非业务方可读性略低于 Gherkin |
+| **MBD Markdown 场景**（采纳） | 已在 React Excel 路径验证；`@novasheet/mbd` 统一解析/manifest；人读友好 | 结构化 action/assert 需由测试代码手写承接 |
 | Gherkin | 产品 / QA 可读 | 需 step definition 层；Flutter/Dart 需另套 binding |
 
-**决策**：L0 用 **YAML + 封闭 action/assert 枚举**；人类可读摘要写在场景 `description` 字段（可选）。
+**决策**：Core L0/L1/L2 用 **MBD Markdown + 手写 `bun:test`**；场景只写行为契约，不新增自定义 YAML 解析器。
 
 ### ADR-B：Engine oracle vs 仅 Grid E2E
 
 | 方案 | 优点 | 缺点 |
 | --- | --- | --- |
-| **L1 + L2 双跑**（采纳） | 脱 DOM 快；可服务 Dart 引擎；能抓 Grid 转发 drift | EngineRunner 需维护 action 映射表 |
+| **L1 + L2 对齐**（采纳） | 脱 DOM 快；可服务 Dart 引擎；能抓 Grid 转发 drift | 需要维护公开观测 API |
 | 仅 Grid E2E | 实现简单 | 绑 canvas2d + DOM；换引擎无 oracle |
 
-**决策**：`layer` 含 `engine` 的场景 **必须** L1/L2 双跑；contract drift 优先修门面而非改期望。
+**决策**：能同时覆盖 L1/L2 的场景应保持公开观测一致；contract drift 优先修门面或补公开观测 API，而非改期望。
 
 ### ADR-C：是否替换现有单元测试
 
-**决策**：**不替换**。中央场景收敛 **用户可见门面行为**；kernel 算法、painter 录制、DOM 交互 mock 仍留在原包。acceptance 场景数目标 **30–50**（P0+P1），而非复制 ~1076 `it`。
+**决策**：**不替换**。中央场景收敛 **用户可见门面行为**；kernel 算法、painter 录制、DOM 交互 mock 仍留在原包。Core BDD 场景按公开 API 路线批次增长，而非复制 ~1076 `it`。
 
-### ADR-D：Phase 0 excel-first vs 先做 Core 行为测试
+### ADR-D：Core L0–L2 启动策略
 
 | 方案 | 优点 | 缺点 |
 | --- | --- | --- |
-| **excel-first（采纳，Phase 0）** | 产品入口定型；Core API 变动时少维护门面 E2E；TDD 仍驱动 core 实现 | excel 失败时定位需 L3b 接线测辅助 |
-| 先做 L0–L2 acceptance | 引擎契约早锁 | API 未冻结时期望频繁漂移，与 decomposition 抢维护 |
+| **分批启动 L0–L2（采纳，Phase 1）** | 公开 API 契约早锁；每批可独立验证；Excel 深断言可下沉 | 需要维护公开观测 API |
+| 一次性全量 L0–L2 | 一轮覆盖所有 API | diff 巨大；场景设计风险集中爆发 |
+| 继续 excel-first | 产品入口维护成本低 | Core 公开契约缺少独立真相 |
 
-**决策**：Phase 0 **excel 大行为测试 + Core TDD**；**暂缓** L0–L2。API 冻结后将 excel 旅程中稳定的引擎断言**下沉**到 `acceptance`（不是永远只靠 react 层）。
+**决策**：解除 Core L0–L2 行为层暂缓，按 `2026-06-11-novasheet-core-public-api-bdd-roadmap.md` 分批建设 `packages/core/tests/bdd`。Excel L3 继续保留，但 Core 深层行为以 Core BDD 场景为准。
 
 ---
 
@@ -549,7 +447,7 @@ bun run lint:architecture         # kernel / react boundary
 
 ## 附录 B：P0 迁移对照（Phase45 文件行号）
 
-| Phase45 `it` | YAML `id` |
+| Phase45 `it` | MBD `id` |
 | --- | --- |
 | L40 insertRows undo | `structural.insert-rows-undo` |
 | L58 undo/redo | `structural.insert-rows-undo-redo` |
@@ -558,12 +456,12 @@ bun run lint:architecture         # kernel / react boundary
 | L132 menu unhide item | `structural.hide-unhide-menu-item` |
 | L154 hide unhide undo | `structural.hide-unhide-undo-redo` |
 
-| Phase46 `it` | YAML `id` |
+| Phase46 `it` | MBD `id` |
 | --- | --- |
 | L46 insertCols frozen | `structural.insert-cols-undo-frozen` |
 | L66 deleteCols sort | `view.sort-delete-cols-invalidate` |
 | L81 hideCols anchor | `structural.hide-cols-anchor` |
 
-| Phase47 `it` | YAML `id` |
+| Phase47 `it` | MBD `id` |
 | --- | --- |
 | L31 moveCols hidden | `structural.move-cols-hidden-undo-redo` |

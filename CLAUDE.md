@@ -53,12 +53,12 @@ Loaded into every agent session — invariants easy to get wrong without context
 完整方法论：`docs/superpowers/specs/2026-06-10-novasheet-bdd-tdd-method-design.md`（**干活前读它**）。BDD 先锁可观测行为（场景），TDD 驱动实现。
 
 1. **brainstorming** → spec（`docs/superpowers/specs/`）
-2. **【BDD gate】场景定稿** — 写/改 `scenarios/*.md`（先 `## User Story`，再 G/W/T）作外环契约；`mbd validate`+`manifest`。无场景不开内环；契约漂移优先修门面/补观测 API，禁静默改期望。仅罩 L0–L3 可观测行为；kernel 算法与 L4 白盒纯 TDD。活跃层由 behavioral-testing **Phase 0**（excel-first）决定。
+2. **【BDD gate】场景定稿** — 写/改场景（Core L0–L2 用 `packages/core/tests/bdd/scenarios/*.md`，Excel L3 用 `packages/react/tests/excel/scenarios/*.md`；MD 先 `## User Story`，再 G/W/T）作外环契约；`mbd validate`+`manifest`。无场景不开内环；契约漂移优先修门面/补观测 API，禁静默改期望。仅罩 L0–L3 可观测行为；kernel 算法与 L4 白盒纯 TDD。活跃层由 behavioral-testing **Phase 1** 决定：Core L0–L2 分批启动，Excel L3 持续维护。
 3. **writing-plans** → plan（`docs/superpowers/plans/`）；首类任务 = 让行为测试存在并红，余 = TDD 内环。
 4. **subagent-driven-development** — 一 task 一 subagent，不批。内环全绿→外环行为测试转绿→`lint:scenario-coverage` 不退化。
 5. **finishing-a-development-branch** — verify、push、tag。
 
-**Subagent prompts must:** 引 plan 文件路径（勿贴正文）+ 方法论 spec + 相关 `scenarios/*.md` 路径（subagent 不自动加载，控制器须显式带上）；显式点明 plan-risk（off-by-one/语义冲突）并要求 STOP+ASK；要求 self-review（DONE/DONE_WITH_CONCERNS/BLOCKED/NEEDS_CONTEXT）。
+**Subagent prompts must:** 引 plan 文件路径（勿贴正文）+ 方法论 spec + 相关场景 MD 路径（Core `packages/core/tests/bdd/scenarios/*.md` 或 Excel `packages/react/tests/excel/scenarios/*.md`；subagent 不自动加载，控制器须显式带上）；显式点明 plan-risk（off-by-one/语义冲突）并要求 STOP+ASK；要求 self-review（DONE/DONE_WITH_CONCERNS/BLOCKED/NEEDS_CONTEXT）。
 
 ## Navigation（详见 `packages/core/src/ARCHITECTURE.md`）
 
@@ -71,7 +71,8 @@ Loaded into every agent session — invariants easy to get wrong without context
 | Canvas2D 渲染 | `canvas2d/src/render/Canvas2DRenderer.ts`、`painters/`；Theme tokens `core/src/kernel/theme/denseGridTheme.ts` |
 | DOM 壳 / runtime | `core/src/dom/{host,scroll,interaction,overlay,runtime}/`（`GridRuntime`、`GridControllerImpl`、`ScrollMapper`） |
 | 渲染后端端口 + 工厂 | `core/src/ports/RenderBackend.ts`、`canvas2d/src/backend/canvas2dBackend.ts` |
-| 行为测试规格 | `docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md`（L0–L4、Phase 0 excel-first） |
+| 行为测试规格 | `docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md`（L0–L4、Phase 1 Core L0–L2 分批启动） |
+| Core BDD 路线 | `docs/superpowers/plans/2026-06-11-novasheet-core-public-api-bdd-roadmap.md`（公开 API 场景矩阵 + 分批路径） |
 | MD 场景工具 | `packages/mbd/`（`validate`/`manifest`）；覆盖率 `@novasheet/react` `lint:scenario-coverage`；规格 `2026-06-09-novasheet-mbd-package-design.md` |
 | React 包架构 | `packages/react/docs/project-{structure,standards}.md` |
 | 测试 | each `packages/<pkg>/tests/` mirrors `src/`（core: kernel/features/engine；canvas2d: grid/integration/runtime/painters） |
