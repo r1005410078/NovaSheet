@@ -120,7 +120,12 @@ function FillColorPalette({
 
       <div className="my-3 h-px bg-slate-300" />
 
-      <ToolbarColorPaletteCustom onSelect={dispatchColor} />
+      <ToolbarColorPaletteCustom
+        onSelect={dispatchColor}
+        onOpenPicker={() => {}}
+        customColors={[]}
+        selectedColor={selectedColor}
+      />
 
       <div className="my-3 h-px bg-slate-300" />
 
