@@ -1,0 +1,114 @@
+set:fillStyle = #ffffff
+fillRect(0, 0, 320, 160)
+save
+  beginPath
+  rect(0, 32, 320, 128)
+  clip
+  set:strokeStyle = #eaeef2
+  set:lineWidth = 1
+  beginPath
+  moveTo(0, 60.5)
+  lineTo(80, 60.5)
+  moveTo(0, 88.5)
+  lineTo(80, 88.5)
+  moveTo(0.5, 60)
+  lineTo(0.5, 88)
+  moveTo(80.5, 60)
+  lineTo(80.5, 88)
+  moveTo(80, 60.5)
+  lineTo(160, 60.5)
+  moveTo(80, 88.5)
+  lineTo(160, 88.5)
+  moveTo(80.5, 60)
+  lineTo(80.5, 88)
+  moveTo(160.5, 60)
+  lineTo(160.5, 88)
+  stroke
+  set:fillStyle = rgba(255,0,0,0.3)
+  fillRect(0, 60, 80, 28)
+  set:fillStyle = rgba(255,0,0,0.3)
+  fillRect(80, 60, 80, 28)
+restore
+set:font = 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+save
+  beginPath
+  rect(0, 32, 320, 128)
+  clip
+  save
+    beginPath
+    rect(0, 32, 160, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("xxxxxxxxxxxxxxxxxxxx", 8, 46)
+  restore
+  save
+    beginPath
+    rect(80, 32, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+  restore
+  save
+    beginPath
+    rect(0, 60, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("A2", 8, 74)
+  restore
+  save
+    beginPath
+    rect(80, 60, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("B2", 88, 74)
+  restore
+restore
+save
+  beginPath
+  rect(0, 0, 320, 32)
+  clip
+  set:fillStyle = #f6f8fa
+  fillRect(0, 0, 320, 32)
+  set:textBaseline = middle
+  set:textAlign = left
+  set:fillStyle = #656d76
+  fillText("A", 8, 16, 64)
+  set:fillStyle = #656d76
+  fillText("B", 88, 16, 64)
+  set:strokeStyle = #eaeef2
+  set:lineWidth = 1
+  beginPath
+  moveTo(80.5, 0)
+  lineTo(80.5, 32)
+  moveTo(160.5, 0)
+  lineTo(160.5, 32)
+  moveTo(0, 31.5)
+  lineTo(320, 31.5)
+  stroke
+restore
+set:strokeStyle = #eaeef2
+set:lineWidth = 1
+beginPath
+moveTo(160, 60.5)
+lineTo(320, 60.5)
+moveTo(160, 88.5)
+lineTo(320, 88.5)
+moveTo(80.5, 88)
+lineTo(80.5, 160)
+moveTo(160.5, 32)
+lineTo(160.5, 60)
+moveTo(160.5, 88)
+lineTo(160.5, 160)
+stroke
+set:strokeStyle = #d0d7de
+set:lineWidth = 1
+beginPath
+rect(0.5, 0.5, 319, 159)
+stroke

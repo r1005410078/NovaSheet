@@ -1,0 +1,206 @@
+set:fillStyle = #ffffff
+fillRect(0, 0, 320, 160)
+set:font = 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+save
+  beginPath
+  rect(80, 60, 240, 100)
+  clip
+  save
+    beginPath
+    rect(50, 58, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("B2", 58, 72)
+  restore
+  save
+    beginPath
+    rect(50, 86, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("B3", 58, 100)
+  restore
+  save
+    beginPath
+    rect(50, 114, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("B4", 58, 128)
+  restore
+  save
+    beginPath
+    rect(50, 142, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("B5", 58, 156)
+  restore
+restore
+save
+  beginPath
+  rect(0, 60, 80, 100)
+  clip
+  save
+    beginPath
+    rect(0, 58, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("A2", 8, 72)
+  restore
+  save
+    beginPath
+    rect(0, 86, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("A3", 8, 100)
+  restore
+  save
+    beginPath
+    rect(0, 114, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("A4", 8, 128)
+  restore
+  save
+    beginPath
+    rect(0, 142, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("A5", 8, 156)
+  restore
+restore
+save
+  beginPath
+  rect(80, 32, 240, 28)
+  clip
+  save
+    beginPath
+    rect(50, 32, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("B1", 58, 46)
+  restore
+restore
+save
+  beginPath
+  rect(0, 32, 80, 28)
+  clip
+  save
+    beginPath
+    rect(0, 32, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("A1", 8, 46)
+  restore
+restore
+save
+  beginPath
+  rect(80, 0, 240, 32)
+  clip
+  set:fillStyle = #f6f8fa
+  fillRect(80, 0, 240, 32)
+  set:textBaseline = middle
+  set:textAlign = left
+  set:fillStyle = #656d76
+  fillText("B", 58, 16, 64)
+  set:strokeStyle = #eaeef2
+  set:lineWidth = 1
+  beginPath
+  moveTo(130.5, 0)
+  lineTo(130.5, 32)
+  moveTo(80, 31.5)
+  lineTo(320, 31.5)
+  stroke
+restore
+save
+  beginPath
+  rect(0, 0, 80, 32)
+  clip
+  set:fillStyle = #f6f8fa
+  fillRect(0, 0, 80, 32)
+  set:textBaseline = middle
+  set:textAlign = left
+  set:fillStyle = #656d76
+  fillText("A", 8, 16, 64)
+  set:strokeStyle = #eaeef2
+  set:lineWidth = 1
+  beginPath
+  moveTo(79.5, 0)
+  lineTo(79.5, 32)
+  moveTo(0, 31.5)
+  lineTo(80, 31.5)
+  stroke
+restore
+set:strokeStyle = #eaeef2
+set:lineWidth = 1
+beginPath
+moveTo(80, 86.5)
+lineTo(320, 86.5)
+moveTo(80, 114.5)
+lineTo(320, 114.5)
+moveTo(80, 142.5)
+lineTo(320, 142.5)
+moveTo(130.5, 60)
+lineTo(130.5, 160)
+stroke
+set:strokeStyle = #eaeef2
+set:lineWidth = 1
+beginPath
+moveTo(0, 86.5)
+lineTo(80, 86.5)
+moveTo(0, 114.5)
+lineTo(80, 114.5)
+moveTo(0, 142.5)
+lineTo(80, 142.5)
+moveTo(79.5, 60)
+lineTo(79.5, 160)
+stroke
+set:strokeStyle = #eaeef2
+set:lineWidth = 1
+beginPath
+moveTo(80, 59.5)
+lineTo(320, 59.5)
+moveTo(130.5, 32)
+lineTo(130.5, 60)
+stroke
+set:strokeStyle = #eaeef2
+set:lineWidth = 1
+beginPath
+moveTo(0, 59.5)
+lineTo(80, 59.5)
+moveTo(79.5, 32)
+lineTo(79.5, 60)
+stroke
+save
+  set:strokeStyle = #d0d7de
+  set:lineWidth = 1
+  beginPath
+  moveTo(79.5, 0)
+  lineTo(79.5, 160)
+  moveTo(0, 59.5)
+  lineTo(320, 59.5)
+  stroke
+restore
+set:strokeStyle = #d0d7de
+set:lineWidth = 1
+beginPath
+rect(0.5, 0.5, 319, 159)
+stroke

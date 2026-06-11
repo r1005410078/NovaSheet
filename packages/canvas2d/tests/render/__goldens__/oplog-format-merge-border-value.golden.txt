@@ -1,0 +1,127 @@
+set:fillStyle = #ffffff
+fillRect(0, 0, 320, 160)
+save
+  beginPath
+  rect(0, 32, 320, 128)
+  clip
+  set:fillStyle = #fff2cc
+  fillRect(0, 32, 160, 56)
+  set:fillStyle = #d9ead3
+  fillRect(160, 32, 80, 28)
+restore
+set:font = 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+save
+  beginPath
+  rect(0, 32, 320, 128)
+  clip
+  save
+    beginPath
+    rect(160, 32, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = right
+    fillText("1", 232, 46)
+  restore
+  save
+    beginPath
+    rect(160, 60, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = right
+    fillText("2", 232, 74)
+  restore
+  save
+    beginPath
+    rect(0, 88, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("A3", 8, 102)
+  restore
+  save
+    beginPath
+    rect(80, 88, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("B3", 88, 102)
+  restore
+  save
+    beginPath
+    rect(160, 88, 80, 28)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = right
+    fillText("13.5%", 232, 102)
+  restore
+  save
+    beginPath
+    rect(0, 32, 160, 56)
+    clip
+    set:fillStyle = #1f2328
+    set:textBaseline = middle
+    set:textAlign = left
+    fillText("A1", 8, 60)
+  restore
+restore
+save
+  beginPath
+  rect(0, 0, 320, 32)
+  clip
+  set:fillStyle = #f6f8fa
+  fillRect(0, 0, 320, 32)
+  set:textBaseline = middle
+  set:textAlign = left
+  set:fillStyle = #656d76
+  fillText("A", 8, 16, 64)
+  set:fillStyle = #656d76
+  fillText("B", 88, 16, 64)
+  set:fillStyle = #656d76
+  fillText("N", 168, 16, 64)
+  set:strokeStyle = #eaeef2
+  set:lineWidth = 1
+  beginPath
+  moveTo(80.5, 0)
+  lineTo(80.5, 32)
+  moveTo(160.5, 0)
+  lineTo(160.5, 32)
+  moveTo(240.5, 0)
+  lineTo(240.5, 32)
+  moveTo(0, 31.5)
+  lineTo(320, 31.5)
+  stroke
+restore
+set:strokeStyle = #eaeef2
+set:lineWidth = 1
+beginPath
+moveTo(240, 60.5)
+lineTo(320, 60.5)
+moveTo(160, 88.5)
+lineTo(320, 88.5)
+moveTo(0, 116.5)
+lineTo(320, 116.5)
+moveTo(80.5, 88)
+lineTo(80.5, 160)
+moveTo(160.5, 88)
+lineTo(160.5, 160)
+moveTo(240.5, 60)
+lineTo(240.5, 160)
+stroke
+save
+  beginPath
+  rect(-1, 31, 322, 130)
+  clip
+  set:fillStyle = #d93025
+  fillRect(160, 116, 80, 1)
+  fillRect(240, 88, 1, 28)
+restore
+set:strokeStyle = #d0d7de
+set:lineWidth = 1
+beginPath
+rect(0.5, 0.5, 319, 159)
+stroke
