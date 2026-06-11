@@ -1,0 +1,182 @@
+{
+  "metrics": {
+    "rowHeight": 28,
+    "headerHeight": 32,
+    "rowHeaderWidth": 0,
+    "cellPaddingX": 8,
+    "cellPaddingY": 4,
+    "fontSize": 12,
+    "fontFamily": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+    "borderWidth": 1,
+    "menuShadow": "0 4px 12px rgba(15, 23, 42, 0.12)",
+    "menuPaddingX": 8,
+    "menuPaddingY": 4,
+    "headerIconSize": 16,
+    "headerIconGap": 4
+  },
+  "colors": {
+    "background": "#ffffff",
+    "headerBackground": "#f6f8fa",
+    "text": "#1f2328",
+    "headerText": "#656d76",
+    "gridLine": "#eaeef2",
+    "gridLineStrong": "#d0d7de",
+    "frozenShadow": "rgba(0,0,0,0.08)",
+    "hoverRowBg": "#f6f8fa",
+    "selectionBg": "rgba(9,105,218,0.10)",
+    "selectionBorder": "#0969da",
+    "selectionText": "#ffffff",
+    "menuItemHover": "#f6f8fa",
+    "hideIndicator": "#6b7280"
+  },
+  "cell": {
+    "textAlignByType": {
+      "text": "left",
+      "number": "right",
+      "singleSelect": "left",
+      "multiSelect": "left",
+      "date": "left",
+      "checkbox": "left",
+      "url": "left"
+    },
+    "tagRadius": 10,
+    "tagPaddingX": 6
+  },
+  "icons": {
+    "byFieldType": {
+      "text": {
+        "path": "M3 4h10v1.5H3zM3 8h10v1.5H3zM3 12h7v1.5H3z"
+      },
+      "number": {
+        "path": "M5 3l-.5 3h2L7 3h1.5L8 6h2v1.5H7.75l-.25 2H10V11H7.25L6.75 14h-1.5l.5-3h-2L3.25 14h-1.5l.5-3H0V9.5h2.5l.25-2H0V6h3l.5-3z"
+      },
+      "singleSelect": {
+        "path": "M8 1a7 7 0 100 14A7 7 0 008 1zm0 12.5A5.5 5.5 0 118 2.5a5.5 5.5 0 010 11zM8 4.5A3.5 3.5 0 118 11.5 3.5 3.5 0 018 4.5z"
+      },
+      "multiSelect": {
+        "path": "M2 3h12v2H2zM2 7h12v2H2zM2 11h8v2H2z"
+      },
+      "date": {
+        "path": "M4 1v1.5H3A1.5 1.5 0 001.5 4v9A1.5 1.5 0 003 14.5h10A1.5 1.5 0 0014.5 13V4A1.5 1.5 0 0013 2.5h-1V1h-1.5v1.5h-5V1H4zm-1 5h10v7H3V6z"
+      },
+      "checkbox": {
+        "path": "M3 2.5A1.5 1.5 0 011.5 4v8A1.5 1.5 0 003 13.5h10A1.5 1.5 0 0014.5 12V4A1.5 1.5 0 0013 2.5H3zm4.25 7.31l4.94-4.94L11.13 3.81 7.25 7.69 5.81 6.25 4.75 7.31l2.5 2.5z"
+      },
+      "url": {
+        "path": "M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM2 8h12a6 6 0 01-6 6V2a6 6 0 016 6H2z"
+      }
+    },
+    "sortAsc": {
+      "path": "M8 3l4 4H9.5v6h-3V7H4z"
+    },
+    "sortDesc": {
+      "path": "M8 13l-4-4h2.5V3h3v6H12z"
+    },
+    "filter": {
+      "path": "M2.5 3h11L9.5 7.5V13l-3 1V7.5z"
+    },
+    "hideBoundaryUp": "M0 6 L4 0 L8 6 Z",
+    "hideBoundaryDown": "M0 0 L4 6 L8 0 Z"
+  },
+  "scrollbar": {
+    "trackWidth": 15,
+    "trackColor": "#f8f9fa",
+    "thumbColor": "#bdc1c6",
+    "thumbHoverColor": "#9aa0a6",
+    "borderRadius": 8
+  },
+  "frozenSeparator": {
+    "color": "#d0d7de",
+    "width": 1
+  },
+  "dimensions": {
+    "hideTriangleOffset": 4,
+    "hideTrianglePadX": 6,
+    "hideColTriangleOffset": 4,
+    "hideColTrianglePadY": 6
+  },
+  "emptyState": {
+    "viewBoxWidth": 80,
+    "viewBoxHeight": 72,
+    "layers": [
+      {
+        "path": "M18 60a26 4 0 1 0 52 0 26 4 0 1 0-52 0",
+        "fill": "#eef1f5"
+      },
+      {
+        "path": "M56 48c6-8 12-18 10-28-4 10-8 18-10 28z",
+        "fill": "#d4a855"
+      },
+      {
+        "path": "M30 46c-2-12 6-22 16-24s20 6 22 18c2 12-6 20-16 22s-20-4-22-16z",
+        "fill": "#e8c478",
+        "stroke": "#d4a855",
+        "lineWidth": 1.5
+      },
+      {
+        "path": "M40 50c-4-4 2-8 6-6s8 0 10 4c2 4-4 8-10 6s-6-2-6-4z",
+        "fill": "#f5deaa"
+      },
+      {
+        "path": "M27 30a17 17 0 1 0 34 0 17 17 0 1 0-34 0",
+        "fill": "#e8c478",
+        "stroke": "#d4a855",
+        "lineWidth": 1.5
+      },
+      {
+        "path": "M28 24c-6-12-12-14-8-4s6 10 8 4z",
+        "fill": "#d4a855"
+      },
+      {
+        "path": "M60 24c6-12 12-14 8-4s-6 10-8 4z",
+        "fill": "#d4a855"
+      },
+      {
+        "path": "M44 34c-6 0-10 4-10 8s4 8 10 8 10-4 10-8-4-8-10-8z",
+        "fill": "#ffffff"
+      },
+      {
+        "path": "M44 38a3.5 2.8 0 1 0 0.01 0z",
+        "fill": "#4a3728"
+      },
+      {
+        "path": "M35 27a2.8 3.2 0 1 0 0.01 0z",
+        "fill": "#24292f"
+      },
+      {
+        "path": "M53 27a2.8 3.2 0 1 0 0.01 0z",
+        "fill": "#24292f"
+      },
+      {
+        "path": "M35.8 25.8a0.9 0.9 0 1 0 0.01 0z",
+        "fill": "#ffffff"
+      },
+      {
+        "path": "M53.8 25.8a0.9 0.9 0 1 0 0.01 0z",
+        "fill": "#ffffff"
+      },
+      {
+        "path": "M31 36a2.5 1.8 0 1 0 0.01 0z",
+        "fill": "#ffc9c9"
+      },
+      {
+        "path": "M57 36a2.5 1.8 0 1 0 0.01 0z",
+        "fill": "#ffc9c9"
+      },
+      {
+        "path": "M42 44.5a2 1.5 0 1 0 4 0 2 1.5 0 1 0-4 0",
+        "fill": "#f48484"
+      },
+      {
+        "path": "M41 43.5q3 3 6 0",
+        "stroke": "#8b6914",
+        "lineWidth": 1.5,
+        "lineCap": "round"
+      }
+    ],
+    "titleColor": "#1f2328",
+    "subtitleColor": "#656d76",
+    "title": "暂无数据",
+    "subtitle": "添加行后，内容将显示在这里"
+  }
+}

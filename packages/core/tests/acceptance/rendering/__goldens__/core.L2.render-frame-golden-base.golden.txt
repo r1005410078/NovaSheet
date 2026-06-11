@@ -1,0 +1,10 @@
+== viewport ==
+content=400x300 scroll=(0,0) header=32 rowHeader=0
+== regions ==
+main rect=(0,32,400,268) rows=[0,2] cols=[0,3] offset=(0,0) z=10
+== cells (formatted) ==
+r0: r0 | 10 | c0 | d0
+r1: r1 | 20 | c1 | d1
+r2: r2 | 30 | c2 | d2
+== merges ==
+== cellFormats ==

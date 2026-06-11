@@ -1,9 +1,9 @@
 ---
 id: core.L1.engine-frame-initial-visible-range
 layer: L1
-summary: DefaultGridEngine 初始 frame 暴露可见行列和单元格
-tags: [engine, frame]
-status: draft
+summary: DefaultGridEngine 初始 frame 快照与黄金文件一致
+tags: [engine, frame, golden]
+status: implemented
 ---
 
 ## User Story
@@ -21,6 +21,4 @@ status: draft
 
 ## Then
 
-- frame rowsAxis 行数为 2
-- frame colsAxis 列数为 2
-- view 坐标 (0,0) 的单元格值为 `Ada`
+- `dumpFrame(engine.getFrame())` 与 `__goldens__/core.L1.engine-frame-initial-visible-range.golden.txt` 一致（可见范围、region 几何、单元格文本整帧锁定）

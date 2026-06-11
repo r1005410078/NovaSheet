@@ -78,7 +78,7 @@ TDD 内环（实现单元，inside-out，红绿重构）                        
 
 | 层 | 外环（BDD） | 内环（TDD） | Phase 1 活跃 |
 | --- | --- | --- | --- |
-| **L0** 场景规格 | `packages/core/tests/bdd/scenarios/*.md` + L3 `scenarios/*.md` | — | ✅（Core + Excel） |
+| **L0** 场景规格 | `packages/core/tests/acceptance/**/scenarios/*.md` + L3 `scenarios/*.md` | — | ✅（Core + Excel） |
 | **L1** 引擎 oracle | Core MBD 场景 + 手写 `bun:test` 调 `DefaultGridEngine` | `engine/`、`features/` 单元红绿 | ✅（分批启动） |
 | **L2** Grid 门面 | Core MBD 场景 + 手写 `bun:test` 调 `Grid` facade | `dom/runtime` 接线 TDD | ✅（分批启动） |
 | **L3** excel 适配 | MBD 场景 → 行为测试 | 组件 / hook TDD | ✅（持续维护） |

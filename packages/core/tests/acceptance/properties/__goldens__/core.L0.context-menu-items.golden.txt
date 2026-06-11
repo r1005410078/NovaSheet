@@ -1,0 +1,21 @@
+== cell ==
+cut "剪切"
+copy "复制" |sep
+paste "粘贴" disabled
+== rowHeader (2 rows) ==
+insert-above "在上方插入 2 行"
+insert-below "在下方插入 2 行" |sep
+delete-rows "删除 2 行"
+hide-rows "隐藏 2 行" |sep
+resize-row-height "调整行高…"
+== columnHeader (sort/filter pipeline) ==
+filter-open "筛选..."
+filter-clear "清除筛选" disabled
+sort-asc "升序排序"
+sort-desc "降序排序"
+sort-none "清除排序" disabled |sep
+insert-col-left "在左侧插入 1 列"
+insert-col-right "在右侧插入 1 列" |sep
+delete-cols "删除 1 列"
+hide-cols "隐藏 1 列" |sep
+resize-column-width "调整列宽…"

@@ -9,7 +9,7 @@
 
 ## Phase 1 — 当前执行范围
 
-Core 公开 API 进入 BDD 分批覆盖阶段：Core L0/L1/L2 场景统一放在 `packages/core/tests/bdd/scenarios/*.md`，由 `@novasheet/mbd` 解析/manifest，手写 `bun:test` 覆盖 `Grid` / `DefaultGridEngine` / `DataSource` / view / format / undo 等公开可观测行为。Excel L3 继续维护为组合层烟测，不再承担 Core 深层行为断言。
+Core 公开 API 进入 BDD 分批覆盖阶段：Core L0/L1/L2 场景统一放在 `packages/core/tests/acceptance/**/scenarios/*.md`（按行为域分子目录，frontmatter `layer` 保留 L0/L1/L2），由 `@novasheet/mbd` 解析/manifest，手写 `bun:test`（`acceptance/**/*.test.ts`）覆盖 `Grid` / `DefaultGridEngine` / `DataSource` / view / format / undo 等公开可观测行为。Excel L3 继续维护为组合层烟测，不再承担 Core 深层行为断言。
 截至 2026-06-11，Core BDD 路线计划见 `docs/superpowers/plans/2026-06-11-novasheet-core-public-api-bdd-roadmap.md`。
 
 ### 两类测试，不可混用
@@ -17,7 +17,7 @@ Core 公开 API 进入 BDD 分批覆盖阶段：Core L0/L1/L2 场景统一放在
 | 类型 | Core | Excel（`packages/react/tests/excel/`） |
 | --- | --- | --- |
 | **TDD**（单元 / 领域 / 引擎） | **继续** — `kernel/`、`features/`、`engine/` 红→绿→重构 | 不适用（组合层用行为测驱动） |
-| **行为测试**（端到端 / 用户旅程） | **启动** — 分批建设 `packages/core/tests/bdd`，L0/L1/L2 覆盖公开 API 契约 | **继续维护** — 壳层、接线、用户旅程 |
+| **行为测试**（端到端 / 用户旅程） | **启动** — 分批建设 `packages/core/tests/acceptance`，L0/L1/L2 覆盖公开 API 契约 | **继续维护** — 壳层、接线、用户旅程 |
 
 ```text
 Core 实现  ←—— TDD（细、快、白盒）———————————— 持续进行
@@ -40,10 +40,10 @@ Excel 行为 ←—— NovaExcel 大组件旅程 / 接线 ———————�
 
 Core L0–L2 立即启动，但按批次提交，避免一次性大改压垮维护：
 
-- 第 0 批只建 `packages/core/tests/bdd` 骨架和 3–5 条 smoke 场景。
+- 第 0 批只建 `packages/core/tests/acceptance` 骨架和 3–5 条 smoke 场景。
 - 第 1–2 批锁结构 / view / selection / undo 这些最容易 regression 的 API。
 - 第 3–5 批再覆盖 clipboard / fill / format / merge / DOM Grid 门面。
-- 每批都必须 Core `mbd validate` / `manifest`、BDD 测试红绿、`bun test packages/core/tests/bdd`、全仓关键 gates 通过。
+- 每批都必须 Core `mbd validate` / `manifest`、BDD 测试红绿、`bun test packages/core/tests/acceptance`、全仓关键 gates 通过。
 
 ### Phase 0 excel 行为测试分层
 
@@ -94,7 +94,7 @@ NovaSheet 是 Canvas 表格引擎 + 多端适配（React 已 ship，Vue / Flutte
 2. **不替换**现有 `canvas2d/tests` 渲染白盒（L4）——中央场景将来是 **收敛门面行为**，不是削减 painter / DOM mock 覆盖
 3. **默认不引入** Playwright 作为 PR 门禁（scroll / DPR / 系统剪贴板权限留给可选 nightly 或手测）
 4. **不共享** React / Vue / Flutter 的 `.test.ts` 源码
-5. **不一次性迁移所有旧 E2E**——`packages/core/tests/bdd` 分批建设；Phase45–47 在 L2 覆盖稳定后再薄包装或下线
+5. **不一次性迁移所有旧 E2E**——`packages/core/tests/acceptance` 分批建设；Phase45–47 在 L2 覆盖稳定后再薄包装或下线
 6. **不把** painter `RecordingContext` 指令序列上升为跨端契约
 7. **Excel 行为测试不再承载 Core 深层语义**（rowCount 还原、view pipeline 重算等下沉到 L1/L2）
 
@@ -115,7 +115,7 @@ NovaSheet 是 Canvas 表格引擎 + 多端适配（React 已 ship，Vue / Flutte
 ```mermaid
 flowchart TB
   subgraph L0 [L0_Spec]
-    md["packages/core/tests/bdd/scenarios/*.md"]
+    md["packages/core/tests/acceptance/**/scenarios/*.md"]
     manifest["scenarios.manifest.json"]
   end
 
@@ -149,7 +149,7 @@ flowchart TB
 
 | 层 | 名称 | 入口 | 断言对象 | 跨端 | 现有测试归属 |
 | --- | --- | --- | --- | --- | --- |
-| **L0** | 中央场景规格 | MBD Markdown + manifest | 无（纯数据） | 是 | `packages/core/tests/bdd/scenarios/` |
+| **L0** | 中央场景规格 | MBD Markdown + manifest | 无（纯数据） | 是 | `packages/core/tests/acceptance/**/scenarios/` |
 | **L1** | 引擎 oracle | `DefaultGridEngine` | `data.getRowCount()`、`canUndo`、`getViewCellFormat`、`getViewPipeline().getComposed()` | 是 | **Phase 1 启动**；Core TDD 继续保留 |
 | **L2** | Grid 门面契约 | `new Grid(el, { backend })` | 仅 `Grid` 公开 API + `DataSource` 观测 | 是 | **Phase 1 启动**；Phase45–47 后续迁移 |
 | **L3** | 框架组合行为 | `NovaExcel` / 未来 Vue·Flutter | DOM 契约、ref、StrictMode、toolbar→`grid.*` 接线、用户旅程（浅断言） | 否 | `packages/react/tests/excel/` 持续维护；`features/` 仅孤立 UI / 纯函数 |
@@ -161,20 +161,37 @@ flowchart TB
 
 ## 5. L0 场景规格（MBD Markdown 契约）
 
-### 5.1 目录结构（实现期创建）
+### 5.1 目录结构（已落地）
 
 ```text
 packages/core/
   mbd.config.ts
-  tests/bdd/
-    scenarios/
-      L0-*.md
-      L1-*.md
-      L2-*.md
-    core-bdd.test.ts
+  tests/acceptance/
+    _helpers/fixtures.ts
+    functional/
+      formula/                  # 占位
+      recalculation/            # 占位
+      data-ops/scenarios/       # DataSource、Workspace、sort/filter
+    interaction/
+      selection/scenarios/
+      editing/scenarios/
+      undo/scenarios/
+    rendering/__goldens__/      # 占位
+    contract/
+      file-format/scenarios/
+      plugin-api/scenarios/
+      events/scenarios/
+    performance/                # 占位
+    properties/scenarios/       # 公开纯函数不变量
+    e2e/
+      engine/scenarios/         # L1 oracle
+      grid/scenarios/           # L2 Grid 旅程
+    **/*.test.ts
     scenarios.manifest.json
     SCENARIOS.md
 ```
+
+场景 `id` 与 frontmatter `layer` 不变；目录按 **测试类型 + 行为域** 组织（见 `tests/acceptance/README.md`）。TDD 单元测不迁入 `acceptance/`。
 
 ### 5.2 单场景结构
 
@@ -321,14 +338,14 @@ area: engine
 
 ```text
 bun test                          # 现有全量（保持）
-bun test packages/core/tests/bdd  # Phase 1：Core L0+L1+L2 BDD 测试
+bun test packages/core/tests/acceptance  # Phase 1：Core L0+L1+L2 BDD 测试
 bun run lint:architecture         # kernel / react boundary
 ```
 
 | 门禁 | 内容 |
 | --- | --- |
 | 默认 PR | 全量 `bun test` + lint + typecheck + build |
-| Core BDD 合入后 | `packages/core/tests/bdd` 绿 + Core 场景 100% |
+| Core BDD 合入后 | `packages/core/tests/acceptance` 绿 + Core 场景 100% |
 | 可选 nightly | Playwright `dom-hit` 子集 |
 | Baseline | L1 `ObservationSnapshot` 受控 accept；首次引入需 review |
 
@@ -340,7 +357,7 @@ bun run lint:architecture         # kernel / react boundary
 | --- | --- | --- |
 | **0. excel-first（完成）** | `tests/excel/` L3a/L3b/L3c；Core **TDD** 照常 | `2026-06-10-novasheet-react-behavioral-testing-consolidation-design.md` |
 | **1. 规格** | 本文档 + react standards + CLAUDE.md 索引 | ✅ |
-| **2. Core BDD 基础设施（当前）** | `packages/core/tests/bdd`、`mbd.config.ts`、smoke MBD 场景 | `2026-06-11-novasheet-core-public-api-bdd-roadmap.md` |
+| **2. Core BDD 基础设施（当前）** | `packages/core/tests/acceptance`、`mbd.config.ts`、60 条 MBD 场景 | `2026-06-11-novasheet-core-public-api-bdd-roadmap.md` |
 | **3. 场景补全** | P1 clipboard/format/fill；Phase45–47 薄包装下线；excel 深断言**下沉**到 L2 | 阶段 2 绿 |
 | **4. 跨端** | Vue L3 冒烟；`data-novasheet-excel` 统一；Flutter 复用场景语义 | 阶段 3 + 各端包存在 |
 
@@ -380,7 +397,7 @@ bun run lint:architecture         # kernel / react boundary
 | 一次性全量 L0–L2 | 一轮覆盖所有 API | diff 巨大；场景设计风险集中爆发 |
 | 继续 excel-first | 产品入口维护成本低 | Core 公开契约缺少独立真相 |
 
-**决策**：解除 Core L0–L2 行为层暂缓，按 `2026-06-11-novasheet-core-public-api-bdd-roadmap.md` 分批建设 `packages/core/tests/bdd`。Excel L3 继续保留，但 Core 深层行为以 Core BDD 场景为准。
+**决策**：解除 Core L0–L2 行为层暂缓，按 `2026-06-11-novasheet-core-public-api-bdd-roadmap.md` 分批建设 `packages/core/tests/acceptance`。Excel L3 继续保留，但 Core 深层行为以 Core BDD 场景为准。
 
 ---
 

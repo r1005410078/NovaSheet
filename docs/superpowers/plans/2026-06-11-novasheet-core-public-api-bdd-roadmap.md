@@ -26,13 +26,30 @@
 
 | 路径 | 职责 |
 | --- | --- |
-| `packages/core/mbd.config.ts` | Core BDD 场景配置；允许 `L0/L1/L2` layer |
-| `packages/core/tests/bdd/scenarios/**/*.md` | Core 场景；`id` 全局唯一，按 layer/domain 分文件 |
-| `packages/core/tests/bdd/core-bdd.test.ts` | 手写 `bun:test` 行为测试；`it()` 标题以 scenario id 开头 |
-| `packages/core/tests/bdd/scenarios.manifest.json` | `@novasheet/mbd` generated 机读清单 |
-| `packages/core/tests/bdd/SCENARIOS.md` | `@novasheet/mbd` generated 人读清单 |
+| `packages/core/mbd.config.ts` | Core BDD 场景配置；允许 `L0/L1/L2/type-only` layer |
+| `packages/core/tests/acceptance/**/scenarios/**/*.md` | Core 场景；`id` 全局唯一；frontmatter `layer` 保留 L0/L1/L2，目录按行为域分层 |
+| `packages/core/tests/acceptance/**/*.test.ts` | 手写 `bun:test` 行为测试；`it()` 标题以 scenario id 开头；按域拆文件 |
+| `packages/core/tests/acceptance/_helpers/fixtures.ts` | 共享 Grid / DataSource 夹具（`mountRecordingGrid` 等） |
+| `packages/core/tests/acceptance/scenarios.manifest.json` | `@novasheet/mbd` generated 机读清单 |
+| `packages/core/tests/acceptance/SCENARIOS.md` | `@novasheet/mbd` generated 人读清单 |
 | `packages/core/package.json` | `lint:mbd` / `manifest:mbd` scripts |
 | `docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md` | 已解除 Core L0–L2 暂缓 |
+
+**场景目录映射（`layer` 不变，路径按 acceptance taxonomy）：**
+
+| 域 | 场景目录 |
+| --- | --- |
+| DataSource / Workspace / Sort·Filter L0+L2 | `acceptance/functional/data-ops/scenarios/` |
+| Engine L1 oracle | `acceptance/e2e/engine/scenarios/` |
+| Grid 门面 L2 旅程 | `acceptance/e2e/grid/scenarios/` |
+| 几何 / 主题 / 菜单不变量 L0 | `acceptance/properties/scenarios/` |
+| TSV / paste 线性格式 L0 | `acceptance/contract/file-format/scenarios/` |
+| 公开类型面 type-only | `acceptance/contract/plugin-api/scenarios/` |
+| 事件订阅 L2 | `acceptance/contract/events/scenarios/` |
+| 选区 / 导航 | `acceptance/interaction/selection/scenarios/` |
+| 剪贴板 / 编辑 / 填充 | `acceptance/interaction/editing/scenarios/` |
+| Undo 序列化 L0 | `acceptance/interaction/undo/scenarios/` |
+| 公式 / 重算（占位） | `acceptance/functional/formula/`、`functional/recalculation/` |
 
 ## 3. Scenario 命名
 
@@ -68,7 +85,7 @@
 **验证:**
 - `bun run --filter @novasheet/core lint:mbd`
 - `bun run --filter @novasheet/core manifest:mbd`
-- `bun test packages/core/tests/bdd`
+- `bun test packages/core/tests/acceptance`
 - `bun run --filter @novasheet/core typecheck`
 
 ### Batch 1: DataSource / Schema / Workspace
@@ -204,12 +221,12 @@
 
 每批必须按同一顺序执行：
 
-1. 写 / 改 `packages/core/tests/bdd/scenarios/*.md` 场景。
+1. 写 / 改 `packages/core/tests/acceptance/**/scenarios/*.md` 场景（按上表域目录落盘）。
 2. 跑 `bun run --filter @novasheet/core lint:mbd`，确认场景有效。
 3. 跑 `bun run --filter @novasheet/core manifest:mbd`，提交 generated manifest / 清单。
-4. 写 `bun:test` 行为测试并确认红灯来自未实现行为或缺失观测 API。
+4. 在对应域的 `acceptance/**/*.test.ts` 写 `bun:test` 行为测试并确认红灯来自未实现行为或缺失观测 API。
 5. 补最小公开 API 调用 / 观测 API / 实现。
-6. 跑 `bun test packages/core/tests/bdd`。
+6. 跑 `bun test packages/core/tests/acceptance`。
 7. 跑 `bun run --filter @novasheet/core typecheck`。
 8. 跑 `bun run lint`；若既有 warning 仍存在，记录来源，不把它归因到本批。
 9. 一批一 commit，commit subject 用中文：`test(core): 覆盖 Core 结构变更 BDD 场景`。

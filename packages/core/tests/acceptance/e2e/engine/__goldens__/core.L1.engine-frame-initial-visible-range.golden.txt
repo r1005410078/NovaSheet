@@ -1,0 +1,9 @@
+== viewport ==
+content=400x240 scroll=(0,0) header=32 rowHeader=0
+== regions ==
+main rect=(0,32,400,208) rows=[0,1] cols=[0,1] offset=(0,0) z=10
+== cells (formatted) ==
+r0: Ada | 10
+r1: Grace | 20
+== merges ==
+== cellFormats ==

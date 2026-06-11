@@ -1,0 +1,19 @@
+== viewport ==
+content=400x300 scroll=(0,0) header=32 rowHeader=0
+== regions ==
+main rect=(120,60,280,240) rows=[1,9] cols=[1,1] offset=(120,28) z=10
+middleLeft rect=(0,60,120,240) rows=[1,9] cols=[0,0] offset=(0,28) z=20
+topCenter rect=(120,32,280,28) rows=[0,0] cols=[1,1] offset=(120,0) z=30
+topLeft rect=(0,32,120,28) rows=[0,0] cols=[0,0] offset=(0,0) z=40
+== cells (formatted) ==
+r1: 1
+r2: 2
+r3: 3
+r4: 4
+r5: 5
+r6: 6
+r7: 7
+r8: 8
+r9: 9
+== merges ==
+== cellFormats ==
