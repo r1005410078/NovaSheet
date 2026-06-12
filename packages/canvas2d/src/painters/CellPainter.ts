@@ -106,7 +106,7 @@ export class CellPainter {
 
     ctx.fillStyle = this.theme.colors.text
     ctx.textBaseline = 'middle'
-    ctx.textAlign = this.theme.cell.textAlignByType[field.type]
+    ctx.textAlign = this.getTextAlign(field)
 
     // Phase 5-C：若 rowIndex/colIndex 已知且 formatCell 存在，尝试获取格式化文本。
     // 返回 undefined 时各绘制分支回退现有默认路径，保证未格式化格零回归。
@@ -129,6 +129,27 @@ export class CellPainter {
     }
 
     ctx.restore()
+  }
+
+  private getTextAlign(field: Field): CanvasTextAlign {
+    switch (field.type) {
+      case 'text':
+        return this.theme.cell.textAlignByType.text
+      case 'singleSelect':
+        return this.theme.cell.textAlignByType.singleSelect
+      case 'multiSelect':
+        return this.theme.cell.textAlignByType.multiSelect
+      case 'date':
+        return this.theme.cell.textAlignByType.date
+      case 'checkbox':
+        return this.theme.cell.textAlignByType.checkbox
+      case 'url':
+        return this.theme.cell.textAlignByType.url
+      case 'number':
+        return this.theme.cell.textAlignByType.number
+      default:
+        return this.theme.cell.textAlignByType.text
+    }
   }
 
   /** 把任意 CellValue 标准化为可绘文本（与 paintFallback 的逻辑保持一致）。 */

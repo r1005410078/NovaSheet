@@ -3,11 +3,7 @@
  */
 
 import type { CellValue, Field, FieldType } from '../../kernel/data/Schema'
-import {
-  SKIP_CELL_VALUE,
-  formatCellForEditWithTypes,
-  parseCellEditInputWithTypes,
-} from '../cell-types'
+import { formatCellForEditWithTypes, parseCellEditInputWithTypes } from '../cell-types'
 
 export function isEditableFieldType(type: FieldType): boolean {
   return type === 'text' || type === 'number'
@@ -27,18 +23,18 @@ export function isTypableEditKey(
   return key !== '\n' && key !== '\t'
 }
 
-export function formatCellForEdit(value: CellValue | undefined, type: FieldType): string {
-  return formatCellForEditWithTypes(value, createEditField(type))
+export function formatCellForEdit(value: CellValue | undefined, _type: FieldType): string {
+  if (value === undefined || value === null) return ''
+  return String(value)
 }
 
 /** 合法输入返回 CellValue；空串为 null；非法 number 返回 undefined。 */
 export function parseCellEditInput(text: string, type: FieldType): CellValue | null | undefined {
-  const parsed = parseCellEditInputWithTypes(text, createEditField(type))
-  return parsed === SKIP_CELL_VALUE ? undefined : parsed
-}
-
-function createEditField(type: FieldType): Field {
-  return { id: '', name: '', type, width: 0 }
+  const trimmed = text.trim()
+  if (trimmed === '') return null
+  if (type !== 'number') return trimmed
+  const n = Number(trimmed)
+  return Number.isNaN(n) ? undefined : n
 }
 
 export { formatCellForEditWithTypes, parseCellEditInputWithTypes }

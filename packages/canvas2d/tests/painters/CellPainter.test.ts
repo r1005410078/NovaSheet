@@ -88,6 +88,20 @@ describe('CellPainter — 单元格', () => {
     }
   })
 
+  it('custom 类型按文本左对齐 fallback', () => {
+    const { ctx, ops } = createRecordingContext()
+    new CellPainter(denseGridTheme).paint(ctx, {
+      value: 'gold',
+      rect: { x: 0, y: 0, width: 100, height: 28 },
+      field: makeField({ type: 'rating' }),
+    })
+    expect(ops).toContainEqual({ op: 'set:textAlign', value: 'left' })
+    const fillTextOp = ops.find((o) => o.op === 'fillText')
+    if (fillTextOp?.op === 'fillText') {
+      expect(fillTextOp.args[0]).toBe('gold')
+    }
+  })
+
   it('null/undefined 不绘制 fillText', () => {
     const { ctx, ops } = createRecordingContext()
     new CellPainter(denseGridTheme).paint(ctx, {
