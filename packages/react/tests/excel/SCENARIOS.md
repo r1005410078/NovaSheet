@@ -26,6 +26,8 @@
 | excel.L3b.value-format | L3b | draft | value-format 菜单接线 grid.setValueFormat |
 | excel.L3c.currency-display | L3c | draft | currency 列格式化配置生效且组件无错误 |
 | excel.L3c.custom-color-persist | L3c | draft | 自定义颜色 swatch 跨卸载重挂留存 |
+| excel.L3c.custom-react-editor-commit-cancel | L3c | draft | React cell editor adapter 提交与取消 |
+| excel.L3c.custom-react-filter-editor-apply-cancel | L3c | draft | React filter editor adapter 应用与取消 |
 | excel.L3c.external-on-undo-on-redo | L3c | draft | onUndo/onRedo 与 toolbar 联动 |
 | excel.L3c.eyedropper-feature-detect | L3c | draft | 无 EyeDropper API 时吸管不渲染 |
 | excel.L3c.fill-reflects-toolbar | L3c | draft | 填色后 toolbar 反映 |
@@ -535,6 +537,62 @@
 ### Then
 
 - 自定义区出现 `data-fill-color="#00ff0080"` swatch
+
+## excel.L3c.custom-react-editor-commit-cancel
+
+- **layer**: L3c
+- **summary**: React cell editor adapter 提交与取消
+- **status**: draft
+
+### User Story
+
+作为 React 集成方，当我用 `createReactCellEditor` 注册业务选择器时，我希望 React 组件能通过 props 提交或取消编辑，并由 NovaExcel / Grid 统一清理 overlay 生命周期。
+
+### Given
+
+- NovaExcel 使用 `assignee` 字段
+- `cellEditors.assignee` 由 `createReactCellEditor(AssigneePicker, { kind: "popover" })` 创建
+- 当前单元格 raw value 为 `"Alice"`
+
+### When
+
+- 用户打开 assignee editor 并在 React 组件中点击 `"Bob"`
+- 用户再次打开 editor 后点击 Cancel
+
+### Then
+
+- 第一次操作调用 `commit("Bob")` 并写回 Grid 数据
+- editor overlay unmount
+- 第二次操作调用 `cancel()`，不改变 raw value
+- React 组件没有参与 cell canvas 绘制
+
+## excel.L3c.custom-react-filter-editor-apply-cancel
+
+- **layer**: L3c
+- **summary**: React filter editor adapter 应用与取消
+- **status**: draft
+
+### User Story
+
+作为 React 集成方，当我为自定义类型注册 filter editor 时，我希望 React filter UI 只负责采集 operator value，筛选语义仍由 `cellTypes[type].filterOperators` 执行，以便 UI 与 core 纯语义解耦。
+
+### Given
+
+- `assignee` 类型定义注册了 `assignee-is-any-of` filter operator
+- `cellFilterEditors.assignee` 由 `createReactCellFilterEditor(AssigneeFilter)` 创建
+- 表格中有 `"Alice"`、`"Bob"`、`"Carol"` 三个 assignee 值
+
+### When
+
+- 用户打开 assignee filter editor，选择 `"Alice"` 与 `"Bob"` 后 Apply
+- 用户再次打开 filter editor 修改选择后 Cancel
+
+### Then
+
+- Apply 后 Grid filter 使用 `assignee-is-any-of.matches()` 只保留 Alice/Bob 行
+- filter editor overlay unmount
+- Cancel 不改变当前 filter spec
+- React filter editor 不包含 filter predicate 逻辑
 
 ## excel.L3c.external-on-undo-on-redo
 

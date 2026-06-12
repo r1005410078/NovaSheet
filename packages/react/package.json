@@ -40,6 +40,8 @@
     "test:watch": "bun test --watch",
     "typecheck": "tsc --noEmit",
     "lint:boundary": "bun scripts/check-react-boundary.ts",
+    "lint:mbd": "bun run --filter @novasheet/mbd mbd validate --config ../../packages/react/mbd.config.ts",
+    "manifest:mbd": "bun run --filter @novasheet/mbd mbd manifest --config ../../packages/react/mbd.config.ts",
     "lint:scenario-coverage": "bun scripts/check-scenario-coverage.ts --fail-on-missing --fail-on-orphan"
   },
   "dependencies": {

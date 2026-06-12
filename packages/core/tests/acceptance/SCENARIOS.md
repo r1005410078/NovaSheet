@@ -4,6 +4,8 @@
 
 | id | layer | status | summary |
 | --- | --- | --- | --- |
+| core.L0.cell-extension-custom-type-fallback | L0 | draft | 未注册 custom FieldType 文本 fallback 且不可编辑 |
+| core.L0.cell-extension-type-definition-contract | L0 | draft | CellTypeDefinition 锁定编辑、剪贴板、排序与筛选语义 |
 | core.L0.cell-hit-test | L0 | implemented | hitTestCell 与 computeCellRect 公开几何契约 |
 | core.L0.clipboard-paste-target-merge-conflict | L0 | implemented | 粘贴目标与合并区冲突检测 |
 | core.L0.clipboard-tsv-parse-matrix | L0 | implemented | parseTsvToCells 类型强制矩阵与黄金文件一致 |
@@ -35,11 +37,13 @@
 | core.L1.engine-rows-move-undo-redo | L1 | implemented | DefaultGridEngine moveRows 移动连续行块并支持 undo/redo |
 | core.L1.engine-structural-event-stream | L1 | implemented | 结构 mutation + undo/redo 的 DataSource 事件流与黄金文件一致 |
 | core.L2.grid-autofit-wrap-rows | L2 | implemented | Grid autofitRows 使用 wrap 字段和 measurer 更新行高 |
+| core.L2.grid-cell-action-opens-editor | L2 | draft | cell action 先 onAction，未拦截则打开同类型 editor |
 | core.L2.grid-clipboard-copy-cut-paste-roundtrip | L2 | implemented | Grid copy/cut/paste 通过 facade 完成选区往返 |
 | core.L2.grid-clipboard-paste-skipped-readonly-type | L2 | implemented | 粘贴类型不匹配时 Grid 触发 onPasteSkipped |
 | core.L2.grid-cols-hide-unhide-visible-count | L2 | implemented | Grid hideCols 与 unhideCols 更新隐藏集合和 render frame schema |
 | core.L2.grid-cols-insert-delete-undo-redo | L2 | implemented | Grid 列插入、删除与 undo/redo 通过 facade 保持 schema 一致 |
 | core.L2.grid-cols-move-callback | L2 | implemented | Grid moveCols 移动列组、触发 onColumnsMoved，并支持 undo/redo |
+| core.L2.grid-custom-editor-open-triggers | L2 | draft | 自定义 editor 由所有编辑入口统一触发 |
 | core.L2.grid-data-theme-refresh | L2 | implemented | Grid setData、setTheme 与 refresh 通过 backend frame 可观测 |
 | core.L2.grid-events-on-off | L2 | implemented | Grid event facade 支持 on、onUndo、onRedo 与 onFill 的取消订阅 |
 | core.L2.grid-fill-series-down-right | L2 | implemented | 填充柄目标计算、序列写入与 engine commitFill |
@@ -71,6 +75,64 @@
 | core.L2.render-frame-golden-frozen-quadrants | L2 | implemented | 冻结行列后的 region 象限几何快照与黄金文件一致 |
 | core.L2.render-frame-golden-view-compose | L2 | implemented | hide×sort 组合视图下 raw 键控格式的整帧黄金快照 |
 | core.type.public-api-inventory | type-only | implemented | index.ts 公开 type 导出由 typecheck 覆盖 |
+
+## core.L0.cell-extension-custom-type-fallback
+
+- **layer**: L0
+- **summary**: 未注册 custom FieldType 文本 fallback 且不可编辑
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当文档 schema 含有当前运行环境未注册的自定义 `FieldType` 时，我希望表格仍能打开并显示原始值文本，但不允许用户直接编辑未知业务类型，以免插件缺失时破坏数据语义。
+
+### Given
+
+- schema 中有字段 `{ id: "score", type: "rating" }`
+- `GridOptions.cellTypes` / `cellEditors` / backend `cellRenderers` 均未注册 `rating`
+- 该列某个单元格 raw value 为 `4`
+
+### When
+
+- runtime 或 renderer 读取该单元格用于显示
+- 用户尝试通过双击、Enter/F2、直接键入进入编辑态
+
+### Then
+
+- 单元格显示 fallback 文本 `4`
+- 不抛出 unknown field type 错误
+- 不打开 editor
+- 数据源 raw value 保持 `4`
+
+## core.L0.cell-extension-type-definition-contract
+
+- **layer**: L0
+- **summary**: CellTypeDefinition 锁定编辑、剪贴板、排序与筛选语义
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当我为自定义类型注册 `CellTypeDefinition` 时，我希望编辑解析、剪贴板序列化、排序值和 filter operator 都由同一份类型语义驱动，以便业务类型在不同入口保持一致。
+
+### Given
+
+- 注册 `rating` 类型定义
+- `rating` 定义包含 `formatForEdit`、`parseEditInput`、`serializeClipboard`、`parseClipboard`、`sortValue`、`isEmpty` 与 `filterOperators`
+- `rating` 字段 options 含 `{ max: 5 }`
+
+### When
+
+- 对 raw value `4` 调用 edit format / parse
+- 对剪贴板文本 `3` 和非法文本 `bad` 调用 parse
+- 对多个 rating value 计算 sort key
+- 用 `gte` filter operator 匹配 `>= 3` 的值
+
+### Then
+
+- edit draft 为 `"4"`，合法输入解析为 clamp 后 number
+- 非法 edit / clipboard 输入返回失败 sentinel，不写入数据
+- sort key 使用 number 值而不是 fallback string
+- filter operator 只匹配满足业务谓词的单元格
 
 ## core.L0.cell-hit-test
 
@@ -827,6 +889,33 @@
 - 返回结果中 `changedRows` 大于 0
 - backend 下一帧中的 row 0 高度大于默认行高
 
+## core.L2.grid-cell-action-opens-editor
+
+- **layer**: L2
+- **summary**: cell action 先 onAction，未拦截则打开同类型 editor
+- **status**: draft
+
+### User Story
+
+作为 Grid 集成方，当自定义 renderer 在单元格内声明按钮或其它 action hit zone 时，我希望点击 action 后先给业务类型一次拦截机会，未拦截时再用统一 editor 流程打开同类型编辑器。
+
+### Given
+
+- `assignee` 单元格 renderer 声明 action `{ id: "change-assignee" }`
+- `cellTypes.assignee.onAction` 已注册但不调用 `preventOpenEditor`
+- `cellEditors.assignee` 已注册 popover editor
+
+### When
+
+- 用户点击该 action hit zone
+
+### Then
+
+- runtime 先调用 `cellTypes.assignee.onAction(ctx)`
+- `ctx.trigger` 为 `cell-action` 且 `ctx.actionId` 为 `change-assignee`
+- 因未拦截，runtime 随后调用 `cellEditors.assignee.open(ctx)`
+- 若 `onAction` 调用 `preventOpenEditor()`，则不打开 editor；可在 `onAction` 中直接 `commit()`，例如 checkbox toggle
+
 ## core.L2.grid-clipboard-copy-cut-paste-roundtrip
 
 - **layer**: L2
@@ -959,6 +1048,36 @@
 - 移动后 schema 顺序为 `b,c,d,a`
 - 回调收到 `{ fieldIds: ['a'], beforeFieldId: null }`
 - undo / redo 还原并重放 schema 顺序
+
+## core.L2.grid-custom-editor-open-triggers
+
+- **layer**: L2
+- **summary**: 自定义 editor 由所有编辑入口统一触发
+- **status**: draft
+
+### User Story
+
+作为 Grid 集成方，当我为自定义类型注册 editor 时，我希望双击、Enter/F2、直接键入和 API 打开编辑器都进入同一个 `openCellEditor(ctx)` 流程，以便 editor 只处理一套 trigger contract。
+
+### Given
+
+- Grid 使用字段 `{ id: "owner", type: "assignee" }`
+- `GridOptions.cellEditors.assignee` 注册了 popover editor
+- 当前选中 `owner` 单元格，raw value 为 `"Alice"`
+
+### When
+
+- 用户双击该单元格
+- 用户按 Enter 或 F2
+- 用户直接键入字符 `B`
+- 集成方调用公开 API 请求打开该单元格 editor
+
+### Then
+
+- 每种入口都调用同一个 editor `open(ctx)`
+- `ctx.trigger` 分别标识 `double-click`、`enter` / `f2`、`typing`、`api`
+- typing 入口携带 `ctx.initialInput = "B"`
+- editor `commit("Bob")` 后通过 Grid facade 写回数据并触发重绘
 
 ## core.L2.grid-data-theme-refresh
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-11T22:59:08.360Z",
+  "generatedAt": "2026-06-12T13:45:35.027Z",
   "source": "tests/acceptance/**/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -11,6 +11,63 @@
     ]
   },
   "scenarios": [
+    {
+      "id": "core.L0.cell-extension-custom-type-fallback",
+      "layer": "L0",
+      "summary": "未注册 custom FieldType 文本 fallback 且不可编辑",
+      "userStory": "作为 Core 集成方，当文档 schema 含有当前运行环境未注册的自定义 `FieldType` 时，我希望表格仍能打开并显示原始值文本，但不允许用户直接编辑未知业务类型，以免插件缺失时破坏数据语义。",
+      "tags": [
+        "cell-extension",
+        "plugin-api"
+      ],
+      "status": "draft",
+      "sourceFile": "tests/acceptance/contract/plugin-api/scenarios/L0-cell-extension-custom-type-fallback.md",
+      "given": [
+        "schema 中有字段 `{ id: \"score\", type: \"rating\" }`",
+        "`GridOptions.cellTypes` / `cellEditors` / backend `cellRenderers` 均未注册 `rating`",
+        "该列某个单元格 raw value 为 `4`"
+      ],
+      "when": [
+        "runtime 或 renderer 读取该单元格用于显示",
+        "用户尝试通过双击、Enter/F2、直接键入进入编辑态"
+      ],
+      "then": [
+        "单元格显示 fallback 文本 `4`",
+        "不抛出 unknown field type 错误",
+        "不打开 editor",
+        "数据源 raw value 保持 `4`"
+      ]
+    },
+    {
+      "id": "core.L0.cell-extension-type-definition-contract",
+      "layer": "L0",
+      "summary": "CellTypeDefinition 锁定编辑、剪贴板、排序与筛选语义",
+      "userStory": "作为 Core 集成方，当我为自定义类型注册 `CellTypeDefinition` 时，我希望编辑解析、剪贴板序列化、排序值和 filter operator 都由同一份类型语义驱动，以便业务类型在不同入口保持一致。",
+      "tags": [
+        "cell-extension",
+        "plugin-api",
+        "filter"
+      ],
+      "status": "draft",
+      "sourceFile": "tests/acceptance/contract/plugin-api/scenarios/L0-cell-extension-type-definition-contract.md",
+      "given": [
+        "注册 `rating` 类型定义",
+        "`rating` 定义包含 `formatForEdit`、`parseEditInput`、`serializeClipboard`、`parseClipboard`、`sortValue`、`isEmpty` 与 `filterOperators`",
+        "`rating` 字段 options 含 `{ max: 5 }`"
+      ],
+      "when": [
+        "对 raw value `4` 调用 edit format / parse",
+        "对剪贴板文本 `3` 和非法文本 `bad` 调用 parse",
+        "对多个 rating value 计算 sort key",
+        "用 `gte` filter operator 匹配 `>= 3` 的值"
+      ],
+      "then": [
+        "edit draft 为 `\"4\"`，合法输入解析为 clamp 后 number",
+        "非法 edit / clipboard 输入返回失败 sentinel，不写入数据",
+        "sort key 使用 number 值而不是 fallback string",
+        "filter operator 只匹配满足业务谓词的单元格"
+      ]
+    },
     {
       "id": "core.L0.cell-hit-test",
       "layer": "L0",
@@ -743,6 +800,34 @@
       ]
     },
     {
+      "id": "core.L2.grid-cell-action-opens-editor",
+      "layer": "L2",
+      "summary": "cell action 先 onAction，未拦截则打开同类型 editor",
+      "userStory": "作为 Grid 集成方，当自定义 renderer 在单元格内声明按钮或其它 action hit zone 时，我希望点击 action 后先给业务类型一次拦截机会，未拦截时再用统一 editor 流程打开同类型编辑器。",
+      "tags": [
+        "cell-extension",
+        "editing",
+        "grid",
+        "action"
+      ],
+      "status": "draft",
+      "sourceFile": "tests/acceptance/e2e/grid/scenarios/L2-grid-cell-action-opens-editor.md",
+      "given": [
+        "`assignee` 单元格 renderer 声明 action `{ id: \"change-assignee\" }`",
+        "`cellTypes.assignee.onAction` 已注册但不调用 `preventOpenEditor`",
+        "`cellEditors.assignee` 已注册 popover editor"
+      ],
+      "when": [
+        "用户点击该 action hit zone"
+      ],
+      "then": [
+        "runtime 先调用 `cellTypes.assignee.onAction(ctx)`",
+        "`ctx.trigger` 为 `cell-action` 且 `ctx.actionId` 为 `change-assignee`",
+        "因未拦截，runtime 随后调用 `cellEditors.assignee.open(ctx)`",
+        "若 `onAction` 调用 `preventOpenEditor()`，则不打开 editor；可在 `onAction` 中直接 `commit()`，例如 checkbox toggle"
+      ]
+    },
+    {
       "id": "core.L2.grid-clipboard-copy-cut-paste-roundtrip",
       "layer": "L2",
       "summary": "Grid copy/cut/paste 通过 facade 完成选区往返",
@@ -871,6 +956,36 @@
         "移动后 schema 顺序为 `b,c,d,a`",
         "回调收到 `{ fieldIds: ['a'], beforeFieldId: null }`",
         "undo / redo 还原并重放 schema 顺序"
+      ]
+    },
+    {
+      "id": "core.L2.grid-custom-editor-open-triggers",
+      "layer": "L2",
+      "summary": "自定义 editor 由所有编辑入口统一触发",
+      "userStory": "作为 Grid 集成方，当我为自定义类型注册 editor 时，我希望双击、Enter/F2、直接键入和 API 打开编辑器都进入同一个 `openCellEditor(ctx)` 流程，以便 editor 只处理一套 trigger contract。",
+      "tags": [
+        "cell-extension",
+        "editing",
+        "grid"
+      ],
+      "status": "draft",
+      "sourceFile": "tests/acceptance/e2e/grid/scenarios/L2-grid-custom-editor-open-triggers.md",
+      "given": [
+        "Grid 使用字段 `{ id: \"owner\", type: \"assignee\" }`",
+        "`GridOptions.cellEditors.assignee` 注册了 popover editor",
+        "当前选中 `owner` 单元格，raw value 为 `\"Alice\"`"
+      ],
+      "when": [
+        "用户双击该单元格",
+        "用户按 Enter 或 F2",
+        "用户直接键入字符 `B`",
+        "集成方调用公开 API 请求打开该单元格 editor"
+      ],
+      "then": [
+        "每种入口都调用同一个 editor `open(ctx)`",
+        "`ctx.trigger` 分别标识 `double-click`、`enter` / `f2`、`typing`、`api`",
+        "typing 入口携带 `ctx.initialInput = \"B\"`",
+        "editor `commit(\"Bob\")` 后通过 Grid facade 写回数据并触发重绘"
       ]
     },
     {
