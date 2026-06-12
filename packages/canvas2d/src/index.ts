@@ -11,6 +11,7 @@ export type { Canvas2DRendererOptions } from './render/Canvas2DRenderer'
 export { CANVAS2D_PAINT_LAYERS } from './render/PaintLayer'
 export type { Canvas2DPaintLayer } from './render/PaintLayer'
 export type {
+  Canvas2DCellActionZone,
   Canvas2DCellRenderParams,
   Canvas2DCellRenderer,
   Canvas2DCellRendererRegistry,
