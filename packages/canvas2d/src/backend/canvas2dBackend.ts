@@ -17,45 +17,49 @@ import { Canvas2DRenderer } from '../render/Canvas2DRenderer'
 import { Canvas2DTextMeasurer } from '../measure/Canvas2DTextMeasurer'
 import { HighDPI } from '../surface/HighDPI'
 
-export const canvas2dBackend: RenderBackendFactory = ({
-  container,
-  engine,
-  scheduler,
-}: RenderBackendDeps): RenderBackendHandle => {
-  const canvas = document.createElement('canvas')
-  Object.assign(canvas.style, {
-    position: 'absolute',
-    top: '0',
-    left: '0',
-    pointerEvents: 'none',
-    zIndex: '0',
-  })
-  container.appendChild(canvas)
+export interface Canvas2DBackendOptions {
+  /** Reserved for backend-specific extension options. */
+  readonly _reserved?: never
+}
 
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('NovaSheet: 2d canvas context unavailable')
-
-  const highDpi = new HighDPI(canvas, ctx)
-  // 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量复用同一 LRU 缓存。
-  const measurer = new Canvas2DTextMeasurer()
-
-  const createRenderer = (e: GridEngineFrameSource): RenderBackend =>
-    new Canvas2DRenderer({
-      ctx,
-      data: e.getData(),
-      viewport: e.getViewport(),
-      rowsAxis: e.getRowsAxis(),
-      colsAxis: e.getColsAxis(),
-      theme: e.getTheme(),
-      scheduler,
-      measurer,
+export function canvas2dBackend(options: Canvas2DBackendOptions = {}): RenderBackendFactory {
+  void options
+  return ({ container, engine, scheduler }: RenderBackendDeps): RenderBackendHandle => {
+    const canvas = document.createElement('canvas')
+    Object.assign(canvas.style, {
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      pointerEvents: 'none',
+      zIndex: '0',
     })
+    container.appendChild(canvas)
 
-  return {
-    renderer: createRenderer(engine),
-    measurer,
-    createRenderer,
-    resizeSurface: (w, h) => highDpi.resize(w, h),
-    destroy: () => canvas.remove(),
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('NovaSheet: 2d canvas context unavailable')
+
+    const highDpi = new HighDPI(canvas, ctx)
+    // 共享 measurer：CellPainter 绘制 wrap 字段 + runtime.autofitRows 度量复用同一 LRU 缓存。
+    const measurer = new Canvas2DTextMeasurer()
+
+    const createRenderer = (e: GridEngineFrameSource): RenderBackend =>
+      new Canvas2DRenderer({
+        ctx,
+        data: e.getData(),
+        viewport: e.getViewport(),
+        rowsAxis: e.getRowsAxis(),
+        colsAxis: e.getColsAxis(),
+        theme: e.getTheme(),
+        scheduler,
+        measurer,
+      })
+
+    return {
+      renderer: createRenderer(engine),
+      measurer,
+      createRenderer,
+      resizeSurface: (w, h) => highDpi.resize(w, h),
+      destroy: () => canvas.remove(),
+    }
   }
 }

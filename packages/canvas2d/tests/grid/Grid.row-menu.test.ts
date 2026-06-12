@@ -12,7 +12,7 @@ describe('Grid row header context menu', () => {
     const container = document.createElement('div')
     Object.assign(container.style, { width: '300px', height: '200px' })
     document.body.appendChild(container)
-    const grid = new Grid(container, { backend: canvas2dBackend, data: ds, theme: denseGridTheme })
+    const grid = new Grid(container, { backend: canvas2dBackend(), data: ds, theme: denseGridTheme })
 
     grid.setSelection({
       activeCell: { rowIndex: 1, colIndex: 0 },
@@ -39,7 +39,7 @@ describe('Grid row header context menu', () => {
     })
     const container = document.createElement('div')
     document.body.appendChild(container)
-    const grid = new Grid(container, { backend: canvas2dBackend, data: ds, theme: denseGridTheme })
+    const grid = new Grid(container, { backend: canvas2dBackend(), data: ds, theme: denseGridTheme })
     grid.hideRows([2])
     grid.setSelection({
       activeCell: { rowIndex: 0, colIndex: 0 },
@@ -59,7 +59,7 @@ describe('Grid row header context menu', () => {
     })
     const container = document.createElement('div')
     document.body.appendChild(container)
-    const grid = new Grid(container, { backend: canvas2dBackend, data: ds, theme: denseGridTheme })
+    const grid = new Grid(container, { backend: canvas2dBackend(), data: ds, theme: denseGridTheme })
     grid.setSelection({
       activeCell: { rowIndex: 1, colIndex: 0 },
       anchorCell: { rowIndex: 1, colIndex: 0 },

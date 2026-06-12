@@ -20,7 +20,7 @@ const rows = [
 ]
 
 const grid = new Grid(document.getElementById('grid')!, {
-  backend: canvas2dBackend,
+  backend: canvas2dBackend(),
   data: new InMemoryDataSource({ schema, rows }),
   onFill: (event) => console.log('[fill]', event.direction, event.fill),
 })

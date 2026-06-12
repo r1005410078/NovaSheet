@@ -7,7 +7,7 @@ describe('Grid Phase 5-A APIs', () => {
   it('exposes the current selection for range formatting controls', () => {
     const container = document.createElement('div')
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data: new InMemoryDataSource({
         schema: {
           fields: [
@@ -34,7 +34,7 @@ describe('Grid Phase 5-A APIs', () => {
   it('forwards fill, border, merge, and unmerge to the controller', () => {
     const container = document.createElement('div')
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data: new InMemoryDataSource({
         schema: {
           fields: [

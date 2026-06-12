@@ -27,7 +27,7 @@ function setupGrid() {
 describe('Grid facade — undo/redo', () => {
   it('canUndo / canRedo 初始 false', () => {
     const { container, data } = setupGrid()
-    const grid = new Grid(container, { backend: canvas2dBackend, data })
+    const grid = new Grid(container, { backend: canvas2dBackend(), data })
     expect(grid.canUndo()).toBe(false)
     expect(grid.canRedo()).toBe(false)
     grid.destroy()
@@ -36,7 +36,7 @@ describe('Grid facade — undo/redo', () => {
 
   it('setRowHeight 通过 facade 不进 undo 栈(preview path 保持)', () => {
     const { container, data } = setupGrid()
-    const grid = new Grid(container, { backend: canvas2dBackend, data })
+    const grid = new Grid(container, { backend: canvas2dBackend(), data })
     grid.setRowHeight(0, 60)
     expect(grid.canUndo()).toBe(false)
     grid.destroy()
@@ -47,7 +47,7 @@ describe('Grid facade — undo/redo', () => {
     const { container, data } = setupGrid()
     const events: UndoCommand[] = []
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data,
       onUndo: (e) => events.push(e.command),
     })

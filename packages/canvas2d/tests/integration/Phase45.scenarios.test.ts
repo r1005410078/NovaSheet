@@ -29,7 +29,7 @@ function mkGrid(rowCount: number) {
   const container = document.createElement('div')
   Object.assign(container.style, { width: '300px', height: '300px' })
   document.body.appendChild(container)
-  const grid = new Grid(container, { backend: canvas2dBackend, data, theme: denseGridTheme })
+  const grid = new Grid(container, { backend: canvas2dBackend(), data, theme: denseGridTheme })
   return { grid, data, container }
 }
 

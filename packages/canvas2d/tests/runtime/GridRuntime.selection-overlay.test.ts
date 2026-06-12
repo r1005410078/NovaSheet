@@ -31,7 +31,7 @@ describe('GridRuntime selection overlay', () => {
     const raf = captureRaf()
 
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data: new InMemoryDataSource({
         schema: {
           fields: [
@@ -65,7 +65,7 @@ describe('GridRuntime selection overlay', () => {
     const raf = captureRaf()
 
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data: new InMemoryDataSource({
         schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 80 }] },
         rows: [{ a: 'A1' }],
@@ -102,7 +102,7 @@ describe('GridRuntime selection overlay', () => {
     document.body.appendChild(container)
     const raf = captureRaf()
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data: new InMemoryDataSource({
         schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 80 }] },
         rows: [{ a: 'A1' }],

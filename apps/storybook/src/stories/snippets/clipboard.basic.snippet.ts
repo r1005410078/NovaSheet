@@ -11,7 +11,7 @@ const schema: Schema = {
 }
 
 const grid = new Grid(container, {
-  backend: canvas2dBackend,
+  backend: canvas2dBackend(),
   data: new InMemoryDataSource({ schema, rows }),
   onCopy: (range) => console.log('copied', range),
   onCut: (range) => console.log('cut', range),

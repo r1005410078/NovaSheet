@@ -20,7 +20,7 @@ function mkGrid(onColumnsMoved?: (event: { fieldIds: readonly string[]; beforeFi
   Object.assign(container.style, { width: '500px', height: '300px' })
   document.body.appendChild(container)
   return {
-    grid: new Grid(container, { backend: canvas2dBackend, data, theme: denseGridTheme, onColumnsMoved }),
+    grid: new Grid(container, { backend: canvas2dBackend(), data, theme: denseGridTheme, onColumnsMoved }),
     data,
     container,
   }

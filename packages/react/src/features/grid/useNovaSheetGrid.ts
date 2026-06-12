@@ -104,7 +104,7 @@ export function useNovaSheetGrid(options: Omit<NovaSheetGridProps, 'className'>)
         onHideColsChange: (event) => onHideColsChangeRef.current?.(event),
       onColumnsMoved: (event) => onColumnsMovedRef.current?.(event),
       onSelectionChange: (selection) => onSelectionChangeRef.current?.(selection),
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       }),
     [],
   )

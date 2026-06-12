@@ -23,7 +23,7 @@ export function createGridHost(
   if (width === '100%' || height === '100%') {
     el.style.minHeight = '0'
   }
-  const grid = new Grid(el, { backend: canvas2dBackend, ...opts })
+  const grid = new Grid(el, { backend: canvas2dBackend(), ...opts })
   ;(el as unknown as HTMLElement & { __grid: Grid }).__grid = grid
   return el
 }

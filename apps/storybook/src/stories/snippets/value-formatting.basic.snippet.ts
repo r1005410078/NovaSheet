@@ -23,7 +23,7 @@ const data = new InMemoryDataSource({
 })
 
 const grid = new Grid(container, {
-  backend: canvas2dBackend,
+  backend: canvas2dBackend(),
   data,
   locale: 'zh-CN', // zh-CN → ¥1,234.50；en-US → CN¥1,234.50（Intl 消歧）
   formatters: {

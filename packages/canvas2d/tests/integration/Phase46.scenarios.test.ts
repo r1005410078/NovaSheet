@@ -30,7 +30,7 @@ function mkGrid(opts: { frozen?: Partial<FrozenConfig> } = {}) {
   Object.assign(container.style, { width: '500px', height: '300px' })
   document.body.appendChild(container)
   const grid = new Grid(container, {
-    backend: canvas2dBackend,
+    backend: canvas2dBackend(),
     data,
     theme: denseGridTheme,
     frozen: { topRows: 0, leftCols: 0, rightCols: 0, ...opts.frozen },

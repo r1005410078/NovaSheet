@@ -18,7 +18,7 @@ const data = new InMemoryDataSource({
 const container = document.getElementById('grid-container')!
 
 const grid = new Grid(container, {
-  backend: canvas2dBackend,
+  backend: canvas2dBackend(),
   data,
   onUndo: (e) => console.log('[undo]', e.command.kind),
   onRedo: (e) => console.log('[redo]', e.command.kind),

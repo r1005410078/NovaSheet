@@ -71,11 +71,16 @@ function runtimeRefreshSpy(grid: Grid) {
 }
 
 describe('Grid — 浏览器门面', () => {
+  it('canvas2dBackend() returns a RenderBackendFactory', () => {
+    const backend = canvas2dBackend()
+    expect(typeof backend).toBe('function')
+  })
+
   it('在容器内挂载 canvas', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     expect(el.querySelector('canvas')).not.toBeNull()
     grid.destroy()
     document.body.removeChild(el)
@@ -83,7 +88,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('destroy 幂等并移除 canvas', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     grid.destroy()
     grid.destroy()
     expect(el.querySelector('canvas')).toBeNull()
@@ -92,16 +97,16 @@ describe('Grid — 浏览器门面', () => {
   it('mount → destroy → mount 可重复（Strict Mode 形态）', () => {
     const el = document.createElement('div')
     const data = makeData()
-    const g1 = new Grid(el, { backend: canvas2dBackend, data })
+    const g1 = new Grid(el, { backend: canvas2dBackend(), data })
     g1.destroy()
-    const g2 = new Grid(el, { backend: canvas2dBackend, data })
+    const g2 = new Grid(el, { backend: canvas2dBackend(), data })
     expect(el.querySelectorAll('canvas')).toHaveLength(1)
     g2.destroy()
   })
 
   it('setTheme 触发重绘', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const spy = runtimeRefreshSpy(grid)
     grid.setTheme(denseGridTheme)
     expect(spy).toHaveBeenCalled()
@@ -110,7 +115,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('setData 替换数据源并触发重绘', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const newData = new InMemoryDataSource({ schema: SCHEMA, rows: [{ name: 'X', age: 0 }] })
     grid.setData(newData)
     expect(el.querySelector('canvas')).not.toBeNull()
@@ -119,7 +124,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('setRowHeight 改行高并触发重绘', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const spy = runtimeRefreshSpy(grid)
     grid.setRowHeight(5, 60)
     expect(spy).toHaveBeenCalled()
@@ -128,7 +133,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('setColumnWidth 改列宽并触发重绘', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const spy = runtimeRefreshSpy(grid)
     grid.setColumnWidth('age', 200)
     expect(spy).toHaveBeenCalled()
@@ -137,7 +142,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('未知 fieldId 的 setColumnWidth 为 no-op', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     grid.setColumnWidth('does-not-exist', 200)
     grid.destroy()
   })
@@ -151,7 +156,7 @@ describe('Grid — 浏览器门面', () => {
     }) as typeof requestAnimationFrame
 
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     while (rafs.length) rafs.shift()!()
     grid.refresh()
     expect(rafs).toHaveLength(1)
@@ -164,7 +169,7 @@ describe('Grid — 浏览器门面', () => {
   it('destroy 恢复容器原始 position', () => {
     const el = document.createElement('div')
     el.style.position = 'absolute'
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     expect(el.style.position).toBe('absolute')
     grid.destroy()
     expect(el.style.position).toBe('absolute')
@@ -174,7 +179,7 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
 
     const scrollHost = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement | null
     const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement | null
@@ -193,7 +198,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('canvas 为 pointer-events:none，滚动事件穿透', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const canvas = el.querySelector('canvas') as HTMLCanvasElement
     expect(canvas.style.pointerEvents).toBe('none')
     grid.destroy()
@@ -201,7 +206,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('scroll-host 为 overflow:auto，产生原生滚动条', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     expect(host.style.overflow).toBe('auto')
     grid.destroy()
@@ -209,7 +214,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('scroll-host 应用 Theme scrollbar CSS 变量', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     expect(host.style.getPropertyValue('--ns-scrollbar-size')).toBe('15px')
     expect(host.style.getPropertyValue('--ns-scrollbar-thumb')).toBe('#bdc1c6')
@@ -218,7 +223,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('scroll-host 右下角存在 corner 元素，无实际滚动条时隐藏（不盖画布）', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const corner = el.querySelector('[data-novasheet-scrollbar-corner]') as HTMLElement | null
     expect(corner).not.toBeNull()
     expect(corner!.style.right).toBe('0px')
@@ -233,7 +238,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('scroll-host z-index 高于 canvas，原生滚动条可见', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     const canvas = el.querySelector('canvas') as HTMLCanvasElement
     expect(Number(host.style.zIndex)).toBeGreaterThan(Number(canvas.style.zIndex))
@@ -242,7 +247,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('scroll-spacer 宽高由 ScrollMapper.computeSpacerSize 决定', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
     expect(spacer.style.height).toBe('1432px')
     expect(spacer.style.width).toBe('280px')
@@ -251,7 +256,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('setColumnWidth 会更新 spacer 宽度', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     grid.setColumnWidth('name', 500)
     const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
     expect(spacer.style.width).toBe(`${280 + 300}px`)
@@ -262,7 +267,7 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const spy = runtimeRefreshSpy(grid)
 
     grid.setFrozen({ topRows: 1, leftCols: 1 })
@@ -283,7 +288,7 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const spy = runtimeRefreshSpy(grid)
 
     grid.setFrozen({ topRows: 1, leftCols: 1, rightCols: 1 })
@@ -301,7 +306,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('destroy 同时移除 scroll-host 与 canvas', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     grid.destroy()
     expect(el.querySelector('[data-novasheet-scroll-host]')).toBeNull()
     expect(el.querySelector('canvas')).toBeNull()
@@ -309,7 +314,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('setData 按新数据集重算 spacer 尺寸', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const newData = new InMemoryDataSource({
       schema: SCHEMA,
       rows: Array.from({ length: 200 }, (_, i) => ({ name: `n${i}`, age: i })),
@@ -322,7 +327,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('setRowHeight 会更新 spacer 高度', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     grid.setRowHeight(0, 100)
     const spacer = el.querySelector('[data-novasheet-scroll-spacer]') as HTMLElement
     expect(spacer.style.height).toBe(`${50 * 28 + 72 + 32}px`)
@@ -340,7 +345,7 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     while (rafs.length) rafs.shift()!()
 
@@ -382,7 +387,7 @@ describe('Grid — 浏览器门面', () => {
       },
       rows: Array.from({ length: 20 }, (_, i) => ({ name: `n${i}`, age: i, notes: `note ${i}` })),
     })
-    const grid = new Grid(el, { backend: canvas2dBackend, data, frozen: { leftCols: 1 } })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data, frozen: { leftCols: 1 } })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
     while (rafs.length) rafs.shift()!()
 
@@ -405,7 +410,7 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
 
     grid.scrollToRow(10, 'start')
@@ -422,7 +427,7 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
 
     grid.setColumnWidth('name', 500)
@@ -438,7 +443,7 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const host = el.querySelector('[data-novasheet-scroll-host]') as HTMLElement
 
     grid.scrollToRow(20, 'end')
@@ -450,7 +455,7 @@ describe('Grid — 浏览器门面', () => {
 
   it('scrollToRow 越界索引不抛错', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     expect(() => grid.scrollToRow(99999, 'start')).not.toThrow()
     expect(() => grid.scrollToRow(-1, 'start')).not.toThrow()
     grid.destroy()
@@ -467,7 +472,7 @@ describe('Grid — 浏览器门面', () => {
     const el = document.createElement('div')
     Object.assign(el.style, { width: '400px', height: '300px' })
     document.body.appendChild(el)
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
 
     const viewport = canvas2dDelegate(grid).engine.getViewport()
     const setSizeSpy = spyOn(viewport, 'setSize')
@@ -495,7 +500,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     document.body.appendChild(container)
     const onAction = mock((_a: string, _c: never) => {})
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data: new InMemoryDataSource({
         schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] },
         rows: [{ a: '1' }, { a: '2' }, { a: '3' }],
@@ -524,7 +529,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     Object.assign(container.style, { width: '400px', height: '300px', position: 'relative' })
     document.body.appendChild(container)
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data: new InMemoryDataSource({
         schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] },
         rows: [{ a: '1' }],
@@ -548,7 +553,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
     const grid = new Grid(container, {
-      backend: canvas2dBackend,
+      backend: canvas2dBackend(),
       data: new InMemoryDataSource({
         schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] },
         rows: [],
@@ -564,7 +569,7 @@ describe('Grid — Phase 4.0 context menu facade', () => {
 describe('Grid — Phase 4.4 view pipeline facade', () => {
   it('returns stable sort, filter, and pipeline instances', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
 
     expect(grid.getSortLayer()).toBe(grid.getSortLayer())
     expect(grid.getFilterLayer()).toBe(grid.getFilterLayer())
@@ -575,7 +580,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
   it('emits sortChange with the active spec', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const handler = mock((_event: { spec: unknown }) => {})
     const spec = { fieldId: 'age', direction: 'desc' as const }
 
@@ -592,7 +597,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
   it('column header menu sort asc changes row order and emits sortChange', () => {
     const el = document.createElement('div')
     const data = makeData()
-    const grid = new Grid(el, { backend: canvas2dBackend, data })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data })
     const delegate = canvas2dDelegate(grid)
     const handler = mock((_event: { spec: unknown }) => {})
 
@@ -617,7 +622,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
   it('emits filterChange with the active spec', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const handler = mock((_event: { spec: unknown }) => {})
     const spec = {
       fieldId: 'name',
@@ -636,7 +641,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
   it('filter text contains changes row count and emits filterChange', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const handler = mock((_event: { spec: unknown }) => {})
     const spec = {
       fieldId: 'name',
@@ -654,7 +659,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
   it('emits viewChange with the changed layer id', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const handler = mock((_event: { layerId: 'sort' | 'filter' }) => {})
 
     const unsubscribe = grid.on('viewChange', handler)
@@ -669,7 +674,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
   it('stops delivering events after unsubscribe', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const handler = mock((_event: { layerId: 'sort' | 'filter' }) => {})
 
     const unsubscribe = grid.on('viewChange', handler)
@@ -683,7 +688,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
   it('setData clears sort and filter specs', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
 
     grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'asc' })
     grid.getFilterLayer().setSpec({
@@ -702,7 +707,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
   it('setData updates runtime header-menu pipeline wiring', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const delegate = canvas2dDelegate(grid)
     const oldPipeline = delegate.getViewPipeline()
 
@@ -727,7 +732,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
       schema: SCHEMA,
       rows: [{ name: 'current', age: 1 }],
     })
-    const grid = new Grid(el, { backend: canvas2dBackend, data: oldSource })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: oldSource })
     const handler = mock((_event: { layerId: 'sort' | 'filter' }) => {})
 
     grid.on('viewChange', handler)
@@ -754,7 +759,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
   it('preserves undo across sort view changes', () => {
     const el = document.createElement('div')
     const data = makeData()
-    const grid = new Grid(el, { backend: canvas2dBackend, data })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data })
     const { engine } = canvas2dDelegate(grid)
 
     engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })
@@ -772,7 +777,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
   it('editing while sorted does not automatically resort', () => {
     const el = document.createElement('div')
     const data = makeData()
-    const grid = new Grid(el, { backend: canvas2dBackend, data })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data })
     const { engine } = canvas2dDelegate(grid)
 
     grid.getSortLayer().setSpec({ fieldId: 'age', direction: 'asc' })
@@ -788,7 +793,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
   it('editing while filtered does not automatically refilter', () => {
     const el = document.createElement('div')
     const data = makeData()
-    const grid = new Grid(el, { backend: canvas2dBackend, data })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data })
     const { engine } = canvas2dDelegate(grid)
 
     grid.getFilterLayer().setSpec({
@@ -808,7 +813,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
 
   it('remaps selection to the same underlying row across sort view changes', () => {
     const el = document.createElement('div')
-    const grid = new Grid(el, { backend: canvas2dBackend, data: makeData() })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data: makeData() })
     const { engine } = canvas2dDelegate(grid)
 
     engine.selectCell({ rowIndex: 0, colIndex: 1 })
@@ -822,7 +827,7 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
   it('undo writes a filtered-out row through underlying row coordinates', () => {
     const el = document.createElement('div')
     const data = makeData()
-    const grid = new Grid(el, { backend: canvas2dBackend, data })
+    const grid = new Grid(el, { backend: canvas2dBackend(), data })
     const { engine } = canvas2dDelegate(grid)
 
     engine.beginCellEdit({ rowIndex: 1, colIndex: 0 })
