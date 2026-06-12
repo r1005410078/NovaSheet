@@ -5,7 +5,7 @@
  */
 
 import type { DataSource } from '../kernel/data/DataSource'
-import type { Field } from '../kernel/data/Schema'
+import type { CellValue, Field } from '../kernel/data/Schema'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../kernel/undo/UndoCommand'
 import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode, ValueFormat } from '../kernel/protocol/FormatTypes'
@@ -196,6 +196,9 @@ export interface GridCellEditing {
 
   /** 提交编辑；非法输入返回 false。 */
   commitCellEdit(): boolean
+
+  /** 直接提交单个 view cell 值；用于 custom editor 等非草稿编辑入口，入栈 `editCell`。 */
+  commitCellValue(cell: CellAddress, fieldId: string, value: CellValue | null): boolean
 
   /** 返回当前是否处于单元格编辑状态。 */
   isCellEditing(): boolean

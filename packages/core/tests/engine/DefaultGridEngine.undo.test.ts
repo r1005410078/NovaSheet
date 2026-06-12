@@ -162,6 +162,23 @@ describe('DefaultGridEngine — undo/redo scaffolding', () => {
 })
 
 describe('DefaultGridEngine — editCell undo/redo', () => {
+  it('commitCellValue 写入 custom editor 值并 push editCell 命令', () => {
+    const engine = makeEngine()
+
+    expect(engine.commitCellValue({ rowIndex: 0, colIndex: 0 }, 'a', 'Bob')).toBe(true)
+    expect(engine.getData().getCell(0, 'a')).toBe('Bob')
+
+    const cmd = engine.undo()
+    expect(cmd?.kind).toBe('editCell')
+    expect(cmd).toMatchObject({
+      rowIndex: 0,
+      fieldId: 'a',
+      before: 'x',
+      after: 'Bob',
+    })
+    expect(engine.getData().getCell(0, 'a')).toBe('x')
+  })
+
   it('commitCellEdit 后 push editCell 命令', () => {
     const engine = makeEngine()
     engine.selectCell({ rowIndex: 0, colIndex: 0 })

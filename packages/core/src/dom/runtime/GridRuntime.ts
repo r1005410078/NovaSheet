@@ -2232,18 +2232,7 @@ export class GridRuntime {
     value: CellValue | null,
     editor: NonNullable<CellEditorRegistry[string]>,
   ): void {
-    const fields = this.engine.getFrame().data.getSchema().fields
-    this.engine.commitPaste(
-      { cells: [[value]], sourceFieldIds: [field.id], typed: true },
-      {
-        startRow: cell.rowIndex,
-        endRow: cell.rowIndex,
-        startCol: cell.colIndex,
-        endCol: cell.colIndex,
-        tile: { rows: 1, cols: 1 },
-      },
-      fields.map((candidate) => candidate.id),
-    )
+    if (!this.engine.commitCellValue(cell, field.id, value)) return
     editor.close?.()
     this.afterEngineMutation()
   }

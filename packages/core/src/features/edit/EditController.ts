@@ -60,8 +60,6 @@ export class EditController {
   commit(): boolean {
     const session = this.model.getSession()
     if (!session) return false
-    const data = this.mutableData()
-    if (!data) return false
 
     const field = this.fieldById(session.fieldId)
     if (!field) return false
@@ -74,17 +72,27 @@ export class EditController {
     )
     if (parsed === SKIP_CELL_VALUE) return false
 
-    const before = data.getCell(session.cell.rowIndex, session.fieldId) ?? null
-    const underlyingRow = this.ctx.viewRowToRaw(session.cell.rowIndex)
-    data.updateCell(session.cell.rowIndex, session.fieldId, parsed)
+    if (!this.commitCellValue(session.cell, session.fieldId, parsed)) return false
+    this.model.clear()
+    return true
+  }
+
+  commitCellValue(cell: CellAddress, fieldId: string, value: CellValue | null): boolean {
+    const data = this.mutableData()
+    if (!data) return false
+    if (!this.fieldById(fieldId)) return false
+
+    const editCell = this.ctx.resolveEditCell(cell)
+    const before = data.getCell(editCell.rowIndex, fieldId) ?? null
+    const underlyingRow = this.ctx.viewRowToRaw(editCell.rowIndex)
+    data.updateCell(editCell.rowIndex, fieldId, value)
     this.ctx.pushUndo({
       kind: 'editCell',
       rowIndex: underlyingRow,
-      fieldId: session.fieldId,
+      fieldId,
       before,
-      after: parsed,
+      after: value,
     })
-    this.model.clear()
     return true
   }
 

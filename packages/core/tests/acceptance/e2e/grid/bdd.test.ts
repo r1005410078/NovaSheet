@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it, mock } from 'bun:test'
 
 import {
   DefaultGridEngine,
@@ -7,6 +7,7 @@ import {
   borderPatchForCell,
   denseGridTheme,
   type BorderStyle,
+  type CellEditorOpenContext,
   type Row,
   type Schema,
   type Theme,
@@ -358,6 +359,40 @@ function createValueFormatData(): InMemoryDataSource {
 }
 
 describe('Core BDD Batch 6 format merge theme scenarios', () => {
+  it('core.L2.grid-custom-editor-open-triggers routes Grid facade API to custom editor', () =>
+    withManualRaf((flushRaf) => {
+      const data = new InMemoryDataSource({
+        schema: {
+          fields: [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+        },
+        rows: [{ owner: 'Alice' }] satisfies Row[],
+      })
+      const editor = {
+        open: mock((ctx: CellEditorOpenContext) => ctx.commit('Bob')),
+        close: mock(() => {}),
+      }
+      const { container, grid, recorder } = mountRecordingGrid({
+        data,
+        cellEditors: { assignee: editor },
+      })
+
+      expect(grid.openCellEditor(0, 'owner')).toBe(true)
+      flushRaf()
+
+      expect(editor.open).toHaveBeenCalledTimes(1)
+      expect(editor.open.mock.calls[0]?.[0]).toMatchObject({
+        cell: { rowIndex: 0, colIndex: 0 },
+        field: { id: 'owner', type: 'assignee' },
+        value: 'Alice',
+        trigger: 'api',
+      })
+      expect(data.getCell(0, 'owner')).toBe('Bob')
+      expect(lastFrame(recorder).data.getCell(0, 'owner')).toBe('Bob')
+
+      grid.destroy()
+      document.body.removeChild(container)
+    }))
+
   it('core.L2.grid-format-fill-color-set-clear sets and clears fill through Grid facade', () => {
     const { container, grid } = mountRecordingGrid({ data: createFormatData() })
     const range = fillRange(0, 0, 0, 0)

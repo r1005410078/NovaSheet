@@ -6,6 +6,7 @@ import {
   Viewport,
   denseGridTheme,
   type CellRange,
+  type CellEditorRegistry,
   type ExcelWorkspacePort,
   type GridEngineFrameSource,
   type GridSelection,
@@ -72,6 +73,7 @@ export function mountRecordingGrid(
     onCut?: (range: CellRange) => void
     onPaste?: (range: CellRange) => void
     onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
+    cellEditors?: CellEditorRegistry
   } = {},
 ): {
   container: HTMLElement
@@ -90,6 +92,7 @@ export function mountRecordingGrid(
     onCut: options.onCut,
     onPaste: options.onPaste,
     onPasteSkipped: options.onPasteSkipped,
+    cellEditors: options.cellEditors,
   })
   return { container, grid, recorder }
 }

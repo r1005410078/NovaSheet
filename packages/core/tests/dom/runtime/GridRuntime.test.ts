@@ -41,6 +41,7 @@ function makeEngine(): GridEngine {
     updateCellEditDraft: mock(() => {}),
     cancelCellEdit: mock(() => {}),
     commitCellEdit: mock(() => false),
+    commitCellValue: mock(() => false),
     isCellEditing: mock(() => false),
     clearRange: mock(() => {}),
     clearSelection: mock(() => {}),
@@ -775,6 +776,115 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
     expect(engine.updateCellEditDraft).not.toHaveBeenCalled()
   })
 
+  it('core.L2.grid-custom-editor-open-triggers routes double-click through custom editor context', () => {
+    const engine = makeEngine()
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+        [{ owner: 'Ada' }, { owner: 'Alice' }],
+      ),
+    )
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}) }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    runtime.handleHostDoubleClick({ x: 8, y: 64, shiftKey: false })
+
+    expect(editor.open).toHaveBeenCalledTimes(1)
+    expect(editor.open.mock.calls[0]?.[0]).toMatchObject({
+      cell: { rowIndex: 1, colIndex: 0 },
+      trigger: 'double-click',
+    })
+    expect(engine.beginCellEdit).not.toHaveBeenCalled()
+    expect(engine.updateCellEditDraft).not.toHaveBeenCalled()
+  })
+
+  it('core.L2.grid-custom-editor-open-triggers routes F2 through custom editor context', () => {
+    const engine = makeEngine()
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 1, colIndex: 0 },
+      anchorCell: { rowIndex: 1, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: 0 },
+      selectedRange: { startRow: 1, endRow: 1, startCol: 0, endCol: 0 },
+    }))
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+        [{ owner: 'Ada' }, { owner: 'Alice' }],
+      ),
+    )
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}) }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    expect(
+      runtime.handleHostKeyDown({
+        key: 'F2',
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+      }),
+    ).toBe(true)
+
+    expect(editor.open).toHaveBeenCalledTimes(1)
+    expect(editor.open.mock.calls[0]?.[0]).toMatchObject({
+      cell: { rowIndex: 1, colIndex: 0 },
+      trigger: 'f2',
+    })
+    expect(engine.beginCellEdit).not.toHaveBeenCalled()
+    expect(engine.updateCellEditDraft).not.toHaveBeenCalled()
+  })
+
+  it('core.L2.grid-custom-editor-open-triggers routes Enter through custom editor context', () => {
+    const engine = makeEngine()
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 1, colIndex: 0 },
+      anchorCell: { rowIndex: 1, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: 0 },
+      selectedRange: { startRow: 1, endRow: 1, startCol: 0, endCol: 0 },
+    }))
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+        [{ owner: 'Ada' }, { owner: 'Alice' }],
+      ),
+    )
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}) }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    expect(
+      runtime.handleHostKeyDown({
+        key: 'Enter',
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+      }),
+    ).toBe(true)
+
+    expect(editor.open).toHaveBeenCalledTimes(1)
+    expect(editor.open.mock.calls[0]?.[0]).toMatchObject({
+      cell: { rowIndex: 1, colIndex: 0 },
+      trigger: 'enter',
+    })
+    expect(engine.beginCellEdit).not.toHaveBeenCalled()
+    expect(engine.updateCellEditDraft).not.toHaveBeenCalled()
+  })
+
   it('core.L2.grid-custom-editor-open-triggers routes API calls through custom editor context', () => {
     const engine = makeEngine()
     engine.getColumnIndex = mock((fieldId: string) => (fieldId === 'owner' ? 0 : -1))
@@ -799,6 +909,36 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
       rect: { x: 0, y: 32, width: 160, height: 28 },
       trigger: 'api',
     })
+    expect(engine.beginCellEdit).not.toHaveBeenCalled()
+    expect(engine.updateCellEditDraft).not.toHaveBeenCalled()
+  })
+
+  it('custom editor commit delegates to engine commitCellValue instead of paste', () => {
+    const engine = makeEngine()
+    engine.getFrame = mock(() =>
+      makeFrameWithFields([{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }]),
+    )
+    engine.commitCellValue = mock(() => true)
+    const editor = {
+      open: mock((ctx: CellEditorOpenContext) => ctx.commit('Bob')),
+      close: mock(() => {}),
+    }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(true)
+
+    expect(engine.commitCellValue).toHaveBeenCalledWith(
+      { rowIndex: 0, colIndex: 0 },
+      'owner',
+      'Bob',
+    )
+    expect(engine.commitPaste).not.toHaveBeenCalled()
+    expect(editor.close).toHaveBeenCalledTimes(1)
   })
 
   it('选中后直接键入进入编辑（Sheets 式）', () => {

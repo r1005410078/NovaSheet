@@ -407,6 +407,10 @@ export class DefaultGridEngine implements GridEngine {
     return this.editController.commit()
   }
 
+  commitCellValue(cell: CellAddress, fieldId: string, value: CellValue | null): boolean {
+    return this.editController.commitCellValue(cell, fieldId, value)
+  }
+
   isCellEditing(): boolean {
     return this.editController.isEditing()
   }
