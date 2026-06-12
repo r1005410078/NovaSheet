@@ -13,17 +13,17 @@ import type {
   RenderBackendFactory,
   GridEngineFrameSource,
 } from '@novasheet/core'
+import type { Canvas2DCellRendererRegistry } from '../painters/CellPainter'
 import { Canvas2DRenderer } from '../render/Canvas2DRenderer'
 import { Canvas2DTextMeasurer } from '../measure/Canvas2DTextMeasurer'
 import { HighDPI } from '../surface/HighDPI'
 
 export interface Canvas2DBackendOptions {
-  /** Reserved for backend-specific extension options. */
-  readonly _reserved?: never
+  /** Canvas2D-only custom cell renderer registry. */
+  readonly cellRenderers?: Canvas2DCellRendererRegistry
 }
 
 export function canvas2dBackend(options: Canvas2DBackendOptions = {}): RenderBackendFactory {
-  void options
   return ({ container, engine, scheduler }: RenderBackendDeps): RenderBackendHandle => {
     const canvas = document.createElement('canvas')
     Object.assign(canvas.style, {
@@ -52,6 +52,7 @@ export function canvas2dBackend(options: Canvas2DBackendOptions = {}): RenderBac
         theme: e.getTheme(),
         scheduler,
         measurer,
+        cellRenderers: options.cellRenderers,
       })
 
     return {

@@ -47,6 +47,29 @@ export interface CellPaintParams {
   formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
 }
 
+/** Canvas2D custom renderer 收到的单元格绘制上下文。 */
+export interface Canvas2DCellRenderParams extends CellPaintParams {
+  /** 当前 theme；外部 renderer 可优先复用 NovaSheet 视觉 token。 */
+  readonly theme: Theme
+}
+
+/** Task 6 接入 action routing 前，仅声明 Canvas2D renderer 可返回的 hit zone 形状。 */
+export interface Canvas2DCellActionZone {
+  readonly id: string
+  readonly rect: QuadrantRect
+  readonly cursor?: 'pointer' | 'text' | 'default'
+  readonly label?: string
+}
+
+/** Canvas2D-only 单元格 renderer。 */
+export interface Canvas2DCellRenderer {
+  paint(ctx: CanvasRenderingContext2D, params: Canvas2DCellRenderParams): void
+  getActionZones?(params: Canvas2DCellRenderParams): readonly Canvas2DCellActionZone[]
+}
+
+/** field.type -> Canvas2D-only renderer registry。 */
+export type Canvas2DCellRendererRegistry = Readonly<Record<string, Canvas2DCellRenderer>>
+
 /** CellPainter 构造选项 */
 export interface CellPainterOptions {
   /**
@@ -54,6 +77,8 @@ export interface CellPainterOptions {
    * `canvas2dBackend` 工厂会注入 `Canvas2DTextMeasurer` 实例。
    */
   measurer?: TextMeasurer
+  /** Canvas2D-only custom renderer registry；命中时优先于内置文本 fallback。 */
+  cellRenderers?: Canvas2DCellRendererRegistry
 }
 
 /**
@@ -72,12 +97,14 @@ export class CellPainter {
    */
   private truncationCache = new Map<string, string>()
   private measurer: TextMeasurer | undefined
+  private cellRenderers: Canvas2DCellRendererRegistry
 
   constructor(
     private theme: Theme,
     options: CellPainterOptions = {},
   ) {
     this.measurer = options.measurer
+    this.cellRenderers = options.cellRenderers ?? {}
   }
 
   /** 切换主题并清空截断缓存（字体变更后缓存失效） */
@@ -103,6 +130,13 @@ export class CellPainter {
     ctx.beginPath()
     ctx.rect(rect.x, rect.y, rect.width, rect.height)
     ctx.clip()
+
+    const custom = this.cellRenderers[field.type]
+    if (custom) {
+      custom.paint(ctx, { ...params, theme: this.theme })
+      ctx.restore()
+      return
+    }
 
     ctx.fillStyle = this.theme.colors.text
     ctx.textBaseline = 'middle'

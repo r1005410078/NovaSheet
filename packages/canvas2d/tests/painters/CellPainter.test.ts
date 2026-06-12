@@ -102,6 +102,29 @@ describe('CellPainter — 单元格', () => {
     }
   })
 
+  it('custom renderer wins over fallback text rendering', () => {
+    const { ctx, ops } = createRecordingContext()
+    const painter = new CellPainter(denseGridTheme, {
+      cellRenderers: {
+        rating: {
+          paint: (paintCtx, params) => {
+            paintCtx.fillText(`rating:${String(params.value)}`, params.rect.x, params.rect.y)
+          },
+        },
+      },
+    })
+
+    painter.paint(ctx, {
+      value: 4,
+      rect: { x: 10, y: 20, width: 100, height: 28 },
+      field: makeField({ type: 'rating' }),
+    })
+
+    const fillTextOps = ops.filter((op) => op.op === 'fillText')
+    expect(fillTextOps).toEqual([{ op: 'fillText', args: ['rating:4', 10, 20] }])
+    expect(fillTextOps).not.toContainEqual({ op: 'fillText', args: ['4', 18, 34] })
+  })
+
   it('null/undefined 不绘制 fillText', () => {
     const { ctx, ops } = createRecordingContext()
     new CellPainter(denseGridTheme).paint(ctx, {

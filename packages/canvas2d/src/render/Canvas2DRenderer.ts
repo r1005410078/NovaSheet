@@ -73,7 +73,7 @@ import type {
 import { FrameScheduler, type Axis, type Viewport } from '@novasheet/core'
 import { MergeLookup, mergedRectSize } from '../paint/merge-lookup'
 import { buildFilledCellLookup } from '../paint/filled-lookup'
-import { CellPainter } from '../painters/CellPainter'
+import { CellPainter, type Canvas2DCellRendererRegistry } from '../painters/CellPainter'
 import { EmptyStatePainter } from '../painters/EmptyStatePainter'
 import { FormatBorderPainter } from '../painters/FormatBorderPainter'
 import { FormatFillPainter } from '../painters/FormatFillPainter'
@@ -103,6 +103,8 @@ export interface Canvas2DRendererOptions {
    * 未提供时 wrap 字段静默退化为单行截断。
    */
   measurer?: TextMeasurer
+  /** Canvas2D-only custom cell renderer registry. */
+  cellRenderers?: Canvas2DCellRendererRegistry
 }
 
 /** scheduler key——每个 Renderer 实例同一时间最多一个待执行 flush */
@@ -210,7 +212,10 @@ export class Canvas2DRenderer implements RenderBackend {
     //   - HeaderPainter：顶部列头背景和字段名
     // Renderer 通过固定 layer 顺序调用它们，保证层级稳定：
     // background -> content -> grid -> overlay。
-    this.cellPainter = new CellPainter(this.theme, { measurer: opts.measurer })
+    this.cellPainter = new CellPainter(this.theme, {
+      measurer: opts.measurer,
+      cellRenderers: opts.cellRenderers,
+    })
     this.gridLinesPainter = new GridLinesPainter(this.theme)
     this.headerPainter = new HeaderPainter(this.theme)
     this.rowHeaderPainter = new RowHeaderPainter(this.theme)
