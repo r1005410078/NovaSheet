@@ -13,6 +13,7 @@ import type {
   GridSelection,
   PasteSkippedCell,
   Theme,
+  CellEditorRegistry,
 } from './index'
 import type { GridEngineOptions } from './engine/GridEngine'
 import type { ExcelWorkspacePolicy } from './features/excel-workspace'
@@ -66,6 +67,8 @@ export interface GridOptions extends GridEngineOptions {
   onColumnsMoved?: (event: { fieldIds: readonly string[]; beforeFieldId: string | null }) => void
   /** 选区变化时触发（含点击、键盘导航、程序化 setSelection）。 */
   onSelectionChange?: (selection: GridSelection) => void
+  /** 自定义 DOM 单元格编辑器注册表；key 为 `Field.type`。 */
+  cellEditors?: CellEditorRegistry
   /** Excel workspace auto-grow/shrink；默认关闭。 */
   excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
 }
@@ -111,6 +114,7 @@ export class Grid {
         onRedo: options.onRedo,
         onFill: options.onFill,
         onSelectionChange: options.onSelectionChange,
+        cellEditors: options.cellEditors,
         excelWorkspace: options.excelWorkspace,
       },
       options.backend,
@@ -147,6 +151,11 @@ export class Grid {
 
   scrollToCell(rowIndex: number, fieldId: string): void {
     this.delegate.scrollToCell(rowIndex, fieldId)
+  }
+
+  /** 程序化打开单元格编辑器；custom editor 的 trigger 为 `api`。 */
+  openCellEditor(rowIndex: number, fieldId: string): boolean {
+    return this.delegate.openCellEditor(rowIndex, fieldId)
   }
 
   /**

@@ -24,7 +24,7 @@ import {
   type ExcelWorkspacePort,
 } from '../../features/excel-workspace'
 import type { DataSource } from '../../kernel/data/DataSource'
-import type { Field, Row } from '../../kernel/data/Schema'
+import type { CellValue, Field, Row } from '../../kernel/data/Schema'
 import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import { FilterLayer } from '../../features/view/FilterLayer'
 import type { FilterOp } from '../../features/view/FilterLayer'
@@ -94,6 +94,7 @@ import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/Host'
 import type { RenderBackend } from '../../ports/RenderBackend'
 import { ScrollMapper } from '../scroll/ScrollMapper'
 import type { NativeScrollSource } from '../scroll/NativeScroller'
+import type { CellEditorRegistry, CellEditorTrigger } from '../interaction/CellEditorContract'
 
 /** Phase 4.1 — TSV FNV-1a 32-bit hash；用于验证 paste 时剪贴板内容是否仍是 grid 自己刚写出去的，决定 typed 缓存命中。 */
 function fnv1aHash(s: string): number {
@@ -123,6 +124,8 @@ export interface GridRuntimeOptions {
   host: WebHost
   /** 当前渲染器实现，负责消费 render frame。 */
   renderer: RenderBackend
+  /** 自定义单元格编辑器注册表；key 为 `Field.type`。 */
+  cellEditors?: CellEditorRegistry
   /** 每个 grid 独立的 RAF scheduler；未传时 runtime 自建。 */
   scheduler?: FrameScheduler
   /** 调整绘制表面位图（如 HighDPI）；Canvas2D 目前走此回调，`RenderBackend.resize` 仍为过渡 stub。 */
@@ -276,6 +279,8 @@ export class GridRuntime {
   private excelWorkspaceMutated = false
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
+  /** 自定义单元格编辑器注册表；key 为 `Field.type`。 */
+  private cellEditors: CellEditorRegistry = {}
   /** DOM 右键菜单 layer。 */
   private contextMenuLayer?: DomContextMenuLayer
   /** DOM filter popover。 */
@@ -343,6 +348,7 @@ export class GridRuntime {
     this.engine = opts.engine
     this.host = opts.host
     this.renderer = opts.renderer
+    this.cellEditors = opts.cellEditors ?? {}
     this.scheduler = opts.scheduler ?? new FrameScheduler()
     this.onSurfaceResize = opts.onSurfaceResize
     this.measurer = opts.measurer
@@ -1297,6 +1303,18 @@ export class GridRuntime {
     this.invalidate()
   }
 
+  /** 程序化打开单元格编辑器；custom editor 的 trigger 为 `api`。 */
+  openCellEditor(rowIndex: number, fieldId: string): boolean {
+    if (this.destroyed) return false
+    const colIndex = this.engine.getColumnIndex(fieldId)
+    if (colIndex < 0) return false
+    return this.openCellEditorForTrigger({
+      cell: { rowIndex, colIndex },
+      trigger: 'api',
+      selectAll: false,
+    })
+  }
+
   /**
    * 按当前列宽 + 文本内容批量重算 `field.wrap === true` 字段的行高（M3 autofit）。
    *
@@ -1559,6 +1577,7 @@ export class GridRuntime {
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.rowReorderOverlay?.hide()
+    for (const editor of Object.values(this.cellEditors)) editor.destroy?.()
     this.scheduler.cancel('renderer:flush')
     this.scheduler.cancel(HOST_RESIZE_KEY)
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
@@ -1629,7 +1648,7 @@ export class GridRuntime {
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return
     this.engine.selectCell(hit)
-    this.openCellEditor(hit, { selectAll: false })
+    this.openCellEditorForTrigger({ cell: hit, trigger: 'double-click', selectAll: false })
   }
 
   /** Phase 3.3 / 3.5 — 导航；选中后直接键入进入编辑（Sheets 式）。 */
@@ -1681,7 +1700,11 @@ export class GridRuntime {
     const cell = this.engine.getSelection().activeCell
 
     if (event.key === 'F2' && cell) {
-      if (this.openCellEditor(cell, { selectAll: false })) return true
+      if (this.openCellEditorForTrigger({ cell, trigger: 'f2', selectAll: false })) return true
+    }
+
+    if (event.key === 'Enter' && cell && this.hasCustomCellEditor(cell)) {
+      if (this.openCellEditorForTrigger({ cell, trigger: 'enter', selectAll: false })) return true
     }
 
     if (
@@ -1692,7 +1715,16 @@ export class GridRuntime {
         altKey: event.altKey,
       })
     ) {
-      if (this.beginCellEditWithDraft(cell, event.key)) return true
+      if (
+        this.openCellEditorForTrigger({
+          cell,
+          trigger: 'typing',
+          initialInput: event.key,
+          selectAll: false,
+        })
+      ) {
+        return true
+      }
     }
 
     if (!this.engine.navigateSelection(event.key, event.shiftKey)) return false
@@ -2144,19 +2176,88 @@ export class GridRuntime {
     this.filterPopover?.applyTheme(this.engine.getTheme())
   }
 
-  /** 打开指定单元格编辑器，并按需全选原内容。 */
-  private openCellEditor(cell: CellAddress, options: { selectAll?: boolean } = {}): boolean {
-    if (!this.cellEditor || this.resizeDrag.active) return false
-    if (!this.engine.beginCellEdit(cell)) return false
-    return this.showCellEditor(options)
+  /** 所有进入编辑态的 DOM/API 入口先尝试 custom editor，再回退到内置 DOM editor。 */
+  private openCellEditorForTrigger(args: {
+    readonly cell: CellAddress
+    readonly trigger: CellEditorTrigger
+    readonly initialInput?: string
+    readonly actionId?: string
+    readonly selectAll?: boolean
+  }): boolean {
+    if (this.resizeDrag.active) return false
+    if (this.openCustomCellEditor(args)) return true
+    return this.openBuiltInDomEditor(args)
   }
 
-  /** 用首个键入字符作为 draft 打开编辑器。 */
-  private beginCellEditWithDraft(cell: CellAddress, draft: string): boolean {
-    if (!this.cellEditor || this.resizeDrag.active) return false
-    if (!this.engine.beginCellEdit(cell)) return false
-    this.engine.updateCellEditDraft(draft)
-    return this.showCellEditor({ selectAll: false })
+  private hasCustomCellEditor(cell: CellAddress): boolean {
+    const data = this.engine.getFrame().data as Partial<Pick<DataSource, 'getSchema'>>
+    const field = data.getSchema?.().fields[cell.colIndex]
+    return field !== undefined && this.cellEditors[field.type] !== undefined
+  }
+
+  private openCustomCellEditor(args: {
+    readonly cell: CellAddress
+    readonly trigger: CellEditorTrigger
+    readonly initialInput?: string
+    readonly actionId?: string
+  }): boolean {
+    const frame = this.engine.getFrame()
+    const data = frame.data as Partial<Pick<DataSource, 'getCell' | 'getSchema'>>
+    const field = data.getSchema?.().fields[args.cell.colIndex]
+    if (!field) return false
+
+    const editor = this.cellEditors[field.type]
+    if (!editor) return false
+
+    const rect = this.computeCellEditorRect(frame, args.cell)
+    if (!rect) return false
+
+    editor.open({
+      cell: args.cell,
+      field,
+      value: data.getCell?.(args.cell.rowIndex, field.id),
+      rect,
+      trigger: args.trigger,
+      initialInput: args.initialInput,
+      actionId: args.actionId,
+      commit: (value) => this.commitCustomEditorValue(args.cell, field, value, editor),
+      cancel: () => editor.close?.(),
+    })
+    return true
+  }
+
+  private commitCustomEditorValue(
+    cell: CellAddress,
+    field: Field,
+    value: CellValue | null,
+    editor: NonNullable<CellEditorRegistry[string]>,
+  ): void {
+    const fields = this.engine.getFrame().data.getSchema().fields
+    this.engine.commitPaste(
+      { cells: [[value]], sourceFieldIds: [field.id], typed: true },
+      {
+        startRow: cell.rowIndex,
+        endRow: cell.rowIndex,
+        startCol: cell.colIndex,
+        endCol: cell.colIndex,
+        tile: { rows: 1, cols: 1 },
+      },
+      fields.map((candidate) => candidate.id),
+    )
+    editor.close?.()
+    this.afterEngineMutation()
+  }
+
+  /** 打开内置 DOM 单元格编辑器，并按需写入初始 draft。 */
+  private openBuiltInDomEditor(args: {
+    readonly cell: CellAddress
+    readonly initialInput?: string
+    readonly selectAll?: boolean
+  }): boolean {
+    if (!this.cellEditor) return false
+    if (!this.engine.beginCellEdit(args.cell)) return false
+    if (args.initialInput !== undefined) this.engine.updateCellEditDraft(args.initialInput)
+    return this.showCellEditor({ selectAll: args.selectAll ?? false })
   }
 
   /** 根据当前 engine edit session 定位并展示 DOM cell editor。 */

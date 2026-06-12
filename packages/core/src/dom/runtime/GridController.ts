@@ -12,6 +12,7 @@ import type { GridEngineOptions } from '../../engine/GridEngine'
 import type { Theme } from '../../kernel/theme/Theme'
 import type { FillEvent, RedoEvent, UndoEvent } from './GridRuntime'
 export type { FillEvent, RedoEvent, UndoEvent }
+export type { CellEditor, CellEditorOpenContext, CellEditorRegistry, CellEditorTrigger } from '../interaction/CellEditorContract'
 
 export interface ViewChangeEvent {
   readonly layerId: 'sort' | 'filter'
@@ -62,6 +63,7 @@ export interface GridController {
   refresh(): void
   scrollToRow(rowIndex: number, align?: 'start' | 'center' | 'end'): void
   scrollToCell(rowIndex: number, fieldId: string): void
+  openCellEditor(rowIndex: number, fieldId: string): boolean
   /**
    * 按当前列宽和文本内容批量重算 `field.wrap === true` 字段的行高（M3 autofit）。
    * 手动触发；后续若改了列宽 / 数据 / 主题需要再次调用。

@@ -65,6 +65,7 @@ import type {
   UndoEvent,
 } from './GridController'
 import type { RenderBackend, RenderBackendFactory, RenderBackendHandle } from '../../ports/RenderBackend'
+import type { CellEditorRegistry } from '../interaction/CellEditorContract'
 
 /**
  * 通用 Grid 装配（`Grid` facade 转发到此）。
@@ -152,6 +153,7 @@ export class GridControllerImpl implements GridController {
           onRedo?: (event: RedoEvent) => void
           onFill?: (event: FillEvent) => void
           onSelectionChange?: (selection: GridSelection) => void
+          cellEditors?: CellEditorRegistry
           excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
         }
       | undefined,
@@ -218,6 +220,7 @@ export class GridControllerImpl implements GridController {
       engine: this.engine,
       host: this.host,
       renderer: this.renderer,
+      cellEditors: gridOptions?.cellEditors,
       scheduler: this.scheduler,
       measurer: this.measurer,
       handleLayer: this.handleLayer,
@@ -336,6 +339,10 @@ export class GridControllerImpl implements GridController {
 
   scrollToCell(rowIndex: number, fieldId: string): void {
     this.runtime.scrollToCell(rowIndex, fieldId)
+  }
+
+  openCellEditor(rowIndex: number, fieldId: string): boolean {
+    return this.runtime.openCellEditor(rowIndex, fieldId)
   }
 
   autofitRows(options: AutofitRowsOptions = {}): AutofitRowsResult {

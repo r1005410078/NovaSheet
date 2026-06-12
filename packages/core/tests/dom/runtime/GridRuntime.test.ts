@@ -9,6 +9,7 @@ import {
 } from '@novasheet/core'
 import type {
   CellAddress,
+  CellEditorOpenContext,
   DataSource,
   GridEngine,
   GridSelection,
@@ -157,6 +158,50 @@ function makeRenderer(): RenderBackend {
     resize: mock(() => {}),
     render: mock(() => {}),
     destroy: mock(() => {}),
+  }
+}
+
+function makeFrameWithFields(
+  fields: Schema['fields'],
+  rows: readonly Row[] = [{ owner: 'Alice' }],
+) {
+  const data = new InMemoryDataSource({
+    rows: [...rows],
+    schema: { fields },
+  })
+  return {
+    data,
+    theme: { metrics: { headerHeight: 32 } } as Theme,
+    rowsAxis: {
+      getCount: () => rows.length,
+      positionToIndex: (pos: number) => Math.floor(pos / 28),
+      indexToPosition: (i: number) => i * 28,
+      getSize: () => 28,
+    } as never,
+    colsAxis: {
+      getCount: () => fields.length,
+      positionToIndex: (pos: number) => Math.floor(pos / 160),
+      indexToPosition: (i: number) => i * 160,
+      getSize: (i: number) => fields[i]?.width ?? 160,
+    } as never,
+    viewport: {
+      contentRect: { width: 400, height: 300 },
+      regions: [
+        {
+          id: 'main',
+          rowBand: 'middle',
+          colBand: 'center',
+          rowRange: [0, rows.length - 1],
+          colRange: [0, fields.length - 1],
+          rect: { x: 0, y: 32, width: fields.length * 160, height: 268 },
+          scrollOffsetX: 0,
+          scrollOffsetY: 0,
+          zIndex: 10,
+        },
+      ],
+    } as never,
+    collapsedRowGaps: [],
+    collapsedColGaps: [],
   }
 }
 
@@ -683,6 +728,77 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
       }),
     ).toBe(false)
     expect(engine.navigateSelection).toHaveBeenCalledWith('Escape', false)
+  })
+
+  it('core.L2.grid-custom-editor-open-triggers routes typing through custom editor context', () => {
+    const engine = makeEngine()
+    engine.getSelection = mock(() => ({
+      activeCell: { rowIndex: 1, colIndex: 0 },
+      anchorCell: { rowIndex: 1, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: 0 },
+      selectedRange: { startRow: 1, endRow: 1, startCol: 0, endCol: 0 },
+    }))
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+        [{ owner: 'Ada' }, { owner: 'Alice' }],
+      ),
+    )
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}) }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    expect(
+      runtime.handleHostKeyDown({
+        key: 'B',
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+      }),
+    ).toBe(true)
+
+    expect(editor.open).toHaveBeenCalledTimes(1)
+    expect(editor.open.mock.calls[0]?.[0]).toMatchObject({
+      cell: { rowIndex: 1, colIndex: 0 },
+      field: { id: 'owner', type: 'assignee' },
+      value: 'Alice',
+      rect: { x: 0, y: 60, width: 160, height: 28 },
+      trigger: 'typing',
+      initialInput: 'B',
+    })
+    expect(engine.beginCellEdit).not.toHaveBeenCalled()
+    expect(engine.updateCellEditDraft).not.toHaveBeenCalled()
+  })
+
+  it('core.L2.grid-custom-editor-open-triggers routes API calls through custom editor context', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = mock((fieldId: string) => (fieldId === 'owner' ? 0 : -1))
+    engine.getFrame = mock(() =>
+      makeFrameWithFields([{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }]),
+    )
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}) }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(true)
+
+    expect(editor.open).toHaveBeenCalledTimes(1)
+    expect(editor.open.mock.calls[0]?.[0]).toMatchObject({
+      cell: { rowIndex: 0, colIndex: 0 },
+      field: { id: 'owner', type: 'assignee' },
+      value: 'Alice',
+      rect: { x: 0, y: 32, width: 160, height: 28 },
+      trigger: 'api',
+    })
   })
 
   it('选中后直接键入进入编辑（Sheets 式）', () => {

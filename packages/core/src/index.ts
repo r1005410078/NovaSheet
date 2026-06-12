@@ -156,6 +156,12 @@ export type {
 } from './features/context-menu/ContextMenuModel'
 export { computeCellRect } from './kernel/interaction/CellLayout'
 export type { CellRect } from './kernel/interaction/CellLayout'
+export type {
+  CellEditor,
+  CellEditorOpenContext,
+  CellEditorRegistry,
+  CellEditorTrigger,
+} from './dom/interaction/CellEditorContract'
 
 // 剪贴板层（Phase 4.1）
 export { serializeRowsToTsv, parseTsvToCells } from './features/clipboard/TsvFormat'
