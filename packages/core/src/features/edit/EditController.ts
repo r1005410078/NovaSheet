@@ -17,8 +17,8 @@ import type { CellEditSession } from './CellEditModel'
 /** Edit 写入门面所需的 engine 能力（merge 解析、mutable 检查、undo 入栈）。 */
 export interface EditControllerContext {
   getData(): DataSource
-  getCellTypes?(): CellTypeRegistry
-  getLocale?(): string
+  getCellTypes(): CellTypeRegistry
+  getLocale(): string
   /** view 坐标 → 实际编辑格（合并区域时为 anchor）。 */
   resolveEditCell(cell: CellAddress): CellAddress
   viewRowToRaw(viewRow: number): number
@@ -125,11 +125,11 @@ export class EditController {
   }
 
   private cellTypes(): CellTypeRegistry {
-    return this.ctx.getCellTypes?.() ?? {}
+    return this.ctx.getCellTypes()
   }
 
   private locale(): string {
-    return this.ctx.getLocale?.() ?? 'en-US'
+    return this.ctx.getLocale()
   }
 
   private mutableData(): MutableDataSource | null {

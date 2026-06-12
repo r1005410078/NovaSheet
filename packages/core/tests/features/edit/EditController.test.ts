@@ -22,11 +22,12 @@ function makeCtx(overrides: Partial<EditControllerContext> = {}): {
 } {
   const pushed: unknown[] = []
   const ctx: EditControllerContext = {
-    getData: () => makeDataSource(),
-    resolveEditCell: (c) => c,
-    viewRowToRaw: (r) => r,
-    pushUndo: (c) => pushed.push(c),
-    ...overrides,
+    getData: overrides.getData ?? (() => makeDataSource()),
+    getCellTypes: overrides.getCellTypes ?? (() => ({})),
+    getLocale: overrides.getLocale ?? (() => 'en-US'),
+    resolveEditCell: overrides.resolveEditCell ?? ((c) => c),
+    viewRowToRaw: overrides.viewRowToRaw ?? ((r) => r),
+    pushUndo: overrides.pushUndo ?? ((c) => pushed.push(c)),
   }
   return { ctx, pushed }
 }

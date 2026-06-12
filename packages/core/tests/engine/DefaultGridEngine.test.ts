@@ -290,6 +290,60 @@ describe('DefaultGridEngine — 默认引擎', () => {
     expect(data.getCell(0, 'score')).toBe(5)
   })
 
+  it('hideCols commits a valid custom edit before removing the edited field from view schema', () => {
+    const schema: Schema = {
+      fields: [{ id: 'score', name: 'Score', type: 'rating', width: 120, options: { max: 5 } }],
+    }
+    const data = new InMemoryDataSource({ schema, rows: [{ score: 4 }] })
+    const engine = new DefaultGridEngine({
+      data,
+      cellTypes: {
+        rating: {
+          editable: true,
+          formatForEdit: (value) => String(value ?? ''),
+          parseEditInput: (input) => {
+            const n = Number(input)
+            return Number.isNaN(n) ? SKIP_CELL_VALUE : n
+          },
+        },
+      },
+    })
+
+    expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(true)
+    engine.updateCellEditDraft('5')
+    engine.hideCols(['score'])
+
+    expect(data.getCell(0, 'score')).toBe(5)
+    expect(engine.isCellEditing()).toBe(false)
+  })
+
+  it('hideCols cancels an invalid custom edit before removing the edited field from view schema', () => {
+    const schema: Schema = {
+      fields: [{ id: 'score', name: 'Score', type: 'rating', width: 120 }],
+    }
+    const data = new InMemoryDataSource({ schema, rows: [{ score: 4 }] })
+    const engine = new DefaultGridEngine({
+      data,
+      cellTypes: {
+        rating: {
+          editable: true,
+          formatForEdit: (value) => String(value ?? ''),
+          parseEditInput: (input) => {
+            const n = Number(input)
+            return Number.isNaN(n) ? SKIP_CELL_VALUE : n
+          },
+        },
+      },
+    })
+
+    expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(true)
+    engine.updateCellEditDraft('bad')
+    engine.hideCols(['score'])
+
+    expect(data.getCell(0, 'score')).toBe(4)
+    expect(engine.isCellEditing()).toBe(false)
+  })
+
   it('Phase 4.1 — clearRange 把 MutableDataSource 内每个 cell 置 null', () => {
     const schema: Schema = {
       fields: [

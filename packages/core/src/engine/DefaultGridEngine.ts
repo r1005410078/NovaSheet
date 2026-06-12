@@ -691,6 +691,7 @@ export class DefaultGridEngine implements GridEngine {
 
   /** 隐藏给定 fieldId 集合。 */
   hideCols(fieldIds: readonly string[]): void {
+    this.finishActiveEdit()
     this.structural.runCommandStructural({
       execute: () => this.hideColsCommand.execute({ kind: 'hideCols', fieldIds }),
       rebuild: 'cols',
@@ -705,6 +706,7 @@ export class DefaultGridEngine implements GridEngine {
 
   /** 取消隐藏给定 fieldId 集合。 */
   unhideCols(fieldIds: readonly string[]): void {
+    this.finishActiveEdit()
     this.structural.runCommandStructural({
       execute: () => this.unhideColsCommand.execute({ kind: 'unhideCols', fieldIds }),
       rebuild: 'cols',
