@@ -20,6 +20,7 @@ import type {
 import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import { EditController } from '../features/edit/EditController'
 import { CellEditModel } from '../features/edit/CellEditModel'
+import type { CellTypeRegistry } from '../features/cell-types'
 import { parseSelectionNavigationKey } from '../features/selection/SelectionNavigation'
 import type {
   CellAddress,
@@ -94,6 +95,8 @@ export class DefaultGridEngine implements GridEngine {
   private readonly formatters: Readonly<Record<string, CellFormatter>>
   /** Phase 5-C — formatter locale。 */
   private readonly locale: string
+  /** 单元格类型语义注册表。 */
+  private readonly cellTypes: CellTypeRegistry
   /** Layout 领域聚合根：自持 rowsAxis/colsAxis/frozen/viewport，engine 全部委派。 */
   private readonly layout: DefaultLayoutState
   /** 行/列/区 raw↔view 翻译唯一入口；getter 读引擎活状态（data/rawData/columnStructure）。 */
@@ -105,6 +108,8 @@ export class DefaultGridEngine implements GridEngine {
   private readonly selection = new DefaultSelectionState()
   private readonly editController = new EditController(new CellEditModel(), {
     getData: () => this.data,
+    getCellTypes: () => this.cellTypes,
+    getLocale: () => this.locale,
     resolveEditCell: (cell) =>
       resolveViewMergeRegion(this.formatState.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
         ?.anchor ?? cell,
@@ -207,6 +212,7 @@ export class DefaultGridEngine implements GridEngine {
     this.explicitDefaultRowHeight = options.defaultRowHeight
     this.formatters = options.formatters ?? {}
     this.locale = options.locale ?? 'en-US'
+    this.cellTypes = options.cellTypes ?? {}
     this.layout = new DefaultLayoutState({
       theme: this.theme,
       explicitDefaultRowHeight: this.explicitDefaultRowHeight,

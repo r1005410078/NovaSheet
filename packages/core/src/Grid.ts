@@ -95,6 +95,7 @@ export class Grid {
       excelHeaders: options.excelHeaders, // 表头模式：A/B/... 列标 + 1-based 行号。
       formatters: options.formatters, // Phase 5-C — 自定义 formatter 注册表。
       locale: options.locale, // Phase 5-C — formatter locale。
+      cellTypes: options.cellTypes, // 单元格类型语义注册表：驱动 backend-neutral 编辑语义。
     }
 
     this.delegate = new GridControllerImpl(

@@ -25,6 +25,7 @@ import type { Viewport } from '../kernel/geometry/Viewport'
 import type { RenderFrame } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
 import type { ExcelWorkspaceSize } from '../features/excel-workspace'
+import type { CellTypeRegistry } from '../features/cell-types'
 
 /**
  * `DefaultGridEngine` 构造参数。
@@ -76,6 +77,8 @@ export interface GridEngineOptions {
   formatters?: Readonly<Record<string, import('../kernel/protocol/FormatTypes').CellFormatter>>
   /** Phase 5-C — formatter locale；默认 'en-US'。 */
   locale?: string
+  /** 单元格类型语义注册表：驱动 inline edit parse/format 等 backend-neutral 行为。 */
+  cellTypes?: CellTypeRegistry
 }
 
 export interface FillCommitResult {

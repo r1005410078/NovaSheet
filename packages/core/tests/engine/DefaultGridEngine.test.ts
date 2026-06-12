@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import {
   DefaultGridEngine,
   InMemoryDataSource,
+  SKIP_CELL_VALUE,
   denseGridTheme,
   type DataSource,
   type DataSourceListener,
@@ -246,6 +247,47 @@ describe('DefaultGridEngine — 默认引擎', () => {
       data: new InMemoryDataSource({ schema, rows: [{ done: true }] }),
     })
     expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(false)
+  })
+
+  it('core.L0.cell-extension-custom-type-fallback refuses editing for unregistered custom type', () => {
+    const schema: Schema = {
+      fields: [{ id: 'score', name: 'Score', type: 'rating', width: 120 }],
+    }
+    const data = new InMemoryDataSource({ schema, rows: [{ score: 4 }] })
+    const engine = new DefaultGridEngine({ data })
+
+    expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(false)
+    expect(data.getCell(0, 'score')).toBe(4)
+  })
+
+  it('core.L0.cell-extension-type-definition-contract uses custom parseEditInput', () => {
+    const schema: Schema = {
+      fields: [{ id: 'score', name: 'Score', type: 'rating', width: 120, options: { max: 5 } }],
+    }
+    const data = new InMemoryDataSource({ schema, rows: [{ score: 4 }] })
+    const engine = new DefaultGridEngine({
+      data,
+      cellTypes: {
+        rating: {
+          editable: true,
+          formatForEdit: (value) => String(value ?? ''),
+          parseEditInput: (input, ctx) => {
+            const n = Number(input)
+            if (Number.isNaN(n)) return SKIP_CELL_VALUE
+            return Math.min(Number(ctx.field.options?.max ?? 5), n)
+          },
+        },
+      },
+    })
+
+    expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(true)
+    engine.updateCellEditDraft('bad')
+    expect(engine.commitCellEdit()).toBe(false)
+    expect(engine.isCellEditing()).toBe(true)
+    expect(data.getCell(0, 'score')).toBe(4)
+    engine.updateCellEditDraft('8')
+    expect(engine.commitCellEdit()).toBe(true)
+    expect(data.getCell(0, 'score')).toBe(5)
   })
 
   it('Phase 4.1 — clearRange 把 MutableDataSource 内每个 cell 置 null', () => {

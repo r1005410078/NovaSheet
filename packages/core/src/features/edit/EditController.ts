@@ -4,13 +4,21 @@ import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { CellAddress, CellRange } from '../../kernel/coords/SelectionTypes'
-import { formatCellForEdit, isEditableFieldType, parseCellEditInput } from './CellEdit'
+import type { CellTypeRegistry } from '../cell-types'
+import {
+  SKIP_CELL_VALUE,
+  formatCellForEditWithTypes,
+  isEditableFieldTypeWithTypes,
+  parseCellEditInputWithTypes,
+} from '../cell-types'
 import type { CellEditModel } from './CellEditModel'
 import type { CellEditSession } from './CellEditModel'
 
 /** Edit 写入门面所需的 engine 能力（merge 解析、mutable 检查、undo 入栈）。 */
 export interface EditControllerContext {
   getData(): DataSource
+  getCellTypes?(): CellTypeRegistry
+  getLocale?(): string
   /** view 坐标 → 实际编辑格（合并区域时为 anchor）。 */
   resolveEditCell(cell: CellAddress): CellAddress
   viewRowToRaw(viewRow: number): number
@@ -27,12 +35,17 @@ export class EditController {
   beginCellEdit(cell: CellAddress): boolean {
     const editCell = this.ctx.resolveEditCell(cell)
     const field = this.fieldAt(editCell.colIndex)
-    if (!field || !isEditableFieldType(field.type)) return false
+    if (!field || !isEditableFieldTypeWithTypes(field, this.cellTypes())) return false
     const data = this.mutableData()
     if (!data) return false
 
     const value = data.getCell(editCell.rowIndex, field.id)
-    this.model.begin(editCell, field.id, field.type, formatCellForEdit(value, field.type))
+    this.model.begin(
+      editCell,
+      field.id,
+      field.type,
+      formatCellForEditWithTypes(value, field, this.cellTypes(), this.locale()),
+    )
     return true
   }
 
@@ -50,8 +63,16 @@ export class EditController {
     const data = this.mutableData()
     if (!data) return false
 
-    const parsed = parseCellEditInput(session.draft, session.fieldType)
-    if (parsed === undefined) return false
+    const field = this.fieldById(session.fieldId)
+    if (!field) return false
+
+    const parsed = parseCellEditInputWithTypes(
+      session.draft,
+      field,
+      this.cellTypes(),
+      this.locale(),
+    )
+    if (parsed === SKIP_CELL_VALUE) return false
 
     const before = data.getCell(session.cell.rowIndex, session.fieldId) ?? null
     const underlyingRow = this.ctx.viewRowToRaw(session.cell.rowIndex)
@@ -97,6 +118,18 @@ export class EditController {
 
   private fieldAt(colIndex: number): Field | undefined {
     return this.ctx.getData().getSchema().fields[colIndex]
+  }
+
+  private fieldById(fieldId: string): Field | undefined {
+    return this.ctx.getData().getSchema().fields.find((field) => field.id === fieldId)
+  }
+
+  private cellTypes(): CellTypeRegistry {
+    return this.ctx.getCellTypes?.() ?? {}
+  }
+
+  private locale(): string {
+    return this.ctx.getLocale?.() ?? 'en-US'
   }
 
   private mutableData(): MutableDataSource | null {
