@@ -2,7 +2,11 @@ import { describe, expect, it } from 'bun:test'
 
 import * as publicApi from '../../../../src'
 import {
+  type CellActionContext,
+  type CellFilterOperator,
   type CellFormat,
+  type CellTypeDefinition,
+  type CellTypeRegistry,
   type FilterSpec,
   type GridOptions,
   type UndoCommand,
@@ -20,17 +24,29 @@ describe('Core acceptance type inventory', () => {
       undo: UndoCommand
       format: CellFormat
       filter: FilterSpec
+      cellType: CellTypeDefinition
+      cellTypes: CellTypeRegistry
+      cellFilterOperator: CellFilterOperator
+      cellAction: CellActionContext | undefined
     }
     const sample: Inventory = {
       gridOptions: { data: createDenseData(), backend: createNoopBackend },
       undo: { kind: 'editCell', rowIndex: 0, fieldId: 'a', before: null, after: 'x' },
       format: { fillColor: '#ffffff' },
       filter: { fieldId: 'name', op: { kind: 'is-empty' } },
+      cellType: { parseEditInput: (input) => input },
+      cellTypes: {},
+      cellFilterOperator: { id: 'is', label: 'is', matches: (value, operand) => value === operand },
+      cellAction: undefined,
     }
     expect(sample.gridOptions.data.getRowCount()).toBe(2)
     expect(sample.undo.kind).toBe('editCell')
     expect(sample.format.fillColor).toBe('#ffffff')
     expect(sample.filter.op.kind).toBe('is-empty')
+    expect(sample.cellType.parseEditInput?.('x', { field: { id: 'a', name: 'A', type: 'text', width: 80 }, locale: 'en-US' })).toBe('x')
+    expect(sample.cellTypes).toEqual({})
+    expect(sample.cellFilterOperator.matches('a', 'a', { field: { id: 'a', name: 'A', type: 'text', width: 80 }, locale: 'en-US' })).toBe(true)
+    expect(sample.cellAction).toBeUndefined()
 
     // 运行时导出面入金：index.ts 增删任何 value 导出都必须显式过 review。
     // type-only 导出不在 Object.keys 内，仍由上面的类型引用 + strict typecheck 覆盖。

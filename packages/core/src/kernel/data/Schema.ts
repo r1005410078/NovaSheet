@@ -1,9 +1,5 @@
-/**
- * 字段类型枚举。M1 里 CellPainter 只为 text / number 实现专门绘制路径；
- * 其余 5 种全部走 fallback（toString → text）。
- * M2+ 加专属绘制 / 编辑器时只补 switch case，无需改本枚举。
- */
-export type FieldType =
+/** NovaSheet 内置字段类型。 */
+export type BuiltInFieldType =
   | 'text'
   | 'number'
   | 'singleSelect'
@@ -11,6 +7,12 @@ export type FieldType =
   | 'date'
   | 'checkbox'
   | 'url'
+
+/**
+ * 字段类型。内置类型有默认语义；custom string 允许插件声明业务类型。
+ * 未注册 custom type 走文本显示 fallback，且不可直接编辑。
+ */
+export type FieldType = BuiltInFieldType | (string & {})
 
 /** 字段定义（列元数据） */
 export interface Field {

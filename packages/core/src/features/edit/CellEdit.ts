@@ -2,7 +2,12 @@
  * Phase 3.5 — 单元格编辑：text / number 的展示与解析。
  */
 
-import type { CellValue, FieldType } from '../../kernel/data/Schema'
+import type { CellValue, Field, FieldType } from '../../kernel/data/Schema'
+import {
+  SKIP_CELL_VALUE,
+  formatCellForEditWithTypes,
+  parseCellEditInputWithTypes,
+} from '../cell-types'
 
 export function isEditableFieldType(type: FieldType): boolean {
   return type === 'text' || type === 'number'
@@ -23,20 +28,18 @@ export function isTypableEditKey(
 }
 
 export function formatCellForEdit(value: CellValue | undefined, type: FieldType): string {
-  if (value === undefined || value === null) return ''
-  if (type === 'number' && typeof value === 'number') return String(value)
-  if (typeof value === 'string') return value
-  return String(value)
+  return formatCellForEditWithTypes(value, createEditField(type))
 }
 
 /** 合法输入返回 CellValue；空串为 null；非法 number 返回 undefined。 */
 export function parseCellEditInput(text: string, type: FieldType): CellValue | null | undefined {
-  const trimmed = text.trim()
-  if (trimmed === '') return null
-  if (type === 'number') {
-    const n = Number(trimmed)
-    if (Number.isNaN(n)) return undefined
-    return n
-  }
-  return trimmed
+  const parsed = parseCellEditInputWithTypes(text, createEditField(type))
+  return parsed === SKIP_CELL_VALUE ? undefined : parsed
 }
+
+function createEditField(type: FieldType): Field {
+  return { id: '', name: '', type, width: 0 }
+}
+
+export { formatCellForEditWithTypes, parseCellEditInputWithTypes }
+export type { Field }

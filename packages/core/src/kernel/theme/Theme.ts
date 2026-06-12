@@ -1,4 +1,4 @@
-import type { FieldType } from '../data/Schema'
+import type { BuiltInFieldType } from '../data/Schema'
 
 /**
  * Theme 是渲染层视觉值的**唯一来源**（CLAUDE.md 不变量 #3：
@@ -77,7 +77,7 @@ export interface ThemeColors {
 /** 单元格相关 token。 */
 export interface ThemeCell {
   /** 按字段类型决定 ctx.textAlign。number 通常右对齐，其余左对齐。 */
-  readonly textAlignByType: Readonly<Record<FieldType, CanvasTextAlign>>
+  readonly textAlignByType: Readonly<Record<BuiltInFieldType, CanvasTextAlign>>
   /** singleSelect/multiSelect 标签圆角与水平内边距——M2+ 使用 */
   readonly tagRadius: number
   /** 标签徽章水平内边距（px） */
@@ -87,7 +87,7 @@ export interface ThemeCell {
 /** 列头 icon 表——按字段类型取对应 SVG path。 */
 export interface ThemeIcons {
   /** 各字段类型对应的图标定义 */
-  readonly byFieldType: Readonly<Record<FieldType, IconDef>>
+  readonly byFieldType: Readonly<Record<BuiltInFieldType, IconDef>>
   /** 升序排序状态图标 */
   readonly sortAsc: IconDef
   /** 降序排序状态图标 */

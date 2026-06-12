@@ -9,7 +9,7 @@ export type { GridOptions } from './Grid'
 // 数据层
 export { InMemoryDataSource } from './kernel/data/InMemoryDataSource'
 export { SparseExcelDataSource } from './kernel/data/SparseExcelDataSource'
-export type { CellValue, Field, FieldType, Row, Schema } from './kernel/data/Schema'
+export type { BuiltInFieldType, CellValue, Field, FieldType, Row, Schema } from './kernel/data/Schema'
 export type { DataSource, DataSourceEvent, DataSourceListener } from './kernel/data/DataSource'
 export { isMutableDataSource } from './kernel/data/MutableDataSource'
 export type { MutableDataSource, RemovedFieldSnapshot } from './kernel/data/MutableDataSource'
@@ -124,6 +124,21 @@ export {
   isTypableEditKey,
   parseCellEditInput,
 } from './features/edit/CellEdit'
+export {
+  SKIP_CELL_VALUE,
+  formatCellForEditWithTypes,
+  getCellTypeDefinition,
+  isEditableFieldTypeWithTypes,
+  parseCellEditInputWithTypes,
+} from './features/cell-types'
+export type {
+  CellActionContext,
+  CellFilterOperator,
+  CellParseResult,
+  CellTypeContext,
+  CellTypeDefinition,
+  CellTypeRegistry,
+} from './features/cell-types'
 export { CellEditModel } from './features/edit/CellEditModel'
 export type { CellEditSession } from './kernel/render/RenderTypes'
 export {
