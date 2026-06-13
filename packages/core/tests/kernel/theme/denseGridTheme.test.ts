@@ -87,9 +87,9 @@ describe('denseGridTheme.text token', () => {
   it('exposes line-height multiplier and decoration geometry', () => {
     const t = denseGridTheme.text
     expect(t.lineHeightMultiplier).toBe(1.4)
-    expect(t.underlineWidth).toBeGreaterThan(0)
-    expect(typeof t.underlineOffset).toBe('number')
-    expect(t.lineThroughWidth).toBeGreaterThan(0)
-    expect(typeof t.lineThroughOffset).toBe('number')
+    expect(t.underlineWidth).toBe(1)
+    expect(t.underlineOffset).toBe(6)
+    expect(t.lineThroughWidth).toBe(1)
+    expect(t.lineThroughOffset).toBe(0)
   })
 })

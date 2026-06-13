@@ -161,8 +161,10 @@ export interface ThemeDimensions {
 export interface ThemeText {
   readonly lineHeightMultiplier: number
   readonly underlineWidth: number
+  /** 下划线相对 middle 基线的下偏移（px，正=向下） */
   readonly underlineOffset: number
   readonly lineThroughWidth: number
+  /** 删除线相对 middle 基线的上偏移（px，正=向上；0=正中穿过基线） */
   readonly lineThroughOffset: number
 }
 
