@@ -8,6 +8,7 @@ function entry(overrides: Partial<ScenarioEntry> & Pick<ScenarioEntry, 'id' | 'l
     filePath: 'scenarios/sample.md',
     given: [],
     when: [],
+    // oxlint-disable-next-line unicorn/no-thenable -- BDD manifest schema requires a `then` field.
     then: [],
     ...overrides,
   }

@@ -20,6 +20,7 @@ function toManifestEntry(scenario: ScenarioEntry): ManifestScenarioEntry {
     sourceFile: scenario.filePath,
     given: scenario.given,
     when: scenario.when,
+    // oxlint-disable-next-line unicorn/no-thenable -- BDD manifest schema requires a `then` field.
     then: scenario.then,
   }
 }

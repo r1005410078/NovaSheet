@@ -28,6 +28,7 @@ const manifest: ScenarioManifest = {
       sourceFile: 'a.md',
       given: [],
       when: [],
+      // oxlint-disable-next-line unicorn/no-thenable -- BDD manifest schema requires a `then` field.
       then: [],
     },
     {
@@ -38,6 +39,7 @@ const manifest: ScenarioManifest = {
       sourceFile: 'b.md',
       given: [],
       when: [],
+      // oxlint-disable-next-line unicorn/no-thenable -- BDD manifest schema requires a `then` field.
       then: [],
     },
   ],
@@ -122,6 +124,7 @@ describe('runScenarioCoverageCheck', () => {
               sourceFile: 'L3a-default-mount.md',
               given: [],
               when: [],
+              // oxlint-disable-next-line unicorn/no-thenable -- BDD manifest schema requires a `then` field.
               then: [],
             },
           ],

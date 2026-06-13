@@ -52,6 +52,7 @@ export function parseScenarioFile(
     filePath,
     given: sections.given,
     when: sections.when,
+    // oxlint-disable-next-line unicorn/no-thenable -- BDD manifest schema requires a `then` field.
     then: sections.then,
   }
 }

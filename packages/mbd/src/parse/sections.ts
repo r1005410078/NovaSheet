@@ -77,5 +77,6 @@ export function parseSections(body: string): ParsedSections {
     }
   }
 
+  // oxlint-disable-next-line unicorn/no-thenable -- BDD manifest schema requires a `then` field.
   return { userStory, given, when, then }
 }
