@@ -20,8 +20,8 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 | Phase | 包/层 | plan | 状态 |
 | --- | --- | --- | --- |
-| A | `@novasheet/core` 附件轴 | [`2026-06-13-...-cell-attachment-axis-phase-a.md`](./2026-06-13-novasheet-cell-attachment-axis-phase-a.md) | ◐ plan 已详化 |
-| B | `@novasheet/canvas2d` styled-text | 待展开 | ☐ |
+| A | `@novasheet/core` 附件轴 | [`2026-06-13-...-cell-attachment-axis-phase-a.md`](./2026-06-13-novasheet-cell-attachment-axis-phase-a.md) | ☑ 已 ship |
+| B | `@novasheet/canvas2d` styled-text | [`2026-06-13-...-styled-text-phase-b.md`](./2026-06-13-novasheet-styled-text-phase-b.md) | ◐ plan 已详化 |
 | C | `@novasheet/cell-kit` rich-text | 待展开 | ☐ |
 
 ---
@@ -57,13 +57,13 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 | 能力 | 落点（Task） | 状态 |
 | --- | --- | --- |
-| `CellAttachmentStore` get/set | A Task2 | ☐ |
-| 结构 remap（插/删/重排 行列，点 cell） | A Task2+3 | ☐ |
-| undo/redo（format command 附件快照分支） | A Task4 | ☐ |
-| snapshot/restore | A Task2 | ☐ |
-| `Grid.setCellAttachment/getCellAttachment` 门面 | A Task5 | ☐ |
-| `GridOptions.cellAttachments` codec 注册 | A Task5 | ☐ |
-| frame 暴露 view 坐标附件解析器（供 B 读） | A Task6 | ☐ |
+| `CellAttachmentStore` get/set | A Task2 | ☑ |
+| 结构 remap（插/删/重排 行列，点 cell） | A Task2+3 | ☑ |
+| undo/redo（format command 附件快照分支） | A Task4 | ☑ |
+| snapshot/restore | A Task2 | ☑ |
+| `Grid.setCellAttachment/getCellAttachment` 门面 | A Task5 | ☑ |
+| `GridOptions.cellAttachments` codec 注册 | A Task5 | ☑ |
+| frame 暴露 view 坐标附件解析器（供 B 读） | A Task6 | ☑ |
 | **fill 柄携带 runs**（对齐 Google，bb015ed 同款） | A Task8（**待定时机**，见 §5） | ☐ |
 | **clipboard copy/paste 经 codec** | A Task9 或 C（**待定**，见 §5） | ☐ |
 
@@ -78,8 +78,8 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 | 混排行高 = 段内最大 fontSize 括高 | B | ☐ |
 | wrap/overflow/clip × 多段（复用 `wrapText`+measurer） | B | ☐ |
 | 省略号截断 × 多段 | B | ☐ |
-| `getAttachment` 在 paint params 的消费 | B（读 A Task6 契约） | ☐ |
-| valueFormat×runs 门：runs 仅显示=raw string 时生效 | B renderer | ☐ |
+| `getAttachment` 在 paint params 的**透传** | B Task7（消费在 C renderer） | ◐ plan 已详化 |
+| valueFormat×runs 门：runs 仅显示=raw string 时生效 | **C** richTextRenderer（B 无 runs 消费者，无法测；见 Phase B plan Self-Review） | ☐ |
 | DPR 1/1.5/2/3 清晰（线段不糊） | B | ☐ |
 
 ### 1.5 编辑（Phase C）
@@ -130,25 +130,29 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 ---
 
-## 3. Phase B — canvas2d styled-text（待展开成完整 plan）
+## 3. Phase B — canvas2d styled-text（◐ plan 已详化）
 
-里程碑任务（执行到时按 writing-plans 展开为 bite-sized TDD）：
+完整 bite-sized 步骤见 [Phase B plan](./2026-06-13-novasheet-styled-text-phase-b.md)。7 Task 映射：
 
-| # | 任务 | 关键测试（`RecordingContext2D` op-log） |
+| plan Task | 任务 | roadmap 对应 |
 | --- | --- | --- |
-| B1 | 抽 `paintStyledText(ctx, segments, layout)`，内置单段改走它 | 现有 CellPainter 测全绿（零回归基线） |
-| B2 | 多段：按段切 `ctx.font`/`fillStyle` 顺序绘制 | 多段 op-log：font/fillStyle 切换次数与顺序 |
-| B3 | underline/strike 手绘线段 + theme token | 线段 moveTo/lineTo 坐标 = 段 measure x + 基线偏移 |
-| B4 | 混排行高 = 段内最大 fontSize | 行 y 基线按最大段抬高 |
-| B5 | wrap/overflow/clip × 多段（复用 `wrapText`+measurer） | 三态各自多段换行/裁断 op-log |
-| B6 | 消费 paint params `getAttachment`（读 A Task6） | 给定 runs → 段序正确 |
-| B7 | valueFormat×runs 门（仅 raw string 挂 runs） | 数字格 + runs → 忽略 runs |
+| T1 | core `ThemeText` token（行高倍数 + underline/lineThrough 几何） | B3 token 部分 |
+| T2 | `paintStyledText` 单段单行核（font/color/对齐） | B1 原语骨架 |
+| T3 | 多段单行（font/fillStyle 切换 + x 累加） | B2 |
+| T4 | underline/line-through 手绘线（读 ThemeText） | B3 |
+| T5 | `\n` 多行 + 混排行高（段内最大字号）+ maxLines | B4 |
+| T6 | wrap 模式段感知分行 + 末行省略号（对齐 `wrapText`） | B5 |
+| T7 | `getAttachment` 透传 custom renderer params + 导出原语 + 全量 gates | B6 |
 
-**风险:** B1 是零回归基线，必须先让既有 CellPainter 测全绿再加多段。`paintStyledText` 是 canvas2d 公开导出（Phase C renderer 依赖）。
+**决策（偏离原 B1）:** **不迁移内置 `CellPainter` 路径**走 `paintStyledText`。迁移 number/wrap/ellipsis 三条既有路径触碰 30+ golden、零功能收益、高回归风险；原语作独立文件由 Phase C 消费即满足需求，零回归改由「新增文件不动既有」保证。若评审坚持防长期漂移，另开 follow-up 仅迁移 `paintLines`（overflow/clip 文本路径），以既有 golden 为闸门。
 
-**依赖:** 仅 A Task6（frame 读取契约）；可与 A 其余并行起草。
+**B7 valueFormat×runs 门移出 Phase B:** 该门是 renderer 决策，无 runs-消费 renderer 无法测——留 Phase C richTextRenderer（见 §1.4）。
 
-**出口判据:** §1.4 全 ☑。
+**core 命名避闸门:** core `ThemeText` 用 `lineThrough*`（非 `strikethrough`），保 `grep -rn "strikethrough" packages/core/src` 空。
+
+**依赖:** A Task6（已 ship）；现可独立执行。
+
+**出口判据:** §1.4 除 valueFormat×runs（移 C）外全 ☑。
 
 ---
 
