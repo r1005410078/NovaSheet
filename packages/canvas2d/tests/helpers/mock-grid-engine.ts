@@ -97,6 +97,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     updateCellEditDraft: mock((_draft: string) => {}),
     cancelCellEdit: mock(() => {}),
     commitCellEdit: mock(() => true),
+    commitCellValue: mock((_cell, _fieldId, _value) => true),
     isCellEditing: mock(() => false),
     clearRange: mock((_range: CellRange) => {}),
     clearSelection: mock(() => {}),
