@@ -137,6 +137,8 @@ function makeEngine(): GridEngine {
     getViewMergeRegion: mock(() => null),
     setCellAttachment: mock(() => false),
     getCellAttachment: mock((): unknown => undefined),
+    viewRowToRaw: mock((viewRow: number) => viewRow),
+    viewColToRaw: mock((viewCol: number) => viewCol),
   }
 }
 

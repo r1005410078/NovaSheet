@@ -920,6 +920,12 @@ export class DefaultGridEngine implements GridEngine {
     return this.formatState.resolveCellFormat(rowIndex, colIndex)
   }
 
+  /** view 行 → raw 行（sort/filter/hide 解析）。 */
+  viewRowToRaw(viewRow: number): number { return this.coords.viewRowToRaw(viewRow) }
+
+  /** view 列 → raw 列。 */
+  viewColToRaw(viewCol: number): number { return this.coords.viewColToRaw(viewCol) }
+
   /** 解析 view 坐标的单元格格式；无格式返回 undefined。 */
   getViewCellFormat(viewRow: number, viewCol: number): CellFormat | undefined {
     const rawRow = this.coords.viewRowToRaw(viewRow)

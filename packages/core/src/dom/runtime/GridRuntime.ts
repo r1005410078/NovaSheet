@@ -2320,6 +2320,13 @@ export class GridRuntime {
       initialInput: args.initialInput,
       actionId: args.actionId,
       commit: (value) => this.commitCustomEditorValue(cell, field, value, editor, token),
+      setAttachment: (namespace, data) =>
+        this.engine.setCellAttachment(
+          namespace,
+          this.engine.viewRowToRaw(cell.rowIndex),
+          this.engine.viewColToRaw(cell.colIndex),
+          data,
+        ),
       cancel: () => this.closeCustomEditor(editor, token),
     })
     return true

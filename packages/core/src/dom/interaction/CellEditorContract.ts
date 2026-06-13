@@ -15,6 +15,8 @@ export interface CellEditorOpenContext {
   readonly initialInput?: string
   readonly actionId?: string
   commit(value: CellValue | null): void
+  /** 写本单元格附件（namespace 由 GridOptions.cellAttachments 注册）；内部 view→raw 映射，含 undo。 */
+  setAttachment?(namespace: string, data: unknown): boolean
   cancel(): void
 }
 

@@ -342,6 +342,12 @@ export interface GridFormatting {
   /** 解析 view 坐标的单元格格式；无格式返回 undefined。 */
   getViewCellFormat(viewRow: number, viewCol: number): CellFormat | undefined
 
+  /** view 行 → raw 行（sort/filter/hide 解析）。 */
+  viewRowToRaw(viewRow: number): number
+
+  /** view 列 → raw 列。 */
+  viewColToRaw(viewCol: number): number
+
   /** 给 raw cell 写扩展附件；data=undefined 清除；快照前后无变化返回 false。 */
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean
 
