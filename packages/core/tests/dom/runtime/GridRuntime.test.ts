@@ -941,6 +941,100 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
     expect(editor.close).toHaveBeenCalledTimes(1)
   })
 
+  it('merged non-anchor custom editor commit writes anchor field only', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = mock((fieldId: string) =>
+      fieldId === 'owner' ? 0 : fieldId === 'role' ? 1 : -1,
+    )
+    engine.getFrame = mock(() => ({
+      ...makeFrameWithFields(
+        [
+          { id: 'owner', name: 'Owner', type: 'assignee', width: 160 },
+          { id: 'role', name: 'Role', type: 'assignee', width: 160 },
+        ],
+        [{ owner: 'Ada', role: 'Designer' }],
+      ),
+      mergeRegions: [
+        {
+          id: 'merge-1',
+          range: { startRow: 0, endRow: 0, startCol: 0, endCol: 1 },
+          anchor: { rowIndex: 0, colIndex: 0 },
+        },
+      ],
+    }))
+    engine.commitCellValue = mock(() => true)
+    const editor = {
+      open: mock((ctx: CellEditorOpenContext) => ctx.commit('Bob')),
+      close: mock(() => {}),
+    }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    expect(runtime.openCellEditor(0, 'role')).toBe(true)
+
+    expect(editor.open.mock.calls[0]?.[0]).toMatchObject({
+      cell: { rowIndex: 0, colIndex: 0 },
+      field: { id: 'owner', type: 'assignee' },
+      value: 'Ada',
+      rect: { x: 0, y: 32, width: 320, height: 28 },
+    })
+    expect(engine.commitCellValue).toHaveBeenCalledWith(
+      { rowIndex: 0, colIndex: 0 },
+      'owner',
+      'Bob',
+    )
+    expect(engine.commitCellValue).not.toHaveBeenCalledWith(
+      { rowIndex: 0, colIndex: 1 },
+      'role',
+      'Bob',
+    )
+  })
+
+  it('custom editor lifecycle closes active editor on reopen, pointerdown, scroll, and destroy', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = mock((fieldId: string) =>
+      fieldId === 'owner' ? 0 : fieldId === 'reviewer' ? 1 : -1,
+    )
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [
+          { id: 'owner', name: 'Owner', type: 'assignee', width: 160 },
+          { id: 'reviewer', name: 'Reviewer', type: 'assignee', width: 160 },
+        ],
+        [{ owner: 'Ada', reviewer: 'Grace' }],
+      ),
+    )
+    const close = mock(() => {})
+    const destroy = mock(() => {})
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}), close, destroy }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(true)
+    expect(runtime.openCellEditor(0, 'reviewer')).toBe(true)
+    expect(close).toHaveBeenCalledTimes(1)
+
+    runtime.handleHostPointerDown({ x: 8, y: 36, button: 0, shiftKey: false })
+    expect(close).toHaveBeenCalledTimes(2)
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(true)
+    runtime.handleHostScroll(12, 0)
+    expect(close).toHaveBeenCalledTimes(3)
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(true)
+    runtime.destroy()
+    expect(close).toHaveBeenCalledTimes(4)
+    expect(destroy).toHaveBeenCalledTimes(1)
+  })
+
   it('选中后直接键入进入编辑（Sheets 式）', () => {
     const engine = makeEngine()
     engine.getSelection = mock(() => ({
