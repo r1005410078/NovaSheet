@@ -445,6 +445,7 @@ export class Canvas2DRenderer implements RenderBackend {
         ctx.overflowCrossings,
         ctx.frame.cellEdit?.cell,
         ctx.frame.formatCell,
+        ctx.frame.getAttachment,
       )
     this.paintHeaders(
       paintOrder,
@@ -675,6 +676,7 @@ export class Canvas2DRenderer implements RenderBackend {
     overflowCrossings: Set<string>,
     editingCell?: CellAddress,
     formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
+    getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined,
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -731,6 +733,7 @@ export class Canvas2DRenderer implements RenderBackend {
           rowIndex: r,
           colIndex: c,
           formatCell,
+          getAttachment,
         })
         this.collectCellActionHits({
           value,
@@ -740,11 +743,12 @@ export class Canvas2DRenderer implements RenderBackend {
           rowIndex: r,
           colIndex: c,
           formatCell,
+          getAttachment,
         })
       }
     }
 
-    this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, textWrapLookup, editingCell, formatCell)
+    this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, textWrapLookup, editingCell, formatCell, getAttachment)
 
     this.ctx.restore()
   }
@@ -802,6 +806,7 @@ export class Canvas2DRenderer implements RenderBackend {
     textWrapLookup: Map<string, TextWrapMode>,
     editingCell?: CellAddress,
     formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
+    getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined,
   ): void {
     if (merges.isEmpty) return
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
@@ -830,6 +835,7 @@ export class Canvas2DRenderer implements RenderBackend {
         rowIndex: ar,
         colIndex: ac,
         formatCell,
+        getAttachment,
       })
       this.collectCellActionHits({
         value,
@@ -839,6 +845,7 @@ export class Canvas2DRenderer implements RenderBackend {
         rowIndex: ar,
         colIndex: ac,
         formatCell,
+        getAttachment,
       })
     }
   }
@@ -851,6 +858,7 @@ export class Canvas2DRenderer implements RenderBackend {
     readonly rowIndex: number
     readonly colIndex: number
     readonly formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
+    readonly getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined
   }): void {
     const zones = this.cellPainter.getActionZones(params)
     for (const zone of zones) {

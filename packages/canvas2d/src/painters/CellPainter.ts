@@ -45,6 +45,8 @@ export interface CellPaintParams {
   colIndex?: number
   /** Phase 5-C — frame 的值格式化解析器；返回 undefined 时回退默认显示路径（零回归）。 */
   formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
+  /** Phase B — frame 的 view 坐标附件解析器；供 custom renderer（如 rich-text）读 runs。 */
+  getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined
 }
 
 /** Canvas2D custom renderer 收到的单元格绘制上下文。 */

@@ -19,3 +19,5 @@ export type {
 export { HighDPI } from './surface/HighDPI'
 export { Canvas2DTextMeasurer } from './measure/Canvas2DTextMeasurer'
 export { canvas2dBackend } from './backend/canvas2dBackend'
+export { paintStyledText } from './painters/styledText'
+export type { StyledSegment, StyledTextLayout } from './painters/styledText'
