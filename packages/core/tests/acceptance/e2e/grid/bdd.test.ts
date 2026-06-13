@@ -8,9 +8,11 @@ import {
   denseGridTheme,
   type BorderStyle,
   type CellEditorOpenContext,
+  type CellTypeDefinition,
   type Row,
   type Schema,
   type Theme,
+  type RenderBackendFactory,
 } from '../../../../src'
 import {
   createDenseData,
@@ -370,8 +372,45 @@ function dispatchGridDoubleClick(target: HTMLElement, point: { x: number; y: num
   )
 }
 
+function dispatchGridPointerDown(target: HTMLElement, point: { x: number; y: number }): void {
+  target.dispatchEvent(
+    new MouseEvent('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+      clientX: point.x,
+      clientY: point.y,
+      button: 0,
+    }),
+  )
+}
+
 function dispatchGridKeyDown(target: HTMLElement, key: string): void {
   target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key }))
+}
+
+function createActionHitBackend(actionId: string): RenderBackendFactory {
+  return () => {
+    const renderer = {
+      mount(_container: HTMLElement): void {},
+      resize(_width: number, _height: number, _dpr: number): void {},
+      render(): void {},
+      getCellActionAt() {
+        return { rowIndex: 0, colIndex: 0, actionId }
+      },
+      destroy(): void {},
+    }
+    return {
+      renderer,
+      measurer: { measureWidth: (text: string) => text.length * 7 },
+      createRenderer() {
+        return renderer
+      },
+      resizeSurface(_width: number, _height: number): void {},
+      destroy(): void {
+        renderer.destroy()
+      },
+    }
+  }
 }
 
 describe('Core BDD Batch 6 format merge theme scenarios', () => {
@@ -427,6 +466,52 @@ describe('Core BDD Batch 6 format merge theme scenarios', () => {
       grid.destroy()
       document.body.removeChild(container)
     }))
+
+  it('core.L2.grid-cell-action-opens-editor calls onAction before editor fallback', () => {
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+      },
+      rows: [{ owner: 'Alice' }] satisfies Row[],
+    })
+    const calls: string[] = []
+    const onAction = mock((ctx) => {
+      calls.push('onAction')
+      expect(ctx.trigger).toBe('cell-action')
+      expect(ctx.actionId).toBe('change-assignee')
+    })
+    const editor = {
+      open: mock((ctx: CellEditorOpenContext) => {
+        calls.push('editor.open')
+        expect(ctx).toMatchObject({
+          trigger: 'cell-action',
+          actionId: 'change-assignee',
+          cell: { rowIndex: 0, colIndex: 0 },
+          field: { id: 'owner', type: 'assignee' },
+          value: 'Alice',
+        })
+      }),
+    }
+    const container = document.createElement('div')
+    Object.assign(container.style, { width: '400px', height: '300px' })
+    document.body.appendChild(container)
+    const grid = new Grid(container, {
+      data,
+      backend: createActionHitBackend('change-assignee'),
+      cellTypes: { assignee: { onAction } satisfies CellTypeDefinition },
+      cellEditors: { assignee: editor },
+    })
+    const scrollHost = getScrollHost(container)
+
+    dispatchGridPointerDown(scrollHost, { x: 132, y: 44 })
+
+    expect(calls).toEqual(['onAction', 'editor.open'])
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(editor.open).toHaveBeenCalledTimes(1)
+
+    grid.destroy()
+    document.body.removeChild(container)
+  })
 
   it('core.L2.grid-format-fill-color-set-clear sets and clears fill through Grid facade', () => {
     const { container, grid } = mountRecordingGrid({ data: createFormatData() })

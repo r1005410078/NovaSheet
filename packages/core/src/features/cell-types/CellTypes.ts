@@ -1,4 +1,5 @@
 import type { CellValue, Field, FieldType } from '../../kernel/data/Schema'
+import type { CellAddress } from '../../kernel/coords/SelectionTypes'
 
 export const SKIP_CELL_VALUE = Symbol('novasheet.skip-cell-value')
 
@@ -20,6 +21,9 @@ export interface CellFilterOperator {
 }
 
 export interface CellActionContext extends CellTypeContext {
+  readonly cell: CellAddress
+  readonly value: CellValue | undefined
+  readonly trigger: 'cell-action'
   readonly rowIndex: number
   readonly colIndex: number
   readonly actionId: string

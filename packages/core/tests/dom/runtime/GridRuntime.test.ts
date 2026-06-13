@@ -10,6 +10,7 @@ import {
 import type {
   CellAddress,
   CellEditorOpenContext,
+  CellTypeDefinition,
   DataSource,
   GridEngine,
   GridSelection,
@@ -159,6 +160,15 @@ function makeRenderer(): RenderBackend {
     resize: mock(() => {}),
     render: mock(() => {}),
     destroy: mock(() => {}),
+  }
+}
+
+function makeRendererWithActionHit(
+  actionHit: { readonly rowIndex: number; readonly colIndex: number; readonly actionId: string } | null,
+): RenderBackend {
+  return {
+    ...makeRenderer(),
+    getCellActionAt: mock(() => actionHit),
   }
 }
 
@@ -1082,6 +1092,94 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
       'Current reviewer',
     )
     expect(editor.close).toHaveBeenCalledTimes(2)
+  })
+
+  it('core.L2.grid-cell-action-opens-editor calls onAction before editor fallback', () => {
+    const calls: string[] = []
+    const engine = makeEngine()
+    engine.getFrame = mock(() =>
+      makeFrameWithFields([{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }]),
+    )
+    const onAction = mock((ctx) => {
+      calls.push('onAction')
+      expect(ctx).toMatchObject({
+        trigger: 'cell-action',
+        actionId: 'change-assignee',
+        cell: { rowIndex: 0, colIndex: 0 },
+        field: { id: 'owner', type: 'assignee' },
+        value: 'Alice',
+      })
+    })
+    const editor = {
+      open: mock((ctx: CellEditorOpenContext) => {
+        calls.push('editor.open')
+        expect(ctx).toMatchObject({
+          trigger: 'cell-action',
+          actionId: 'change-assignee',
+          cell: { rowIndex: 0, colIndex: 0 },
+          field: { id: 'owner', type: 'assignee' },
+          value: 'Alice',
+        })
+      }),
+    }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRendererWithActionHit({
+        rowIndex: 0,
+        colIndex: 0,
+        actionId: 'change-assignee',
+      }),
+      cellTypes: { assignee: { onAction } satisfies CellTypeDefinition },
+      cellEditors: { assignee: editor },
+    })
+
+    runtime.handleHostPointerDown({ x: 120, y: 44, button: 0, shiftKey: false })
+
+    expect(calls).toEqual(['onAction', 'editor.open'])
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(editor.open).toHaveBeenCalledTimes(1)
+    expect(engine.selectCell).not.toHaveBeenCalled()
+  })
+
+  it('core.L2.grid-cell-action-opens-editor allows onAction to prevent editor and commit', () => {
+    const engine = makeEngine()
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [{ id: 'status', name: 'Status', type: 'taskStatus', width: 160 }],
+        [{ status: 'todo' }],
+      ),
+    )
+    engine.commitCellValue = mock(() => true)
+    const onAction = mock((ctx) => {
+      expect(ctx.trigger).toBe('cell-action')
+      expect(ctx.actionId).toBe('mark-done')
+      ctx.commit('done')
+      ctx.preventOpenEditor()
+    })
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}) }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRendererWithActionHit({
+        rowIndex: 0,
+        colIndex: 0,
+        actionId: 'mark-done',
+      }),
+      cellTypes: { taskStatus: { onAction } satisfies CellTypeDefinition },
+      cellEditors: { taskStatus: editor },
+    })
+
+    runtime.handleHostPointerDown({ x: 120, y: 44, button: 0, shiftKey: false })
+
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(engine.commitCellValue).toHaveBeenCalledWith(
+      { rowIndex: 0, colIndex: 0 },
+      'status',
+      'done',
+    )
+    expect(editor.open).not.toHaveBeenCalled()
+    expect(engine.selectCell).not.toHaveBeenCalled()
   })
 
   it('选中后直接键入进入编辑（Sheets 式）', () => {

@@ -220,6 +220,7 @@ export class GridControllerImpl implements GridController {
       engine: this.engine,
       host: this.host,
       renderer: this.renderer,
+      cellTypes: options.cellTypes,
       cellEditors: gridOptions?.cellEditors,
       scheduler: this.scheduler,
       measurer: this.measurer,

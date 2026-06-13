@@ -92,6 +92,7 @@ import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
 import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/Host'
 import type { RenderBackend } from '../../ports/RenderBackend'
+import type { CellActionHit } from '../../ports/RenderBackend'
 import { ScrollMapper } from '../scroll/ScrollMapper'
 import type { NativeScrollSource } from '../scroll/NativeScroller'
 import type {
@@ -99,6 +100,7 @@ import type {
   CellEditorRegistry,
   CellEditorTrigger,
 } from '../interaction/CellEditorContract'
+import type { CellTypeRegistry } from '../../features/cell-types'
 
 /** Phase 4.1 — TSV FNV-1a 32-bit hash；用于验证 paste 时剪贴板内容是否仍是 grid 自己刚写出去的，决定 typed 缓存命中。 */
 function fnv1aHash(s: string): number {
@@ -130,6 +132,8 @@ export interface GridRuntimeOptions {
   renderer: RenderBackend
   /** 自定义单元格编辑器注册表；key 为 `Field.type`。 */
   cellEditors?: CellEditorRegistry
+  /** 自定义单元格类型语义注册表；key 为 `Field.type`。 */
+  cellTypes?: CellTypeRegistry
   /** 每个 grid 独立的 RAF scheduler；未传时 runtime 自建。 */
   scheduler?: FrameScheduler
   /** 调整绘制表面位图（如 HighDPI）；Canvas2D 目前走此回调，`RenderBackend.resize` 仍为过渡 stub。 */
@@ -285,6 +289,8 @@ export class GridRuntime {
   private cellEditor?: DomCellEditor
   /** 自定义单元格编辑器注册表；key 为 `Field.type`。 */
   private cellEditors: CellEditorRegistry = {}
+  /** 自定义单元格类型语义注册表；key 为 `Field.type`。 */
+  private cellTypes: CellTypeRegistry = {}
   /** 当前由 custom editor registry 打开的 overlay。 */
   private activeCustomEditor: CellEditor | null = null
   /** 当前 custom editor 会话 token；reopen/close 后旧 ctx 回调必须失效。 */
@@ -358,6 +364,7 @@ export class GridRuntime {
     this.host = opts.host
     this.renderer = opts.renderer
     this.cellEditors = opts.cellEditors ?? {}
+    this.cellTypes = opts.cellTypes ?? {}
     this.scheduler = opts.scheduler ?? new FrameScheduler()
     this.onSurfaceResize = opts.onSurfaceResize
     this.measurer = opts.measurer
@@ -1631,6 +1638,11 @@ export class GridRuntime {
     if (this.engine.isCellEditing()) {
       this.commitCellEdit(false)
     }
+    const action = this.renderer.getCellActionAt?.(event.x, event.y)
+    if (action) {
+      this.invokeCellAction(action)
+      return
+    }
     for (const drag of this.drags) {
       if (drag.tryStart(event)) {
         this.activeDrag = drag
@@ -2209,6 +2221,51 @@ export class GridRuntime {
     const editCell = this.resolveEditCell(frame, cell)
     const field = data.getSchema?.().fields[editCell.colIndex]
     return field !== undefined && this.cellEditors[field.type] !== undefined
+  }
+
+  private invokeCellAction(action: CellActionHit): void {
+    const frame = this.engine.getFrame()
+    const data = frame.data as Partial<Pick<DataSource, 'getCell' | 'getSchema'>>
+    const cell = this.resolveEditCell(frame, {
+      rowIndex: action.rowIndex,
+      colIndex: action.colIndex,
+    })
+    const field = data.getSchema?.().fields[cell.colIndex]
+    if (!field) return
+
+    let openEditorPrevented = false
+    const value = data.getCell?.(cell.rowIndex, field.id)
+    const definition = this.cellTypes[field.type]
+    definition?.onAction?.({
+      field,
+      locale: 'en-US',
+      cell,
+      value,
+      trigger: 'cell-action',
+      rowIndex: cell.rowIndex,
+      colIndex: cell.colIndex,
+      actionId: action.actionId,
+      preventOpenEditor: () => {
+        openEditorPrevented = true
+      },
+      commit: (nextValue) => {
+        if (this.engine.commitCellValue(cell, field.id, nextValue)) {
+          this.afterEngineMutation()
+        }
+      },
+    })
+
+    if (openEditorPrevented) return
+    const opened = this.openCellEditorForTrigger({
+      cell,
+      trigger: 'cell-action',
+      actionId: action.actionId,
+      selectAll: false,
+    })
+    if (!opened) {
+      this.engine.selectCell(cell)
+      this.afterEngineMutation()
+    }
   }
 
   private openCustomCellEditor(args: {

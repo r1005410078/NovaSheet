@@ -107,6 +107,13 @@ export interface Canvas2DRendererOptions {
   cellRenderers?: Canvas2DCellRendererRegistry
 }
 
+interface Canvas2DCellActionHit {
+  readonly rowIndex: number
+  readonly colIndex: number
+  readonly actionId: string
+  readonly rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
+}
+
 /** scheduler key——每个 Renderer 实例同一时间最多一个待执行 flush */
 const RENDERER_KEY = 'renderer:flush'
 
@@ -169,6 +176,8 @@ export class Canvas2DRenderer implements RenderBackend {
   private formatFillPainter: FormatFillPainter
   /** 自定义边框绘制器（Phase 5-A） */
   private formatBorderPainter: FormatBorderPainter
+  /** 最近一帧 custom renderer 声明的单元格 action hit zones。 */
+  private cellActionHits: Canvas2DCellActionHit[] = []
 
   /**
    * 组装单帧绘制管线。
@@ -275,6 +284,17 @@ export class Canvas2DRenderer implements RenderBackend {
     this.paintFrame(frame)
   }
 
+  getCellActionAt(x: number, y: number): { readonly rowIndex: number; readonly colIndex: number; readonly actionId: string } | null {
+    for (let i = this.cellActionHits.length - 1; i >= 0; i -= 1) {
+      const hit = this.cellActionHits[i]!
+      const { rect } = hit
+      if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) {
+        return { rowIndex: hit.rowIndex, colIndex: hit.colIndex, actionId: hit.actionId }
+      }
+    }
+    return null
+  }
+
   /**
    * 同步绘制一帧（测试 / `invalidate()` 兜底，例如 `setTheme` 触发的重绘）。
    * 从构造期 `viewport` 合成 frame；生产路径由 `WebGridRuntime` 传 `engine.getFrame()`。
@@ -307,6 +327,7 @@ export class Canvas2DRenderer implements RenderBackend {
   }
 
   private paintFrame(frame: RenderFrame): void {
+    this.cellActionHits = []
     const { viewport: snapshot, data, theme, rowsAxis, colsAxis } = frame
     const { contentRect, regions } = snapshot
     const merges = new MergeLookup(frame.mergeRegions ?? [])
@@ -711,6 +732,15 @@ export class Canvas2DRenderer implements RenderBackend {
           colIndex: c,
           formatCell,
         })
+        this.collectCellActionHits({
+          value,
+          rect: { x: cellX, y: cellY, width: colWidth, height: rowHeight },
+          field,
+          textWrap: mode,
+          rowIndex: r,
+          colIndex: c,
+          formatCell,
+        })
       }
     }
 
@@ -800,6 +830,35 @@ export class Canvas2DRenderer implements RenderBackend {
         rowIndex: ar,
         colIndex: ac,
         formatCell,
+      })
+      this.collectCellActionHits({
+        value,
+        rect: { x: cellX, y: cellY, width, height },
+        field,
+        textWrap: textWrapLookup.get(`${ar}:${ac}`),
+        rowIndex: ar,
+        colIndex: ac,
+        formatCell,
+      })
+    }
+  }
+
+  private collectCellActionHits(params: {
+    readonly value: CellValue | undefined
+    readonly rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
+    readonly field: Field
+    readonly textWrap?: TextWrapMode
+    readonly rowIndex: number
+    readonly colIndex: number
+    readonly formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
+  }): void {
+    const zones = this.cellPainter.getActionZones(params)
+    for (const zone of zones) {
+      this.cellActionHits.push({
+        rowIndex: params.rowIndex,
+        colIndex: params.colIndex,
+        actionId: zone.id,
+        rect: zone.rect,
       })
     }
   }

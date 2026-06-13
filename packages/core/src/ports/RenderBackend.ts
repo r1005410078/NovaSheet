@@ -12,6 +12,12 @@ import type { TextMeasurer } from '../kernel/measure/TextMeasurer'
 import type { Theme } from '../kernel/theme/Theme'
 import type { DataSource } from '../kernel/data/DataSource'
 
+export interface CellActionHit {
+  readonly rowIndex: number
+  readonly colIndex: number
+  readonly actionId: string
+}
+
 export interface RenderBackend {
   /** 将绘制表面挂到容器（Canvas2D 过渡期可能仍为 no-op，由装配层创建 canvas）。 */
   mount(container: HTMLElement): void
@@ -27,6 +33,8 @@ export interface RenderBackend {
    * 数据源变更时同步后端持有的可变引用（持有 data 的后端实现；纯 frame 驱动的后端可不实现）。
    */
   setData?(data: DataSource): void
+  /** 返回给定 canvas/client 坐标下的单元格 action；未命中返回 null。 */
+  getCellActionAt?(x: number, y: number): CellActionHit | null
   destroy(): void
 }
 

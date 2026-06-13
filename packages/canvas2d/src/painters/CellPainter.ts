@@ -165,6 +165,14 @@ export class CellPainter {
     ctx.restore()
   }
 
+  /** 返回 custom renderer 声明的 action hit zones；内置/fallback 单元格无 action。 */
+  getActionZones(params: CellPaintParams): readonly Canvas2DCellActionZone[] {
+    return this.cellRenderers[params.field.type]?.getActionZones?.({
+      ...params,
+      theme: this.theme,
+    }) ?? []
+  }
+
   private getTextAlign(field: Field): CanvasTextAlign {
     switch (field.type) {
       case 'text':
