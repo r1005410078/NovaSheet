@@ -2,10 +2,11 @@ import { useEffect, useRef } from 'react'
 import { createReactCellEditor, type ReactCellEditorProps } from '@novasheet/react'
 import type { CellEditor } from '@novasheet/core'
 import { richTextToHtml, htmlElementToRichText } from './serialize'
+import { FloatingFormatToolbar } from './FloatingFormatToolbar'
 
 const RICH_TEXT_NAMESPACE = 'richText'
 
-/** contenteditable 编辑器组件；初值由当前 value 回填（既存 runs 回填留 Task 6）。 */
+/** contenteditable 编辑器组件；初值由当前 value 回填（既存 runs 回填留 follow-up）。 */
 function RichTextCellEditorComponent(props: ReactCellEditorProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   const { value, commit, setAttachment, cancel } = props
@@ -14,7 +15,7 @@ function RichTextCellEditorComponent(props: ReactCellEditorProps): JSX.Element {
     const el = ref.current
     if (!el) return
     const text = value == null ? '' : String(value)
-    // 初值 runs：先以空 runs 回填纯文本；既存 runs 回填留 Task 6 接 getAttachment。
+    // 初值 runs：先以空 runs 回填纯文本；既存 runs 回填留 follow-up 接 getAttachment。
     el.innerHTML = richTextToHtml(text, [])
     el.focus()
   }, [value])
@@ -29,18 +30,21 @@ function RichTextCellEditorComponent(props: ReactCellEditorProps): JSX.Element {
   }
 
   return (
-    <div
-      ref={ref}
-      contentEditable
-      suppressContentEditableWarning
-      data-novasheet-rich-text-editor
-      style={{ minWidth: 120, outline: 'none', whiteSpace: 'pre-wrap' }}
-      onBlur={submit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' && !e.altKey) { e.preventDefault(); submit() }
-        if (e.key === 'Escape') { e.preventDefault(); cancel() }
-      }}
-    />
+    <div style={{ position: 'relative' }}>
+      <FloatingFormatToolbar editableRef={ref} />
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        data-novasheet-rich-text-editor
+        style={{ minWidth: 120, outline: 'none', whiteSpace: 'pre-wrap' }}
+        onBlur={submit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.altKey) { e.preventDefault(); submit() }
+          if (e.key === 'Escape') { e.preventDefault(); cancel() }
+        }}
+      />
+    </div>
   )
 }
 
