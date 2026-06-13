@@ -21,7 +21,7 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 | Phase | 包/层 | plan | 状态 |
 | --- | --- | --- | --- |
 | A | `@novasheet/core` 附件轴 | [`2026-06-13-...-cell-attachment-axis-phase-a.md`](./2026-06-13-novasheet-cell-attachment-axis-phase-a.md) | ☑ 已 ship |
-| B | `@novasheet/canvas2d` styled-text | [`2026-06-13-...-styled-text-phase-b.md`](./2026-06-13-novasheet-styled-text-phase-b.md) | ◐ plan 已详化 |
+| B | `@novasheet/canvas2d` styled-text | [`2026-06-13-...-styled-text-phase-b.md`](./2026-06-13-novasheet-styled-text-phase-b.md) | ☑ 已 ship |
 | C | `@novasheet/cell-kit` rich-text | 待展开 | ☐ |
 
 ---
@@ -36,11 +36,11 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 | --- | --- | --- |
 | Bold | B 渲染 + C 工具栏/编辑 | ☐ |
 | Italic | B + C | ☐ |
-| Underline（Canvas 手绘线） | B + C | ☐ |
-| Strikethrough（Canvas 手绘线，截图含） | B + C | ☐ |
-| Font size per-run（截图 −/+） | B（行高括高）+ C（工具栏） | ☐ |
-| Font family per-run | B + C | ☐ |
-| Text color per-run（截图 A） | B（段 fillStyle）+ C（颜色选择器） | ☐ |
+| Underline（Canvas 手绘线） | B + C | ◐ B 渲染原语已 ship，C 工具栏待 |
+| Strikethrough（Canvas 手绘线，截图含） | B + C | ◐ B 渲染原语已 ship，C 工具栏待 |
+| Font size per-run（截图 −/+） | B（行高括高）+ C（工具栏） | ◐ B 混排行高已 ship，C 工具栏待 |
+| Font family per-run | B + C | ◐ B StyledSegment.font 已 ship，C 待 |
+| Text color per-run（截图 A） | B（段 fillStyle）+ C（颜色选择器） | ◐ B 段 fillStyle 已 ship，C 待 |
 
 ### 1.2 数据模型（runs）
 
@@ -71,14 +71,14 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 | 能力 | 落点 | 状态 |
 | --- | --- | --- |
-| `paintStyledText` 多段绘制原语（canvas2d 公开导出） | B | ☐ |
-| 内置单段路径复用同原语，**零回归** | B | ☐ |
-| underline / strike 手绘线段（measure x + 基线偏移） | B | ☐ |
-| theme token：underline/strike 线宽 + 偏移 | B | ☐ |
-| 混排行高 = 段内最大 fontSize 括高 | B | ☐ |
-| wrap/overflow/clip × 多段（复用 `wrapText`+measurer） | B | ☐ |
-| 省略号截断 × 多段 | B | ☐ |
-| `getAttachment` 在 paint params 的**透传** | B Task7（消费在 C renderer） | ◐ plan 已详化 |
+| `paintStyledText` 多段绘制原语（canvas2d 公开导出） | B | ☑ |
+| 内置单段路径复用同原语，**零回归** | B（不迁移内置，原语独立+零回归） | ☑ |
+| underline / strike 手绘线段（measure x + 基线偏移） | B | ☑ |
+| theme token：underline/strike 线宽 + 偏移 | B | ☑ |
+| 混排行高 = 段内最大 fontSize 括高 | B（全局最大统一行高） | ☑ |
+| wrap/overflow/clip × 多段（复用 `wrapText`+measurer） | B | ☑ |
+| 省略号截断 × 多段 | B | ☑ |
+| `getAttachment` 在 paint params 的**透传** | B Task7（消费在 C renderer） | ☑ |
 | valueFormat×runs 门：runs 仅显示=raw string 时生效 | **C** richTextRenderer（B 无 runs 消费者，无法测；见 Phase B plan Self-Review） | ☐ |
 | DPR 1/1.5/2/3 清晰（线段不糊） | B | ☐ |
 
@@ -130,7 +130,7 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 ---
 
-## 3. Phase B — canvas2d styled-text（◐ plan 已详化）
+## 3. Phase B — canvas2d styled-text（☑ 已 ship）
 
 完整 bite-sized 步骤见 [Phase B plan](./2026-06-13-novasheet-styled-text-phase-b.md)。7 Task 映射：
 
