@@ -20,6 +20,15 @@ export interface StyledTextLayout {
   readonly measurer?: TextMeasurer
 }
 
+interface LinePiece {
+  readonly text: string
+  readonly seg: StyledSegment
+}
+interface LineLayout {
+  readonly pieces: readonly LinePiece[]
+  readonly height: number // px = 行内最大 fontSize × lineHeightMultiplier
+}
+
 function measure(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -47,28 +56,85 @@ export function paintStyledText(
   segments: readonly StyledSegment[],
   layout: StyledTextLayout,
 ): void {
-  const drawable = segments.filter((s) => s.text.length > 0)
-  if (drawable.length === 0) return
-  const { rect, padX, align, measurer } = layout
+  const { rect, padX, padY, lineHeightMultiplier } = layout
   const maxWidth = rect.width - padX * 2
   if (maxWidth <= 0) return
 
-  const widths = drawable.map((s) => measure(ctx, s.text, s, measurer))
+  // 全局最大 fontSize 决定统一行高（混排时所有行等高）
+  let globalMaxFontSize = 0
+  for (const s of segments) globalMaxFontSize = Math.max(globalMaxFontSize, s.fontSize)
+  const uniformLineHeight = (globalMaxFontSize > 0 ? globalMaxFontSize : 1) * lineHeightMultiplier
+
+  const lines = buildLinesBySplit(segments, lineHeightMultiplier, uniformLineHeight)
+  if (lines.length === 0) return
+
+  const availableHeight = rect.height - padY * 2
+  if (availableHeight <= 0) return
+
+  // 单行：垂直居中（保持 Task 2/3 行为）。多行：自顶向下堆叠，超高裁掉。
+  if (lines.length === 1) {
+    drawLine(ctx, lines[0]!, layout, rect.y + rect.height / 2)
+    return
+  }
+
+  let y = rect.y + padY
+  for (const line of lines) {
+    if (y + line.height > rect.y + padY + availableHeight + 0.01) break
+    drawLine(ctx, line, layout, y + line.height / 2)
+    y += line.height
+  }
+}
+
+function buildLinesBySplit(
+  segments: readonly StyledSegment[],
+  lineHeightMultiplier: number,
+  uniformLineHeight?: number,
+): LineLayout[] {
+  const rawLines: LinePiece[][] = [[]]
+  for (const seg of segments) {
+    const parts = seg.text.split('\n')
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0) rawLines.push([])
+      const part = parts[i]!
+      if (part.length > 0) rawLines[rawLines.length - 1]!.push({ text: part, seg })
+    }
+  }
+  return rawLines.map((pieces) => ({
+    pieces,
+    height: uniformLineHeight ?? lineHeight(pieces, lineHeightMultiplier),
+  }))
+}
+
+function lineHeight(pieces: readonly LinePiece[], multiplier: number): number {
+  let maxSize = 0
+  for (const p of pieces) maxSize = Math.max(maxSize, p.seg.fontSize)
+  return (maxSize > 0 ? maxSize : 1) * multiplier
+}
+
+function drawLine(
+  ctx: CanvasRenderingContext2D,
+  line: LineLayout,
+  layout: StyledTextLayout,
+  centerY: number,
+): void {
+  const pieces = line.pieces
+  if (pieces.length === 0) return
+  const { rect, padX, align, measurer } = layout
+  const widths = pieces.map((p) => measure(ctx, p.text, p.seg, measurer))
   const lineWidth = widths.reduce((a, b) => a + b, 0)
   const startX = lineStartX(rect, padX, align, lineWidth)
-  const centerY = rect.y + rect.height / 2
 
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
 
   let x = startX
-  for (let i = 0; i < drawable.length; i++) {
-    const s = drawable[i]!
-    ctx.font = s.font
-    ctx.fillStyle = s.color
-    ctx.fillText(s.text, x, centerY)
-    if (s.underline || s.strikethrough) {
-      drawDecoration(ctx, s, x, x + widths[i]!, centerY, layout.themeText)
+  for (let i = 0; i < pieces.length; i++) {
+    const { text, seg } = pieces[i]!
+    ctx.font = seg.font
+    ctx.fillStyle = seg.color
+    ctx.fillText(text, x, centerY)
+    if (seg.underline || seg.strikethrough) {
+      drawDecoration(ctx, seg, x, x + widths[i]!, centerY, layout.themeText)
     }
     x += widths[i]!
   }

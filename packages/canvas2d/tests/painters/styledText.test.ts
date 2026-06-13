@@ -120,3 +120,44 @@ describe('paintStyledText — 装饰线', () => {
     expect(ops.find((o) => o.op === 'moveTo')).toBeUndefined()
   })
 })
+
+describe('paintStyledText — 多行 + 混排行高', () => {
+  it('段文本含 \\n 时切两行，自顶向下堆叠', () => {
+    const { ctx, ops } = createRecordingContext()
+    paintStyledText(ctx, [seg('AB\nCD')], layout({ rect: { x: 0, y: 0, width: 100, height: 60 } }))
+    const fills = ops.filter((o) => o.op === 'fillText')
+    expect(fills.length).toBe(2)
+    if (fills[0]?.op === 'fillText' && fills[1]?.op === 'fillText') {
+      expect(fills[0].args[0]).toBe('AB')
+      expect(fills[1].args[0]).toBe('CD')
+      // 行高 = 14 * 1.4 = 19.6；firstY = y + padY + lineHeight/2 = 0+4+9.8 = 13.8
+      expect(fills[0].args[2]).toBeCloseTo(13.8, 5)
+      expect(fills[1].args[2]).toBeCloseTo(13.8 + 19.6, 5)
+    }
+  })
+
+  it('混排：行高取段内最大 fontSize', () => {
+    const { ctx, ops } = createRecordingContext()
+    paintStyledText(
+      ctx,
+      [seg('A', { fontSize: 14 }), seg('B', { fontSize: 28 }), seg('\nC')],
+      layout({ rect: { x: 0, y: 0, width: 200, height: 120 } }),
+    )
+    const fills = ops.filter((o) => o.op === 'fillText')
+    // 第一行高 = max(14,28)*1.4 = 39.2；第二行起点 = firstY + 39.2
+    const line1Y = 4 + 39.2 / 2
+    if (fills[2]?.op === 'fillText') {
+      expect(fills[2].args[0]).toBe('C')
+      expect(fills[2].args[2]).toBeCloseTo(line1Y + 39.2, 4)
+    }
+  })
+
+  it('超 maxLines（高度不足）的行被裁掉', () => {
+    const { ctx, ops } = createRecordingContext()
+    // 高 28，padY*2=8 → 可用 20；行高 19.6 → maxLines = 1
+    paintStyledText(ctx, [seg('AB\nCD\nEF')], layout({ rect: { x: 0, y: 0, width: 100, height: 28 } }))
+    const fills = ops.filter((o) => o.op === 'fillText')
+    expect(fills.length).toBe(1)
+    if (fills[0]?.op === 'fillText') expect(fills[0].args[0]).toBe('AB')
+  })
+})
