@@ -53,6 +53,8 @@ export interface CellPaintParams {
 export interface Canvas2DCellRenderParams extends CellPaintParams {
   /** 当前 theme；外部 renderer 可优先复用 NovaSheet 视觉 token。 */
   readonly theme: Theme
+  /** CellPainter 注入的文本量度器；wrap 模式下 rich-text renderer 可直接复用。 */
+  readonly measurer?: TextMeasurer
 }
 
 /** Task 6 接入 action routing 前，仅声明 Canvas2D renderer 可返回的 hit zone 形状。 */
@@ -135,7 +137,7 @@ export class CellPainter {
 
     const custom = this.cellRenderers[field.type]
     if (custom) {
-      custom.paint(ctx, { ...params, theme: this.theme })
+      custom.paint(ctx, { ...params, theme: this.theme, measurer: this.measurer })
       ctx.restore()
       return
     }
@@ -172,6 +174,7 @@ export class CellPainter {
     return this.cellRenderers[params.field.type]?.getActionZones?.({
       ...params,
       theme: this.theme,
+      measurer: this.measurer,
     }) ?? []
   }
 
