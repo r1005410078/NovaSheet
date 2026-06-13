@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { denseGridTheme } from '@novasheet/core'
+import { denseGridTheme, wrapText } from '@novasheet/core'
 import { paintStyledText, type StyledSegment, type StyledTextLayout } from '../../src/painters/styledText'
 import { createRecordingContext } from '../helpers/recording-context'
 
@@ -159,5 +159,38 @@ describe('paintStyledText — 多行 + 混排行高', () => {
     const fills = ops.filter((o) => o.op === 'fillText')
     expect(fills.length).toBe(1)
     if (fills[0]?.op === 'fillText') expect(fills[0].args[0]).toBe('AB')
+  })
+})
+
+const m7: import('@novasheet/core').TextMeasurer = { measureWidth: (t) => t.length * 7 }
+
+describe('paintStyledText — wrap 多段', () => {
+  it('单段 wrap 与 core wrapText 同字体产出一致的行内容', () => {
+    const { ctx, ops } = createRecordingContext()
+    const text = 'hello world foo bar'
+    const rect = { x: 0, y: 0, width: 100, height: 120 }
+    paintStyledText(ctx, [seg(text)], layout({ rect, wrap: 'wrap', measurer: m7 }))
+    const drawn = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    // maxWidth = 100 - 16 = 84；lineHeight = 19.6；maxLines = floor((120-8)/19.6)=5
+    const expected = wrapText(text, { font: '14px sans-serif', maxWidth: 84, lineHeight: 19.6, maxLines: 5 }, m7)
+    expect(drawn).toEqual([...expected.lines])
+  })
+
+  it('跨段 wrap：第二段接续第一段宽度累加换行', () => {
+    const { ctx, ops } = createRecordingContext()
+    paintStyledText(
+      ctx,
+      [seg('aaaa '), seg('bbbb cccc')],
+      layout({ rect: { x: 0, y: 0, width: 100, height: 120 }, wrap: 'wrap', measurer: m7 }),
+    )
+    const drawn = ops.filter((o) => o.op === 'fillText').map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    expect(drawn.some((s) => s.includes('cccc'))).toBe(true)
+    expect(drawn.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('wrap 但无 measurer 时退化为单行不抛错', () => {
+    const { ctx, ops } = createRecordingContext()
+    paintStyledText(ctx, [seg('hello world foo')], layout({ wrap: 'wrap' }))
+    expect(ops.find((o) => o.op === 'fillText')).toBeDefined()
   })
 })
