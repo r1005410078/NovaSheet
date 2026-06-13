@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": "../..",
     "outDir": "./dist",
-    "types": ["bun"]
+    "jsx": "react-jsx",
+    "types": ["bun", "react"]
   },
   "include": ["src/**/*", "tests/**/*", "scripts/**/*", "build.ts"]
 }

@@ -6,7 +6,7 @@ import { rm, copyFile } from 'node:fs/promises'
 const ROOT = new URL('.', import.meta.url).pathname
 await rm(`${ROOT}dist`, { recursive: true, force: true })
 
-const EXTERNALS = ['@novasheet/core', '@novasheet/canvas2d'] as const
+const EXTERNALS = ['@novasheet/core', '@novasheet/canvas2d', 'react', 'react-dom'] as const
 const common = {
   entrypoints: [`${ROOT}src/index.ts`],
   outdir: `${ROOT}dist`,
