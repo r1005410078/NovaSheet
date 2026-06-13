@@ -157,6 +157,15 @@ export interface ThemeDimensions {
   readonly hideColTrianglePadY: number
 }
 
+/** 文本排版与装饰几何 token */
+export interface ThemeText {
+  readonly lineHeightMultiplier: number
+  readonly underlineWidth: number
+  readonly underlineOffset: number
+  readonly lineThroughWidth: number
+  readonly lineThroughOffset: number
+}
+
 /** 完整主题定义接口，所有视觉值必须从此处读取，禁止在 src/render/ 内硬编码 */
 export interface Theme {
   readonly metrics: ThemeMetrics
@@ -167,4 +176,5 @@ export interface Theme {
   readonly frozenSeparator: ThemeFrozenSeparator
   readonly emptyState: ThemeEmptyState
   readonly dimensions: ThemeDimensions
+  readonly text: ThemeText
 }

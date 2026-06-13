@@ -103,6 +103,13 @@ export const denseGridTheme: Theme = {
     hideColTriangleOffset: 4,
     hideColTrianglePadY: 6,
   },
+  text: {
+    lineHeightMultiplier: 1.4,
+    underlineWidth: 1,
+    underlineOffset: 6,
+    lineThroughWidth: 1,
+    lineThroughOffset: 0,
+  },
   emptyState: {
     viewBoxWidth: 80,
     viewBoxHeight: 72,

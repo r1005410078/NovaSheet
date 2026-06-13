@@ -48,6 +48,7 @@ export type {
   ThemeIcons,
   ThemeMetrics,
   ThemeScrollbar,
+  ThemeText,
 } from './kernel/theme/Theme'
 
 // 布局层

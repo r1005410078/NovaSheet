@@ -82,3 +82,14 @@ describe('denseGridTheme — Phase 4.6 tokens', () => {
     expect(denseGridTheme.dimensions.hideColTrianglePadY).toBe(6)
   })
 })
+
+describe('denseGridTheme.text token', () => {
+  it('exposes line-height multiplier and decoration geometry', () => {
+    const t = denseGridTheme.text
+    expect(t.lineHeightMultiplier).toBe(1.4)
+    expect(t.underlineWidth).toBeGreaterThan(0)
+    expect(typeof t.underlineOffset).toBe('number')
+    expect(t.lineThroughWidth).toBeGreaterThan(0)
+    expect(typeof t.lineThroughOffset).toBe('number')
+  })
+})
