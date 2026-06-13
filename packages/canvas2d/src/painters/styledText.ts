@@ -67,6 +67,36 @@ export function paintStyledText(
     ctx.font = s.font
     ctx.fillStyle = s.color
     ctx.fillText(s.text, x, centerY)
+    if (s.underline || s.strikethrough) {
+      drawDecoration(ctx, s, x, x + widths[i]!, centerY, layout.themeText)
+    }
     x += widths[i]!
+  }
+}
+
+function drawDecoration(
+  ctx: CanvasRenderingContext2D,
+  seg: StyledSegment,
+  x0: number,
+  x1: number,
+  centerY: number,
+  themeText: ThemeText,
+): void {
+  ctx.strokeStyle = seg.color
+  if (seg.underline) {
+    ctx.lineWidth = themeText.underlineWidth
+    const y = centerY + themeText.underlineOffset
+    ctx.beginPath()
+    ctx.moveTo(x0, y)
+    ctx.lineTo(x1, y)
+    ctx.stroke()
+  }
+  if (seg.strikethrough) {
+    ctx.lineWidth = themeText.lineThroughWidth
+    const y = centerY - themeText.lineThroughOffset
+    ctx.beginPath()
+    ctx.moveTo(x0, y)
+    ctx.lineTo(x1, y)
+    ctx.stroke()
   }
 }

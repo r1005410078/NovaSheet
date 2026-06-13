@@ -86,3 +86,37 @@ describe('paintStyledText — 多段单行', () => {
     }
   })
 })
+
+describe('paintStyledText — 装饰线', () => {
+  it('underline 段画 moveTo/lineTo，坐标=段 x 区间 + 基线下偏移', () => {
+    const { ctx, ops } = createRecordingContext()
+    paintStyledText(ctx, [seg('AB', { underline: true })], layout())
+    const moveTo = ops.find((o) => o.op === 'moveTo')
+    const lineTo = ops.find((o) => o.op === 'lineTo')
+    expect(moveTo).toBeDefined()
+    expect(lineTo).toBeDefined()
+    if (moveTo?.op === 'moveTo' && lineTo?.op === 'lineTo') {
+      const y = 14 + denseGridTheme.text.underlineOffset // centerY + offset
+      expect(moveTo.args).toEqual([8, y])               // 起点 x=padX
+      expect(lineTo.args).toEqual([8 + 14, y])          // 终点 x=padX+段宽(2字符*7)
+    }
+    expect(ops).toContainEqual({ op: 'set:lineWidth', value: denseGridTheme.text.underlineWidth })
+    expect(ops).toContainEqual({ op: 'set:strokeStyle', value: '#111' })
+  })
+
+  it('strikethrough 段画线在 centerY - lineThroughOffset', () => {
+    const { ctx, ops } = createRecordingContext()
+    paintStyledText(ctx, [seg('AB', { strikethrough: true })], layout())
+    const moveTo = ops.find((o) => o.op === 'moveTo')
+    if (moveTo?.op === 'moveTo') {
+      const y = 14 - denseGridTheme.text.lineThroughOffset
+      expect(moveTo.args[1]).toBe(y)
+    }
+  })
+
+  it('无装饰段不画线', () => {
+    const { ctx, ops } = createRecordingContext()
+    paintStyledText(ctx, [seg('AB')], layout())
+    expect(ops.find((o) => o.op === 'moveTo')).toBeUndefined()
+  })
+})
