@@ -50,3 +50,39 @@ describe('paintStyledText — 单段单行', () => {
     if (fillText?.op === 'fillText') expect(fillText.args[1]).toBe(71)
   })
 })
+
+describe('paintStyledText — 多段单行', () => {
+  it('按段切 font/fillStyle 顺序绘制，x 累加', () => {
+    const { ctx, ops } = createRecordingContext()
+    paintStyledText(
+      ctx,
+      [
+        seg('AB', { font: 'bold 14px sans-serif', color: '#a00' }),
+        seg('CD', { font: '14px sans-serif', color: '#0a0' }),
+      ],
+      layout(),
+    )
+    const fills = ops.filter((o) => o.op === 'fillText')
+    expect(fills.length).toBe(2)
+    if (fills[0]?.op === 'fillText' && fills[1]?.op === 'fillText') {
+      expect(fills[0].args[0]).toBe('AB')
+      expect(fills[0].args[1]).toBe(8)         // padX
+      expect(fills[1].args[0]).toBe('CD')
+      expect(fills[1].args[1]).toBe(8 + 14)    // padX + 'AB' 宽(2*7)
+    }
+    const fontOps = ops.filter((o) => o.op === 'set:font').map((o) => o.op === 'set:font' && o.value)
+    expect(fontOps).toContain('bold 14px sans-serif')
+    expect(fontOps).toContain('14px sans-serif')
+  })
+
+  it('right 对齐多段：整行宽右贴，段内相对顺序不变', () => {
+    const { ctx, ops } = createRecordingContext()
+    // 'AB'+'CD' 共 4 字符 = 28 宽；右内沿 92 → 起点 64
+    paintStyledText(ctx, [seg('AB'), seg('CD')], layout({ align: 'right' }))
+    const fills = ops.filter((o) => o.op === 'fillText')
+    if (fills[0]?.op === 'fillText' && fills[1]?.op === 'fillText') {
+      expect(fills[0].args[1]).toBe(64)
+      expect(fills[1].args[1]).toBe(64 + 14)
+    }
+  })
+})

@@ -47,21 +47,26 @@ export function paintStyledText(
   segments: readonly StyledSegment[],
   layout: StyledTextLayout,
 ): void {
-  if (segments.length === 0) return
+  const drawable = segments.filter((s) => s.text.length > 0)
+  if (drawable.length === 0) return
   const { rect, padX, align, measurer } = layout
   const maxWidth = rect.width - padX * 2
   if (maxWidth <= 0) return
 
-  const first = segments[0]!
-  if (first.text.length === 0) return
-
-  const lineWidth = measure(ctx, first.text, first, measurer)
+  const widths = drawable.map((s) => measure(ctx, s.text, s, measurer))
+  const lineWidth = widths.reduce((a, b) => a + b, 0)
   const startX = lineStartX(rect, padX, align, lineWidth)
   const centerY = rect.y + rect.height / 2
 
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
-  ctx.font = first.font
-  ctx.fillStyle = first.color
-  ctx.fillText(first.text, startX, centerY)
+
+  let x = startX
+  for (let i = 0; i < drawable.length; i++) {
+    const s = drawable[i]!
+    ctx.font = s.font
+    ctx.fillStyle = s.color
+    ctx.fillText(s.text, x, centerY)
+    x += widths[i]!
+  }
 }
