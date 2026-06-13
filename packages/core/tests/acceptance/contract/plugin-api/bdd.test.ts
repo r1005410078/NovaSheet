@@ -3,6 +3,7 @@ import { describe, expect, it } from 'bun:test'
 import * as publicApi from '../../../../src'
 import {
   type CellActionContext,
+  type CellAttachmentCodec,
   type CellFilterOperator,
   type CellFormat,
   type CellTypeDefinition,
@@ -13,7 +14,10 @@ import {
 } from '../../../../src'
 import {
   createDenseData,
+  createMutableData,
   createNoopBackend,
+  mountRecordingGrid,
+  withManualRaf,
 } from '../../_helpers/fixtures'
 import { expectGolden } from '../../_helpers/golden'
 
@@ -52,5 +56,47 @@ describe('Core acceptance type inventory', () => {
     // type-only 导出不在 Object.keys 内，仍由上面的类型引用 + strict typecheck 覆盖。
     const exportNames = Object.keys(publicApi).sort().join('\n')
     expectGolden(import.meta.dir, 'core.type.public-api-inventory', `${exportNames}\n`)
+  })
+})
+
+describe('Core acceptance cell-attachment', () => {
+  it('core.L2.cell-attachment-store-set-get-undo round-trips and undoes', () => {
+    withManualRaf((_flushRaf) => {
+      const demoCodec: CellAttachmentCodec<{ note: string }> = {
+        namespace: 'demo',
+        serialize: (d) => JSON.stringify(d),
+        deserialize: (t) => JSON.parse(t) as { note: string },
+      }
+      const { grid } = mountRecordingGrid({
+        data: createDenseData(),
+        cellAttachments: [demoCodec],
+      })
+      grid.setCellAttachment('demo', 1, 0, { note: 'x' })
+      expect(grid.getCellAttachment('demo', 1, 0)).toEqual({ note: 'x' })
+      grid.undo()
+      expect(grid.getCellAttachment('demo', 1, 0)).toBeUndefined()
+      grid.redo()
+      expect(grid.getCellAttachment('demo', 1, 0)).toEqual({ note: 'x' })
+      grid.destroy()
+    })
+  })
+
+  it('core.L1.cell-attachment-follows-row-insert shifts with raw cell', () => {
+    withManualRaf((_flushRaf) => {
+      const demoCodec: CellAttachmentCodec<{ note: string }> = {
+        namespace: 'demo',
+        serialize: (d) => JSON.stringify(d),
+        deserialize: (t) => JSON.parse(t) as { note: string },
+      }
+      const { grid } = mountRecordingGrid({
+        data: createMutableData(),
+        cellAttachments: [demoCodec],
+      })
+      grid.setCellAttachment('demo', 2, 0, { note: 'y' })
+      grid.insertRows(0, 1)
+      expect(grid.getCellAttachment('demo', 3, 0)).toEqual({ note: 'y' })
+      expect(grid.getCellAttachment('demo', 2, 0)).toBeUndefined()
+      grid.destroy()
+    })
   })
 })
