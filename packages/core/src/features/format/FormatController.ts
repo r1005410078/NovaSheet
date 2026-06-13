@@ -132,6 +132,7 @@ export class FormatController {
     const selectionBefore = this.ctx.getSelection()
     const formatSnap = this.formatState.formatStore.snapshot()
     const attachmentBefore = this.formatState.attachmentStore.snapshot()
+    // TODO(phase-a-perf): 相同值重写仍入 undo 栈；后续加 deep-equal guard（对齐 commitFormatChange 的 sameFormatLayers）
     this.formatState.attachmentStore.set(namespace, rawRow, rawCol, data)
     const attachmentAfter = this.formatState.attachmentStore.snapshot()
     const selectionAfter = this.ctx.getSelection()
