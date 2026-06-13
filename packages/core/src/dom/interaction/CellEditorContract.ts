@@ -8,6 +8,8 @@ export interface CellEditorOpenContext {
   readonly cell: CellAddress
   readonly field: Field
   readonly value: CellValue | undefined
+  /** Grid 容器；`rect` 使用该容器的本地坐标系。 */
+  readonly container: HTMLElement
   readonly rect: CellRect
   readonly trigger: CellEditorTrigger
   readonly initialInput?: string

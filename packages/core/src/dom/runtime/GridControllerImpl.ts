@@ -217,6 +217,7 @@ export class GridControllerImpl implements GridController {
     })
 
     this.runtime = new GridRuntime({
+      container: this.container,
       engine: this.engine,
       host: this.host,
       renderer: this.renderer,

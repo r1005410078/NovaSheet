@@ -203,19 +203,20 @@ describe('NovaExcel L3a shell', () => {
       rows: [{ owner: 'Alice' }],
     })
 
-    const { unmount } = await mountNovaExcel({
+    const mounted = await mountNovaExcel({
       data,
       ref,
       cellEditors: {
         assignee: createReactCellEditor(AssigneePicker, { kind: 'popover' }),
       },
     })
+    const { container, unmount } = mounted
 
     await act(async () => {
       ref.current!.grid.openCellEditor(0, 'owner')
       await Promise.resolve()
     })
-    const bobButton = document.body.querySelector<HTMLButtonElement>(
+    const bobButton = container.querySelector<HTMLButtonElement>(
       '[data-novasheet-react-cell-editor] button',
     )
     expect(bobButton?.textContent).toBe('Bob')
@@ -226,14 +227,14 @@ describe('NovaExcel L3a shell', () => {
     })
 
     expect(data.getCell(0, 'owner')).toBe('Bob')
-    expect(document.body.querySelector('[data-testid="assignee-picker"]')).toBeNull()
+    expect(container.querySelector('[data-testid="assignee-picker"]')).toBeNull()
 
     await act(async () => {
       ref.current!.grid.openCellEditor(0, 'owner')
       await Promise.resolve()
     })
     const cancelButton = Array.from(
-      document.body.querySelectorAll<HTMLButtonElement>('[data-novasheet-react-cell-editor] button'),
+      container.querySelectorAll<HTMLButtonElement>('[data-novasheet-react-cell-editor] button'),
     ).find((button) => button.textContent === 'Cancel')
     expect(cancelButton).toBeDefined()
 
@@ -243,7 +244,7 @@ describe('NovaExcel L3a shell', () => {
     })
 
     expect(data.getCell(0, 'owner')).toBe('Bob')
-    expect(document.body.querySelector('[data-testid="assignee-picker"]')).toBeNull()
+    expect(container.querySelector('[data-testid="assignee-picker"]')).toBeNull()
     expect('createReactCellRenderer' in NovaSheetReact).toBe(false)
 
     unmount()

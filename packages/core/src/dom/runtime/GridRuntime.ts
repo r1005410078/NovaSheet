@@ -124,6 +124,8 @@ export interface AutofitRowsRuntimeOptions {
 
 /** GridRuntime 的依赖注入参数，由 backend 装配阶段提供。 */
 export interface GridRuntimeOptions {
+  /** Grid DOM container；custom editor overlay 使用同一局部坐标系挂载。 */
+  container?: HTMLElement
   /** 核心表格状态与 mutation 引擎。 */
   engine: GridEngine
   /** Web 平台 host adapter，封装 DOM 生命周期、尺寸与滚动。 */
@@ -287,6 +289,8 @@ export class GridRuntime {
   private excelWorkspaceMutated = false
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
+  /** Custom editor overlay 的 DOM 宿主。 */
+  private editorContainer: HTMLElement
   /** 自定义单元格编辑器注册表；key 为 `Field.type`。 */
   private cellEditors: CellEditorRegistry = {}
   /** 自定义单元格类型语义注册表；key 为 `Field.type`。 */
@@ -363,6 +367,7 @@ export class GridRuntime {
     this.engine = opts.engine
     this.host = opts.host
     this.renderer = opts.renderer
+    this.editorContainer = opts.container ?? document.createElement('div')
     this.cellEditors = opts.cellEditors ?? {}
     this.cellTypes = opts.cellTypes ?? {}
     this.scheduler = opts.scheduler ?? new FrameScheduler()
@@ -2295,6 +2300,7 @@ export class GridRuntime {
       cell,
       field,
       value: data.getCell?.(cell.rowIndex, field.id),
+      container: this.editorContainer,
       rect,
       trigger: args.trigger,
       initialInput: args.initialInput,

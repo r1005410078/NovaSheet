@@ -78,6 +78,7 @@ export function useNovaSheetGrid(options: Omit<NovaSheetGridProps, 'className'>)
   onColumnsMovedRef.current = onColumnsMoved
   onSelectionChangeRef.current = onSelectionChange
 
+  // 扩展注册表是构造期选项；需要变更时应 remount grid。
   const createGrid = useCallback(
     (container: HTMLElement): Grid =>
       new Grid(container, {
@@ -104,9 +105,9 @@ export function useNovaSheetGrid(options: Omit<NovaSheetGridProps, 'className'>)
         onColumnsInserted: (event) => onColumnsInsertedRef.current?.(event),
         onColumnsDeleted: (event) => onColumnsDeletedRef.current?.(event),
         onHideColsChange: (event) => onHideColsChangeRef.current?.(event),
-      onColumnsMoved: (event) => onColumnsMovedRef.current?.(event),
-      onSelectionChange: (selection) => onSelectionChangeRef.current?.(selection),
-      backend: canvas2dBackend(),
+        onColumnsMoved: (event) => onColumnsMovedRef.current?.(event),
+        onSelectionChange: (selection) => onSelectionChangeRef.current?.(selection),
+        backend: canvas2dBackend(),
       }),
     [],
   )

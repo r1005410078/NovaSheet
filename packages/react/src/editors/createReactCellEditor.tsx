@@ -43,7 +43,7 @@ export function createReactCellEditor<TProps extends object = object>(
         top: `${ctx.rect.y + ctx.rect.height}px`,
         zIndex: '20',
       })
-      document.body.appendChild(host)
+      ctx.container.appendChild(host)
 
       root = createRoot(host)
       const props = (componentProps ?? {}) as TProps
