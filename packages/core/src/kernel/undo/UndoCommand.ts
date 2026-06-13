@@ -4,6 +4,7 @@ import type { MergeRegion } from '../coords/MergeRegion'
 import type { CellRange, GridSelection } from '../coords/SelectionTypes'
 import type { FrozenConfig } from '../geometry/FrozenRegions'
 import type { FormatLayer } from '../protocol/FormatTypes'
+import type { CellAttachmentSnapshot } from '../protocol/AttachmentTypes'
 
 export interface CellWrite {
   readonly rowIndex: number
@@ -178,6 +179,9 @@ export type UndoCommand =
       readonly after: readonly FormatLayer[]
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
+      /** 附件快照（可选，仅 setCellAttachment 场景填充）。 */
+      readonly attachmentBefore?: CellAttachmentSnapshot
+      readonly attachmentAfter?: CellAttachmentSnapshot
     }
   | {
       readonly kind: 'merge'

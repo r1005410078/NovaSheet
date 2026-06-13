@@ -124,6 +124,29 @@ export class FormatController {
     return true
   }
 
+  /**
+   * 给 raw 坐标 `(rawRow, rawCol)` 的 `namespace` 附件写入 `data`（`undefined` 为清除）。
+   * 快照附件 before/after 嵌入 format undo 命令；format store 不变（before===after 同一份）。
+   */
+  setCellAttachment<T>(namespace: string, rawRow: number, rawCol: number, data: T | undefined): boolean {
+    const selectionBefore = this.ctx.getSelection()
+    const formatSnap = this.formatState.formatStore.snapshot()
+    const attachmentBefore = this.formatState.attachmentStore.snapshot()
+    this.formatState.attachmentStore.set(namespace, rawRow, rawCol, data)
+    const attachmentAfter = this.formatState.attachmentStore.snapshot()
+    const selectionAfter = this.ctx.getSelection()
+    this.ctx.pushUndo({
+      kind: 'format',
+      before: formatSnap,
+      after: formatSnap,
+      selectionBefore,
+      selectionAfter,
+      attachmentBefore,
+      attachmentAfter,
+    })
+    return true
+  }
+
   /** 快照前后一致说明 store 未变动（无副作用），返回 false；否则入栈 format 命令返回 true。 */
   private commitFormatChange(before: readonly FormatLayer[], selectionBefore: GridSelection): boolean {
     const after = this.formatState.formatStore.snapshot()

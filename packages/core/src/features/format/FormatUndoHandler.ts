@@ -3,6 +3,7 @@ import type { MergeRegion } from '../merge/MergeStore'
 import type { GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { UndoHandler } from '../../kernel/undo/UndoHandler'
+import type { CellAttachmentSnapshot } from '../../kernel/protocol/AttachmentTypes'
 
 /** 本 handler 负责的 format 域命令 kind 集合。 */
 const FORMAT_KINDS = new Set<UndoCommand['kind']>(['format', 'merge', 'unmerge'])
@@ -19,6 +20,8 @@ export interface FormatUndoContext {
   restoreMerge(regions: readonly MergeRegion[]): void
   /** 还原选区（engine 内为 `selectionController.setSelection`）。 */
   restoreSelection(selection: GridSelection): void
+  /** 还原附件快照（engine 内为 `FormatState.restoreAttachments`）。 */
+  restoreAttachments(snap: CellAttachmentSnapshot): void
 }
 
 /**
@@ -41,6 +44,7 @@ export class FormatUndoHandler implements UndoHandler {
     switch (command.kind) {
       case 'format':
         this.ctx.restoreFormat(command.before)
+        if (command.attachmentBefore !== undefined) this.ctx.restoreAttachments(command.attachmentBefore)
         this.ctx.restoreSelection(command.selectionBefore)
         return
       case 'merge':
@@ -57,6 +61,7 @@ export class FormatUndoHandler implements UndoHandler {
     switch (command.kind) {
       case 'format':
         this.ctx.restoreFormat(command.after)
+        if (command.attachmentAfter !== undefined) this.ctx.restoreAttachments(command.attachmentAfter)
         this.ctx.restoreSelection(command.selectionAfter)
         return
       case 'merge':

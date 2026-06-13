@@ -127,3 +127,31 @@ describe('FormatController — setValueFormat', () => {
     expect(pushed).toHaveLength(0)
   })
 })
+
+describe('FormatController — setCellAttachment', () => {
+  it('写入附件并入栈 format 命令（attachmentBefore/After 快照）', () => {
+    const { fc, formatState, pushed } = makeController()
+    const ok = fc.setCellAttachment('demo', 1, 0, { note: 'x' })
+    expect(ok).toBe(true)
+    expect(formatState.attachmentStore.get('demo', 1, 0)).toEqual({ note: 'x' })
+    expect(pushed).toHaveLength(1)
+    const cmd = pushed[0]!
+    expect(cmd.kind).toBe('format')
+    if (cmd.kind === 'format') {
+      expect(cmd.attachmentBefore).toEqual([])
+      expect(cmd.attachmentAfter).toEqual([
+        { row: 1, col: 0, namespace: 'demo', data: { note: 'x' } },
+      ])
+    }
+  })
+
+  it('写入 undefined 等于清除，入栈', () => {
+    const { fc, formatState, pushed } = makeController()
+    fc.setCellAttachment('demo', 1, 0, { note: 'x' })
+    pushed.length = 0
+    fc.setCellAttachment('demo', 1, 0, undefined)
+    expect(formatState.attachmentStore.get('demo', 1, 0)).toBeUndefined()
+    expect(pushed).toHaveLength(1)
+  })
+})
+

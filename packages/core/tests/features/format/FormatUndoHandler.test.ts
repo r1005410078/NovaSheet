@@ -6,11 +6,13 @@ import type { FormatLayer } from '../../../src/kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../../../src/features/merge/MergeStore'
 import type { GridSelection } from '../../../src/kernel/coords/SelectionTypes'
 import type { UndoCommand } from '../../../src/kernel/undo/UndoCommand'
+import type { CellAttachmentSnapshot } from '../../../src/kernel/protocol/AttachmentTypes'
 
 type RestoreFormatCall = { op: 'format'; layers: readonly FormatLayer[] }
 type RestoreMergeCall = { op: 'merge'; regions: readonly MergeRegion[] }
 type RestoreSelCall = { op: 'selection'; selection: GridSelection }
-type Call = RestoreFormatCall | RestoreMergeCall | RestoreSelCall
+type RestoreAttachmentCall = { op: 'attachment'; snap: CellAttachmentSnapshot }
+type Call = RestoreFormatCall | RestoreMergeCall | RestoreSelCall | RestoreAttachmentCall
 
 function makeRecordingContext(): { ctx: FormatUndoContext; calls: Call[] } {
   const calls: Call[] = []
@@ -23,6 +25,9 @@ function makeRecordingContext(): { ctx: FormatUndoContext; calls: Call[] } {
     },
     restoreSelection(selection) {
       calls.push({ op: 'selection', selection })
+    },
+    restoreAttachments(snap) {
+      calls.push({ op: 'attachment', snap })
     },
   }
   return { ctx, calls }
@@ -122,4 +127,55 @@ describe('FormatUndoHandler', () => {
       })
     })
   }
+
+  describe('format with attachments', () => {
+    const attachBefore: CellAttachmentSnapshot = [
+      { row: 0, col: 0, namespace: 'demo', data: { note: 'x' } },
+    ]
+    const attachAfter: CellAttachmentSnapshot = [
+      { row: 0, col: 0, namespace: 'demo', data: { note: 'y' } },
+    ]
+    const cmd: UndoCommand = {
+      kind: 'format',
+      before: formatBefore,
+      after: formatAfter,
+      selectionBefore: selBefore,
+      selectionAfter: selAfter,
+      attachmentBefore: attachBefore,
+      attachmentAfter: attachAfter,
+    }
+
+    it('undo 还原 before 格式 + attachmentBefore + selectionBefore', () => {
+      const { ctx, calls } = makeRecordingContext()
+      new FormatUndoHandler(ctx).applyUndo(cmd)
+      expect(calls).toEqual([
+        { op: 'format', layers: formatBefore },
+        { op: 'attachment', snap: attachBefore },
+        { op: 'selection', selection: selBefore },
+      ])
+    })
+
+    it('redo 还原 after 格式 + attachmentAfter + selectionAfter', () => {
+      const { ctx, calls } = makeRecordingContext()
+      new FormatUndoHandler(ctx).applyRedo(cmd)
+      expect(calls).toEqual([
+        { op: 'format', layers: formatAfter },
+        { op: 'attachment', snap: attachAfter },
+        { op: 'selection', selection: selAfter },
+      ])
+    })
+
+    it('format 命令无附件字段时 undo 不调用 restoreAttachments', () => {
+      const cmdNoAttach: UndoCommand = {
+        kind: 'format',
+        before: formatBefore,
+        after: formatAfter,
+        selectionBefore: selBefore,
+        selectionAfter: selAfter,
+      }
+      const { ctx, calls } = makeRecordingContext()
+      new FormatUndoHandler(ctx).applyUndo(cmdNoAttach)
+      expect(calls.every((c) => c.op !== 'attachment')).toBe(true)
+    })
+  })
 })

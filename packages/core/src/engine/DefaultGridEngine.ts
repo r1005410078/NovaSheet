@@ -253,6 +253,7 @@ export class DefaultGridEngine implements GridEngine {
       restoreFormat: (layers) => this.formatState.restoreFormat(layers),
       restoreMerge: (regions) => this.formatState.restoreMerge(regions),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
+      restoreAttachments: (snap) => this.formatState.restoreAttachments(snap),
     })
     registerRowUndo(this.undoRegistry, {
       setRowHeight: (rowIndex, height) => this.rowStructure.setRowHeight(rowIndex, height),
