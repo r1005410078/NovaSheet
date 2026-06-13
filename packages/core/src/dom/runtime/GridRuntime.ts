@@ -705,6 +705,20 @@ export class GridRuntime {
     return changed
   }
 
+  /** 给 raw cell 写扩展附件；变化时刷新视图并返回 true。 */
+  setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.setCellAttachment(namespace, rawRow, rawCol, data)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** 读 raw cell 的扩展附件；无则 undefined。 */
+  getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown {
+    if (this.destroyed) return undefined
+    return this.engine.getCellAttachment(namespace, rawRow, rawCol)
+  }
+
   /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时刷新视图。 */
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
     if (this.destroyed) return false

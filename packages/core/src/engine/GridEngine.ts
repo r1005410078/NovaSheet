@@ -79,6 +79,8 @@ export interface GridEngineOptions {
   locale?: string
   /** 单元格类型语义注册表：驱动 inline edit parse/format 等 backend-neutral 行为。 */
   cellTypes?: CellTypeRegistry
+  /** 扩展附件 codec 注册表；namespace 唯一，core 不识别 T 语义。 */
+  cellAttachments?: readonly import('../kernel/protocol/AttachmentTypes').CellAttachmentCodec<unknown>[]
 }
 
 export interface FillCommitResult {
@@ -339,6 +341,12 @@ export interface GridFormatting {
 
   /** 解析 view 坐标的单元格格式；无格式返回 undefined。 */
   getViewCellFormat(viewRow: number, viewCol: number): CellFormat | undefined
+
+  /** 给 raw cell 写扩展附件；data=undefined 清除；快照前后无变化返回 false。 */
+  setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean
+
+  /** 读 raw cell 的扩展附件；无则 undefined。 */
+  getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown
 }
 
 /** 单元格合并能力。 */

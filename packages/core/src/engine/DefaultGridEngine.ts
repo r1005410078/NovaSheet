@@ -21,6 +21,7 @@ import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import { EditController } from '../features/edit/EditController'
 import { CellEditModel } from '../features/edit/CellEditModel'
 import type { CellTypeRegistry } from '../features/cell-types'
+import type { CellAttachmentCodec } from '../kernel/protocol/AttachmentTypes'
 import { parseSelectionNavigationKey } from '../features/selection/SelectionNavigation'
 import type {
   CellAddress,
@@ -97,6 +98,8 @@ export class DefaultGridEngine implements GridEngine {
   private readonly locale: string
   /** 单元格类型语义注册表。 */
   private readonly cellTypes: CellTypeRegistry
+  /** 附件 codec 注册表（namespace → codec）。 */
+  private readonly codecRegistry = new Map<string, CellAttachmentCodec<unknown>>()
   /** Layout 领域聚合根：自持 rowsAxis/colsAxis/frozen/viewport，engine 全部委派。 */
   private readonly layout: DefaultLayoutState
   /** 行/列/区 raw↔view 翻译唯一入口；getter 读引擎活状态（data/rawData/columnStructure）。 */
@@ -213,6 +216,9 @@ export class DefaultGridEngine implements GridEngine {
     this.formatters = options.formatters ?? {}
     this.locale = options.locale ?? 'en-US'
     this.cellTypes = options.cellTypes ?? {}
+    for (const codec of options.cellAttachments ?? []) {
+      this.codecRegistry.set(codec.namespace, codec)
+    }
     this.layout = new DefaultLayoutState({
       theme: this.theme,
       explicitDefaultRowHeight: this.explicitDefaultRowHeight,
@@ -868,6 +874,17 @@ export class DefaultGridEngine implements GridEngine {
   setFillColor(range: CellRange, color: string | null): boolean {
     this.finishActiveEdit()
     return this.formatController.setFillColor(range, color)
+  }
+
+  /** 给 raw cell 写扩展附件；data=undefined 清除；快照前后无变化返回 false。 */
+  setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {
+    this.finishActiveEdit()
+    return this.formatController.setCellAttachment(namespace, rawRow, rawCol, data)
+  }
+
+  /** 读 raw cell 的扩展附件；无则 undefined。 */
+  getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown {
+    return this.formatState.attachmentStore.get(namespace, rawRow, rawCol)
   }
 
   /**

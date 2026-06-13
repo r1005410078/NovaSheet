@@ -3,7 +3,7 @@ id: core.L1.cell-attachment-follows-row-insert
 layer: L1
 summary: 插入行后附件跟随 raw cell 下移
 tags: [grid, attachment, structural, remap]
-status: planned
+status: implemented
 ---
 
 ## User Story

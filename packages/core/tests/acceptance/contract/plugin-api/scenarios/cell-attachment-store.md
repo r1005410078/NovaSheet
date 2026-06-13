@@ -3,7 +3,7 @@ id: core.L2.cell-attachment-store-set-get-undo
 layer: L2
 summary: 经 Grid 门面写/读 per-cell 附件并可撤销
 tags: [grid, attachment, plugin-api, undo]
-status: planned
+status: implemented
 ---
 
 ## User Story

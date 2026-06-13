@@ -163,6 +163,8 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     unmergeCells: mock((_range: CellRange) => false),
     getMergeRegion: mock((_rowIndex: number, _colIndex: number) => null),
     getViewMergeRegion: mock((_viewRow: number, _viewCol: number) => null),
+    setCellAttachment: mock((_namespace: string, _rawRow: number, _rawCol: number, _data: unknown) => false),
+    getCellAttachment: mock((_namespace: string, _rawRow: number, _rawCol: number): unknown => undefined),
   } satisfies GridEngine
 
   return Object.assign(engine, options.overrides)

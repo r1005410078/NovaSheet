@@ -129,6 +129,10 @@ export interface GridController {
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean
   /** 设置 view `range` 值格式（Phase 5-C）；变化时刷新并返回 true。 */
   setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean
+  /** 给 raw cell 写扩展附件；data=undefined 清除；变化时返回 true。 */
+  setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean
+  /** 读 raw cell 的扩展附件；无则 undefined。 */
+  getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown
   /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时刷新并返回 true。 */
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean
   /** Phase 5-A — 合并 view `range`；成功刷新并返回 true。 */

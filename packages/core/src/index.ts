@@ -234,6 +234,7 @@ export type {
   FormatContext,
 } from './kernel/protocol/FormatTypes'
 export { formatValue } from './kernel/protocol/formatValue'
+export type { CellAttachmentCodec, CellAttachmentSnapshot } from './kernel/protocol/AttachmentTypes'
 export { MergeStore } from './features/merge/MergeStore'
 export type { MergeRegion } from './kernel/coords/MergeRegion'
 export type {

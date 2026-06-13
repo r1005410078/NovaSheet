@@ -16,6 +16,7 @@ import type {
   CellEditorRegistry,
 } from './index'
 import type { GridEngineOptions } from './engine/GridEngine'
+import type { CellAttachmentCodec } from './kernel/protocol/AttachmentTypes'
 import type { ExcelWorkspacePolicy } from './features/excel-workspace'
 import type { FilterLayer } from './features/view/FilterLayer'
 import type { SortLayer } from './features/view/SortLayer'
@@ -69,6 +70,8 @@ export interface GridOptions extends GridEngineOptions {
   onSelectionChange?: (selection: GridSelection) => void
   /** 自定义 DOM 单元格编辑器注册表；key 为 `Field.type`。 */
   cellEditors?: CellEditorRegistry
+  /** 扩展附件 codec 注册表；namespace 唯一，core 不识别 T 语义。 */
+  cellAttachments?: readonly CellAttachmentCodec<unknown>[]
   /** Excel workspace auto-grow/shrink；默认关闭。 */
   excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
 }
@@ -99,6 +102,7 @@ export class Grid {
       formatters: options.formatters, // Phase 5-C — 自定义 formatter 注册表。
       locale: options.locale, // Phase 5-C — formatter locale。
       cellTypes: options.cellTypes, // 单元格类型语义注册表：驱动 backend-neutral 编辑语义。
+      cellAttachments: options.cellAttachments, // 扩展附件 codec 注册表。
     }
 
     this.delegate = new GridControllerImpl(
@@ -353,6 +357,16 @@ export class Grid {
   /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时返回 true 并重绘。 */
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
     return this.delegate.setTextWrap(range, mode)
+  }
+
+  /** 给 raw cell 写扩展私有附件（namespace 由 cellAttachments 注册）；data=undefined 清除；变化时返回 true。 */
+  setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {
+    return this.delegate.setCellAttachment(namespace, rawRow, rawCol, data)
+  }
+
+  /** 读 raw cell 的扩展附件；无则 undefined。 */
+  getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown {
+    return this.delegate.getCellAttachment(namespace, rawRow, rawCol)
   }
 
   /** Phase 5-A — 合并 view `range`；成功返回 true 并重绘。 */

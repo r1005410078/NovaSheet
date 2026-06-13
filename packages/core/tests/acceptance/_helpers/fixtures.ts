@@ -5,6 +5,7 @@ import {
   FrozenRegions,
   Viewport,
   denseGridTheme,
+  type CellAttachmentCodec,
   type CellRange,
   type CellEditorRegistry,
   type ExcelWorkspacePort,
@@ -74,6 +75,7 @@ export function mountRecordingGrid(
     onPaste?: (range: CellRange) => void
     onPasteSkipped?: (cells: readonly PasteSkippedCell[]) => void
     cellEditors?: CellEditorRegistry
+    cellAttachments?: readonly CellAttachmentCodec<unknown>[]
   } = {},
 ): {
   container: HTMLElement
@@ -93,6 +95,7 @@ export function mountRecordingGrid(
     onPaste: options.onPaste,
     onPasteSkipped: options.onPasteSkipped,
     cellEditors: options.cellEditors,
+    cellAttachments: options.cellAttachments,
   })
   return { container, grid, recorder }
 }
