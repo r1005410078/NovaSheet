@@ -8,9 +8,11 @@ import type { Field } from '@novasheet/core'
 import * as NovaSheetReact from '../../src'
 import {
   createReactCellEditor,
+  createReactCellFilterEditor,
   NovaExcel,
   type NovaExcelRef,
   type ReactCellEditorProps,
+  type ReactCellFilterEditorProps,
 } from '../../src'
 import { unmountReactRoot } from '../helpers/dom'
 import { createDenseData, mountNovaExcel, runGridUpdate, selectSingleCell } from './helpers'
@@ -248,5 +250,86 @@ describe('NovaExcel L3a shell', () => {
     expect('createReactCellRenderer' in NovaSheetReact).toBe(false)
 
     unmount()
+  })
+
+  it('excel.L3c.custom-react-filter-editor-apply-cancel applies operator value without predicate logic', async () => {
+    function AssigneeFilter(props: ReactCellFilterEditorProps) {
+      return React.createElement(
+        'div',
+        { 'data-testid': 'assignee-filter' },
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            onClick: () =>
+              props.apply({ operatorId: 'assignee-is-any-of', value: ['Alice', 'Bob'] }),
+          },
+          'Apply',
+        ),
+        React.createElement('button', { type: 'button', onClick: () => props.cancel() }, 'Cancel'),
+      )
+    }
+
+    const apply = mock(() => {})
+    const cancel = mock(() => {})
+    const filterEditor = createReactCellFilterEditor(AssigneeFilter)
+
+    await act(async () => {
+      filterEditor.open({
+        field: { id: 'owner', name: 'Owner', type: 'assignee', width: 160 },
+        operatorId: 'assignee-is-any-of',
+        value: null,
+        rect: { x: 0, y: 0, width: 160, height: 28 },
+        apply,
+        cancel,
+      })
+      await Promise.resolve()
+    })
+
+    const applyButton = document.body.querySelector<HTMLButtonElement>(
+      '[data-novasheet-react-filter-editor] button',
+    )
+    expect(applyButton?.textContent).toBe('Apply')
+
+    await act(async () => {
+      applyButton!.click()
+      await Promise.resolve()
+    })
+
+    expect(apply).toHaveBeenCalledWith({
+      operatorId: 'assignee-is-any-of',
+      value: ['Alice', 'Bob'],
+    })
+    expect(cancel).not.toHaveBeenCalled()
+    expect(document.body.querySelector('[data-novasheet-react-filter-editor]')).toBeNull()
+    expect('matches' in AssigneeFilter).toBe(false)
+
+    await act(async () => {
+      filterEditor.open({
+        field: { id: 'owner', name: 'Owner', type: 'assignee', width: 160 },
+        operatorId: 'assignee-is-any-of',
+        value: ['Alice', 'Bob'],
+        rect: { x: 0, y: 0, width: 160, height: 28 },
+        apply,
+        cancel,
+      })
+      await Promise.resolve()
+    })
+
+    const cancelButton = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>(
+        '[data-novasheet-react-filter-editor] button',
+      ),
+    ).find((button) => button.textContent === 'Cancel')
+    expect(cancelButton).toBeDefined()
+
+    await act(async () => {
+      cancelButton!.click()
+      await Promise.resolve()
+    })
+
+    expect(apply).toHaveBeenCalledTimes(1)
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(document.body.querySelector('[data-novasheet-react-filter-editor]')).toBeNull()
   })
 })

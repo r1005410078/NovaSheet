@@ -14,8 +14,12 @@ export type {
 } from './features/grid'
 export {
   createReactCellEditor,
+  createReactCellFilterEditor,
+  type CellFilterApply,
   type CreateReactCellEditorOptions,
+  type CellFilterEditor,
   type ReactCellEditorProps,
+  type ReactCellFilterEditorProps,
 } from './editors'
 export {
   NovaSheetToolbar,
