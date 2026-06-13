@@ -287,6 +287,9 @@ export class GridRuntime {
   private cellEditors: CellEditorRegistry = {}
   /** 当前由 custom editor registry 打开的 overlay。 */
   private activeCustomEditor: CellEditor | null = null
+  /** 当前 custom editor 会话 token；reopen/close 后旧 ctx 回调必须失效。 */
+  private activeCustomEditorToken: number | null = null
+  private nextCustomEditorToken = 1
   /** DOM 右键菜单 layer。 */
   private contextMenuLayer?: DomContextMenuLayer
   /** DOM filter popover。 */
@@ -2227,7 +2230,10 @@ export class GridRuntime {
     if (!rect) return false
 
     this.closeActiveCustomEditor()
+    const token = this.nextCustomEditorToken
+    this.nextCustomEditorToken += 1
     this.activeCustomEditor = editor
+    this.activeCustomEditorToken = token
     editor.open({
       cell,
       field,
@@ -2236,8 +2242,8 @@ export class GridRuntime {
       trigger: args.trigger,
       initialInput: args.initialInput,
       actionId: args.actionId,
-      commit: (value) => this.commitCustomEditorValue(cell, field, value, editor),
-      cancel: () => this.closeCustomEditor(editor),
+      commit: (value) => this.commitCustomEditorValue(cell, field, value, editor, token),
+      cancel: () => this.closeCustomEditor(editor, token),
     })
     return true
   }
@@ -2247,14 +2253,19 @@ export class GridRuntime {
     field: Field,
     value: CellValue | null,
     editor: NonNullable<CellEditorRegistry[string]>,
+    token: number,
   ): void {
+    if (this.activeCustomEditor !== editor || this.activeCustomEditorToken !== token) return
     if (!this.engine.commitCellValue(cell, field.id, value)) return
-    this.closeCustomEditor(editor)
+    this.closeCustomEditor(editor, token)
     this.afterEngineMutation()
   }
 
-  private closeCustomEditor(editor: CellEditor): void {
-    if (this.activeCustomEditor === editor) this.activeCustomEditor = null
+  private closeCustomEditor(editor: CellEditor, token?: number): void {
+    if (this.activeCustomEditor !== editor) return
+    if (token !== undefined && this.activeCustomEditorToken !== token) return
+    this.activeCustomEditor = null
+    this.activeCustomEditorToken = null
     editor.close?.()
   }
 
@@ -2262,6 +2273,7 @@ export class GridRuntime {
     const editor = this.activeCustomEditor
     if (!editor) return
     this.activeCustomEditor = null
+    this.activeCustomEditorToken = null
     editor.close?.()
   }
 

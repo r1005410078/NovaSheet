@@ -358,8 +358,24 @@ function createValueFormatData(): InMemoryDataSource {
   })
 }
 
+function dispatchGridDoubleClick(target: HTMLElement, point: { x: number; y: number }): void {
+  target.dispatchEvent(
+    new MouseEvent('dblclick', {
+      bubbles: true,
+      cancelable: true,
+      clientX: point.x,
+      clientY: point.y,
+      button: 0,
+    }),
+  )
+}
+
+function dispatchGridKeyDown(target: HTMLElement, key: string): void {
+  target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key }))
+}
+
 describe('Core BDD Batch 6 format merge theme scenarios', () => {
-  it('core.L2.grid-custom-editor-open-triggers routes Grid facade API to custom editor', () =>
+  it('core.L2.grid-custom-editor-open-triggers routes double-click, F2, Enter, typing, and API to custom editor', () =>
     withManualRaf((flushRaf) => {
       const data = new InMemoryDataSource({
         schema: {
@@ -367,20 +383,39 @@ describe('Core BDD Batch 6 format merge theme scenarios', () => {
         },
         rows: [{ owner: 'Alice' }] satisfies Row[],
       })
+      const contexts: CellEditorOpenContext[] = []
       const editor = {
-        open: mock((ctx: CellEditorOpenContext) => ctx.commit('Bob')),
+        open: mock((ctx: CellEditorOpenContext) => contexts.push(ctx)),
         close: mock(() => {}),
       }
       const { container, grid, recorder } = mountRecordingGrid({
         data,
         cellEditors: { assignee: editor },
       })
+      const scrollHost = getScrollHost(container)
 
+      dispatchGridDoubleClick(scrollHost, { x: 8, y: 36 })
+      grid.setSelection(singleCellSelection(0, 0))
+      dispatchGridKeyDown(scrollHost, 'F2')
+      grid.setSelection(singleCellSelection(0, 0))
+      dispatchGridKeyDown(scrollHost, 'Enter')
+      grid.setSelection(singleCellSelection(0, 0))
+      dispatchGridKeyDown(scrollHost, 'B')
       expect(grid.openCellEditor(0, 'owner')).toBe(true)
+
+      contexts.at(-1)?.commit('Bob')
       flushRaf()
 
-      expect(editor.open).toHaveBeenCalledTimes(1)
-      expect(editor.open.mock.calls[0]?.[0]).toMatchObject({
+      expect(editor.open).toHaveBeenCalledTimes(5)
+      expect(contexts.map((ctx) => ctx.trigger)).toEqual([
+        'double-click',
+        'f2',
+        'enter',
+        'typing',
+        'api',
+      ])
+      expect(contexts[3]).toMatchObject({ trigger: 'typing', initialInput: 'B' })
+      expect(contexts[4]).toMatchObject({
         cell: { rowIndex: 0, colIndex: 0 },
         field: { id: 'owner', type: 'assignee' },
         value: 'Alice',

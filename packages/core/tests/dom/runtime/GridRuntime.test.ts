@@ -1035,6 +1035,55 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
     expect(destroy).toHaveBeenCalledTimes(1)
   })
 
+  it('custom editor lifecycle ignores stale commit and cancel after reopen', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = mock((fieldId: string) =>
+      fieldId === 'owner' ? 0 : fieldId === 'reviewer' ? 1 : -1,
+    )
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [
+          { id: 'owner', name: 'Owner', type: 'assignee', width: 160 },
+          { id: 'reviewer', name: 'Reviewer', type: 'assignee', width: 160 },
+        ],
+        [{ owner: 'Ada', reviewer: 'Grace' }],
+      ),
+    )
+    engine.commitCellValue = mock(() => true)
+    const contexts: CellEditorOpenContext[] = []
+    const editor = {
+      open: mock((ctx: CellEditorOpenContext) => contexts.push(ctx)),
+      close: mock(() => {}),
+    }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(true)
+    const staleCtx = contexts[0]!
+    expect(runtime.openCellEditor(0, 'reviewer')).toBe(true)
+    const currentCtx = contexts[1]!
+
+    staleCtx.commit('Stale owner')
+    staleCtx.cancel()
+
+    expect(engine.commitCellValue).not.toHaveBeenCalled()
+    expect(editor.close).toHaveBeenCalledTimes(1)
+
+    currentCtx.commit('Current reviewer')
+
+    expect(engine.commitCellValue).toHaveBeenCalledTimes(1)
+    expect(engine.commitCellValue).toHaveBeenCalledWith(
+      { rowIndex: 0, colIndex: 1 },
+      'reviewer',
+      'Current reviewer',
+    )
+    expect(editor.close).toHaveBeenCalledTimes(2)
+  })
+
   it('选中后直接键入进入编辑（Sheets 式）', () => {
     const engine = makeEngine()
     engine.getSelection = mock(() => ({
