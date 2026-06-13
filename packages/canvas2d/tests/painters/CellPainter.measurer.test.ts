@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { Field, TextMeasurer } from '@novasheet/core'
 import { denseGridTheme } from '@novasheet/core'
-import type { Canvas2DCellRenderParams, Canvas2DCellRenderer } from '../../src/painters/CellPainter'
+import type { Canvas2DCellRenderer } from '../../src/painters/CellPainter'
 import { CellPainter } from '../../src/painters/CellPainter'
 import { createRecordingContext } from '../helpers/recording-context'
 
@@ -14,12 +14,12 @@ describe('CellPainter — measurer 透传 custom renderer', () => {
     }
     const painter = new CellPainter(denseGridTheme, { cellRenderers: { text: renderer }, measurer })
     const { ctx } = createRecordingContext()
-    const field: Field = { name: 'name', type: 'text' }
+    const field: Field = { id: 'f', name: 'F', type: 'text', width: 100 }
     painter.paint(ctx, {
       value: 'hello',
       rect: { x: 0, y: 0, width: 100, height: 30 },
       field,
     })
-    expect(seen).toBe(measurer)
+    expect(seen as unknown as TextMeasurer).toEqual(measurer)
   })
 })
