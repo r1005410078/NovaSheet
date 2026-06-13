@@ -22,7 +22,8 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 | --- | --- | --- | --- |
 | A | `@novasheet/core` 附件轴 | [`2026-06-13-...-cell-attachment-axis-phase-a.md`](./2026-06-13-novasheet-cell-attachment-axis-phase-a.md) | ☑ 已 ship |
 | B | `@novasheet/canvas2d` styled-text | [`2026-06-13-...-styled-text-phase-b.md`](./2026-06-13-novasheet-styled-text-phase-b.md) | ☑ 已 ship |
-| C | `@novasheet/cell-kit` rich-text | 待展开 | ☐ |
+| C-display | `@novasheet/cell-kit` 类型/codec/renderer | [`2026-06-13-...-phase-c-display.md`](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-display.md) | ☑ 已 ship |
+| C-edit | `@novasheet/cell-kit` editor/toolbar/选区加粗/fill/clipboard/装配/BDD | 待展开 | ☐ |
 
 ---
 
@@ -46,12 +47,12 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 | 能力 | 落点 | 状态 |
 | --- | --- | --- |
-| `TextRun {start,end,attrs}` 半开 UTF-16 offset | C（cell-kit 类型） | ☐ |
-| `TextRunAttrs`（7 属性，全 optional=继承） | C | ☐ |
-| normalize：排序 + 不重叠 + 合并相邻等格 + gap 继承 | C | ☐ |
-| 代理对边界不切半字符 | C（normalize 保证） | ☐ |
-| 存 attachment `'richText'` namespace（opaque） | A 存储 + C codec | ☐ |
-| `richTextCodec` serialize/deserialize | C | ☐ |
+| `TextRun {start,end,attrs}` 半开 UTF-16 offset | C-display（cell-kit 类型） | ☑ |
+| `TextRunAttrs`（7 属性，全 optional=继承） | C-display | ☑ |
+| normalize：排序 + 不重叠 + 合并相邻等格 + gap 继承 | C-display | ☑ |
+| 代理对边界不切半字符 | C-display（normalize 保证，向外扩 snap） | ☑ |
+| 存 attachment `'richText'` namespace（opaque） | A 存储 + C-display codec | ☑ |
+| `richTextCodec` serialize/deserialize | C-display | ☑ |
 
 ### 1.3 存储/数据完整性（Phase A）
 
@@ -79,7 +80,7 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 | wrap/overflow/clip × 多段（复用 `wrapText`+measurer） | B | ☑ |
 | 省略号截断 × 多段 | B | ☑ |
 | `getAttachment` 在 paint params 的**透传** | B Task7（消费在 C renderer） | ☑ |
-| valueFormat×runs 门：runs 仅显示=raw string 时生效 | **C** richTextRenderer（B 无 runs 消费者，无法测；见 Phase B plan Self-Review） | ☐ |
+| valueFormat×runs 门：runs 仅显示=raw string 时生效 | **C-display** richTextRenderer | ☑ |
 | DPR 1/1.5/2/3 清晰（线段不糊） | B | ☐ |
 
 ### 1.5 编辑（Phase C）
@@ -101,13 +102,13 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 | 能力 | 落点 | 状态 |
 | --- | --- | --- |
-| `packages/cell-kit/` 脚手架（package.json/tsconfig/build/tests/README） | C | ☐ |
-| `richTextExtension` 装配（codec+renderer+editor） | C | ☐ |
-| boundary lint：禁 core/canvas2d/react 反向依赖 cell-kit | C | ☐ |
-| **默认不带**验证：默认 Grid 无字体组；注册后生效 | C（BDD `excel.L3.rich-text-default-not-bundled`） | ☐ |
-| core 零 typography/TextRun（`grep` 门） | A Task7 + C | ☐ |
-| storybook story（cell-kit 注册示例） | C | ☐ |
-| 组合根装配示例（cellAttachments+cellEditors+cellRenderers 三注册点） | C | ☐ |
+| `packages/cell-kit/` 脚手架（package.json/tsconfig/build/tests/README） | C-display | ☑ |
+| `richTextExtension` 装配（codec+renderer+editor） | C-display codec+renderer ☑；editor 延 C-edit | ◐ |
+| boundary lint：禁 core/canvas2d/react 反向依赖 cell-kit | C-display | ☑ |
+| **默认不带**验证：默认 Grid 无字体组；注册后生效 | C-edit（BDD `excel.L3.rich-text-default-not-bundled`） | ☐ |
+| core 零 typography/TextRun（`grep` 门） | A Task7 + C-display | ☑ |
+| storybook story（cell-kit 注册示例） | C-edit | ☐ |
+| 组合根装配示例（cellAttachments+cellEditors+cellRenderers 三注册点） | C-edit | ☐ |
 
 ### 1.7 跨切面 / 收尾（每 phase）
 
@@ -156,41 +157,59 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 ---
 
-## 4. Phase C — cell-kit rich-text（待展开成完整 plan）
+## 4. Phase C — cell-kit rich-text（拆 C-display ☑ + C-edit ☐）
+
+**拆分决策（2026-06-13 拍板）:** C 体量大（跨 cell-kit/core/react，含最易错的 contenteditable↔runs 序列化），拆两 plan：**C-display**（类型/normalize/codec/renderer，可独立 ship 并用 attachment 渲染验证）+ **C-edit**（editor/toolbar/选区加粗/fill/clipboard/装配/BDD）。**D1/D2 纳入 C-edit**（见 §5）。
+
+### 4.1 C-display（☑ 已 ship）
+
+完整步骤见 [C-display plan](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-display.md)。6 Task：
+
+| # | 任务 | 层 | 状态 |
+| --- | --- | --- | --- |
+| C1 | `packages/cell-kit/` 脚手架 + boundary lint | 包配置 | ☑ |
+| C2 | `TextRun`/`TextRunAttrs` 类型 + `normalize`（排序/合并/gap/代理对） | cell-kit（纯函数 TDD） | ☑ |
+| C3 | `richTextCodec`（serialize/deserialize，注册 `'richText'`） | cell-kit→core | ☑ |
+| C4 | measurer 透传 `Canvas2DCellRenderParams`（dogfood 缝补） | canvas2d | ☑ |
+| C5 | `richTextRenderer`（读 runs→切段→`paintStyledText`，valueFormat×runs 门） | cell-kit→canvas2d | ☑ |
+| C6 | `richTextExtension` display 半装配（codec+renderer）+ 包导出 | cell-kit | ☑ |
+
+**C-display dogfood 收获:** custom renderer 拿不到 `measurer` 的缝缺口在 C4 补齐（透传进 paint params），未走私有通道——验证缝完整性。
+**C-display follow-up（Minor，非阻断）:** ① renderer 测试跨包相对 import canvas2d 的 `recording-context` helper，长期宜提取为 testkit；② —。
+
+### 4.2 C-edit（☐ 待展开成完整 plan）
 
 里程碑任务：
 
 | # | 任务 | 层 |
 | --- | --- | --- |
-| C1 | `packages/cell-kit/` 脚手架 + boundary lint | 包配置 |
-| C2 | `TextRun`/`TextRunAttrs` 类型 + `normalize`（排序/合并/gap/代理对） | cell-kit（纯函数，TDD） |
-| C3 | `richTextCodec`（serialize/deserialize，注册 `'richText'`） | cell-kit→core |
-| C4 | `richTextRenderer`（`Canvas2DCellRenderer`：读 runs→切段→`paintStyledText`） | cell-kit→canvas2d |
-| C5 | `RichTextCellEditor`（contenteditable，runs↔DOM，提交写 value+attachment） | cell-kit→react |
-| C6 | `FloatingFormatToolbar`（size/B/I/U/strike/color，Selection toggle，复用 color picker） | cell-kit→react |
-| C7 | 选区加粗 = 逐格 full-span run（应用门面） | cell-kit + core 门面 |
-| C8 | `richTextExtension` 装配 + 组合根 + storybook story | cell-kit |
-| C9 | BDD：`excel.L3.rich-text-toolbar-bold-substring` + `...-default-not-bundled` 转绿 | react excel L3 |
+| CE1 | `RichTextCellEditor`（contenteditable，runs↔DOM，提交写 value+attachment） | cell-kit→react |
+| CE2 | `FloatingFormatToolbar`（size/B/I/U/strike/color，Selection toggle，复用 color picker） | cell-kit→react |
+| CE3 | 选区加粗 = 逐格 full-span run（应用门面，D3） | cell-kit + core 门面 |
+| CE4 | **fill 柄携带 runs**（D1） | core attachment fill |
+| CE5 | **clipboard copy/paste 经 codec**（D2） | core attachment clipboard |
+| CE6 | `richTextExtension` 补 editor + 组合根 + storybook story | cell-kit |
+| CE7 | BDD：`excel.L3.rich-text-toolbar-bold-substring` + `...-default-not-bundled` 转绿 | react excel L3 |
 
 **风险:**
-- contenteditable ↔ runs 双向序列化是最易错点（光标/换行/嵌套 span 规整）——C5 必须 TDD 覆盖「加粗子串→提交→重开保持」「跨 run 边界选择」「全选 toggle 取消」。
-- dogfood 验证（C9 `default-not-bundled`）是缝完整性的硬门：若 cell-kit 拼装时发现缺 core/canvas2d/react 的公开 API，**STOP**——回头补缝，别在 cell-kit 走私有通道。
+- contenteditable ↔ runs 双向序列化是最易错点（光标/换行/嵌套 span 规整）——CE1 必须 TDD 覆盖「加粗子串→提交→重开保持」「跨 run 边界选择」「全选 toggle 取消」。
+- dogfood 验证（CE7 `default-not-bundled`）是缝完整性的硬门：若 cell-kit 拼装时发现缺 core/canvas2d/react 的公开 API，**STOP**——回头补缝，别在 cell-kit 走私有通道。
 
-**依赖:** A + B 全绿。
+**依赖:** A + B + C-display 全绿。
 
-**出口判据:** §1.1/1.2/1.5/1.6 全 ☑；§1.7 收尾门过。
+**出口判据:** §1.1/1.5 全 ☑；§1.3 fill/clipboard ☑；§1.6 装配/storybook/默认不带 ☑；§1.7 收尾门过。
 
 ---
 
 ## 5. 待定决策（须拍板，别静默）
 
-| # | 决策 | 选项 | 倾向 |
+| # | 决策 | 选项 | 拍板（2026-06-13） |
 | --- | --- | --- | --- |
-| D1 | fill 柄携带 runs 的时机 | (a) Phase A Task8 即接 / (b) 留 Phase C 接 rich-text 时 | **(b)**：A 先骨架+undo，fill 等真消费者再接，避免无消费者空实现 |
-| D2 | clipboard codec 接入时机 | (a) Phase A Task9 / (b) Phase C | **(b)**：同上 |
-| D3 | 选区加粗的 range 优化 | 逐格 full-span run（本批）/ 无限列单 layer（后续） | 本批逐格，足够有限选区 |
+| D1 | fill 柄携带 runs 的时机 | (a) Phase A Task8 即接 / (b) 留 Phase C 接 rich-text 时 | **✅ (b) 纳入 C-edit（CE4）**：A 先骨架+undo，fill 等真消费者再接 |
+| D2 | clipboard codec 接入时机 | (a) Phase A Task9 / (b) Phase C | **✅ (b) 纳入 C-edit（CE5）** |
+| D3 | 选区加粗的 range 优化 | 逐格 full-span run（本批）/ 无限列单 layer（后续） | **✅ 本批逐格（CE3）**，足够有限选区 |
 
-D1/D2 一旦定 (b)，Phase A 出口判据排除 fill/clipboard（已在 §1.3 标）。
+D1/D2 定 (b)，Phase A 出口判据已排除 fill/clipboard（§1.3 标）；fill/clipboard 落 C-edit。
 
 ---
 

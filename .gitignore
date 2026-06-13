@@ -2,6 +2,9 @@ node_modules
 dist
 coverage
 .tsbuildinfo
+# tsc declaration artifacts that leak into src on misconfigured rootDir（仅 packages，apps/storybook 有手写 .d.ts）
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
 .DS_Store
 .vscode/*
 !.vscode/extensions.json

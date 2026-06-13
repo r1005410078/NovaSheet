@@ -34,6 +34,8 @@ export const richTextRenderer: Canvas2DCellRenderer = {
     const applyRuns = !!runs && runs.length > 0 && (display === undefined || display === raw)
     const segments = applyRuns ? splitIntoSegments(text, runs, def) : splitIntoSegments(text, [], def)
 
+    // custom renderer 无法静态枚举 BuiltInFieldType，故以宽 string key 动态查 textAlignByType；
+    // 自定义 type 未命中时 fallback 'text'，对齐内置 CellPainter 的 default case 语义。
     const align =
       (theme.cell.textAlignByType as Readonly<Record<string, CanvasTextAlign>>)[field.type] ??
       theme.cell.textAlignByType['text']
