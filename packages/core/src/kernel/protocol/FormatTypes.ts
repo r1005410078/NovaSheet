@@ -67,6 +67,10 @@ export interface FormatLayer {
   readonly clearFill?: boolean
   /** When true, clears `borders` accumulated from prior layers for covered cells. */
   readonly clearBorders?: boolean
+  /** When true, clears `textWrap` set by prior layers for covered cells. */
+  readonly clearTextWrap?: boolean
+  /** When true, clears `valueFormat` set by prior layers for covered cells. */
+  readonly clearValueFormat?: boolean
   /** 单层边框：覆盖整个 range，边缘归属在 resolveCell 读时按 preset+位置解析。 */
   readonly borderPreset?: Exclude<BorderPreset, 'clear'>
   readonly borderStyle?: BorderStyle

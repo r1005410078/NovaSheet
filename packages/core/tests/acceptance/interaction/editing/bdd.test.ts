@@ -212,5 +212,22 @@ describe('Core BDD Batch 5 clipboard edit fill scenarios', () => {
     expect(engine.getViewCellFormat(1, 0)?.fillColor).toBe('#ff0000')
     expect(engine.getViewCellFormat(2, 0)?.fillColor).toBe('#ff0000')
   })
+
+  it('core.L2.grid-fill-style-propagates copies textWrap and valueFormat to target cells', () => {
+    const engine = createFillEngine()
+    engine.setTextWrap(fillRange(0, 0, 0, 0), 'wrap')
+    engine.setValueFormat(fillRange(0, 0, 0, 0), { kind: 'currency', currency: 'USD' })
+    engine.commitFill(fillRange(0, 0, 0, 0), fillRange(1, 2, 0, 0), 'down')
+    expect(engine.getViewCellFormat(1, 0)?.textWrap).toBe('wrap')
+    expect(engine.getViewCellFormat(1, 0)?.valueFormat).toEqual({ kind: 'currency', currency: 'USD' })
+    expect(engine.getViewCellFormat(2, 0)?.valueFormat).toEqual({ kind: 'currency', currency: 'USD' })
+  })
+
+  it('core.L2.grid-fill-style-propagates clears stale target format when source has none', () => {
+    const engine = createFillEngine()
+    engine.setValueFormat(fillRange(2, 2, 0, 0), { kind: 'percent' }) // 目标格预先有格式
+    engine.commitFill(fillRange(0, 0, 0, 0), fillRange(1, 2, 0, 0), 'down')
+    expect(engine.getViewCellFormat(2, 0)).toBeUndefined()
+  })
 })
 })

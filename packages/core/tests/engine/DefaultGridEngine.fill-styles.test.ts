@@ -3,7 +3,7 @@ import { InMemoryDataSource } from '../../src/kernel/data/InMemoryDataSource'
 import { DefaultGridEngine } from '../../src/engine/DefaultGridEngine'
 import { FilterLayer } from '../../src/features/view/FilterLayer'
 import { SortLayer } from '../../src/features/view/SortLayer'
-import type { BorderStyle, CellRange } from '../../src/index'
+import type { BorderStyle, CellRange, ValueFormat } from '../../src/index'
 import type { Row, Schema } from '../../src/kernel/data/Schema'
 
 const schema: Schema = {
@@ -14,6 +14,8 @@ const schema: Schema = {
 }
 
 const RED: BorderStyle = { color: '#cc0000', width: 'thin', lineStyle: 'solid' }
+const USD: ValueFormat = { kind: 'currency', currency: 'USD' }
+const PCT: ValueFormat = { kind: 'percent' }
 
 function engine(rowCount = 6) {
   const rows: Row[] = Array.from({ length: rowCount }, (_, i) => ({ a: `r${i}`, b: `s${i}` }))
@@ -67,6 +69,70 @@ describe('DefaultGridEngine.commitFill — 颜色/边框传播', () => {
     e.setFillColor(cell(2, 0), '#123456') // 目标格预先有色
     e.commitFill(cell(0, 0), { startRow: 1, endRow: 2, startCol: 0, endCol: 0 }, 'down')
     expect(e.getCellFormat(2, 0)).toBeUndefined()
+  })
+})
+
+describe('DefaultGridEngine.commitFill — valueFormat/textWrap 传播（对齐 Google）', () => {
+  it('向下填充把源 valueFormat 复制到目标格', () => {
+    const e = engine()
+    e.setValueFormat(cell(0, 0), USD)
+    e.commitFill(cell(0, 0), { startRow: 1, endRow: 2, startCol: 0, endCol: 0 }, 'down')
+    expect(e.getCellFormat(1, 0)?.valueFormat).toEqual(USD)
+    expect(e.getCellFormat(2, 0)?.valueFormat).toEqual(USD)
+  })
+
+  it('向下填充把源 textWrap 复制到目标格', () => {
+    const e = engine()
+    e.setTextWrap(cell(0, 0), 'wrap')
+    e.commitFill(cell(0, 0), cell(1, 0), 'down')
+    expect(e.getCellFormat(1, 0)?.textWrap).toBe('wrap')
+  })
+
+  it('向右填充把源 valueFormat 沿列复制', () => {
+    const e = engine()
+    e.setValueFormat(cell(0, 0), USD)
+    e.commitFill(cell(0, 0), { startRow: 0, endRow: 0, startCol: 1, endCol: 1 }, 'right')
+    expect(e.getCellFormat(0, 1)?.valueFormat).toEqual(USD)
+  })
+
+  it('多行源 valueFormat 按块平铺（货币/百分比交替）', () => {
+    const e = engine()
+    e.setValueFormat(cell(0, 0), USD)
+    e.setValueFormat(cell(1, 0), PCT)
+    e.commitFill(
+      { startRow: 0, endRow: 1, startCol: 0, endCol: 0 },
+      { startRow: 2, endRow: 5, startCol: 0, endCol: 0 },
+      'down',
+    )
+    expect(e.getCellFormat(2, 0)?.valueFormat).toEqual(USD)
+    expect(e.getCellFormat(3, 0)?.valueFormat).toEqual(PCT)
+    expect(e.getCellFormat(4, 0)?.valueFormat).toEqual(USD)
+    expect(e.getCellFormat(5, 0)?.valueFormat).toEqual(PCT)
+  })
+
+  it('源无 valueFormat 时清除目标格陈旧 valueFormat（Google 覆盖语义）', () => {
+    const e = engine()
+    e.setValueFormat(cell(2, 0), USD) // 目标格预先有格式
+    e.commitFill(cell(0, 0), { startRow: 1, endRow: 2, startCol: 0, endCol: 0 }, 'down')
+    expect(e.getCellFormat(2, 0)).toBeUndefined()
+  })
+
+  it('源无 textWrap 时清除目标格陈旧 textWrap', () => {
+    const e = engine()
+    e.setTextWrap(cell(1, 0), 'wrap')
+    e.commitFill(cell(0, 0), cell(1, 0), 'down')
+    expect(e.getCellFormat(1, 0)).toBeUndefined()
+  })
+
+  it('undo 撤销 valueFormat 填充，redo 恢复', () => {
+    const e = engine()
+    e.setValueFormat(cell(0, 0), USD)
+    e.commitFill(cell(0, 0), cell(1, 0), 'down')
+    expect(e.getCellFormat(1, 0)?.valueFormat).toEqual(USD)
+    e.undo()
+    expect(e.getCellFormat(1, 0)).toBeUndefined()
+    e.redo()
+    expect(e.getCellFormat(1, 0)?.valueFormat).toEqual(USD)
   })
 })
 

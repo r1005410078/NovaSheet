@@ -44,8 +44,8 @@ export class FillStylePropagator {
   }
 
   /**
-   * 把源选区的格式（填充色/边框）与合并区按填充轴平铺到 fill 目标区，并返回供 undo/redo
-   * 恢复的 store 快照。源或目标的 view→raw 映射非连续时返回空对象（不改动任何 store）。
+   * 把源选区的格式（填充色/边框/textWrap/valueFormat）与合并区按填充轴平铺到 fill 目标区，
+   * 并返回供 undo/redo 恢复的 store 快照。源或目标的 view→raw 映射非连续时返回空对象（不改动任何 store）。
    */
   propagateFillStyles(source: CellRange, fill: CellRange, direction: FillDirection): FillStyleSnapshots {
     const rawSource = this.coords.viewRangeToRaw(source)
@@ -65,8 +65,9 @@ export class FillStylePropagator {
   }
 
   /**
-   * 格式平铺：清空目标区后，按填充轴的 `positiveModulo` 取对应源格的已解析格式重写，
-   * 使目标格精确等于源（源无格式则清除目标陈旧格式）。坐标均为 raw。
+   * 格式平铺：清空目标区的 fill/边框/textWrap/valueFormat 后，按填充轴的 `positiveModulo`
+   * 取对应源格的已解析格式重写，使目标格精确等于源（源无格式则清除目标陈旧格式，对齐 Google
+   * 填充覆盖语义）。坐标均为 raw。
    */
   private tileFillFormat(rawSource: RawRange, rawFill: RawRange, direction: FillDirection): void {
     const sourceHasFormat = this.formatStore.resolveVisible(rawSource).length > 0
@@ -75,6 +76,8 @@ export class FillStylePropagator {
 
     this.formatStore.clearFill(rawFill)
     this.formatStore.clearBorders(rawFill)
+    this.formatStore.clearTextWrap(rawFill)
+    this.formatStore.clearValueFormat(rawFill)
     if (!sourceHasFormat) return
 
     const sRows = rawSource.endRow - rawSource.startRow + 1
@@ -93,6 +96,8 @@ export class FillStylePropagator {
         const target = asRawRange({ startRow: row, endRow: row, startCol: col, endCol: col })
         if (fmt.fillColor !== undefined) this.formatStore.apply(target, { fillColor: fmt.fillColor })
         if (fmt.borders !== undefined) this.formatStore.apply(target, { borders: fmt.borders })
+        if (fmt.textWrap !== undefined) this.formatStore.apply(target, { textWrap: fmt.textWrap })
+        if (fmt.valueFormat !== undefined) this.formatStore.apply(target, { valueFormat: fmt.valueFormat })
       }
     }
   }

@@ -33,6 +33,18 @@ export class RangeStyleStore {
     this.layers.push({ range, patch: {}, clearBorders: true, order: this.nextOrder++ })
   }
 
+  clearTextWrap(range: RawRange): void {
+    // Symmetric to clearFill/clearBorders: only push when an intersecting layer would set or clear
+    // textWrap, so a no-op clear over plain cells doesn't grow the snapshot (spurious undo entry).
+    if (!this.anyLayerContributesTextWrap(range)) return
+    this.layers.push({ range, patch: {}, clearTextWrap: true, order: this.nextOrder++ })
+  }
+
+  clearValueFormat(range: RawRange): void {
+    if (!this.anyLayerContributesValueFormat(range)) return
+    this.layers.push({ range, patch: {}, clearValueFormat: true, order: this.nextOrder++ })
+  }
+
   /** True when some intersecting layer would set or clear a fillColor for `target`. O(layers). */
   private anyLayerContributesFill(target: CellRange): boolean {
     for (const layer of this.layers) {
@@ -48,6 +60,24 @@ export class RangeStyleStore {
       if (!rangesIntersect(layer.range, target)) continue
       if (layer.clearBorders || layer.patch.borders !== undefined || layer.borderPreset !== undefined)
         return true
+    }
+    return false
+  }
+
+  /** True when some intersecting layer would set or clear textWrap for `target`. O(layers). */
+  private anyLayerContributesTextWrap(target: CellRange): boolean {
+    for (const layer of this.layers) {
+      if (!rangesIntersect(layer.range, target)) continue
+      if (layer.clearTextWrap || layer.patch.textWrap !== undefined) return true
+    }
+    return false
+  }
+
+  /** True when some intersecting layer would set or clear valueFormat for `target`. O(layers). */
+  private anyLayerContributesValueFormat(target: CellRange): boolean {
+    for (const layer of this.layers) {
+      if (!rangesIntersect(layer.range, target)) continue
+      if (layer.clearValueFormat || layer.patch.valueFormat !== undefined) return true
     }
     return false
   }
@@ -92,6 +122,10 @@ export class RangeStyleStore {
       } else if (layer.clearBorders) {
         borders = undefined
         hasBorders = false
+      } else if (layer.clearTextWrap) {
+        textWrap = undefined
+      } else if (layer.clearValueFormat) {
+        valueFormat = undefined
       } else {
         if (layer.patch.fillColor !== undefined) {
           fillColor = layer.patch.fillColor
