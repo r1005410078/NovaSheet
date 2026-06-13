@@ -26,6 +26,8 @@ export {
   defaultToolbarItems,
   deriveToolbarStateFromGrid,
   useNovaSheetToolbarState,
+  CustomColorPicker,
+  CHECKERBOARD_BG,
 } from './features/toolbar'
 export type {
   ToolbarStateGridAccess,
