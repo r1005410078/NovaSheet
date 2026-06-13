@@ -60,4 +60,9 @@ export interface RenderFrame {
    * painter 应回退默认显示路径。引擎构帧时闭合 cell 级 valueFormat + 列默认 + 注册表 + locale。
    */
   formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
+  /**
+   * Phase A — 附件读取闭包（view 坐标）。引擎构帧时闭合 coords view→raw 转换 + attachmentStore。
+   * `viewRow`/`viewCol` 为 view 空间坐标（渲染时已知），返回 `undefined` 表示该格无此 namespace 数据。
+   */
+  getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined
 }

@@ -80,9 +80,64 @@ describe('assembleRenderFrame', () => {
       frameFormat,
       formatters: {},
       locale: 'en-US',
+      viewRowToRaw: (v) => v,
+      viewColToRaw: (v) => v,
+      attachmentStore: formatState.attachmentStore,
     }
     const frame = assembleRenderFrame(input)
     expect(frame.collapsedRowGaps).toHaveLength(1)
     expect(frame.collapsedRowGaps[0]!.yPx).toBe(24 * 2 - 10)
+  })
+
+  it('getAttachment 按 view 坐标读取附件（经 view→raw 转换）', () => {
+    const data = new InMemoryDataSource({ schema, rows: [{ a: 'x' }, { a: 'y' }, { a: 'z' }] })
+    const formatState = new DefaultFormatState()
+    const coords = new CoordinateSpace({
+      getViewData: () => data,
+      getRawSchema: () => schema,
+      isColHidden: () => false,
+    })
+    const frameFormat = new VisibleFormatResolver(
+      formatState.formatStore,
+      formatState.mergeStore,
+      coords,
+    )
+    const viewport: ViewportSnapshot = {
+      regions: [],
+      scrollX: 0,
+      scrollY: 0,
+      contentRect: { width: 200, height: 200 },
+      headerHeight: 32,
+      rowHeaderWidth: 48,
+      version: 0,
+    }
+    // rawRow=1, rawCol=0 → view row 1 (no sort/filter), view col 0
+    formatState.attachmentStore.set('richText', 1, 0, { spans: ['hello'] })
+    const input: FrameAssemblerInput = {
+      data,
+      theme: denseGridTheme,
+      rowsAxis: mockAxis([0, 2], (i) => i * 24),
+      colsAxis: mockAxis([0, 0], (i) => i * 80),
+      viewport,
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 0, colIndex: 0 },
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      },
+      allRowGaps: [],
+      allColGaps: [],
+      frameFormat,
+      formatters: {},
+      locale: 'en-US',
+      viewRowToRaw: (v) => v,
+      viewColToRaw: (v) => v,
+      attachmentStore: formatState.attachmentStore,
+    }
+    const frame = assembleRenderFrame(input)
+    type RichText = { spans: string[] }
+    expect(frame.getAttachment!<RichText>('richText', 1, 0)).toEqual({ spans: ['hello'] })
+    expect(frame.getAttachment!<RichText>('richText', 0, 0)).toBeUndefined()
+    expect(frame.getAttachment!<RichText>('other', 1, 0)).toBeUndefined()
   })
 })

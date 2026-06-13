@@ -9,6 +9,7 @@ import type { CellFormatter, ResolvedCellFormat, ValueFormat } from '../kernel/p
 import type { VisibleFormatResolver } from '../features/format/VisibleFormatResolver'
 import type { GridSelection } from '../kernel/coords/SelectionTypes'
 import type { CollapsedGap } from '../kernel/render/RenderTypes'
+import type { CellAttachmentStore } from '../features/attachment/CellAttachmentStore'
 import { formatValue } from '../kernel/protocol/formatValue'
 
 /**
@@ -45,6 +46,12 @@ export interface FrameAssemblerInput {
   readonly frameFormat: VisibleFormatResolver
   readonly formatters: Readonly<Record<string, CellFormatter>>
   readonly locale: string
+  /** view→raw 行坐标转换，用于构建 getAttachment 闭包。 */
+  readonly viewRowToRaw: (viewRow: number) => number
+  /** view→raw 列坐标转换，用于构建 getAttachment 闭包。 */
+  readonly viewColToRaw: (viewCol: number) => number
+  /** 附件存储引用，供 getAttachment 读取。 */
+  readonly attachmentStore: CellAttachmentStore
 }
 
 /** 从 layout/structure 快照装配不可变 `RenderFrame`（纯函数，无 engine 副作用）。 */
@@ -84,6 +91,12 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     mergeRegions,
   )
   const formatCell = buildFormatCell(cellFormats, input.formatters, input.locale)
+  const { viewRowToRaw, viewColToRaw, attachmentStore } = input
+  function getAttachment<T>(namespace: string, viewRow: number, viewCol: number): T | undefined {
+    const rawRow = viewRowToRaw(viewRow)
+    const rawCol = viewColToRaw(viewCol)
+    return attachmentStore.get(namespace, rawRow, rawCol) as T | undefined
+  }
   return {
     data: input.data,
     theme: input.theme,
@@ -97,5 +110,6 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     cellFormats,
     mergeRegions,
     formatCell,
+    getAttachment,
   }
 }
