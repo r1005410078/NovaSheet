@@ -2,10 +2,13 @@ import type { CellFormat, FormatLayer } from '../../kernel/protocol/FormatTypes'
 import { RangeStyleStore } from './RangeStyleStore'
 import type { MergeRegion, MergeStore } from '../merge/MergeStore'
 import { MergeStore as MergeStoreImpl } from '../merge/MergeStore'
+import { CellAttachmentStore } from '../attachment/CellAttachmentStore'
+import type { CellAttachmentSnapshot } from '../../kernel/protocol/AttachmentTypes'
 
 export interface FormatState {
   readonly formatStore: RangeStyleStore
   readonly mergeStore: MergeStore
+  readonly attachmentStore: CellAttachmentStore
   resolveCellFormat(rowIndex: number, colIndex: number): CellFormat | undefined
   getMergeRegionAt(rowIndex: number, colIndex: number): MergeRegion | null
   restoreFormat(layers: readonly FormatLayer[]): void
@@ -22,11 +25,19 @@ export interface FormatState {
   remapMergeAfterColsInserted(at: number, count: number): void
   remapFormatAfterColsDeleted(colIndices: readonly number[]): void
   remapMergeAfterColsDeleted(colIndices: readonly number[]): void
+  restoreAttachments(snap: CellAttachmentSnapshot): void
+  remapAttachmentAfterRowsInserted(at: number, count: number): void
+  remapAttachmentAfterRowsDeleted(rowIds: readonly number[]): void
+  remapAttachmentRows(indexMap: ReadonlyMap<number, number>): void
+  remapAttachmentAfterColsInserted(at: number, count: number): void
+  remapAttachmentAfterColsDeleted(colIndices: readonly number[]): void
+  remapAttachmentCols(indexMap: ReadonlyMap<number, number>): void
 }
 
 export class DefaultFormatState implements FormatState {
   readonly formatStore = new RangeStyleStore()
   readonly mergeStore = new MergeStoreImpl()
+  readonly attachmentStore = new CellAttachmentStore()
 
   resolveCellFormat(rowIndex: number, colIndex: number): CellFormat | undefined {
     return this.formatStore.resolveCell(rowIndex, colIndex)
@@ -90,5 +101,33 @@ export class DefaultFormatState implements FormatState {
 
   remapMergeAfterColsDeleted(colIndices: readonly number[]): void {
     this.mergeStore.remapAfterColsDeleted([...colIndices].sort((a, b) => a - b))
+  }
+
+  restoreAttachments(snap: CellAttachmentSnapshot): void {
+    this.attachmentStore.restore(snap)
+  }
+
+  remapAttachmentAfterRowsInserted(at: number, count: number): void {
+    this.attachmentStore.remapAfterRowsInserted(at, count)
+  }
+
+  remapAttachmentAfterRowsDeleted(rowIds: readonly number[]): void {
+    this.attachmentStore.remapAfterRowsDeleted([...rowIds].sort((a, b) => a - b))
+  }
+
+  remapAttachmentRows(indexMap: ReadonlyMap<number, number>): void {
+    this.attachmentStore.remapByRowIndexMap(indexMap)
+  }
+
+  remapAttachmentAfterColsInserted(at: number, count: number): void {
+    this.attachmentStore.remapAfterColsInserted(at, count)
+  }
+
+  remapAttachmentAfterColsDeleted(colIndices: readonly number[]): void {
+    this.attachmentStore.remapAfterColsDeleted([...colIndices].sort((a, b) => a - b))
+  }
+
+  remapAttachmentCols(indexMap: ReadonlyMap<number, number>): void {
+    this.attachmentStore.remapByColIndexMap(indexMap)
   }
 }
