@@ -2,9 +2,16 @@ import { describe, expect, it, mock } from 'bun:test'
 import React, { act } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
+import { InMemoryDataSource } from '@novasheet/core'
 import type { Field } from '@novasheet/core'
 
-import { NovaExcel, type NovaExcelRef } from '../../src'
+import * as NovaSheetReact from '../../src'
+import {
+  createReactCellEditor,
+  NovaExcel,
+  type NovaExcelRef,
+  type ReactCellEditorProps,
+} from '../../src'
 import { unmountReactRoot } from '../helpers/dom'
 import { createDenseData, mountNovaExcel, runGridUpdate, selectSingleCell } from './helpers'
 
@@ -174,6 +181,70 @@ describe('NovaExcel L3a shell', () => {
       ref.current!.grid.unhideCols(['score'])
     })
     expect(onHideColsChange).toHaveBeenLastCalledWith({ hidden: [] })
+
+    unmount()
+  })
+
+  it('excel.L3c.custom-react-editor-commit-cancel commits, cancels, and unmounts overlay', async () => {
+    const ref = React.createRef<NovaExcelRef>()
+    function AssigneePicker(props: ReactCellEditorProps) {
+      return React.createElement(
+        'div',
+        { 'data-testid': 'assignee-picker' },
+        React.createElement('button', { type: 'button', onClick: () => props.commit('Bob') }, 'Bob'),
+        React.createElement('button', { type: 'button', onClick: () => props.cancel() }, 'Cancel'),
+      )
+    }
+
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+      },
+      rows: [{ owner: 'Alice' }],
+    })
+
+    const { unmount } = await mountNovaExcel({
+      data,
+      ref,
+      cellEditors: {
+        assignee: createReactCellEditor(AssigneePicker, { kind: 'popover' }),
+      },
+    })
+
+    await act(async () => {
+      ref.current!.grid.openCellEditor(0, 'owner')
+      await Promise.resolve()
+    })
+    const bobButton = document.body.querySelector<HTMLButtonElement>(
+      '[data-novasheet-react-cell-editor] button',
+    )
+    expect(bobButton?.textContent).toBe('Bob')
+
+    await act(async () => {
+      bobButton!.click()
+      await Promise.resolve()
+    })
+
+    expect(data.getCell(0, 'owner')).toBe('Bob')
+    expect(document.body.querySelector('[data-testid="assignee-picker"]')).toBeNull()
+
+    await act(async () => {
+      ref.current!.grid.openCellEditor(0, 'owner')
+      await Promise.resolve()
+    })
+    const cancelButton = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('[data-novasheet-react-cell-editor] button'),
+    ).find((button) => button.textContent === 'Cancel')
+    expect(cancelButton).toBeDefined()
+
+    await act(async () => {
+      cancelButton!.click()
+      await Promise.resolve()
+    })
+
+    expect(data.getCell(0, 'owner')).toBe('Bob')
+    expect(document.body.querySelector('[data-testid="assignee-picker"]')).toBeNull()
+    expect('createReactCellRenderer' in NovaSheetReact).toBe(false)
 
     unmount()
   })

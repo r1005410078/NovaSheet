@@ -13,6 +13,11 @@ export type {
   UseNovaSheetGridResult,
 } from './features/grid'
 export {
+  createReactCellEditor,
+  type CreateReactCellEditorOptions,
+  type ReactCellEditorProps,
+} from './editors'
+export {
   NovaSheetToolbar,
   defaultToolbarItems,
   deriveToolbarStateFromGrid,

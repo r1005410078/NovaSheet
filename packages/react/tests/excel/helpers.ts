@@ -59,6 +59,7 @@ export async function mountNovaExcel(
         '[data-novasheet-fill-palette]',
         '[data-novasheet-border-palette]',
         '[data-novasheet-merge-menu]',
+        '[data-novasheet-react-cell-editor]',
       ]) {
         document.body.querySelector(selector)?.remove()
       }
