@@ -1318,6 +1318,55 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
     expect(engine.selectCell).toHaveBeenCalledWith({ rowIndex: 0, colIndex: 0 })
   })
 
+  it('falls back to original custom registry when resolved type changes without explicit override', () => {
+    const engine = makeEngine()
+    engine.commitCellValue = mock(() => true)
+    engine.getColumnIndex = mock((fieldId: string) => (fieldId === 'owner' ? 0 : -1))
+    engine.getFrame = mock(() => {
+      const frame = makeFrameWithFields(
+        [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+        [{ owner: 'Alice' }],
+      )
+      return {
+        ...frame,
+        resolveCellType: (rowIndex: number, colIndex: number, field: Schema['fields'][number]) =>
+          rowIndex === 0 && colIndex === 0 && field.id === 'owner' ? 'text' : 'text',
+        hasCellTypeOverride: () => false,
+      }
+    })
+
+    const calls: string[] = []
+    const onAction = mock((ctx) => {
+      calls.push('onAction')
+      expect(ctx.field).toMatchObject({ id: 'owner', type: 'assignee' })
+      expect(ctx.actionId).toBe('change-owner')
+    })
+    const editor = {
+      open: mock((ctx: CellEditorOpenContext) => {
+        calls.push('editor.open')
+        expect(ctx.field).toMatchObject({ id: 'owner', type: 'assignee' })
+      }),
+    }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRendererWithActionHit({
+        rowIndex: 0,
+        colIndex: 0,
+        actionId: 'change-owner',
+      }),
+      cellTypes: { assignee: { onAction } satisfies CellTypeDefinition },
+      cellEditors: { assignee: editor },
+    })
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(true)
+    expect(editor.open).toHaveBeenCalledTimes(1)
+
+    runtime.handleHostPointerDown({ x: 120, y: 44, button: 0, shiftKey: false })
+
+    expect(calls).toEqual(['editor.open', 'onAction', 'editor.open'])
+  })
+
   it('选中后直接键入进入编辑（Sheets 式）', () => {
     const engine = makeEngine()
     engine.getSelection = mock(() => ({
@@ -1381,6 +1430,118 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
     expect(engine.beginCellEdit).toHaveBeenCalledWith({ rowIndex: 1, colIndex: 0 })
     expect(engine.updateCellEditDraft).toHaveBeenCalledWith('x')
     expect(engine.navigateSelection).not.toHaveBeenCalled()
+  })
+
+  it('built-in editor uses single-line input when session.fieldType resolves to number on a text column', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = mock((fieldId: string) => (fieldId === 'name' ? 0 : -1))
+    engine.beginCellEdit = mock(() => true)
+    engine.getData = mock(() => ({
+      getSchema: () => ({
+        fields: [{ id: 'name', name: 'Name', type: 'text', width: 100 }],
+      }),
+    }) as never)
+    engine.getFrame = mock(() => ({
+      data: engine.getData(),
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: { indexToPosition: () => 0, getSize: () => 28 } as never,
+      colsAxis: { indexToPosition: () => 0, getSize: () => 100 } as never,
+      viewport: {
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            rowRange: [0, 9],
+            colRange: [0, 2],
+            rect: { x: 0, y: 32, width: 300, height: 200 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+      cellEdit: {
+        cell: { rowIndex: 0, colIndex: 0 },
+        fieldId: 'name',
+        fieldType: 'number' as const,
+        draft: '42',
+      },
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+    }))
+
+    const editor = {
+      open: mock(() => {}),
+      close: mock(() => {}),
+      isOpen: mock(() => false),
+      syncRect: mock(() => {}),
+      applyTheme: mock(() => {}),
+    }
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setCellEditor(editor as never)
+
+    expect(runtime.openCellEditor(0, 'name')).toBe(true)
+    expect(editor.open).toHaveBeenCalledWith(
+      { x: 0, y: 32, width: 100, height: 28 },
+      '42',
+      { selectAll: false, multiline: false },
+    )
+  })
+
+  it('built-in editor uses multiline textarea when session.fieldType resolves to text on a number column', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = mock((fieldId: string) => (fieldId === 'score' ? 0 : -1))
+    engine.beginCellEdit = mock(() => true)
+    engine.getData = mock(() => ({
+      getSchema: () => ({
+        fields: [{ id: 'score', name: 'Score', type: 'number', width: 100 }],
+      }),
+    }) as never)
+    engine.getFrame = mock(() => ({
+      data: engine.getData(),
+      theme: { metrics: { headerHeight: 32 } } as never,
+      rowsAxis: { indexToPosition: () => 0, getSize: () => 28 } as never,
+      colsAxis: { indexToPosition: () => 0, getSize: () => 100 } as never,
+      viewport: {
+        regions: [
+          {
+            id: 'main',
+            rowBand: 'middle',
+            rowRange: [0, 9],
+            colRange: [0, 2],
+            rect: { x: 0, y: 32, width: 300, height: 200 },
+            scrollOffsetX: 0,
+            scrollOffsetY: 0,
+            zIndex: 10,
+          },
+        ],
+      } as never,
+      cellEdit: {
+        cell: { rowIndex: 0, colIndex: 0 },
+        fieldId: 'score',
+        fieldType: 'text' as const,
+        draft: 'hello',
+      },
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+    }))
+
+    const editor = {
+      open: mock(() => {}),
+      close: mock(() => {}),
+      isOpen: mock(() => false),
+      syncRect: mock(() => {}),
+      applyTheme: mock(() => {}),
+    }
+    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
+    runtime.setCellEditor(editor as never)
+
+    expect(runtime.openCellEditor(0, 'score')).toBe(true)
+    expect(editor.open).toHaveBeenCalledWith(
+      { x: 0, y: 32, width: 100, height: 28 },
+      'hello',
+      { selectAll: false, multiline: true },
+    )
   })
 
   it('合并单元格进入编辑时，编辑器覆盖完整合并区域', () => {

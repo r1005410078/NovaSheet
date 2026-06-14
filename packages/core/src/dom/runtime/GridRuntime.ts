@@ -2549,10 +2549,9 @@ export class GridRuntime {
       return false
     }
 
-    const field = this.engine.getData().getSchema?.().fields[session.cell.colIndex]
     // 任意非 number 格都用多行编辑器：支持 Alt+Enter 硬换行（与 Google 表格一致），
     // 提交时按内容 autofit 行高。number 仍单行。
-    const multiline = field ? field.type !== 'number' : true
+    const multiline = session.fieldType !== 'number'
 
     this.editingMultilineOriginalRowHeight = multiline
       ? this.engine.getRowsAxis().getSize(session.cell.rowIndex)
