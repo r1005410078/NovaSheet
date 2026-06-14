@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@novasheet/canvas2d": "workspace:*",
+    "@novasheet/cell-kit": "workspace:*",
     "@novasheet/core": "workspace:*",
     "@novasheet/react": "workspace:*"
   },

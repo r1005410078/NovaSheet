@@ -8,6 +8,7 @@
       "@novasheet/canvas2d": ["./packages/canvas2d/src/index.ts"],
       "@novasheet/react": ["./packages/react/src/index.ts"],
       "@novasheet/mbd": ["./packages/mbd/src/index.ts"],
+      "@novasheet/cell-kit": ["./packages/cell-kit/src/index.ts"],
       "@/*": ["./packages/react/src/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
