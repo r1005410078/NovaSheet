@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { formatValue } from '../../../src/kernel/protocol/formatValue'
+import { dateToSerial } from '../../../src/kernel/protocol/serial'
 import type { Field } from '../../../src/kernel/data/Schema'
 import type { CellFormatter, FormatContext } from '../../../src/kernel/protocol/FormatTypes'
 
@@ -20,9 +21,14 @@ describe('formatValue', () => {
   it('percent: 0.1357 → 13.57%', () => {
     expect(formatValue(0.1357, { kind: 'percent', decimals: 2 }, ctx, noReg)).toBe('13.57%')
   })
-  it('date: token 替换', () => {
-    const d = new Date(2024, 5, 9, 8, 5, 3) // 2024-06-09 08:05:03 本地
-    expect(formatValue(d, { kind: 'date', pattern: 'YYYY-MM-DD HH:mm:ss' }, ctx, noReg)).toBe('2024-06-09 08:05:03')
+  it('date: serial + UTC token 替换', () => {
+    const serial = dateToSerial(new Date(Date.UTC(2024, 5, 9, 8, 5, 3))) // 2024-06-09 08:05:03Z
+    expect(formatValue(serial, { kind: 'date', pattern: 'YYYY-MM-DD HH:mm:ss' }, ctx, noReg)).toBe(
+      '2024-06-09 08:05:03',
+    )
+  })
+  it('date: 非数字 → undefined（painter 兜底）', () => {
+    expect(formatValue('not-a-date', { kind: 'date', pattern: 'YYYY-MM-DD' }, ctx, noReg)).toBeUndefined()
   })
   it('类型不匹配 → undefined（painter 兜底）', () => {
     expect(formatValue('x', { kind: 'number' }, ctx, noReg)).toBeUndefined()

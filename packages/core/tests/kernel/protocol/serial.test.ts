@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { dateToSerial, serialToDate, SERIAL_EPOCH_MS } from '../../../src/kernel/protocol/serial'
+import { dateToSerial, serialToDate } from '../../../src/kernel/protocol/serial'
 
 describe('serial', () => {
   it('纪元锚点：1899-12-30 = 0', () => {

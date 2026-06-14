@@ -1,5 +1,6 @@
 import type { CellValue } from '../data/Schema'
 import type { CellFormatter, FormatContext, ValueFormat } from './FormatTypes'
+import { serialToDate } from './serial'
 
 const warned = new Set<string>()
 function warnOnce(msg: string): void {
@@ -28,15 +29,15 @@ function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-/** v1 固定 token 子集；未识别 token 原样保留。使用本地时间。 */
+/** v1 固定 token 子集；未识别 token 原样保留。使用 UTC 方法（serial 时区中性）。 */
 function formatDatePattern(d: Date, pattern: string): string {
   return pattern
-    .replace(/YYYY/g, String(d.getFullYear()))
-    .replace(/MM/g, pad(d.getMonth() + 1))
-    .replace(/DD/g, pad(d.getDate()))
-    .replace(/HH/g, pad(d.getHours()))
-    .replace(/mm/g, pad(d.getMinutes()))
-    .replace(/ss/g, pad(d.getSeconds()))
+    .replace(/YYYY/g, String(d.getUTCFullYear()))
+    .replace(/MM/g, pad(d.getUTCMonth() + 1))
+    .replace(/DD/g, pad(d.getUTCDate()))
+    .replace(/HH/g, pad(d.getUTCHours()))
+    .replace(/mm/g, pad(d.getUTCMinutes()))
+    .replace(/ss/g, pad(d.getUTCSeconds()))
 }
 
 /**
@@ -80,9 +81,9 @@ export function formatValue(
       }).format(n)
     }
     case 'date': {
-      const d = value instanceof Date ? value : typeof value === 'number' ? new Date(value) : null
-      if (!d || Number.isNaN(d.getTime())) return undefined
-      return formatDatePattern(d, format.pattern)
+      const n = asFiniteNumber(value)
+      if (n === null) return undefined
+      return formatDatePattern(serialToDate(n), format.pattern)
     }
     case 'custom': {
       const fn = registry[format.formatterId]
