@@ -14,6 +14,7 @@ import type { ViewportSnapshot } from '../geometry/Viewport'
 import type { Theme } from '../theme/Theme'
 import type { ResolvedCellFormat } from '../protocol/FormatTypes'
 import type { CellEditSession, CollapsedGap, HeaderDecorationSource } from './RenderTypes'
+import type { CellTypeOverride } from '../../features/cell-types'
 
 /**
  * Phase 4.5 — `RenderFrame` 中的折叠行间隙，扩展 `CollapsedGap` 加入像素坐标。
@@ -60,6 +61,8 @@ export interface RenderFrame {
    * painter 应回退默认显示路径。引擎构帧时闭合 cell 级 valueFormat + 列默认 + 注册表 + locale。
    */
   formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
+  /** 当前格 resolved cell type 解析器（view 坐标）。 */
+  resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => CellTypeOverride
   /**
    * Phase A — 附件读取闭包（view 坐标）。引擎构帧时闭合 coords view→raw 转换 + attachmentStore。
    * `viewRow`/`viewCol` 为 view 空间坐标（渲染时已知），返回 `undefined` 表示该格无此 namespace 数据。

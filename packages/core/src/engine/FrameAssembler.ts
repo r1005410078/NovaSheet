@@ -10,10 +10,12 @@ import type { VisibleFormatResolver } from '../features/format/VisibleFormatReso
 import type { GridSelection } from '../kernel/coords/SelectionTypes'
 import type { CollapsedGap } from '../kernel/render/RenderTypes'
 import type { CellAttachmentStore } from '../features/attachment/CellAttachmentStore'
+import { normalizeFieldType, type CellTypeOverride } from '../features/cell-types'
 import { formatValue } from '../kernel/protocol/formatValue'
 
 /** date 类型列在没有显式 valueFormat 时使用的默认显示 pattern。 */
 const DEFAULT_DATE_PATTERN = 'YYYY-MM-DD'
+const DEFAULT_DATE_FORMAT: ValueFormat = { kind: 'date', pattern: DEFAULT_DATE_PATTERN }
 
 /**
  * 构 RenderFrame.formatCell 闭包。闭合可见区已解析的 cell 级 valueFormat（VIEW 坐标）
@@ -24,6 +26,7 @@ export function buildFormatCell(
   cellFormats: readonly ResolvedCellFormat[],
   formatters: Readonly<Record<string, CellFormatter>>,
   locale: string,
+  resolveCellType: (rowIndex: number, colIndex: number, field: Field) => CellTypeOverride,
 ): (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined {
   const cellMap = new Map<string, ValueFormat>()
   for (const cf of cellFormats) {
@@ -31,8 +34,7 @@ export function buildFormatCell(
   }
   return (rowIndex, colIndex, field, value) => {
     const explicit = cellMap.get(`${rowIndex}:${colIndex}`) ?? field.format
-    const format =
-      explicit ?? (field.type === 'date' ? { kind: 'date' as const, pattern: DEFAULT_DATE_PATTERN } : undefined)
+    const format = explicit ?? (resolveCellType(rowIndex, colIndex, field) === 'date' ? DEFAULT_DATE_FORMAT : undefined)
     if (!format) return undefined
     return formatValue(value, format, { field, locale }, formatters)
   }
@@ -56,6 +58,8 @@ export interface FrameAssemblerInput {
   readonly viewRowToRaw: (viewRow: number) => number
   /** view→raw 列坐标转换，用于构建 getAttachment 闭包。 */
   readonly viewColToRaw: (viewCol: number) => number
+  /** raw cell type resolver，构帧时包成 view resolver。 */
+  readonly resolveRawCellType: (rowIndex: number, colIndex: number, field: Field) => CellTypeOverride
   /** 附件存储引用，供 getAttachment 读取。 */
   readonly attachmentStore: CellAttachmentStore
 }
@@ -96,7 +100,12 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     lastVisibleCol,
     mergeRegions,
   )
-  const formatCell = buildFormatCell(cellFormats, input.formatters, input.locale)
+  const resolveCellType = (viewRow: number, viewCol: number, field: Field): CellTypeOverride => {
+    const rawRow = input.viewRowToRaw(viewRow)
+    const rawCol = input.viewColToRaw(viewCol)
+    return rawCol < 0 ? normalizeFieldType(field.type) : input.resolveRawCellType(rawRow, rawCol, field)
+  }
+  const formatCell = buildFormatCell(cellFormats, input.formatters, input.locale, resolveCellType)
   const { viewRowToRaw, viewColToRaw, attachmentStore } = input
   function getAttachment<T>(namespace: string, viewRow: number, viewCol: number): T | undefined {
     const rawRow = viewRowToRaw(viewRow)
@@ -116,6 +125,7 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     cellFormats,
     mergeRegions,
     formatCell,
+    resolveCellType,
     getAttachment,
   }
 }

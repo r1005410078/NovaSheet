@@ -17,6 +17,8 @@ const schema = {
 }
 
 const numField: Field = { id: 'a', name: 'A', type: 'number', width: 100 }
+const textField: Field = { id: 't', name: 'T', type: 'text', width: 100 }
+const defaultResolveCellType = () => 'text' as const
 
 describe('buildFormatCell', () => {
   it('cell 级 valueFormat 覆盖列默认', () => {
@@ -24,12 +26,12 @@ describe('buildFormatCell', () => {
       { rowIndex: 0, colIndex: 0, format: { valueFormat: { kind: 'currency', currency: 'CNY' } } },
     ]
     const field: Field = { ...numField, format: { kind: 'number' } }
-    const fc = buildFormatCell(cellFormats, {}, 'en-US')
+    const fc = buildFormatCell(cellFormats, {}, 'en-US', defaultResolveCellType)
     expect(fc(0, 0, field, 1234.5)).toBe('CN¥1,234.50')   // cell 级 currency 胜
     expect(fc(1, 0, field, 1234)).toBe('1,234')          // 无 cell 级 → 列默认 number
   })
   it('无任何 format → undefined', () => {
-    const fc = buildFormatCell([], {}, 'en-US')
+    const fc = buildFormatCell([], {}, 'en-US', defaultResolveCellType)
     expect(fc(0, 0, numField, 5)).toBeUndefined()
   })
 })
@@ -83,6 +85,7 @@ describe('assembleRenderFrame', () => {
       locale: 'en-US',
       viewRowToRaw: (v) => v,
       viewColToRaw: (v) => v,
+      resolveRawCellType: () => 'text',
       attachmentStore: formatState.attachmentStore,
     }
     const frame = assembleRenderFrame(input)
@@ -133,6 +136,7 @@ describe('assembleRenderFrame', () => {
       locale: 'en-US',
       viewRowToRaw: (v) => v,
       viewColToRaw: (v) => v,
+      resolveRawCellType: () => 'text',
       attachmentStore: formatState.attachmentStore,
     }
     const frame = assembleRenderFrame(input)
@@ -148,18 +152,49 @@ const plainNumField: Field = { id: 'n', name: 'N', type: 'number', width: 100 }
 
 describe('buildFormatCell — date 默认 pattern', () => {
   it('date 列无 valueFormat → 默认 YYYY-MM-DD', () => {
-    const fc = buildFormatCell([], {}, 'en-US')
+    const fc = buildFormatCell([], {}, 'en-US', () => 'date')
     const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
     expect(fc(0, 0, dateField, serial)).toBe('2025-01-15')
   })
   it('非 date 列无 valueFormat → undefined（painter 兜底）', () => {
-    const fc = buildFormatCell([], {}, 'en-US')
+    const fc = buildFormatCell([], {}, 'en-US', defaultResolveCellType)
     expect(fc(0, 0, plainNumField, 42)).toBeUndefined()
   })
   it('date 列有显式 field.format → 用显式 pattern 覆盖默认', () => {
     const f: Field = { ...dateField, format: { kind: 'date', pattern: 'DD/MM/YYYY' } }
-    const fc = buildFormatCell([], {}, 'en-US')
+    const fc = buildFormatCell([], {}, 'en-US', defaultResolveCellType)
     const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
     expect(fc(0, 0, f, serial)).toBe('15/01/2025')
+  })
+
+  it('text field + resolver returns date → 默认 YYYY-MM-DD', () => {
+    const fc = buildFormatCell([], {}, 'en-US', () => 'date')
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    expect(fc(0, 0, textField, serial)).toBe('2025-01-15')
+  })
+
+  it('explicit field.format 或 cell valueFormat 仍优先于 resolver date', () => {
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    const fieldWithFormat: Field = {
+      ...textField,
+      format: { kind: 'date', pattern: 'DD/MM/YYYY' },
+    }
+    const withFieldFormat = buildFormatCell([], {}, 'en-US', () => 'date')
+    expect(withFieldFormat(0, 0, fieldWithFormat, serial)).toBe('15/01/2025')
+
+    const cellFormats: ResolvedCellFormat[] = [
+      { rowIndex: 0, colIndex: 0, format: { valueFormat: { kind: 'date', pattern: 'MM-DD-YYYY' } } },
+    ]
+    const withCellFormat = buildFormatCell(cellFormats, {}, 'en-US', () => 'date')
+    expect(withCellFormat(0, 0, fieldWithFormat, serial)).toBe('01-15-2025')
+  })
+
+  it('resolver returns number/text 时不注入默认 date format', () => {
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    const numberResolved = buildFormatCell([], {}, 'en-US', () => 'number')
+    const textResolved = buildFormatCell([], {}, 'en-US', () => 'text')
+
+    expect(numberResolved(0, 0, textField, serial)).toBeUndefined()
+    expect(textResolved(0, 0, textField, serial)).toBeUndefined()
   })
 })

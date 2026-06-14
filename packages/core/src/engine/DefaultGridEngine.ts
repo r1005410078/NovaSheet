@@ -478,6 +478,7 @@ export class DefaultGridEngine implements GridEngine {
       locale: this.locale,
       viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
       viewColToRaw: (viewCol) => this.coords.viewColToRaw(viewCol),
+      resolveRawCellType: (row, col, field) => this.cellTypeStore.resolve(row, col, field),
       attachmentStore: this.formatState.attachmentStore,
     })
   }
