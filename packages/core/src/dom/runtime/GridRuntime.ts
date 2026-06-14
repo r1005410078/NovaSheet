@@ -323,7 +323,12 @@ export class GridRuntime {
   /** Phase 4.1 — 剪贴板读写 adapter。 */
   private clipboardAdapter?: DomClipboardAdapter
   /** 最近一次从 grid 写出的剪贴板缓存，用于 typed paste 保留值类型。 */
-  private clipboardCache: { range: CellRange; rows: readonly Row[]; tsvHash: number } | null = null
+  private clipboardCache: {
+    range: CellRange
+    rows: readonly Row[]
+    tsvHash: number
+    attachments?: ReadonlyArray<ReadonlyArray<Record<string, string>>>
+  } | null = null
   /** copy 成功后的通知回调。 */
   private onCopy?: (range: CellRange) => void
   /** cut 成功后的通知回调。 */
@@ -925,12 +930,46 @@ export class GridRuntime {
     return { range, rows, tsv: serializeRowsToTsv(rows, fieldIds) }
   }
 
+  /**
+   * 遍历选区每格、每注册 namespace，经 codec.serialize 存入二维数组（行×列）。
+   * 坐标：range 是 view 坐标，读 attachment 前经 viewRowToRaw/viewColToRaw 转换。
+   */
+  private captureSelectionAttachments(range: CellRange): Record<string, string>[][] {
+    const namespaces = this.engine.getAttachmentNamespaces()
+    const grid: Record<string, string>[][] = []
+    for (let r = range.startRow; r <= range.endRow; r++) {
+      const rowOut: Record<string, string>[] = []
+      for (let c = range.startCol; c <= range.endCol; c++) {
+        const cell: Record<string, string> = {}
+        if (namespaces.length > 0) {
+          const rawRow = this.engine.viewRowToRaw(r)
+          const rawCol = this.engine.viewColToRaw(c)
+          for (const ns of namespaces) {
+            const data = this.engine.getCellAttachment(ns, rawRow, rawCol)
+            if (data !== undefined) {
+              const codec = this.engine.getAttachmentCodec(ns)
+              if (codec) cell[ns] = codec.serialize(data)
+            }
+          }
+        }
+        rowOut.push(cell)
+      }
+      grid.push(rowOut)
+    }
+    return grid
+  }
+
   /** 处理 copy：序列化当前选区、写入剪贴板并更新 typed paste 缓存。 */
   async handleClipboardCopy(): Promise<boolean> {
     if (this.destroyed) return false
     const snap = this.snapshotSelection()
     if (!snap) return false
-    this.clipboardCache = { range: snap.range, rows: snap.rows, tsvHash: fnv1aHash(snap.tsv) }
+    this.clipboardCache = {
+      range: snap.range,
+      rows: snap.rows,
+      tsvHash: fnv1aHash(snap.tsv),
+      attachments: this.captureSelectionAttachments(snap.range),
+    }
     await this.clipboardAdapter?.writeText(snap.tsv)
     this.onCopy?.(snap.range)
     return true
@@ -942,7 +981,12 @@ export class GridRuntime {
     if (!isMutableDataSource(this.engine.getData())) return false
     const snap = this.snapshotSelection()
     if (!snap) return false
-    this.clipboardCache = { range: snap.range, rows: snap.rows, tsvHash: fnv1aHash(snap.tsv) }
+    this.clipboardCache = {
+      range: snap.range,
+      rows: snap.rows,
+      tsvHash: fnv1aHash(snap.tsv),
+      attachments: this.captureSelectionAttachments(snap.range),
+    }
     await this.clipboardAdapter?.writeText(snap.tsv)
     this.engine.clearRange(snap.range)
     this.afterEngineMutation()
