@@ -627,47 +627,49 @@ describe('Core BDD Batch 6 format merge theme scenarios', () => {
     })
     const { container, grid } = mountRecordingGrid({ data })
 
-    expect(grid.getCellType(0, 1)).toBe('date')
-    expect(grid.setCellType(fillRange(0, 0, 1, 1), 'text')).toBe(true)
-    expect(grid.getCellType(0, 1)).toBe('text')
-    expect(grid.clearCellType(fillRange(0, 0, 1, 1))).toBe(true)
-    expect(grid.getCellType(0, 1)).toBe('date')
-    grid.undo()
-    expect(grid.getCellType(0, 1)).toBe('text')
-    grid.redo()
-    expect(grid.getCellType(0, 1)).toBe('date')
+    try {
+      expect(grid.getCellType(0, 1)).toBe('date')
+      expect(grid.setCellType(fillRange(0, 0, 1, 1), 'text')).toBe(true)
+      expect(grid.getCellType(0, 1)).toBe('text')
+      expect(grid.clearCellType(fillRange(0, 0, 1, 1))).toBe(true)
+      expect(grid.getCellType(0, 1)).toBe('date')
+      grid.undo()
+      expect(grid.getCellType(0, 1)).toBe('text')
+      grid.redo()
+      expect(grid.getCellType(0, 1)).toBe('date')
 
-    grid.hideCols(['name'])
-    expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'asc' })).toBe(true)
-    expect(grid.setCellType(fillRange(0, 0, 0, 0), 'number')).toBe(true)
-    expect(grid.getCellType(0, 0)).toBe('number')
+      grid.hideCols(['name'])
+      expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'asc' })).toBe(true)
+      expect(grid.setCellType(fillRange(0, 0, 0, 0), 'number')).toBe(true)
+      expect(grid.getCellType(0, 0)).toBe('number')
 
-    expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'desc' })).toBe(true)
-    expect(grid.getCellType(0, 0)).toBe('date')
-    expect(grid.getCellType(2, 0)).toBe('number')
-    expect(grid.clearCellType(fillRange(2, 2, 0, 0))).toBe(true)
-    expect(grid.getCellType(2, 0)).toBe('date')
+      expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'desc' })).toBe(true)
+      expect(grid.getCellType(0, 0)).toBe('date')
+      expect(grid.getCellType(2, 0)).toBe('number')
+      expect(grid.clearCellType(fillRange(2, 2, 0, 0))).toBe(true)
+      expect(grid.getCellType(2, 0)).toBe('date')
 
-    expect(
-      grid.getFilterLayer().setSpec({
-        fieldId: 'score',
-        op: { kind: 'number-equals', value: 30 },
-      }),
-    ).toBe(true)
-    expect(grid.setCellType(fillRange(0, 0, 0, 0), 'checkbox')).toBe(true)
-    expect(grid.getCellType(0, 0)).toBe('checkbox')
-    expect(grid.clearCellType(fillRange(0, 0, 0, 0))).toBe(true)
-    expect(grid.getCellType(0, 0)).toBe('date')
-    expect(grid.getFilterLayer().setSpec(null)).toBe(true)
-    expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'asc' })).toBe(true)
-    expect(grid.getCellType(2, 0)).toBe('date')
+      expect(
+        grid.getFilterLayer().setSpec({
+          fieldId: 'score',
+          op: { kind: 'number-equals', value: 30 },
+        }),
+      ).toBe(true)
+      expect(grid.setCellType(fillRange(0, 0, 0, 0), 'checkbox')).toBe(true)
+      expect(grid.getCellType(0, 0)).toBe('checkbox')
+      expect(grid.clearCellType(fillRange(0, 0, 0, 0))).toBe(true)
+      expect(grid.getCellType(0, 0)).toBe('date')
+      expect(grid.getFilterLayer().setSpec(null)).toBe(true)
+      expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'asc' })).toBe(true)
+      expect(grid.getCellType(2, 0)).toBe('date')
 
-    expect(grid.setCellType(fillRange(0, 1, 0, 0), 'checkbox')).toBe(false)
-    expect(grid.getCellType(0, 0)).toBe('date')
-    expect(grid.getCellType(1, 0)).toBe('date')
-
-    grid.destroy()
-    document.body.removeChild(container)
+      expect(grid.setCellType(fillRange(0, 1, 0, 0), 'checkbox')).toBe(false)
+      expect(grid.getCellType(0, 0)).toBe('date')
+      expect(grid.getCellType(1, 0)).toBe('date')
+    } finally {
+      grid.destroy()
+      container.remove()
+    }
   })
 
   it('core.L2.grid-cell-type-edit-display uses resolved type for default date display and edit parsing', () => {

@@ -283,19 +283,21 @@ describe('Core BDD Batch 5 clipboard edit fill scenarios', () => {
       onPasteSkipped: (cells) => skipped.push(...cells),
     })
 
-    grid.setCellType(fillRange(0, 0, 0, 0), 'date')
-    grid.setCellType(fillRange(0, 0, 1, 1), 'number')
-    grid.setSelection({ kind: 'cell', active: { rowIndex: 0, colIndex: 0 }, range: fillRange(0, 0, 0, 1) })
-    expect(await grid.paste()).toBe(true)
+    try {
+      grid.setCellType(fillRange(0, 0, 0, 0), 'date')
+      grid.setCellType(fillRange(0, 0, 1, 1), 'number')
+      grid.setSelection({ kind: 'cell', active: { rowIndex: 0, colIndex: 0 }, range: fillRange(0, 0, 0, 1) })
+      expect(await grid.paste()).toBe(true)
 
-    expect(data.getCell(0, 'a')).toBe(dateToSerial(new Date(Date.UTC(2025, 0, 15))))
-    expect(data.getCell(0, 'b')).toBeNull()
-    expect(skipped).toEqual([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
-    expect(grid.getCellType(0, 0)).toBe('date')
-    expect(grid.getCellType(0, 1)).toBe('number')
-
-    grid.destroy()
-    document.body.removeChild(container)
+      expect(data.getCell(0, 'a')).toBe(dateToSerial(new Date(Date.UTC(2025, 0, 15))))
+      expect(data.getCell(0, 'b')).toBeNull()
+      expect(skipped).toEqual([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
+      expect(grid.getCellType(0, 0)).toBe('date')
+      expect(grid.getCellType(0, 1)).toBe('number')
+    } finally {
+      grid.destroy()
+      container.remove()
+    }
   })
 })
 })
