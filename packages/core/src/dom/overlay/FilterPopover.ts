@@ -2,6 +2,7 @@ import type { Field } from '../../kernel/data/Schema'
 import type { FilterOp } from '../../features/view/FilterLayer'
 import type { Theme } from '../../kernel/theme/Theme'
 import { applyFilterPopoverTheme, ensureFilterPopoverStylesheet } from '../host/filter-popover-style'
+import { dateToSerial, serialToDate } from '../../kernel/protocol/serial'
 
 export interface FilterPopoverCallbacks {
   onApply: (op: FilterOp | null) => void
@@ -351,12 +352,12 @@ function finiteOrNull(value: string): number | null {
   return Number.isFinite(number) ? number : null
 }
 
-function dateOrNull(value: string): Date | null {
+function dateOrNull(value: string): number | null {
   if (value.trim() === '') return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
+  const date = new Date(value) // date-only ISO 按 UTC 午夜解析
+  return Number.isNaN(date.getTime()) ? null : dateToSerial(date)
 }
 
-function dateInputValue(date: Date | null): string {
-  return date ? date.toISOString().slice(0, 10) : ''
+function dateInputValue(serial: number | null): string {
+  return serial == null ? '' : serialToDate(serial).toISOString().slice(0, 10)
 }
