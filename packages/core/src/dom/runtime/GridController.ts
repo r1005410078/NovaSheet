@@ -4,6 +4,7 @@ import type { CellRange, GridSelection } from '../../kernel/coords/SelectionType
 import type { ContextMenuItem } from '../../features/context-menu/ContextMenuModel'
 import type { DataSource } from '../../kernel/data/DataSource'
 import type { Field } from '../../kernel/data/Schema'
+import type { CellTypeOverride } from '../../features/cell-types'
 import type { FilterLayer, FilterSpec } from '../../features/view/FilterLayer'
 import type { SortLayer, SortSpec } from '../../features/view/SortLayer'
 import type { ViewPipeline } from '../../features/view/ViewPipeline'
@@ -129,6 +130,12 @@ export interface GridController {
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean
   /** 设置 view `range` 值格式（Phase 5-C）；变化时刷新并返回 true。 */
   setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean
+  /** 为 view `range` 设置单元格类型覆盖；变化时刷新并返回 true。 */
+  setCellType(range: CellRange, type: CellTypeOverride): boolean
+  /** 清除 view `range` 的单元格类型覆盖；变化时刷新并返回 true。 */
+  clearCellType(range: CellRange): boolean
+  /** 读取 view 坐标的 resolved cell type；越界保守返回 `text`。 */
+  getCellType(viewRow: number, viewCol: number): CellTypeOverride
   /** 给 raw cell 写扩展附件；data=undefined 清除；变化时返回 true。 */
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean
   /** 读 raw cell 的扩展附件；无则 undefined。 */

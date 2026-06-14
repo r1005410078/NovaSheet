@@ -6,6 +6,12 @@ import type { FrozenConfig } from '../geometry/FrozenRegions'
 import type { FormatLayer } from '../protocol/FormatTypes'
 import type { CellAttachmentSnapshot } from '../protocol/AttachmentTypes'
 
+type CellTypeUndoSnapshot = ReadonlyArray<{
+  readonly rowIndex: number
+  readonly colIndex: number
+  readonly type: 'text' | 'number' | 'date' | 'checkbox'
+}>
+
 export interface CellWrite {
   readonly rowIndex: number
   readonly fieldId: string
@@ -203,6 +209,13 @@ export type UndoCommand =
       readonly kind: 'unmerge'
       readonly before: readonly MergeRegion[]
       readonly after: readonly MergeRegion[]
+      readonly selectionBefore: GridSelection
+      readonly selectionAfter: GridSelection
+    }
+  | {
+      readonly kind: 'cellType'
+      readonly before: CellTypeUndoSnapshot
+      readonly after: CellTypeUndoSnapshot
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
     }

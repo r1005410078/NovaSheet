@@ -14,6 +14,7 @@ import type {
   PasteSkippedCell,
   Theme,
   CellEditorRegistry,
+  CellTypeOverride,
 } from './index'
 import type { GridEngineOptions } from './engine/GridEngine'
 import type { CellAttachmentCodec } from './kernel/protocol/AttachmentTypes'
@@ -362,6 +363,21 @@ export class Grid {
   /** 给 raw cell 写扩展私有附件（namespace 由 cellAttachments 注册）；data=undefined 清除；变化时返回 true。 */
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {
     return this.delegate.setCellAttachment(namespace, rawRow, rawCol, data)
+  }
+
+  /** 为 view `range` 设置单元格类型覆盖；变化时返回 true 并重绘。 */
+  setCellType(range: CellRange, type: CellTypeOverride): boolean {
+    return this.delegate.setCellType(range, type)
+  }
+
+  /** 清除 view `range` 的单元格类型覆盖；变化时返回 true 并重绘。 */
+  clearCellType(range: CellRange): boolean {
+    return this.delegate.clearCellType(range)
+  }
+
+  /** 读取 view 坐标的 resolved cell type；越界保守返回 `text`。 */
+  getCellType(viewRow: number, viewCol: number): CellTypeOverride {
+    return this.delegate.getCellType(viewRow, viewCol)
   }
 
   /** 读 raw cell 的扩展附件；无则 undefined。 */

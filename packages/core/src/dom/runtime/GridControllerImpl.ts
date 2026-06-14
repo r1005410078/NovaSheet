@@ -21,6 +21,7 @@ import { ViewPipeline } from '../../features/view/ViewPipeline'
 import { FrameScheduler } from '../../kernel/util/raf'
 import type { BorderPreset, BorderStyle, TextWrapMode, ValueFormat } from '../../kernel/protocol/FormatTypes'
 import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
+import type { CellTypeOverride } from '../../features/cell-types'
 import type {
   ContextMenuItem,
   ContextMenuAction,
@@ -509,6 +510,18 @@ export class GridControllerImpl implements GridController {
 
   setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
     return this.runtime.setValueFormat(range, valueFormat)
+  }
+
+  setCellType(range: CellRange, type: CellTypeOverride): boolean {
+    return this.runtime.setCellType(range, type)
+  }
+
+  clearCellType(range: CellRange): boolean {
+    return this.runtime.clearCellType(range)
+  }
+
+  getCellType(viewRow: number, viewCol: number): CellTypeOverride {
+    return this.engine.getCellType(viewRow, viewCol)
   }
 
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {

@@ -100,7 +100,7 @@ import type {
   CellEditorRegistry,
   CellEditorTrigger,
 } from '../interaction/CellEditorContract'
-import type { CellTypeRegistry } from '../../features/cell-types'
+import type { CellTypeOverride, CellTypeRegistry } from '../../features/cell-types'
 
 type RuntimeRenderFrame = ReturnType<GridEngine['getFrame']>
 type RuntimeCellEdit = NonNullable<RuntimeRenderFrame['cellEdit']>
@@ -711,6 +711,22 @@ export class GridRuntime {
   setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
     if (this.destroyed) return false
     const changed = this.engine.setValueFormat(range, valueFormat)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** 为 view `range` 设置单元格类型覆盖；变化时刷新视图。 */
+  setCellType(range: CellRange, type: CellTypeOverride): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.setCellType(range, type)
+    if (changed) this.afterEngineMutation()
+    return changed
+  }
+
+  /** 清除 view `range` 的单元格类型覆盖；变化时刷新视图。 */
+  clearCellType(range: CellRange): boolean {
+    if (this.destroyed) return false
+    const changed = this.engine.clearCellType(range)
     if (changed) this.afterEngineMutation()
     return changed
   }

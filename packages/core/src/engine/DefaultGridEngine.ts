@@ -20,7 +20,13 @@ import type {
 import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import { EditController } from '../features/edit/EditController'
 import { CellEditModel } from '../features/edit/CellEditModel'
-import type { CellTypeRegistry } from '../features/cell-types'
+import {
+  CellTypeController,
+  CellTypeStore,
+  registerCellTypeUndo,
+  type CellTypeOverride,
+  type CellTypeRegistry,
+} from '../features/cell-types'
 import type { CellAttachmentCodec } from '../kernel/protocol/AttachmentTypes'
 import { parseSelectionNavigationKey } from '../features/selection/SelectionNavigation'
 import type {
@@ -147,6 +153,8 @@ export class DefaultGridEngine implements GridEngine {
   private readonly undoReplay = new UndoReplay(this.undoRegistry)
   /** Phase 5-A — format/merge 聚合根；store 按 **raw** 坐标键控，结构变更经 remap 面委托。 */
   private readonly formatState = new DefaultFormatState()
+  /** Cell type override store（raw 坐标）。 */
+  private readonly cellTypeStore = new CellTypeStore()
   /**
    * Selection 写入门面；engine 经此写选区，不直连聚合 mutation（invariant #3）。
    * merge lookup 经 resolveViewMergeRegion 做 view→raw→view 翻译，sort/filter/隐藏列下亦正确。
@@ -164,6 +172,12 @@ export class DefaultGridEngine implements GridEngine {
     pushUndo: (command) => this.undoStack.push(command),
     getSelection: () => this.selection.getSelection(),
     selectRange: (range) => this.selectionController.setSelectedRange(range),
+  })
+  /** CellType 写入门面：view→raw、快照比较、undo 入栈。 */
+  private readonly cellTypeController = new CellTypeController(this.cellTypeStore, {
+    translateRange: (range) => this.coords.viewRangeToRaw(range),
+    pushUndo: (command) => this.undoStack.push(command),
+    getSelection: () => this.selection.getSelection(),
   })
   /** 可见 format/merge → VIEW 帧字段的只读解析器（从 getFrame 抽出，R1）。 */
   private readonly frameFormat = new VisibleFormatResolver(
@@ -265,6 +279,10 @@ export class DefaultGridEngine implements GridEngine {
       restoreMerge: (regions) => this.formatState.restoreMerge(regions),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
       restoreAttachments: (snap) => this.formatState.restoreAttachments(snap),
+    })
+    registerCellTypeUndo(this.undoRegistry, {
+      restoreCellTypes: (snapshot) => this.cellTypeStore.restore(snapshot),
+      restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
     registerRowUndo(this.undoRegistry, {
       setRowHeight: (rowIndex, height) => this.rowStructure.setRowHeight(rowIndex, height),
@@ -903,6 +921,26 @@ export class DefaultGridEngine implements GridEngine {
 
   getAttachmentCodec(namespace: string): import('../kernel/protocol/AttachmentTypes').CellAttachmentCodec<unknown> | undefined {
     return this.codecRegistry.get(namespace)
+  }
+
+  setCellType(range: CellRange, type: CellTypeOverride): boolean {
+    this.finishActiveEdit()
+    return this.cellTypeController.setCellType(range, type)
+  }
+
+  clearCellType(range: CellRange): boolean {
+    this.finishActiveEdit()
+    return this.cellTypeController.clearCellType(range)
+  }
+
+  getCellType(viewRow: number, viewCol: number): CellTypeOverride {
+    if (viewRow < 0 || viewRow >= this.data.getRowCount()) return 'text'
+    const rawCol = this.coords.viewColToRaw(viewCol)
+    if (rawCol < 0) return 'text'
+    const field = this.rawData.getSchema().fields[rawCol]
+    if (!field) return 'text'
+    const rawRow = this.coords.viewRowToRaw(viewRow)
+    return this.cellTypeStore.resolve(rawRow, rawCol, field)
   }
 
   /**

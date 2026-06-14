@@ -26,7 +26,7 @@ import type { Viewport } from '../kernel/geometry/Viewport'
 import type { RenderFrame } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
 import type { ExcelWorkspaceSize } from '../features/excel-workspace'
-import type { CellTypeRegistry } from '../features/cell-types'
+import type { CellTypeOverride, CellTypeRegistry } from '../features/cell-types'
 import type { CellAttachmentCodec } from '../kernel/protocol/AttachmentTypes'
 
 /**
@@ -362,6 +362,15 @@ export interface GridFormatting {
 
   /** 取某 namespace 的 codec（serialize/deserialize）；未注册返回 undefined。 */
   getAttachmentCodec(namespace: string): CellAttachmentCodec<unknown> | undefined
+
+  /** 为 view `range` 设置单元格类型覆盖；仅改 CellTypeStore，不改 value/format。 */
+  setCellType(range: CellRange, type: CellTypeOverride): boolean
+
+  /** 清除 view `range` 的单元格类型覆盖，回退到列默认 resolved type。 */
+  clearCellType(range: CellRange): boolean
+
+  /** 解析 view 坐标的 resolved cell type；越界或缺 field 时保守返回 `text`。 */
+  getCellType(viewRow: number, viewCol: number): CellTypeOverride
 }
 
 /** 单元格合并能力。 */
