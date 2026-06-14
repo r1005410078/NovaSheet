@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { createReactCellEditor, type ReactCellEditorProps } from '@novasheet/react'
 import type { CellEditor } from '@novasheet/core'
+import type { FocusEvent } from 'react'
 import { richTextToHtml, htmlElementToRichText } from './serialize'
 import { FloatingFormatToolbar } from './FloatingFormatToolbar'
 import { createRichTextEditingSession } from './editingSession'
@@ -9,6 +10,8 @@ import type { RichTextToolbarController } from './RichTextToolbarProvider'
 
 const RICH_TEXT_NAMESPACE = 'richText'
 const TOOLBAR_HEIGHT = 36
+const RICH_TEXT_EXTERNAL_FOCUS_SELECTOR =
+  '[data-rich-text-toolbar], [data-rich-text-color-picker]'
 
 export interface RichTextEditorOptions {
   readonly showInlineToolbar?: boolean
@@ -64,6 +67,14 @@ function RichTextCellEditorComponent(props: ReactCellEditorProps & RichTextCellE
     commit(text)
   }
 
+  const submitOnBlur = (event: FocusEvent<HTMLDivElement>): void => {
+    const nextFocus = event.relatedTarget
+    if (nextFocus instanceof Element && nextFocus.closest(RICH_TEXT_EXTERNAL_FOCUS_SELECTOR)) {
+      return
+    }
+    submit()
+  }
+
   return (
     <div style={{ position: 'relative', paddingTop: showInlineToolbar ? TOOLBAR_HEIGHT : 0 }}>
       {showInlineToolbar ? (
@@ -77,7 +88,7 @@ function RichTextCellEditorComponent(props: ReactCellEditorProps & RichTextCellE
         suppressContentEditableWarning
         data-novasheet-rich-text-editor
         style={{ minWidth: 120, outline: 'none', whiteSpace: 'pre-wrap' }}
-        onBlur={submit}
+        onBlur={submitOnBlur}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.altKey) { e.preventDefault(); submit() }
           if (e.key === 'Escape') { e.preventDefault(); cancel() }

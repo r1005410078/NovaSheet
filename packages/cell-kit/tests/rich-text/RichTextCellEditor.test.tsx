@@ -47,6 +47,25 @@ describe('richTextEditor', () => {
     expect(committed.runs).toEqual([{ start: 1, end: 3, attrs: { bold: true } }])
   })
 
+  it('does not commit when focus moves into external rich-text color picker', async () => {
+    const { ctx, container, committed } = open()
+    await act(async () => { richTextEditor.open(ctx) })
+    const ce = container.querySelector('[contenteditable]') as HTMLElement
+    const picker = document.createElement('div')
+    picker.setAttribute('data-rich-text-color-picker', '')
+    const input = document.createElement('input')
+    picker.appendChild(input)
+    document.body.appendChild(picker)
+
+    await act(async () => {
+      ce.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: input }))
+    })
+
+    expect(committed.value).toBeUndefined()
+    expect(committed.runs).toBeUndefined()
+    picker.remove()
+  })
+
   it('seeds contenteditable with existing runs when getAttachment is provided', async () => {
     const existingRuns = [{ start: 1, end: 3, attrs: { bold: true } }]
     const { ctx, container } = open({

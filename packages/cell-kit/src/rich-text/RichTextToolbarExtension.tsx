@@ -128,6 +128,11 @@ function RichTextToolbarControls({
               data-rich-text-color-picker=""
               className={RICH_TEXT_COLOR_PICKER_CLASS}
               style={{ top: colorPickerPosition.top, left: colorPickerPosition.left }}
+              onMouseDown={(event) => {
+                const target = event.target
+                if (target instanceof HTMLInputElement) return
+                event.preventDefault()
+              }}
             >
               <CustomColorPicker
                 initialColor={activeColor}
