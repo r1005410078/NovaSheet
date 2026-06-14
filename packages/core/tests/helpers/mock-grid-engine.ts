@@ -4,6 +4,7 @@ import { denseGridTheme } from '@novasheet/core'
 import type {
   Axis,
   CellRange,
+  CellTypeOverride,
   DataSource,
   FillDirection,
   FrozenConfig,
@@ -156,6 +157,9 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     setFillColor: mock((_range: CellRange, _color: string | null) => false),
     setBorders: mock((_range, _preset, _border) => false),
     setValueFormat: mock((_range, _valueFormat) => false),
+    setCellType: mock((_range: CellRange, _type: CellTypeOverride) => false),
+    clearCellType: mock((_range: CellRange) => false),
+    getCellType: mock((_viewRow: number, _viewCol: number): CellTypeOverride => 'text'),
     setTextWrap: mock((_range, _mode) => false),
     getCellFormat: mock((_rowIndex: number, _colIndex: number) => undefined),
     getViewCellFormat: mock((_viewRow: number, _viewCol: number) => undefined),

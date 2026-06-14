@@ -6,6 +6,7 @@ import { describe, expect, it, mock } from 'bun:test'
 import { InMemoryDataSource } from '@novasheet/core'
 import type {
   CellEditorOpenContext,
+  CellTypeOverride,
   DataSource,
   GridEngine,
   GridSelection,
@@ -122,6 +123,9 @@ function makeEngine(): GridEngine {
     setFillColor: mock(() => false),
     setBorders: mock(() => false),
     setValueFormat: mock(() => false),
+    setCellType: mock((_range, _type): boolean => false),
+    clearCellType: mock((_range): boolean => false),
+    getCellType: mock((_viewRow: number, _viewCol: number): CellTypeOverride => 'text'),
     setTextWrap: mock(() => false),
     getCellFormat: mock(() => undefined),
     getViewCellFormat: mock(() => undefined),
