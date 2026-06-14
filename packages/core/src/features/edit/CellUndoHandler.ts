@@ -32,6 +32,7 @@ export class CellUndoHandler implements UndoHandler {
         return
       case 'paste':
         for (const w of command.before) this.ctx.applyCellWrite(w.rowIndex, w.fieldId, w.value)
+        if (command.attachmentBefore) this.ctx.restoreAttachments?.(command.attachmentBefore)
         this.ctx.restoreSelectionForWrites(command.before, command.target)
         return
       default:
@@ -51,6 +52,7 @@ export class CellUndoHandler implements UndoHandler {
         return
       case 'paste':
         for (const w of command.after) this.ctx.applyCellWrite(w.rowIndex, w.fieldId, w.value)
+        if (command.attachmentAfter) this.ctx.restoreAttachments?.(command.attachmentAfter)
         this.ctx.restoreSelectionForWrites(command.after, command.target)
         return
       default:

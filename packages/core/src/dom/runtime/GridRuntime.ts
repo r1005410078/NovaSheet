@@ -1013,6 +1013,7 @@ export class GridRuntime {
     const tsvHash = fnv1aHash(tsv)
     let source: ApplyPasteSource
 
+    let attachmentWrites: import('../../features/clipboard/PasteController').AttachmentWrite[] | undefined
     if (this.clipboardCache && this.clipboardCache.tsvHash === tsvHash) {
       const cachedRange = this.clipboardCache.range
       const cachedFieldIds = fields
@@ -1022,6 +1023,8 @@ export class GridRuntime {
         cachedFieldIds.map((fid) => row[fid] ?? null),
       )
       source = { cells, sourceFieldIds: cachedFieldIds, typed: true }
+      // typed-cache 命中时恢复 attachment（codec deserialize + view→raw）
+      attachmentWrites = []
     } else {
       const anchorFieldIds = fieldIdsAtCols.slice(active.colIndex)
       const cells = parseTsvToCells(tsv, anchorFieldIds, schema)
@@ -1037,8 +1040,30 @@ export class GridRuntime {
       colCount: fields.length,
     })
 
+    // typed-cache 命中时构建 attachmentWrites（target 偏移对齐 cache 左上角）
+    if (attachmentWrites !== undefined && this.clipboardCache?.attachments) {
+      const cachedAttachments = this.clipboardCache.attachments
+      for (let r = target.startRow; r <= target.endRow; r++) {
+        for (let c = target.startCol; c <= target.endCol; c++) {
+          const cacheRow = (r - target.startRow) % sourceRows
+          const cacheCol = (c - target.startCol) % sourceCols
+          const cellAttachments = cachedAttachments[cacheRow]?.[cacheCol]
+          if (!cellAttachments) continue
+          for (const [ns, serialized] of Object.entries(cellAttachments)) {
+            const codec = this.engine.getAttachmentCodec(ns)
+            if (!codec) continue
+            const data = codec.deserialize(serialized)
+            const rawRow = this.engine.viewRowToRaw(r)
+            const rawCol = this.engine.viewColToRaw(c)
+            attachmentWrites.push({ rawRow, rawCol, namespace: ns, data })
+          }
+        }
+      }
+    }
+
     this.engine.commitPaste(source, target, fieldIdsAtCols, (skipped) =>
       this.onPasteSkipped?.(skipped),
+    attachmentWrites?.length ? attachmentWrites : undefined,
     )
     this.afterEngineMutation()
     const targetRange: CellRange = {

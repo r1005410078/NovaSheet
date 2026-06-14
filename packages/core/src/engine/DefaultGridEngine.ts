@@ -126,6 +126,7 @@ export class DefaultGridEngine implements GridEngine {
     getSchema: () => this.data.getSchema(),
     viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
     pushUndo: (command) => this.undoStack.push(command),
+    getAttachmentStore: () => this.formatState.attachmentStore,
   })
   private readonly fillController = new FillController({
     getMutableData: () => (isMutableDataSource(this.data) ? this.data : null),
@@ -255,6 +256,7 @@ export class DefaultGridEngine implements GridEngine {
         this.restoreSelectionForEdit(rowIndex, fieldId),
       restoreSelectionForWrites: (writes, fallbackRange) =>
         this.restoreSelectionForWrites(writes, fallbackRange),
+      restoreAttachments: (snap) => this.formatState.restoreAttachments(snap),
     })
     registerFormatUndo(this.undoRegistry, {
       restoreFormat: (layers) => this.formatState.restoreFormat(layers),
@@ -851,8 +853,9 @@ export class DefaultGridEngine implements GridEngine {
     target: PasteTargetRect,
     fieldIdsAtCols: readonly string[],
     onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
+    attachmentWrites?: readonly import('../features/clipboard/PasteController').AttachmentWrite[],
   ): void {
-    this.pasteController.commit(source, target, fieldIdsAtCols, onSkipped)
+    this.pasteController.commit(source, target, fieldIdsAtCols, onSkipped, attachmentWrites)
   }
 
   commitFill(

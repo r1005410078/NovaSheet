@@ -4,6 +4,7 @@ import type { PasteControllerContext } from '../../../src/features/clipboard/Pas
 import type { ApplyPasteSource, PasteTargetRect } from '../../../src/features/clipboard/ApplyPaste'
 import type { MutableDataSource } from '../../../src/kernel/data/MutableDataSource'
 import type { MergeRegion } from '../../../src/features/merge/MergeStore'
+import { CellAttachmentStore } from '../../../src/features/attachment/CellAttachmentStore'
 import { asRawRange } from '../../../src/kernel/coords/coordinates'
 
 function pasteSource(cells: (string | number | null)[][], fieldIds: string[]): ApplyPasteSource {
@@ -51,6 +52,7 @@ function makeCtx(overrides: Partial<PasteControllerContext> = {}): {
     getSchema: () => ({ fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] }),
     viewRowToRaw: (r) => r,
     pushUndo: (c) => pushed.push(c),
+    getAttachmentStore: () => new CellAttachmentStore(),
     ...overrides,
   }
   return { ctx, pushed, skipped }

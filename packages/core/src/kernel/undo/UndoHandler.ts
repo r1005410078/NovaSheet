@@ -1,6 +1,7 @@
 import type { CellValue } from '../data/Schema'
 import type { CellRange } from '../coords/SelectionTypes'
 import type { CellWrite, UndoCommand } from './UndoCommand'
+import type { CellAttachmentSnapshot } from '../protocol/AttachmentTypes'
 
 /**
  * 单个领域的 undo/redo replay 单元：自持本域最小 ctx，按 `kind` 自治逆/重做。
@@ -31,4 +32,6 @@ export interface CellUndoContext {
   restoreSelectionAfterEdit(rowIndex: number, fieldId: string): void
   /** 批量写入（clearRange/paste）后按可见写入行 + `fallbackRange` 的列恢复选区。 */
   restoreSelectionForWrites(writes: ReadonlyArray<CellWrite>, fallbackRange: CellRange): void
+  /** paste undo/redo 恢复 attachment 快照（可选，仅 paste 命令携带 attachment 时注入）。 */
+  restoreAttachments?(snap: CellAttachmentSnapshot): void
 }

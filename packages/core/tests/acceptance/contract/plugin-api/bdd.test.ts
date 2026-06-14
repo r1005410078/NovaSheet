@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it, mock } from 'bun:test'
 
 import * as publicApi from '../../../../src'
 import {
   DefaultGridEngine,
   InMemoryDataSource,
+  GridRuntime,
   type CellActionContext,
   type CellAttachmentCodec,
   type CellFilterOperator,
@@ -15,6 +16,8 @@ import {
   type Row,
   type Schema,
   type UndoCommand,
+  type WebHost,
+  type RenderBackend,
 } from '../../../../src'
 import {
   createDenseData,
@@ -146,5 +149,91 @@ describe('Core acceptance cell-attachment', () => {
       expect(grid.getCellAttachment('demo', 2, 0)).toBeUndefined()
       grid.destroy()
     })
+  })
+})
+
+describe('Core acceptance cell-attachment clipboard', () => {
+  const clipboardSchema: Schema = {
+    fields: [{ id: 'a', name: 'A', type: 'text', width: 80 }],
+  }
+
+  const demoCodec: CellAttachmentCodec<{ v: number }> = {
+    namespace: 'demo',
+    serialize: (d) => JSON.stringify(d),
+    deserialize: (t) => JSON.parse(t) as { v: number },
+  }
+
+  function makeHost(): WebHost {
+    return {
+      attach: mock(() => {}),
+      applyScrollbarTheme: mock(() => {}),
+      setScrollSize: mock(() => {}),
+      setCursor: mock(() => {}),
+      scrollTo: mock(() => {}),
+      getDpr: () => 1,
+      getContainerSize: () => ({ width: 400, height: 300 }),
+      getContainerBoundingRect: () => ({ left: 0, top: 0 }),
+      getScrollPosition: () => ({ scrollTop: 0, scrollLeft: 0 }),
+      focusScrollHost: mock(() => {}),
+      destroy: mock(() => {}),
+    }
+  }
+
+  function makeRenderer(): RenderBackend {
+    return {
+      mount: mock(() => {}),
+      resize: mock(() => {}),
+      render: mock(() => {}),
+      destroy: mock(() => {}),
+    }
+  }
+
+  function setupClipboardRuntime() {
+    const data = new InMemoryDataSource({
+      schema: clipboardSchema,
+      rows: [
+        { a: 'src' },
+        { a: null },
+        { a: null },
+      ] satisfies Row[],
+    })
+    const engine = new DefaultGridEngine({ data, cellAttachments: [demoCodec] })
+    const host = makeHost()
+    const renderer = makeRenderer()
+    const runtime = new GridRuntime({ engine, host, renderer })
+
+    let clipboardText = ''
+    runtime.setClipboardAdapter({
+      writeText: async (text: string) => { clipboardText = text; return true },
+      readText: async () => clipboardText,
+    } as never)
+
+    return { engine, runtime, data }
+  }
+
+  it('core.L2.cell-attachment-clipboard-roundtrip: copy/paste 同 Grid 内携带附件往返', async () => {
+    const { engine, runtime } = setupClipboardRuntime()
+
+    // 源格设附件
+    engine.setCellAttachment('demo', 0, 0, { v: 9 })
+
+    // 选中 (0,0) 复制
+    engine.selectCell({ rowIndex: 0, colIndex: 0 })
+    await runtime.handleClipboardCopy()
+
+    // 选中 (2,0) 粘贴
+    engine.selectCell({ rowIndex: 2, colIndex: 0 })
+    await runtime.handleClipboardPaste()
+
+    // 目标格附件经 codec 往返出现
+    expect(engine.getCellAttachment('demo', 2, 0)).toEqual({ v: 9 })
+
+    // undo：值与附件整体撤销（一次 undo）
+    engine.undo()
+    expect(engine.getCellAttachment('demo', 2, 0)).toBeUndefined()
+
+    // redo：附件恢复
+    engine.redo()
+    expect(engine.getCellAttachment('demo', 2, 0)).toEqual({ v: 9 })
   })
 })

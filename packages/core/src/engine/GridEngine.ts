@@ -12,6 +12,7 @@ import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode, ValueFormat }
 import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import type { ApplyPasteSource, PasteTargetRect } from '../features/clipboard/ApplyPaste'
 import type { PasteSkippedCell } from '../features/clipboard/types'
+import type { AttachmentWrite } from '../features/clipboard/PasteController'
 import type { FillDirection, FillMergeSnap } from '../features/fill/FillTarget'
 import type {
   CellAddress,
@@ -223,6 +224,7 @@ export interface GridClipboardMutation {
     target: PasteTargetRect,
     fieldIdsAtCols: readonly string[],
     onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
+    attachmentWrites?: readonly AttachmentWrite[],
   ): void
 }
 
