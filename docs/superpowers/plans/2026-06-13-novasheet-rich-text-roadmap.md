@@ -23,7 +23,8 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 | A | `@novasheet/core` 附件轴 | [`2026-06-13-...-cell-attachment-axis-phase-a.md`](./2026-06-13-novasheet-cell-attachment-axis-phase-a.md) | ☑ 已 ship |
 | B | `@novasheet/canvas2d` styled-text | [`2026-06-13-...-styled-text-phase-b.md`](./2026-06-13-novasheet-styled-text-phase-b.md) | ☑ 已 ship |
 | C-display | `@novasheet/cell-kit` 类型/codec/renderer | [`2026-06-13-...-phase-c-display.md`](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-display.md) | ☑ 已 ship |
-| C-edit | `@novasheet/cell-kit` editor/toolbar/选区加粗/fill/clipboard/装配/BDD | 待展开 | ☐ |
+| C-edit-UI | `@novasheet/cell-kit` editor/toolbar/选区加粗/装配/BDD | [`2026-06-13-...-phase-c-edit-ui.md`](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-edit-ui.md) | ☑ 已 ship |
+| C-edit-data | `@novasheet/cell-kit` D1 fill + D2 clipboard（纯 core） | 待展开 | ☐ |
 
 ---
 
@@ -87,27 +88,27 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 
 | 能力 | 落点 | 状态 |
 | --- | --- | --- |
-| `RichTextCellEditor`（contenteditable，editor adapter 缝注册） | C | ☐ |
-| runs → span 回填初值 | C | ☐ |
-| 提交：DOM → normalized runs + plain text | C | ☐ |
-| 提交写 value + `setCellAttachment` | C | ☐ |
-| `FloatingFormatToolbar`（size −/+、B、I、U、删除线、颜色 A） | C | ☐ |
-| 工具栏作用于 DOM Selection + toggle 语义 | C | ☐ |
-| 颜色选择器复用 `2026-06-11-toolbar-custom-color-picker` | C | ☐ |
-| editor overlay 坐标系正确（延 4ee78e1） | C | ☐ |
-| destroy/unmount 幂等（StrictMode mount→destroy→mount 绿） | C | ☐ |
-| **选区加粗** = 选区内逐格写 full-span run | C | ☐ |
+| `RichTextCellEditor`（contenteditable，editor adapter 缝注册） | C-edit-UI | ☑ |
+| runs → span 回填初值 | C-edit-UI（既存 runs 回填留 follow-up F1，第一版纯文本起） | ◐ |
+| 提交：DOM → normalized runs + plain text | C-edit-UI（`htmlElementToRichText`） | ☑ |
+| 提交写 value + `setCellAttachment` | C-edit-UI（editor 缝 `setAttachment`，T1） | ☑ |
+| `FloatingFormatToolbar`（size −/+、B、I、U、删除线、颜色 A） | C-edit-UI（B/I/U/strike/color ☑；size −/+ 留 follow-up） | ◐ |
+| 工具栏作用于 DOM Selection + toggle 语义 | C-edit-UI（包 span ☑；toggle-off 留 follow-up F2） | ◐ |
+| 颜色选择器复用 `2026-06-11-toolbar-custom-color-picker` | C-edit-UI（导出 `CustomColorPicker` 复用） | ☑ |
+| editor overlay 坐标系正确（延 4ee78e1） | C-edit-UI（`createReactCellEditor` overlay） | ☑ |
+| destroy/unmount 幂等（StrictMode mount→destroy→mount 绿） | C-edit-UI（`createReactCellEditor` close/destroy） | ☑ |
+| **选区加粗** = 选区内逐格写 full-span run | C-edit-UI（`applyBoldToRange` helper ☑；真实接线缺 `Grid.getCellValue`，F3） | ◐ |
 
 ### 1.6 打包 / dogfood（Phase C）
 
 | 能力 | 落点 | 状态 |
 | --- | --- | --- |
 | `packages/cell-kit/` 脚手架（package.json/tsconfig/build/tests/README） | C-display | ☑ |
-| `richTextExtension` 装配（codec+renderer+editor） | C-display codec+renderer ☑；editor 延 C-edit | ◐ |
+| `richTextExtension` 装配（codec+renderer+editor） | C-display codec+renderer + C-edit-UI editor | ☑ |
 | boundary lint：禁 core/canvas2d/react 反向依赖 cell-kit | C-display | ☑ |
-| **默认不带**验证：默认 Grid 无字体组；注册后生效 | C-edit（BDD `excel.L3.rich-text-default-not-bundled`） | ☐ |
+| **默认不带**验证：默认 Grid 无字体组；注册后生效 | C-edit-UI（BDD `excel.L3c.rich-text-default-not-bundled`） | ☑ |
 | core 零 typography/TextRun（`grep` 门） | A Task7 + C-display | ☑ |
-| storybook story（cell-kit 注册示例） | C-edit | ☐ |
+| storybook story（cell-kit 注册示例） | C-edit-UI 未做（follow-up F4） | ☐ |
 | 组合根装配示例（cellAttachments+cellEditors+cellRenderers 三注册点） | C-edit | ☐ |
 
 ### 1.7 跨切面 / 收尾（每 phase）
@@ -177,27 +178,42 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 **C-display dogfood 收获:** custom renderer 拿不到 `measurer` 的缝缺口在 C4 补齐（透传进 paint params），未走私有通道——验证缝完整性。
 **C-display follow-up（Minor，非阻断）:** ① renderer 测试跨包相对 import canvas2d 的 `recording-context` helper，长期宜提取为 testkit；② —。
 
-### 4.2 C-edit（☐ 待展开成完整 plan）
+### 4.2 C-edit-UI（☑ 已 ship）
 
-里程碑任务：
+完整步骤见 [C-edit-UI plan](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-edit-ui.md)。7 Task：
+
+| # | 任务 | 层 | 状态 |
+| --- | --- | --- | --- |
+| T1 | core editor 缝 `setAttachment` 写通道（view→raw） | core | ☑ |
+| T2 | 导出 `CustomColorPicker`（dogfood 缝补） | react | ☑ |
+| T3 | runs↔DOM 序列化（`richTextToHtml`/`htmlElementToRichText`）+ cell-kit react 依赖 | cell-kit | ☑ |
+| T4 | `RichTextCellEditor`（contenteditable，提交写 value+runs） | cell-kit→react | ☑ |
+| T5 | 选区加粗 `applyBoldToRange`（逐格 full-span run，D3） | cell-kit | ☑ |
+| T6 | `FloatingFormatToolbar`（Selection 包 span + color picker）+ extension 加 editor | cell-kit→react | ☑ |
+| T7 | Excel L3 BDD（`excel.L3c.rich-text-{toolbar-bold-substring,default-not-bundled}`）+ e2e + 全量 gates | react/cell-kit | ☑ |
+
+**C-edit-UI dogfood 收获:** 两处缝缺口本 phase 补齐——① editor 缝缺 attachment 写通道 → T1 `setAttachment`；② `CustomColorPicker` 未导出 → T2。均经公开通道，未走私有特权（spec ADR-C 验证）。
+
+**C-edit-UI follow-up（Minor/第一版限制，留后续 cleanup batch）:**
+- **F1** 既存 runs 回填编辑器初值（需 editor 缝加对称的 `getAttachment` 读通道）——第一版编辑态从纯文本起。
+- **F2** toolbar toggle-off（已 bold 子串再点取消）——第一版只包 span 单向。
+- **F3** 选区加粗真实接线缺 `Grid.getCellValue`（raw cell text 读 API）——helper 已就位，组合根适配需先补 core facade 读 API。
+- **F4** storybook story（cell-kit 注册示例）未做。
+- **F5** 工具栏 size −/+ 字号按钮未做（B/I/U/strike/color 已做）。
+- **F6（已修）** ~~style 属性引号转义 + toolbar wrap containment guard~~——里程碑 reviewer 两处 Minor 已修（commit c688476）。
+- **F7** Excel L3 测试从 `cell-kit/src` 内部 import 而非 `@novasheet/cell-kit` 包名（避 build 依赖的务实选择）——长期宜改包名 import。
+
+### 4.3 C-edit-data（☐ 待展开成完整 plan）
 
 | # | 任务 | 层 |
 | --- | --- | --- |
-| CE1 | `RichTextCellEditor`（contenteditable，runs↔DOM，提交写 value+attachment） | cell-kit→react |
-| CE2 | `FloatingFormatToolbar`（size/B/I/U/strike/color，Selection toggle，复用 color picker） | cell-kit→react |
-| CE3 | 选区加粗 = 逐格 full-span run（应用门面，D3） | cell-kit + core 门面 |
-| CE4 | **fill 柄携带 runs**（D1） | core attachment fill |
-| CE5 | **clipboard copy/paste 经 codec**（D2） | core attachment clipboard |
-| CE6 | `richTextExtension` 补 editor + 组合根 + storybook story | cell-kit |
-| CE7 | BDD：`excel.L3.rich-text-toolbar-bold-substring` + `...-default-not-bundled` 转绿 | react excel L3 |
+| CD1 | **fill 柄携带 runs**（D1，对齐 Google bb015ed）；sort/filter 打散保守 no-op | core attachment fill |
+| CD2 | **clipboard copy/paste 经 codec**（D2）；跨 Grid/外部安全降级 | core attachment clipboard |
+| CD3 | BDD：`core.L1.cell-attachment-fill-propagate` + clipboard 往返场景 | core L1/L2 |
 
-**风险:**
-- contenteditable ↔ runs 双向序列化是最易错点（光标/换行/嵌套 span 规整）——CE1 必须 TDD 覆盖「加粗子串→提交→重开保持」「跨 run 边界选择」「全选 toggle 取消」。
-- dogfood 验证（CE7 `default-not-bundled`）是缝完整性的硬门：若 cell-kit 拼装时发现缺 core/canvas2d/react 的公开 API，**STOP**——回头补缝，别在 cell-kit 走私有通道。
+**依赖:** A 全绿（attachment 轴）。与 C-edit-UI 互不依赖，可并行。
 
-**依赖:** A + B + C-display 全绿。
-
-**出口判据:** §1.1/1.5 全 ☑；§1.3 fill/clipboard ☑；§1.6 装配/storybook/默认不带 ☑；§1.7 收尾门过。
+**出口判据:** §1.3 fill/clipboard ☑；Core L1/L2 场景绿。
 
 ---
 
