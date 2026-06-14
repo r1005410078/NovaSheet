@@ -5,6 +5,7 @@ import type { CellRange } from '../../kernel/coords/SelectionTypes'
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { CellAttachmentStore } from '../attachment/CellAttachmentStore'
+import type { CellTypeOverride } from '../cell-types'
 import {
   applyPaste,
   pasteTargetConflictsWithMerges,
@@ -30,6 +31,7 @@ export interface PasteControllerContext {
   getSchema(): Schema
   viewRowToRaw(viewRow: number): number
   pushUndo(command: UndoCommand): void
+  resolveCellType?(rowIndex: number, colIndex: number, fieldId: string): CellTypeOverride
   /** attachment 存储（paste 携带附件时需要快照）。 */
   getAttachmentStore(): CellAttachmentStore
 }
@@ -82,6 +84,7 @@ export class PasteController {
         before.push({ rowIndex: underlyingRow, fieldId: rec.fieldId, value: rec.before })
         after.push({ rowIndex: underlyingRow, fieldId: rec.fieldId, value: rec.after })
       },
+      this.ctx.resolveCellType,
     )
     if (after.length === 0) return
     const range: CellRange = {

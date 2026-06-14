@@ -135,6 +135,10 @@ export class DefaultGridEngine implements GridEngine {
     getSchema: () => this.data.getSchema(),
     viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
     pushUndo: (command) => this.undoStack.push(command),
+    resolveCellType: (rowIndex, colIndex, fieldId) =>
+      this.data.getSchema().fields.some((field) => field.id === fieldId)
+        ? this.getCellType(rowIndex, colIndex)
+        : 'text',
     getAttachmentStore: () => this.formatState.attachmentStore,
   })
   private readonly fillController = new FillController({

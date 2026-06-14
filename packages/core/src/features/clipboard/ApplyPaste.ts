@@ -2,6 +2,7 @@ import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { CellAddress, CellRange } from '../../kernel/coords/SelectionTypes'
 import type { CellValue, Schema } from '../../kernel/data/Schema'
 import type { MergeRegion } from '../merge/MergeStore'
+import type { CellTypeOverride } from '../cell-types'
 import type { PasteSkippedCell } from './types'
 import { dateToSerial } from '../../kernel/protocol/serial'
 
@@ -30,6 +31,12 @@ export interface GridDimensions {
   readonly rowCount: number
   readonly colCount: number
 }
+
+export type PasteResolvedTypeResolver = (
+  rowIndex: number,
+  colIndex: number,
+  fieldId: string,
+) => CellTypeOverride
 
 export function computePasteTarget(
   active: CellAddress,
@@ -136,6 +143,7 @@ export function applyPaste(
   data: MutableDataSource,
   onSkipped?: (cells: readonly PasteSkippedCell[]) => void,
   onWrite?: (record: PasteWriteRecord) => void,
+  resolveTargetType?: PasteResolvedTypeResolver,
 ): void {
   const skipped: PasteSkippedCell[] = []
   const sourceRows = source.cells.length
@@ -161,7 +169,7 @@ export function applyPaste(
         continue
       }
 
-      const type = fieldTypeById.get(fieldId)
+      const type = resolveTargetType?.(r, c, fieldId) ?? fieldTypeById.get(fieldId)
       const coerced = coerceForType(rawValue, type)
       if (coerced === SKIP) {
         skipped.push({ rowIndex: r, fieldId, reason: 'type' })

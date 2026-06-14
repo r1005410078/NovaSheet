@@ -217,4 +217,26 @@ describe('applyPaste', () => {
     expect(data.writes).toHaveLength(0)
     expect(skipped).toEqual([{ rowIndex: 0, fieldId: 'd', reason: 'type' }])
   })
+
+  it('coerces each pasted cell by target resolved type resolver', () => {
+    const data = makeData()
+    const skipped: { rowIndex: number; fieldId: string; reason: string }[] = []
+    applyPaste(
+      { cells: [['2025-01-15', 'bad']], sourceFieldIds: [], typed: false },
+      { startRow: 0, endRow: 0, startCol: 0, endCol: 1, tile: { rows: 1, cols: 1 } },
+      {
+        fields: [
+          { id: 'a', name: 'A', type: 'text', width: 100 },
+          { id: 'b', name: 'B', type: 'text', width: 100 },
+        ],
+      },
+      ['a', 'b'],
+      data as never,
+      (cells) => skipped.push(...cells),
+      undefined,
+      (_row, col) => (col === 0 ? 'date' : 'number'),
+    )
+    expect(data.writes).toEqual([{ row: 0, field: 'a', value: dateToSerial(new Date(Date.UTC(2025, 0, 15))) }])
+    expect(skipped).toEqual([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
+  })
 })
