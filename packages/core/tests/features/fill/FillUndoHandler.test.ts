@@ -21,6 +21,7 @@ function makeRecordingContext(): { ctx: FillUndoContext; calls: Call[] } {
     restoreFormat: (layers) => calls.push({ op: 'format', layers }),
     restoreMerge: (regions) => calls.push({ op: 'merge', regions }),
     restoreSelectionForWrites: (writes, fallbackRange) => calls.push({ op: 'selWrites', writes, fallbackRange }),
+    restoreAttachments: (_snap) => { /* no-op stub for existing tests */ },
   }
   return { ctx, calls }
 }

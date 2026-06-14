@@ -286,6 +286,7 @@ export class DefaultGridEngine implements GridEngine {
         this.restoreSelectionForWrites(writes, fallbackRange),
       restoreFormat: (layers) => this.formatState.restoreFormat(layers),
       restoreMerge: (regions) => this.formatState.restoreMerge(regions),
+      restoreAttachments: (snap) => this.formatState.restoreAttachments(snap),
     })
     registerRowStructureUndo(this.undoRegistry, {
       canInsertRows: () => !!(isMutableDataSource(this.rawData) && this.rawData.insertRows),

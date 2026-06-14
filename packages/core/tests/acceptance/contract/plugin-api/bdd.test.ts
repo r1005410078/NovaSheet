@@ -2,6 +2,8 @@ import { describe, expect, it } from 'bun:test'
 
 import * as publicApi from '../../../../src'
 import {
+  DefaultGridEngine,
+  InMemoryDataSource,
   type CellActionContext,
   type CellAttachmentCodec,
   type CellFilterOperator,
@@ -10,6 +12,8 @@ import {
   type CellTypeRegistry,
   type FilterSpec,
   type GridOptions,
+  type Row,
+  type Schema,
   type UndoCommand,
 } from '../../../../src'
 import {
@@ -79,6 +83,50 @@ describe('Core acceptance cell-attachment', () => {
       expect(grid.getCellAttachment('demo', 1, 0)).toEqual({ note: 'x' })
       grid.destroy()
     })
+  })
+
+  it('core.L1.cell-attachment-fill-propagate propagates attachment on fill and restores on undo', () => {
+    const fillSchema: Schema = {
+      fields: [
+        { id: 'a', name: 'A', type: 'text', width: 80 },
+      ],
+    }
+    const demoCodec: CellAttachmentCodec<{ v: number }> = {
+      namespace: 'demo',
+      serialize: (d) => JSON.stringify(d),
+      deserialize: (t) => JSON.parse(t) as { v: number },
+    }
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({
+        schema: fillSchema,
+        rows: [
+          { a: 'src' },
+          { a: null },
+          { a: null },
+        ] satisfies Row[],
+      }),
+      cellAttachments: [demoCodec],
+    })
+    // 源格设附件
+    engine.setCellAttachment('demo', 0, 0, { v: 1 })
+    // 向下 fill 到 row 1 和 row 2
+    engine.commitFill(
+      { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      { startRow: 1, endRow: 2, startCol: 0, endCol: 0 },
+      'down',
+    )
+    // 目标格附件已平铺
+    expect(engine.getCellAttachment('demo', 1, 0)).toEqual({ v: 1 })
+    expect(engine.getCellAttachment('demo', 2, 0)).toEqual({ v: 1 })
+    // undo 后目标格附件消失，源格保留
+    engine.undo()
+    expect(engine.getCellAttachment('demo', 1, 0)).toBeUndefined()
+    expect(engine.getCellAttachment('demo', 2, 0)).toBeUndefined()
+    expect(engine.getCellAttachment('demo', 0, 0)).toEqual({ v: 1 })
+    // redo 后目标格附件恢复
+    engine.redo()
+    expect(engine.getCellAttachment('demo', 1, 0)).toEqual({ v: 1 })
+    expect(engine.getCellAttachment('demo', 2, 0)).toEqual({ v: 1 })
   })
 
   it('core.L1.cell-attachment-follows-row-insert shifts with raw cell', () => {

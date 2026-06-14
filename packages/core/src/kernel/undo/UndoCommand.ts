@@ -44,6 +44,9 @@ export type UndoCommand =
       readonly formatAfter?: readonly FormatLayer[]
       readonly mergeBefore?: readonly MergeRegion[]
       readonly mergeAfter?: readonly MergeRegion[]
+      // Phase C-edit-data fill 携带附件快照（同 format/merge，非连续时缺省）。
+      readonly attachmentBefore?: CellAttachmentSnapshot
+      readonly attachmentAfter?: CellAttachmentSnapshot
     }
   | {
       readonly kind: 'resizeRow'
