@@ -3,6 +3,7 @@ import { assembleRenderFrame, buildFormatCell } from '../../src/engine/FrameAsse
 import type { FrameAssemblerInput } from '../../src/engine/FrameAssembler'
 import type { ResolvedCellFormat } from '../../src/kernel/protocol/FormatTypes'
 import type { Field } from '../../src/kernel/data/Schema'
+import { dateToSerial } from '../../src/kernel/protocol/serial'
 import { VisibleFormatResolver } from '../../src/features/format/VisibleFormatResolver'
 import { DefaultFormatState } from '../../src/features/format/FormatState'
 import { CoordinateSpace } from '../../src/kernel/coords/CoordinateSpace'
@@ -139,5 +140,26 @@ describe('assembleRenderFrame', () => {
     expect(frame.getAttachment!<RichText>('richText', 1, 0)).toEqual({ spans: ['hello'] })
     expect(frame.getAttachment!<RichText>('richText', 0, 0)).toBeUndefined()
     expect(frame.getAttachment!<RichText>('other', 1, 0)).toBeUndefined()
+  })
+})
+
+const dateField: Field = { id: 'd', name: 'D', type: 'date', width: 100 }
+const plainNumField: Field = { id: 'n', name: 'N', type: 'number', width: 100 }
+
+describe('buildFormatCell — date 默认 pattern', () => {
+  it('date 列无 valueFormat → 默认 YYYY-MM-DD', () => {
+    const fc = buildFormatCell([], {}, 'en-US')
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    expect(fc(0, 0, dateField, serial)).toBe('2025-01-15')
+  })
+  it('非 date 列无 valueFormat → undefined（painter 兜底）', () => {
+    const fc = buildFormatCell([], {}, 'en-US')
+    expect(fc(0, 0, plainNumField, 42)).toBeUndefined()
+  })
+  it('date 列有显式 field.format → 用显式 pattern 覆盖默认', () => {
+    const f: Field = { ...dateField, format: { kind: 'date', pattern: 'DD/MM/YYYY' } }
+    const fc = buildFormatCell([], {}, 'en-US')
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    expect(fc(0, 0, f, serial)).toBe('15/01/2025')
   })
 })

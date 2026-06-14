@@ -12,9 +12,13 @@ import type { CollapsedGap } from '../kernel/render/RenderTypes'
 import type { CellAttachmentStore } from '../features/attachment/CellAttachmentStore'
 import { formatValue } from '../kernel/protocol/formatValue'
 
+/** date 类型列在没有显式 valueFormat 时使用的默认显示 pattern。 */
+const DEFAULT_DATE_PATTERN = 'YYYY-MM-DD'
+
 /**
  * 构 RenderFrame.formatCell 闭包。闭合可见区已解析的 cell 级 valueFormat（VIEW 坐标）
  * + 列默认（field.format）+ 注册表 + locale。无显式 format 的格返回 undefined。
+ * date 类型列无显式 format 时注入默认 pattern，避免裸 serial 数字露出。
  */
 export function buildFormatCell(
   cellFormats: readonly ResolvedCellFormat[],
@@ -26,7 +30,9 @@ export function buildFormatCell(
     if (cf.format.valueFormat) cellMap.set(`${cf.rowIndex}:${cf.colIndex}`, cf.format.valueFormat)
   }
   return (rowIndex, colIndex, field, value) => {
-    const format = cellMap.get(`${rowIndex}:${colIndex}`) ?? field.format
+    const explicit = cellMap.get(`${rowIndex}:${colIndex}`) ?? field.format
+    const format =
+      explicit ?? (field.type === 'date' ? { kind: 'date' as const, pattern: DEFAULT_DATE_PATTERN } : undefined)
     if (!format) return undefined
     return formatValue(value, format, { field, locale }, formatters)
   }
