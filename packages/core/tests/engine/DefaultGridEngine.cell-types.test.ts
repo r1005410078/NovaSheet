@@ -40,4 +40,20 @@ describe('DefaultGridEngine cell type API', () => {
     expect(engine.getCellType(0, 99)).toBe('text')
     expect(engine.getCellType(0, -1)).toBe('text')
   })
+
+  it('rejects type writes for invalid view rows and cols without pushing undo', () => {
+    const engine = makeEngine()
+
+    expect(engine.setCellType({ startRow: -1, endRow: -1, startCol: 0, endCol: 0 }, 'date')).toBe(false)
+    expect(engine.clearCellType({ startRow: -1, endRow: -1, startCol: 0, endCol: 0 })).toBe(false)
+    expect(engine.canUndo()).toBe(false)
+
+    expect(engine.setCellType({ startRow: 99, endRow: 99, startCol: 0, endCol: 0 }, 'date')).toBe(false)
+    expect(engine.clearCellType({ startRow: 99, endRow: 99, startCol: 0, endCol: 0 })).toBe(false)
+    expect(engine.canUndo()).toBe(false)
+
+    expect(engine.setCellType({ startRow: 0, endRow: 0, startCol: -1, endCol: -1 }, 'date')).toBe(false)
+    expect(engine.clearCellType({ startRow: 0, endRow: 0, startCol: -1, endCol: -1 })).toBe(false)
+    expect(engine.canUndo()).toBe(false)
+  })
 })

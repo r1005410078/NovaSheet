@@ -925,11 +925,13 @@ export class DefaultGridEngine implements GridEngine {
 
   setCellType(range: CellRange, type: CellTypeOverride): boolean {
     this.finishActiveEdit()
+    if (!this.canTranslateCellTypeRange(range)) return false
     return this.cellTypeController.setCellType(range, type)
   }
 
   clearCellType(range: CellRange): boolean {
     this.finishActiveEdit()
+    if (!this.canTranslateCellTypeRange(range)) return false
     return this.cellTypeController.clearCellType(range)
   }
 
@@ -941,6 +943,11 @@ export class DefaultGridEngine implements GridEngine {
     if (!field) return 'text'
     const rawRow = this.coords.viewRowToRaw(viewRow)
     return this.cellTypeStore.resolve(rawRow, rawCol, field)
+  }
+
+  private canTranslateCellTypeRange(range: CellRange): boolean {
+    const rowCount = this.data.getRowCount()
+    return range.startRow >= 0 && range.endRow >= 0 && range.startRow < rowCount && range.endRow < rowCount
   }
 
   /**
