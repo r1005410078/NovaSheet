@@ -7,6 +7,7 @@
 | core.L0.cell-extension-custom-type-fallback | L0 | draft | 未注册 custom FieldType 文本 fallback 且不可编辑 |
 | core.L0.cell-extension-type-definition-contract | L0 | draft | CellTypeDefinition 锁定编辑、剪贴板、排序与筛选语义 |
 | core.L0.cell-hit-test | L0 | implemented | hitTestCell 与 computeCellRect 公开几何契约 |
+| core.L0.cell-type-store-raw-remap | L0 | draft | CellTypeStore 按 raw 坐标保存、清除、恢复与重映射类型覆盖 |
 | core.L0.clipboard-paste-target-merge-conflict | L0 | implemented | 粘贴目标与合并区冲突检测 |
 | core.L0.clipboard-tsv-parse-matrix | L0 | implemented | parseTsvToCells 类型强制矩阵与黄金文件一致 |
 | core.L0.clipboard-tsv-roundtrip | L0 | implemented | TSV 序列化与解析往返公开契约 |
@@ -33,12 +34,20 @@
 | core.L0.undo-command-serialization | L0 | implemented | UndoCommand JSON 序列化 round-trip smoke |
 | core.L0.undo-command-shape-inventory | L0 | implemented | 全 21 个 UndoCommand kind 的字段集与黄金文件一致 |
 | core.L0.workspace-autogrow-scroll-intent | L0 | implemented | Excel workspace 只在有效 wheel 边缘意图下自动增长 |
+| core.L1.cell-attachment-fill-propagate | L1 | implemented | fill 柄向下平铺携带源格附件，undo 整体撤销 |
+| core.L1.cell-attachment-follows-row-insert | L1 | implemented | 插入行后附件跟随 raw cell 下移 |
 | core.L1.engine-frame-initial-visible-range | L1 | implemented | DefaultGridEngine 初始 frame 快照与黄金文件一致 |
 | core.L1.engine-rows-move-undo-redo | L1 | implemented | DefaultGridEngine moveRows 移动连续行块并支持 undo/redo |
 | core.L1.engine-structural-event-stream | L1 | implemented | 结构 mutation + undo/redo 的 DataSource 事件流与黄金文件一致 |
+| core.L2.cell-attachment-clipboard-roundtrip | L2 | implemented | copy/paste 同 Grid 内携带附件往返，undo 整体撤销；cache miss 安全降级无附件 |
+| core.L2.cell-attachment-store-set-get-undo | L2 | implemented | 经 Grid 门面写/读 per-cell 附件并可撤销 |
 | core.L2.grid-autofit-wrap-rows | L2 | implemented | Grid autofitRows 使用 wrap 字段和 measurer 更新行高 |
 | core.L2.grid-cell-action-opens-editor | L2 | draft | cell action 先 onAction，未拦截则打开同类型 editor |
+| core.L2.grid-cell-type-edit-display | L2 | draft | cell type override 驱动显示默认格式与编辑解析 |
+| core.L2.grid-cell-type-override-api | L2 | draft | Grid cell type override API 使用 view 坐标设置、清除并读取 resolved type |
+| core.L2.grid-cell-type-sort-mixed | L2 | draft | sort 在混合 resolved type 列中使用固定跨类型顺序 |
 | core.L2.grid-clipboard-copy-cut-paste-roundtrip | L2 | implemented | Grid copy/cut/paste 通过 facade 完成选区往返 |
+| core.L2.grid-clipboard-paste-resolved-cell-type | L2 | draft | paste 按目标格 resolved type 强转且不传播源类型 |
 | core.L2.grid-clipboard-paste-skipped-readonly-type | L2 | implemented | 粘贴类型不匹配时 Grid 触发 onPasteSkipped |
 | core.L2.grid-cols-hide-unhide-visible-count | L2 | implemented | Grid hideCols 与 unhideCols 更新隐藏集合和 render frame schema |
 | core.L2.grid-cols-insert-delete-undo-redo | L2 | implemented | Grid 列插入、删除与 undo/redo 通过 facade 保持 schema 一致 |
@@ -47,7 +56,8 @@
 | core.L2.grid-data-theme-refresh | L2 | implemented | Grid setData、setTheme 与 refresh 通过 backend frame 可观测 |
 | core.L2.grid-events-on-off | L2 | implemented | Grid event facade 支持 on、onUndo、onRedo 与 onFill 的取消订阅 |
 | core.L2.grid-fill-series-down-right | L2 | implemented | 填充柄目标计算、序列写入与 engine commitFill |
-| core.L2.grid-fill-style-propagates | L2 | implemented | 填充时源格填充色传播到目标格 |
+| core.L2.grid-fill-style-propagates | L2 | implemented | 填充时源格格式（填充色/边框/textWrap/valueFormat）覆盖目标格 |
+| core.L2.grid-fill-type-format-propagates | L2 | draft | fill 跨列传播值序列、resolved scalar type 与 valueFormat |
 | core.L2.grid-format-borders-presets | L2 | implemented | Grid setBorders 与 borderPatchForCell 边框预设 |
 | core.L2.grid-format-fill-color-set-clear | L2 | implemented | Grid setFillColor 设置与清除填充色 |
 | core.L2.grid-format-text-wrap-cycle | L2 | implemented | Grid setTextWrap 在 overflow/wrap/clip 间切换 |
@@ -159,6 +169,35 @@
 - 列头命中返回 null
 - body 命中返回 row/col 索引
 - computeCellRect 返回非 null 且 height/width 与轴尺寸一致
+
+## core.L0.cell-type-store-raw-remap
+
+- **layer**: L0
+- **summary**: CellTypeStore 按 raw 坐标保存、清除、恢复与重映射类型覆盖
+- **status**: draft
+
+### User Story
+
+作为 Core 维护者，当 cell 级类型覆盖跟随行列结构变化时，我希望 `CellTypeStore` 只按 raw 坐标保存稀疏覆盖，并能在 insert/delete/move 后正确 remap，以便 `resolveCellType` 始终返回数据行/列当前所在位置的语义类型。
+
+### Given
+
+- 一个空 `CellTypeStore`
+- 三列 schema，列默认类型分别为 text / number / date
+- raw cell `(1, 1)` 设置为 `date`，raw cell `(2, 2)` 设置为 `checkbox`
+
+### When
+
+- 读取显式覆盖和列默认 fallback
+- snapshot 后 clear 一个 range，再 restore
+- 插入、删除、移动 raw 行列
+
+### Then
+
+- 显式覆盖优先于列默认
+- clear 后对应单元格回到列默认类型
+- restore 后覆盖恢复
+- insert/delete/move 后覆盖跟随 raw 坐标 remap，删除范围内的覆盖被移除
 
 ## core.L0.clipboard-paste-target-merge-conflict
 
@@ -479,7 +518,7 @@
 
 ### When
 
-- 逐条 `computeFillWrites`，将投影序列 dump（Date 用 ISO）
+- 逐条 `computeFillWrites`，将投影序列 dump（date 用 serial 整数）
 
 ### Then
 
@@ -792,6 +831,57 @@
 - 纯函数返回 grow 决策
 - controller 通过 port append rows
 
+## core.L1.cell-attachment-fill-propagate
+
+- **layer**: L1
+- **summary**: fill 柄向下平铺携带源格附件，undo 整体撤销
+- **status**: implemented
+
+### User Story
+
+作为单元格扩展作者，当用户从含附件的源格向下拖填充柄时，我希望附件随之平铺到目标格（对齐 Google 携带格式），undo 能整体撤销。
+
+### Given
+
+- mounted Grid（`DefaultGridEngine`），注册 namespace `demo`
+- raw (0,0) 设附件 `{ v: 1 }`
+
+### When
+
+- 选中 (0,0)，向下 fill 到 (1,0) 和 (2,0)（`commitFill` source=(0,0), fill=(1,2,0,0), direction='down'）
+
+### Then
+
+- `getCellAttachment('demo', 1, 0)` 返回 `{ v: 1 }`
+- `getCellAttachment('demo', 2, 0)` 返回 `{ v: 1 }`
+- undo 后 `getCellAttachment('demo', 1, 0)` 为 `undefined`
+- undo 后 `getCellAttachment('demo', 2, 0)` 为 `undefined`
+- undo 后 `getCellAttachment('demo', 0, 0)` 仍为 `{ v: 1 }`（源格保留）
+
+## core.L1.cell-attachment-follows-row-insert
+
+- **layer**: L1
+- **summary**: 插入行后附件跟随 raw cell 下移
+- **status**: implemented
+
+### User Story
+
+作为单元格扩展作者，当用户在附件所在行之前插入行时，我希望附件跟随它所属的 raw cell 一起下移，不错位、不丢失。
+
+### Given
+
+- 一个 mounted Grid，注册 namespace `demo`
+- 在 raw cell (row=2,col=0) 设了附件 `{ note: 'y' }`
+
+### When
+
+- 在 row=0 前插入 1 行
+
+### Then
+
+- `grid.getCellAttachment('demo', 3, 0)` 返回 `{ note: 'y' }`
+- `grid.getCellAttachment('demo', 2, 0)` 返回 `undefined`
+
 ## core.L1.engine-frame-initial-visible-range
 
 - **layer**: L1
@@ -865,6 +955,56 @@
 
 - 整段事件流与 `__goldens__/core.L1.engine-structural-event-stream.golden.txt` 一致：
 
+## core.L2.cell-attachment-clipboard-roundtrip
+
+- **layer**: L2
+- **summary**: copy/paste 同 Grid 内携带附件往返，undo 整体撤销；cache miss 安全降级无附件
+- **status**: implemented
+
+### User Story
+
+作为单元格扩展作者，当用户在同一 Grid 内复制含附件的格再粘贴到别处时，我希望附件经 codec 往返出现在目标格，undo 整体撤销（一次撤销同时还原值与附件）；跨 Grid/外部纯文本粘贴则安全降级无附件。
+
+### Given
+
+- mounted Grid（`GridRuntime` + `DefaultGridEngine`），注册 namespace `demo`
+- raw (0,0) 设附件 `{ v: 9 }`
+
+### When
+
+- copy (0,0)（`handleClipboardCopy`），选中 (2,0)，paste（`handleClipboardPaste`，typed-cache 命中）
+
+### Then
+
+- `getCellAttachment('demo', 2, 0)` 返回 `{ v: 9 }`（codec 往返）
+- undo 后 `getCellAttachment('demo', 2, 0)` 为 `undefined`（一次 undo 整体撤销值与附件）
+- redo 后 `getCellAttachment('demo', 2, 0)` 再次返回 `{ v: 9 }`
+
+## core.L2.cell-attachment-store-set-get-undo
+
+- **layer**: L2
+- **summary**: 经 Grid 门面写/读 per-cell 附件并可撤销
+- **status**: implemented
+
+### User Story
+
+作为单元格扩展作者，我希望经公开 `Grid.setCellAttachment` 把任意私有数据挂到某个 raw cell 上、能读回，并且写入可被 undo/redo，从而无需污染 core 也能承载非值数据。
+
+### Given
+
+- 一个 mounted Grid，注册了 namespace `demo` 的 codec
+- 4 行 number 列数据
+
+### When
+
+- `grid.setCellAttachment('demo', 1, 0, { note: 'x' })`
+
+### Then
+
+- `grid.getCellAttachment('demo', 1, 0)` 返回 `{ note: 'x' }`
+- `grid.undo()` 后该格附件为 `undefined`
+- `grid.redo()` 后该格附件恢复 `{ note: 'x' }`
+
 ## core.L2.grid-autofit-wrap-rows
 
 - **layer**: L2
@@ -916,6 +1056,93 @@
 - 因未拦截，runtime 随后调用 `cellEditors.assignee.open(ctx)`
 - 若 `onAction` 调用 `preventOpenEditor()`，则不打开 editor；可在 `onAction` 中直接 `commit()`，例如 checkbox toggle
 
+## core.L2.grid-cell-type-edit-display
+
+- **layer**: L2
+- **summary**: cell type override 驱动显示默认格式与编辑解析
+- **status**: draft
+
+### User Story
+
+作为 Grid facade 使用者，当我把单个单元格覆盖为 date 或 number 时，我希望显示和编辑都按该单元格的 resolved type 工作，而不是继续使用列默认类型，以便同一列中的混合类型可被正确查看和修改。
+
+### Given
+
+- 一个 mounted Grid
+- text 列中某格的 raw value 是 date serial
+- date 列中某格的 raw value 是字符串非法日期
+
+### When
+
+- 对 text 列 serial 单元格调用 `setCellType(..., 'date')`
+- 读取 `getFrame().formatCell` 输出
+- 打开并提交该单元格的编辑 draft
+- 对非法字符串单元格设置 `number` 或 `date` override
+
+### Then
+
+- date override 且无显式 valueFormat 时显示默认 `YYYY-MM-DD`
+- 显式 valueFormat 优先于默认 date pattern
+- 编辑器按 resolved type 格式化 draft 并解析提交值
+- 非法现有值不被 `setCellType` 转换或清空，显示走 fallback
+
+## core.L2.grid-cell-type-override-api
+
+- **layer**: L2
+- **summary**: Grid cell type override API 使用 view 坐标设置、清除并读取 resolved type
+- **status**: draft
+
+### User Story
+
+作为 Grid facade 使用者，当我对选区设置单元格类型覆盖时，我希望 `setCellType` / `clearCellType` / `getCellType` 都使用 view 坐标，并在排序或隐藏后的视图中仍写到正确 raw 单元格，以便 UI 选区语义与用户看到的位置一致。
+
+### Given
+
+- 一个 mounted Grid
+- schema 包含 text、number、date 列
+- 当前 view 经过 sort/filter 或隐藏列组合后与 raw 顺序不同
+
+### When
+
+- 调用 `grid.setCellType(viewRange, 'date')`
+- 调用 `grid.getCellType(viewRow, viewCol)`
+- 调用 `grid.clearCellType(viewRange)`
+
+### Then
+
+- `getCellType` 返回 override 后的 resolved type
+- clear 后返回该 view cell 所在列的默认类型 fallback
+- view→raw 非连续 range 返回 `false` 且不写入 override
+- undo / redo 能恢复 `setCellType` 与 `clearCellType` 的前后状态
+
+## core.L2.grid-cell-type-sort-mixed
+
+- **layer**: L2
+- **summary**: sort 在混合 resolved type 列中使用固定跨类型顺序
+- **status**: draft
+
+### User Story
+
+作为 Grid facade 使用者，当同一列中存在 number/date/text/checkbox/empty 的混合 resolved type 时，我希望排序结果稳定且可预测，以便 cell 级类型覆盖不会让排序依赖隐式 JS 类型比较。
+
+### Given
+
+- 一个 mounted Grid
+- 同一 fieldId 下多行值分别为 number、date serial、text、boolean、null
+- 对部分 raw cell 设置 cell type override，让该列形成混合 resolved type
+
+### When
+
+- 设置 SortLayer spec 为升序
+- 再切换为降序
+
+### Then
+
+- 升序按 `number/date < text < boolean < empty` 排列
+- 降序反转非空类型顺序，但 empty 仍在末尾
+- date 与 number 同 rank，按 serial/number 数值比较
+- 类型内相等时保持稳定 row index tie-break
+
 ## core.L2.grid-clipboard-copy-cut-paste-roundtrip
 
 - **layer**: L2
@@ -942,6 +1169,34 @@
 - `onCopy` / `onCut` / `onPaste` 收到对应 range
 - 目标格写入源格值
 - cut 后源格被清空
+
+## core.L2.grid-clipboard-paste-resolved-cell-type
+
+- **layer**: L2
+- **summary**: paste 按目标格 resolved type 强转且不传播源类型
+- **status**: draft
+
+### User Story
+
+作为 Core 使用者，当我把 TSV 粘贴到带 cell type override 的目标区域时，我希望每个目标格按自己的 resolved type 强转输入值，同时不把源格类型传播到目标格，以便 paste 与显式 fill 的类型传播语义保持区分。
+
+### Given
+
+- 一个 mounted Grid
+- 目标区域跨 text、number、date、checkbox 默认列
+- 目标区域中部分单元格已有 cell type override
+- TSV 中包含数字、ISO 日期、布尔值和非法字符串
+
+### When
+
+- 调用 paste 到目标区域
+
+### Then
+
+- 每个目标格按目标 resolved type coerce
+- 无法 coerce 的格被 skip，reason 为 `type`
+- paste 不创建或修改 cell type override
+- typed clipboard cache 命中时值原样写入，仍不传播源类型
 
 ## core.L2.grid-clipboard-paste-skipped-readonly-type
 
@@ -1161,17 +1416,17 @@
 ## core.L2.grid-fill-style-propagates
 
 - **layer**: L2
-- **summary**: 填充时源格填充色传播到目标格
+- **summary**: 填充时源格格式（填充色/边框/textWrap/valueFormat）覆盖目标格
 - **status**: implemented
 
 ### User Story
 
-作为 Core 使用者，当我向下填充带填充色的源格时，我希望 `getViewCellFormat` 在目标格反映相同 fillColor。
+作为 Core 使用者，当我向下填充带格式的源格时，我希望 `getViewCellFormat` 在目标格反映源格的全部格式轴（填充色/边框/textWrap/valueFormat），且源格无某轴格式时目标格的陈旧值被清除——对齐 Google 表格的填充覆盖语义。
 
 ### Given
 
 - headless engine
-- 源格已设置 fillColor
+- 源格已设置 fillColor / valueFormat 等格式
 
 ### When
 
@@ -1179,7 +1434,37 @@
 
 ### Then
 
-- 目标格 `getViewCellFormat` 的 fillColor 与源格一致
+- 目标格 `getViewCellFormat` 的 fillColor、textWrap、valueFormat 与源格一致
+- 源格未设某轴格式时，目标格该轴的陈旧值被清除
+
+## core.L2.grid-fill-type-format-propagates
+
+- **layer**: L2
+- **summary**: fill 跨列传播值序列、resolved scalar type 与 valueFormat
+- **status**: draft
+
+### User Story
+
+作为 Core 使用者，当我把源格拖拽填充到不同类型的目标列时，我希望目标格不仅获得外推后的值，还获得源 tile 的 resolved 标量类型和 valueFormat，以便跨列 fill 的可观测行为对齐 Google 表格。
+
+### Given
+
+- 一个 headless engine
+- A 列默认类型为 date，B 列默认类型为 text
+- A1 / A2 是 date serial 序列，并带有 date valueFormat
+- B 列目标格预先有不同的 cell type override 与 valueFormat
+
+### When
+
+- 从 A1:A2 向右或向下跨列 `commitFill`
+
+### Then
+
+- 目标值继续 date/number series
+- 目标格 resolved type 等于源 tile 的 resolved type
+- 目标格 valueFormat 等于源 tile 的 valueFormat
+- 源 tile 无 valueFormat 的格会清除目标陈旧 valueFormat
+- undo / redo 同时恢复值、type override 与 valueFormat
 
 ## core.L2.grid-format-borders-presets
 
