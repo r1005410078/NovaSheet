@@ -1,5 +1,6 @@
 import type { CellValue, Field, FieldType } from '../../kernel/data/Schema'
 import type { CellAddress } from '../../kernel/coords/SelectionTypes'
+import { dateToSerial, serialToDate } from '../../kernel/protocol/serial'
 
 export const SKIP_CELL_VALUE = Symbol('novasheet.skip-cell-value')
 
@@ -64,6 +65,19 @@ const builtInCellTypes: CellTypeRegistry = {
       return Number.isNaN(n) ? SKIP_CELL_VALUE : n
     },
   },
+  date: {
+    editable: true,
+    formatForEdit: (value) => {
+      if (typeof value !== 'number' || !Number.isFinite(value)) return ''
+      return serialToDate(value).toISOString().slice(0, 10) // YYYY-MM-DD
+    },
+    parseEditInput: (input) => {
+      const trimmed = input.trim()
+      if (trimmed === '') return null
+      const d = new Date(trimmed) // ISO date-only 按 UTC 午夜解析
+      return Number.isNaN(d.getTime()) ? SKIP_CELL_VALUE : dateToSerial(d)
+    },
+  },
 }
 
 export function getCellTypeDefinition(
@@ -103,7 +117,6 @@ export function parseCellEditInputWithTypes(
 
 function formatBuiltInEditValue(value: CellValue | undefined): string {
   if (value === undefined || value === null) return ''
-  if (value instanceof Date) return value.toISOString()
   if (Array.isArray(value)) return value.join(', ')
   return String(value)
 }

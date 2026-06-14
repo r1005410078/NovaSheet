@@ -6,6 +6,7 @@ import {
   getCellTypeDefinition,
   parseCellEditInputWithTypes,
 } from '../../../src/features/cell-types'
+import { dateToSerial } from '../../../src/kernel/protocol/serial'
 
 const ratingField: Field = {
   id: 'score',
@@ -55,5 +56,24 @@ describe('core.L0.cell-extension-custom-type-fallback', () => {
     expect(getCellTypeDefinition('rating', {})).toBeUndefined()
     expect(formatCellForEditWithTypes(4, ratingField, {})).toBe('4')
     expect(parseCellEditInputWithTypes('5', ratingField, {})).toBe(SKIP_CELL_VALUE)
+  })
+})
+
+const dateField: Field = { id: 'd', name: 'D', type: 'date', width: 100 }
+
+describe('core.L0.builtin-date-cell-type', () => {
+  it('date: formatForEdit serial → YYYY-MM-DD', () => {
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    expect(formatCellForEditWithTypes(serial, dateField)).toBe('2025-01-15')
+  })
+
+  it('date: parseEditInput 日期串 → serial', () => {
+    expect(parseCellEditInputWithTypes('2025-01-15', dateField)).toBe(
+      dateToSerial(new Date(Date.UTC(2025, 0, 15))),
+    )
+  })
+
+  it('date: parseEditInput 非法 → SKIP_CELL_VALUE', () => {
+    expect(parseCellEditInputWithTypes('xxx', dateField)).toBe(SKIP_CELL_VALUE)
   })
 })
