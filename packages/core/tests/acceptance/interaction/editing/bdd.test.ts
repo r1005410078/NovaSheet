@@ -242,13 +242,12 @@ describe('Core BDD Batch 5 clipboard edit fill scenarios', () => {
         rows: [
           { a: serial, b: null },
           { a: serial + 1, b: null },
-          { a: null, b: 'stale' },
         ],
       }),
     })
-    engine.setValueFormat(fillRange(0, 1, 0, 0), { kind: 'date', pattern: 'YYYY/MM/DD' })
-    engine.setCellType(fillRange(2, 2, 1, 1), 'text')
-    engine.setValueFormat(fillRange(2, 2, 1, 1), { kind: 'number' })
+    engine.setValueFormat(fillRange(0, 0, 0, 0), { kind: 'date', pattern: 'YYYY/MM/DD' })
+    engine.setCellType(fillRange(1, 1, 1, 1), 'text')
+    engine.setValueFormat(fillRange(1, 1, 1, 1), { kind: 'number' })
 
     engine.commitFill(fillRange(0, 1, 0, 0), fillRange(0, 1, 1, 1), 'right')
 
@@ -256,10 +255,14 @@ describe('Core BDD Batch 5 clipboard edit fill scenarios', () => {
     expect(engine.getData().getCell(1, 'b')).toBe(serial + 1)
     expect(engine.getCellType(0, 1)).toBe('date')
     expect(engine.getViewCellFormat(0, 1)?.valueFormat).toEqual({ kind: 'date', pattern: 'YYYY/MM/DD' })
+    expect(engine.getCellType(1, 1)).toBe('date')
+    expect(engine.getViewCellFormat(1, 1)?.valueFormat).toBeUndefined()
     engine.undo()
-    expect(engine.getCellType(0, 1)).toBe('text')
+    expect(engine.getCellType(1, 1)).toBe('text')
+    expect(engine.getViewCellFormat(1, 1)?.valueFormat).toEqual({ kind: 'number' })
     engine.redo()
     expect(engine.getCellType(1, 1)).toBe('date')
+    expect(engine.getViewCellFormat(1, 1)?.valueFormat).toBeUndefined()
   })
 
   it('core.L2.grid-clipboard-paste-resolved-cell-type coerces by target resolved type without propagating source type', async () => {

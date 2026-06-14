@@ -616,21 +616,42 @@ describe('Core BDD Batch 6 format merge theme scenarios', () => {
         fields: [
           { id: 'name', name: 'Name', type: 'text', width: 120 },
           { id: 'due', name: 'Due', type: 'date', width: 100 },
+          { id: 'score', name: 'Score', type: 'number', width: 80 },
         ],
       },
-      rows: [{ name: '45000', due: 45000 }],
+      rows: [
+        { name: 'raw0', due: 45000, score: 20 },
+        { name: 'raw1', due: 45001, score: 30 },
+        { name: 'raw2', due: 45002, score: 10 },
+      ],
     })
     const { container, grid } = mountRecordingGrid({ data })
 
-    expect(grid.getCellType(0, 0)).toBe('text')
-    expect(grid.setCellType(fillRange(0, 0, 0, 0), 'date')).toBe(true)
-    expect(grid.getCellType(0, 0)).toBe('date')
-    expect(grid.clearCellType(fillRange(0, 0, 0, 0))).toBe(true)
-    expect(grid.getCellType(0, 0)).toBe('text')
+    expect(grid.getCellType(0, 1)).toBe('date')
+    expect(grid.setCellType(fillRange(0, 0, 1, 1), 'text')).toBe(true)
+    expect(grid.getCellType(0, 1)).toBe('text')
+    expect(grid.clearCellType(fillRange(0, 0, 1, 1))).toBe(true)
+    expect(grid.getCellType(0, 1)).toBe('date')
     grid.undo()
-    expect(grid.getCellType(0, 0)).toBe('date')
+    expect(grid.getCellType(0, 1)).toBe('text')
     grid.redo()
-    expect(grid.getCellType(0, 0)).toBe('text')
+    expect(grid.getCellType(0, 1)).toBe('date')
+
+    grid.hideCols(['name'])
+    expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'asc' })).toBe(true)
+    expect(grid.setCellType(fillRange(0, 0, 0, 0), 'number')).toBe(true)
+    expect(grid.getCellType(0, 0)).toBe('number')
+
+    expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'desc' })).toBe(true)
+    expect(grid.getCellType(0, 0)).toBe('date')
+    expect(grid.getCellType(2, 0)).toBe('number')
+    expect(grid.clearCellType(fillRange(2, 2, 0, 0))).toBe(true)
+    expect(grid.getCellType(2, 0)).toBe('date')
+
+    expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'asc' })).toBe(true)
+    expect(grid.setCellType(fillRange(0, 1, 0, 0), 'checkbox')).toBe(false)
+    expect(grid.getCellType(0, 0)).toBe('date')
+    expect(grid.getCellType(1, 0)).toBe('date')
 
     grid.destroy()
     document.body.removeChild(container)

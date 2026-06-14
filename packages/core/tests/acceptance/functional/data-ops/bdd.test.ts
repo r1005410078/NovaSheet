@@ -341,24 +341,59 @@ function viewColumnValues(grid: Grid, fieldId: string): unknown[] {
 
   it('core.L2.grid-cell-type-sort-mixed orders number/date before text before boolean before empty', () => {
     const data = new InMemoryDataSource({
-      schema: { fields: [{ id: 'v', name: 'V', type: 'text', width: 100 }] },
-      rows: [{ v: 'z' }, { v: 2 }, { v: true }, { v: null }, { v: 1 }],
+      schema: {
+        fields: [
+          { id: 'id', name: 'ID', type: 'text', width: 120 },
+          { id: 'v', name: 'V', type: 'text', width: 100 },
+        ],
+      },
+      rows: [
+        { id: 'text-z', v: 'z' },
+        { id: 'number-2a', v: 2 },
+        { id: 'bool-true', v: true },
+        { id: 'empty', v: null },
+        { id: 'date-1', v: 1 },
+        { id: 'number-2b', v: 2 },
+        { id: 'bool-false', v: false },
+      ],
     })
     const engine = new DefaultGridEngine({ data })
-    engine.setCellType(fillRange(1, 1, 0, 0), 'number')
-    engine.setCellType(fillRange(2, 2, 0, 0), 'checkbox')
-    engine.setCellType(fillRange(4, 4, 0, 0), 'date')
-    const sort = new SortLayer({
+    engine.setCellType(fillRange(1, 1, 1, 1), 'number')
+    engine.setCellType(fillRange(2, 2, 1, 1), 'checkbox')
+    engine.setCellType(fillRange(4, 4, 1, 1), 'date')
+    engine.setCellType(fillRange(5, 5, 1, 1), 'number')
+    engine.setCellType(fillRange(6, 6, 1, 1), 'checkbox')
+    const createSort = () => new SortLayer({
       resolveCellType: (row, field) => engine.resolveRawCellTypeForField(row, field),
     })
-    sort.setSpec({ fieldId: 'v', direction: 'asc' })
-    const sorted = sort.wrap(data)
-    expect(Array.from({ length: sorted.getRowCount() }, (_, row) => sorted.getCell(row, 'v'))).toEqual([
-      1,
-      2,
-      'z',
-      true,
-      null,
+    const ids = (source: {
+      getRowCount(): number
+      getCell(rowIndex: number, fieldId: string): unknown
+    }): unknown[] =>
+      Array.from({ length: source.getRowCount() }, (_, row) => source.getCell(row, 'id'))
+
+    const asc = createSort()
+    asc.setSpec({ fieldId: 'v', direction: 'asc' })
+    expect(ids(asc.wrap(data))).toEqual([
+      'date-1',
+      'number-2a',
+      'number-2b',
+      'text-z',
+      'bool-false',
+      'bool-true',
+      'empty',
+    ])
+
+    const desc = createSort()
+    desc.setSpec({ fieldId: 'v', direction: 'desc' })
+    expect(ids(desc.wrap(data))).toEqual([
+      'bool-true',
+      'bool-false',
+      'text-z',
+      'number-2a',
+      'number-2b',
+      'date-1',
+      'empty',
     ])
   })
 })

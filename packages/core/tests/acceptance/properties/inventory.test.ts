@@ -145,6 +145,9 @@ describe('Core acceptance properties', () => {
 
     store.remapAfterRowsInserted(1, 1)
     expect(store.resolve(2, 1, fields[1])).toBe('date')
+    store.remapByRowIndexMap(new Map([[2, 4]]))
+    expect(store.resolve(4, 1, fields[1])).toBe('date')
+    expect(store.get(2, 1)).toBeUndefined()
     store.remapAfterColsDeleted([2])
     expect(store.get(3, 2)).toBeUndefined()
   })
