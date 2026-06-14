@@ -30,6 +30,9 @@ export type UndoCommand =
       readonly target: CellRange
       readonly before: ReadonlyArray<CellWrite>
       readonly after: ReadonlyArray<CellWrite>
+      // Phase C-edit-data paste 携带附件快照（Task 5 填充；typed-cache 命中时存在）。
+      readonly attachmentBefore?: CellAttachmentSnapshot
+      readonly attachmentAfter?: CellAttachmentSnapshot
     }
   | {
       readonly kind: 'fill'

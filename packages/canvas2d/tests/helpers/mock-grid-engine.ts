@@ -165,6 +165,8 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     getViewMergeRegion: mock((_viewRow: number, _viewCol: number) => null),
     setCellAttachment: mock((_namespace: string, _rawRow: number, _rawCol: number, _data: unknown) => false),
     getCellAttachment: mock((_namespace: string, _rawRow: number, _rawCol: number) => undefined),
+    getAttachmentNamespaces: mock(() => [] as readonly string[]),
+    getAttachmentCodec: mock((_namespace: string) => undefined),
     viewRowToRaw: mock((viewRow: number) => viewRow),
     viewColToRaw: mock((viewCol: number) => viewCol),
   } satisfies GridEngine

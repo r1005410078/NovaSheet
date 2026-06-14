@@ -26,6 +26,7 @@ import type { RenderFrame } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
 import type { ExcelWorkspaceSize } from '../features/excel-workspace'
 import type { CellTypeRegistry } from '../features/cell-types'
+import type { CellAttachmentCodec } from '../kernel/protocol/AttachmentTypes'
 
 /**
  * `DefaultGridEngine` 构造参数。
@@ -353,6 +354,12 @@ export interface GridFormatting {
 
   /** 读 raw cell 的扩展附件；无则 undefined。 */
   getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown
+
+  /** 已注册的附件 namespace 列表（供 clipboard 遍历选区附件）。 */
+  getAttachmentNamespaces(): readonly string[]
+
+  /** 取某 namespace 的 codec（serialize/deserialize）；未注册返回 undefined。 */
+  getAttachmentCodec(namespace: string): CellAttachmentCodec<unknown> | undefined
 }
 
 /** 单元格合并能力。 */

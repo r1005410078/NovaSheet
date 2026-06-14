@@ -892,6 +892,14 @@ export class DefaultGridEngine implements GridEngine {
     return this.formatState.attachmentStore.get(namespace, rawRow, rawCol)
   }
 
+  getAttachmentNamespaces(): readonly string[] {
+    return [...this.codecRegistry.keys()]
+  }
+
+  getAttachmentCodec(namespace: string): import('../kernel/protocol/AttachmentTypes').CellAttachmentCodec<unknown> | undefined {
+    return this.codecRegistry.get(namespace)
+  }
+
   /**
    * 设置 view `range` 的文本显示模式（overflow/wrap/clip）。view→raw 翻译，
    * 非连续映射返回 false；快照前后一致也返回 false（沿用 format undo 命令）。
