@@ -3,6 +3,7 @@ import type { CellAddress, CellRange } from '../../kernel/coords/SelectionTypes'
 import type { CellValue, Schema } from '../../kernel/data/Schema'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { PasteSkippedCell } from './types'
+import { dateToSerial } from '../../kernel/protocol/serial'
 
 export interface PasteWriteRecord {
   readonly rowIndex: number
@@ -106,6 +107,15 @@ function coerceForType(
       if (raw.trim() === '') return null
       const n = Number(raw.trim())
       return Number.isFinite(n) ? n : SKIP
+    }
+    return SKIP
+  }
+  if (type === 'date') {
+    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : SKIP
+    if (typeof raw === 'string') {
+      if (raw.trim() === '') return null
+      const d = new Date(raw.trim()) // ISO（date-only 按 UTC 午夜）
+      return Number.isNaN(d.getTime()) ? SKIP : dateToSerial(d)
     }
     return SKIP
   }

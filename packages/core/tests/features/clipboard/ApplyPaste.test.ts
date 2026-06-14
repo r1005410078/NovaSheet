@@ -5,6 +5,7 @@ import {
   type ApplyPasteSource,
 } from '../../../src/features/clipboard/ApplyPaste'
 import type { Schema } from '../../../src/kernel/data/Schema'
+import { dateToSerial } from '../../../src/kernel/protocol/serial'
 
 const schema: Schema = {
   fields: [
@@ -173,5 +174,47 @@ describe('applyPaste', () => {
     )
     expect(data.writes).toHaveLength(8)
     expect(data.writes.map((w) => w.value)).toEqual(['x', 1, 'y', 2, 'x', 1, 'y', 2])
+  })
+
+  const dateSchema: Schema = {
+    fields: [{ id: 'd', name: 'D', type: 'date', width: 100 }],
+  }
+
+  it('粘贴 ISO 串到 date 列 → serial', () => {
+    const data = makeData()
+    const source: ApplyPasteSource = {
+      cells: [['2025-01-15']],
+      sourceFieldIds: ['d'],
+      typed: false,
+    }
+    applyPaste(
+      source,
+      { startRow: 0, endRow: 0, startCol: 0, endCol: 0, tile: { rows: 1, cols: 1 } },
+      dateSchema,
+      ['d'],
+      data as never,
+    )
+    expect(data.writes).toHaveLength(1)
+    expect(data.writes[0]!.value).toBe(dateToSerial(new Date(Date.UTC(2025, 0, 15))))
+  })
+
+  it('粘贴非法日期到 date 列 → skip（不写入）', () => {
+    const data = makeData()
+    const source: ApplyPasteSource = {
+      cells: [['not-a-date']],
+      sourceFieldIds: ['d'],
+      typed: false,
+    }
+    const skipped: { rowIndex: number; fieldId: string; reason: string }[] = []
+    applyPaste(
+      source,
+      { startRow: 0, endRow: 0, startCol: 0, endCol: 0, tile: { rows: 1, cols: 1 } },
+      dateSchema,
+      ['d'],
+      data as never,
+      (s) => skipped.push(...s),
+    )
+    expect(data.writes).toHaveLength(0)
+    expect(skipped).toEqual([{ rowIndex: 0, fieldId: 'd', reason: 'type' }])
   })
 })
