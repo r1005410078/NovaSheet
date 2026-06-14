@@ -39,6 +39,7 @@ Plan risks that require STOP+ASK:
 | `packages/react/tests/features/toolbar/NovaSheetToolbar.test.ts` | toolbar extension seam tests | Modify |
 | `packages/react/tests/excel/scenarios/L3c-rich-text-toolbar-bold-substring.md` | BDD contract says external React toolbar | Modify |
 | `packages/react/tests/excel/scenarios.manifest.json` | regenerated manifest | Modify |
+| `packages/react/tests/excel/SCENARIOS.md` | regenerated scenario catalog | Modify |
 | `packages/cell-kit/src/rich-text/editingSession.ts` | DOM Range/session command core | Create |
 | `packages/cell-kit/src/rich-text/RichTextToolbarProvider.tsx` | React context/provider/session store | Create |
 | `packages/cell-kit/src/rich-text/RichTextToolbarExtension.tsx` | extension item factory + buttons | Create |
@@ -55,6 +56,7 @@ Plan risks that require STOP+ASK:
 **Files:**
 - Modify: `packages/react/tests/excel/scenarios/L3c-rich-text-toolbar-bold-substring.md`
 - Modify: `packages/react/tests/excel/scenarios.manifest.json`
+- Modify: `packages/react/tests/excel/SCENARIOS.md`
 - Modify: `packages/react/tests/excel/rich-text-extension.test.ts`
 
 - [ ] **Step 1: Update scenario wording**
@@ -104,6 +106,7 @@ Expected:
 
 ```text
 packages/react/tests/excel/scenarios.manifest.json updated
+packages/react/tests/excel/SCENARIOS.md updated
 ```
 
 - [ ] **Step 3: Update L3c shim to assert exported external-toolbar pieces**
@@ -133,7 +136,7 @@ Expected: FAIL with `toolbarExtension` / `ToolbarProvider` undefined.
 - [ ] **Step 5: Commit BDD contract**
 
 ```bash
-git add packages/react/tests/excel/scenarios/L3c-rich-text-toolbar-bold-substring.md packages/react/tests/excel/scenarios.manifest.json packages/react/tests/excel/rich-text-extension.test.ts
+git add packages/react/tests/excel/scenarios/L3c-rich-text-toolbar-bold-substring.md packages/react/tests/excel/scenarios.manifest.json packages/react/tests/excel/SCENARIOS.md packages/react/tests/excel/rich-text-extension.test.ts
 git commit -m "test(react): 更新 rich-text 外部 toolbar 行为场景"
 ```
 
