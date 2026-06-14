@@ -154,7 +154,6 @@ export function autofitRowHeights(params: AutofitRowsParams): AutofitRowsResult 
 
 /** 把任意 CellValue 标准化为可绘文本（与 CellPainter.toDisplayString 保持一致逻辑）。 */
 function toDisplayString(value: CellValue): string {
-  if (value instanceof Date) return value.toISOString()
   if (Array.isArray(value)) return value.join(', ')
   return String(value)
 }

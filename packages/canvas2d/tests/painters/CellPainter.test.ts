@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { Field, TextMeasurer } from '@novasheet/core'
+import { dateToSerial } from '@novasheet/core'
 import { CellPainter } from '../../src/painters/CellPainter'
 import { denseGridTheme } from '@novasheet/core'
 import { createRecordingContext } from '../helpers/recording-context'
@@ -135,17 +136,18 @@ describe('CellPainter — 单元格', () => {
     expect(ops.filter((o) => o.op === 'fillText')).toHaveLength(0)
   })
 
-  it('Date 用 ISO 字符串', () => {
+  it('date 字段：serial 数渲染为字符串数字（无 valueFormat 时 fallback）', () => {
     const { ctx, ops } = createRecordingContext()
-    const d = new Date('2026-05-13T00:00:00Z')
+    // serial date：2026-05-13T00:00:00Z
+    const serial = dateToSerial(new Date('2026-05-13T00:00:00Z'))
     new CellPainter(denseGridTheme).paint(ctx, {
-      value: d,
+      value: serial,
       rect: { x: 0, y: 0, width: 200, height: 28 },
       field: makeField({ type: 'date' }),
     })
     const fillTextOp = ops.find((o) => o.op === 'fillText')
     if (fillTextOp?.op === 'fillText') {
-      expect(fillTextOp.args[0]).toBe(d.toISOString())
+      expect(fillTextOp.args[0]).toBe(String(serial))
     }
   })
 

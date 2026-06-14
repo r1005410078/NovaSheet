@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource, type Row, type Schema } from '@novasheet/core'
+import { InMemoryDataSource, dateToSerial, type Row, type Schema } from '@novasheet/core'
 import type { Grid } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
@@ -38,7 +38,7 @@ function makeRows(n: number): Row[] {
     name: `Employee ${String(i + 1).padStart(3, '0')}`,
     team: teams[i % teams.length]!,
     revenue: (i + 1) * 1000,
-    date: new Date(base + i * 86400000),
+    date: dateToSerial(new Date(base + i * 86400000)),
     active: i % 2 === 0,
   }))
 }

@@ -19,9 +19,9 @@ describe('CellEdit — Phase 3.5', () => {
     expect(formatCellForEdit(null, 'text')).toBe('')
   })
 
-  it('formatCellForEdit 旧 helper 保持 Date 的 String() 兼容行为', () => {
-    const value = new Date('2026-05-13T00:00:00Z')
-    expect(formatCellForEdit(value, 'date')).toBe(String(value))
+  it('formatCellForEdit 旧 helper 对非字符串/数字值返回 String()', () => {
+    // date 字段现在存 serial 数；formatCellForEdit fallback 走 String(number)
+    expect(formatCellForEdit(45309, 'date')).toBe('45309')
   })
 
   it('parseCellEditInput 解析 text', () => {

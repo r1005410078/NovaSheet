@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource } from '@novasheet/core'
+import { InMemoryDataSource, dateToSerial } from '@novasheet/core'
 import type { CellFormatter, CellRange, Row, Schema, ValueFormat } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
@@ -43,7 +43,7 @@ function sampleRows(): Row[] {
     amount: 1234.5 + i * 875.25,
     margin: 0.04 + i * 0.0317,
     qty: 1_234_567 - i * 98_765,
-    updated: new Date(2024, 5, 3 + i),
+    updated: dateToSerial(new Date(Date.UTC(2024, 5, 3 + i))),
     size: (i + 1) * 524_288,
   }))
 }

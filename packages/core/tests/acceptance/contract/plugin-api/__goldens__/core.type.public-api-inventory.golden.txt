@@ -22,6 +22,7 @@ RESIZE_KEYBOARD_STEP
 RESIZE_KEYBOARD_STEP_LARGE
 RangeStyleStore
 SAFE_MAX
+SERIAL_EPOCH_MS
 SKIP_CELL_VALUE
 ScrollMapper
 SelectionOverlay
@@ -43,6 +44,7 @@ computeFillWrites
 computePasteTarget
 computeResizeHandles
 computeScrollReveal
+dateToSerial
 decideExcelWorkspaceResize
 denseGridTheme
 findViewRow
@@ -67,6 +69,7 @@ parseTsvToCells
 pasteTargetConflictsWithMerges
 rangesIntersect
 resolveUnderlyingRow
+serialToDate
 serializeRowsToTsv
 tokenize
 unionRange

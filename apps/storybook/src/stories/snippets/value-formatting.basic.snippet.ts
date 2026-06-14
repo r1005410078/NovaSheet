@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Grid, InMemoryDataSource } from '@novasheet/core'
+import { Grid, InMemoryDataSource, dateToSerial } from '@novasheet/core'
 import { canvas2dBackend } from '@novasheet/canvas2d'
 
 // Column-level default formats (Field.format). Raw values stay numbers/dates —
@@ -18,7 +18,7 @@ const schema = {
 const data = new InMemoryDataSource({
   schema,
   rows: [
-    { product: 'Widget A', amount: 1234.5, margin: 0.1357, qty: 1234567, updated: new Date(2024, 5, 9), size: 1572864 },
+    { product: 'Widget A', amount: 1234.5, margin: 0.1357, qty: 1234567, updated: dateToSerial(new Date(Date.UTC(2024, 5, 9))), size: 1572864 },
   ],
 })
 

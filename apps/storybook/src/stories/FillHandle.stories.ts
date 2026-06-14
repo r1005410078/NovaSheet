@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource } from '@novasheet/core'
+import { InMemoryDataSource, dateToSerial } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/fill-handle.basic.snippet.ts?raw'
@@ -31,8 +31,8 @@ export const Basic: Story = {
     }
 
     const rows = [
-      { task: 'Item 001', count: 1, due: new Date('2026-01-01T00:00:00Z'), done: false },
-      { task: 'Item 002', count: 3, due: new Date('2026-01-03T00:00:00Z'), done: true },
+      { task: 'Item 001', count: 1, due: dateToSerial(new Date('2026-01-01T00:00:00Z')), done: false },
+      { task: 'Item 002', count: 3, due: dateToSerial(new Date('2026-01-03T00:00:00Z')), done: true },
       { task: null, count: null, due: null, done: null },
       { task: null, count: null, due: null, done: null },
       { task: null, count: null, due: null, done: null },

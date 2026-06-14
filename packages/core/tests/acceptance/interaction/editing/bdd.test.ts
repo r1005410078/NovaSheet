@@ -5,6 +5,7 @@ import {
   InMemoryDataSource,
   computeFillTarget,
   computeFillWrites,
+  dateToSerial,
   formatCellForEdit,
   isEditableFieldType,
   isTypableEditKey,
@@ -171,9 +172,8 @@ describe('Core BDD Batch 5 clipboard edit fill scenarios', () => {
     // 每条 = 一列源样本 → 向下填充 6 行的投影序列。覆盖 inferProjector 全部分支：
     // 单样本 clone、等差数、文本尾号（含补零/过零）、日期等步、非等差回退取样循环。
     const schema: Schema = { fields: [{ id: 'v', name: 'V', type: 'text', width: 100 }] }
-    // Date 用固定毫秒构造，dump 用 ISO（UTC）——序列本身确定，无本地时区抖动。
-    const day = 86_400_000
-    const base = Date.UTC(2024, 0, 1)
+    // 日期用序列数（serial date）——整数天数自纪元（1899-12-30）起，与 Excel/Google 对齐。
+    const serial2024_01_01 = dateToSerial(new Date(Date.UTC(2024, 0, 1)))
     const cases: ReadonlyArray<readonly [string, readonly CellValue[]]> = [
       ['单样本 clone', [7]],
       ['等差 +1', [1, 2]],
@@ -182,13 +182,12 @@ describe('Core BDD Batch 5 clipboard edit fill scenarios', () => {
       ['文本尾号 +1', ['Item 1', 'Item 2']],
       ['文本尾号补零保宽', ['Q01', 'Q02']],
       ['文本尾号过零', ['n -1', 'n 0']],
-      ['日期按日等步', [new Date(base), new Date(base + day)]],
+      ['日期按日等步', [serial2024_01_01, serial2024_01_01 + 1]],
       ['非等差→回退取样循环', [1, 2, 4]],
       ['纯文本无尾号→循环重复', ['a', 'b']],
     ]
 
-    const fmt = (v: CellValue): string =>
-      v instanceof Date ? v.toISOString() : v === null ? 'null' : JSON.stringify(v)
+    const fmt = (v: CellValue): string => (v === null ? 'null' : JSON.stringify(v))
 
     const lines: string[] = []
     for (const [label, samples] of cases) {

@@ -6,6 +6,7 @@ import {
   Grid,
   InMemoryDataSource,
   SparseExcelDataSource,
+  dateToSerial,
   decideExcelWorkspaceResize,
   formatValue,
   type CellValue,
@@ -40,8 +41,8 @@ it('core.L0.datasource-in-memory-read-cell reads cells and inclusive rows', () =
       field: { id: 'amount', name: 'Amount', type: 'number', width: 100 },
       locale: 'en-US',
     } as const
-    // label 手写而非 Date.toISOString()——后者按 UTC 输出，跨时区跑会抖动黄金文件。
-    const sampleDate = new Date(2024, 5, 9, 8, 5, 3)
+    // serial date 代替 Date 对象——2024-06-09 08:05:03 UTC 对应的序列数；formatValue 按 UTC 渲染无时区抖动。
+    const sampleDate = dateToSerial(new Date(Date.UTC(2024, 5, 9, 8, 5, 3)))
     const cases: ReadonlyArray<readonly [string, CellValue, ValueFormat]> = [
       ['1234.5', 1234.5, { kind: 'number', decimals: 2 }],
       ['1234.5', 1234.5, { kind: 'number', decimals: 0 }],

@@ -201,7 +201,6 @@ export class CellPainter {
 
   /** 把任意 CellValue 标准化为可绘文本（与 paintFallback 的逻辑保持一致）。 */
   private toDisplayString(value: CellValue): string {
-    if (value instanceof Date) return value.toISOString()
     if (Array.isArray(value)) return value.join(', ')
     return String(value)
   }
@@ -300,7 +299,6 @@ export class CellPainter {
   ): void {
     let str: string
     if (preformatted !== undefined) str = preformatted
-    else if (value instanceof Date) str = value.toISOString()
     else if (Array.isArray(value)) str = value.join(', ')
     else str = String(value)
     this.paintLines(ctx, str, rect)

@@ -78,7 +78,6 @@ function displayText(
   if (value === null || value === undefined) return '·'
   const formatted = frame.formatCell?.(rowIndex, colIndex, field, value)
   if (formatted !== undefined) return formatted
-  if (value instanceof Date) return value.toISOString()
   if (Array.isArray(value)) return value.join(', ')
   return String(value)
 }

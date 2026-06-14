@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource, type Row, type Schema } from '@novasheet/core'
+import { InMemoryDataSource, dateToSerial, type Row, type Schema } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
 
@@ -74,7 +74,7 @@ function sortFilterRows(count: number): Row[] {
   return Array.from({ length: count }, (_, index) => ({
     task: `Task ${String(index + 1).padStart(3, '0')}`,
     score: (index * 17) % 100,
-    due: new Date(base + index * 86400000),
+    due: dateToSerial(new Date(base + index * 86400000)),
     status: statuses[index % statuses.length]!,
     tags: [tags[index % tags.length]!, tags[(index + 1) % tags.length]!],
     done: index % 3 === 0,

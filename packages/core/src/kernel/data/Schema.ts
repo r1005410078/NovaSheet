@@ -53,9 +53,9 @@ export interface Schema {
  * - null：显式空（与 SQL 一致），渲染为空白
  * - undefined（在 DataSource.getCell 返回类型里）：异步源未加载
  * - readonly string[]：multiSelect 用
- * - Date：date 类型用，CellPainter 在 fallback 路径里取 ISO 字符串
+ * - number（date 类型）：序列日期（serial date），纪元 1899-12-30 起的整数天数，与 Excel/Google Sheets 对齐
  */
-export type CellValue = string | number | boolean | null | readonly string[] | Date
+export type CellValue = string | number | boolean | null | readonly string[]
 
 /** 行：fieldId → cellValue。形如 `{ name: 'Alice', age: 30 }` */
 export type Row = Record<string, CellValue>

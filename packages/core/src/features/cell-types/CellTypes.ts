@@ -38,7 +38,7 @@ export interface CellTypeDefinition {
   parseEditInput?(input: string, ctx: CellTypeContext): CellParseResult
   serializeClipboard?(value: CellValue | undefined, ctx: CellTypeContext): string
   parseClipboard?(text: string, ctx: CellTypeContext): CellParseResult
-  sortValue?(value: CellValue | undefined, ctx: CellTypeContext): string | number | boolean | Date | null
+  sortValue?(value: CellValue | undefined, ctx: CellTypeContext): string | number | boolean | null
   isEmpty?(value: CellValue | undefined, ctx: CellTypeContext): boolean
   readonly filterOperators?: readonly CellFilterOperator[]
   onAction?(ctx: CellActionContext): void

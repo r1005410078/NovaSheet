@@ -1,4 +1,5 @@
 import type { Row, Schema } from '@novasheet/core'
+import { dateToSerial } from '@novasheet/core'
 import { GeneratedDataSource } from './generated-data-source'
 
 /**
@@ -92,9 +93,9 @@ export function generateRows(schema: Schema, n: number): Row[] {
           break
         }
         case 'date': {
-          // Deterministic dates anchored to 2026-01-01 + i days.
+          // Deterministic serial dates anchored to 2026-01-01 + i days.
           const base = Date.UTC(2026, 0, 1)
-          row[field.id] = new Date(base + i * 86400000)
+          row[field.id] = dateToSerial(new Date(base + i * 86400000))
           break
         }
         case 'checkbox':

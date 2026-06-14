@@ -1,7 +1,6 @@
 // @ts-nocheck
-import { Grid } from '@novasheet/core'
+import { Grid, InMemoryDataSource, dateToSerial } from '@novasheet/core'
 import { canvas2dBackend } from '@novasheet/canvas2d'
-import { InMemoryDataSource } from '@novasheet/core'
 
 const schema = {
   fields: [
@@ -13,8 +12,8 @@ const schema = {
 }
 
 const rows = [
-  { task: 'Item 001', count: 1, due: new Date('2026-01-01T00:00:00Z'), done: false },
-  { task: 'Item 002', count: 3, due: new Date('2026-01-03T00:00:00Z'), done: true },
+  { task: 'Item 001', count: 1, due: dateToSerial(new Date('2026-01-01T00:00:00Z')), done: false },
+  { task: 'Item 002', count: 3, due: dateToSerial(new Date('2026-01-03T00:00:00Z')), done: true },
   { task: null, count: null, due: null, done: null },
   { task: null, count: null, due: null, done: null },
 ]
