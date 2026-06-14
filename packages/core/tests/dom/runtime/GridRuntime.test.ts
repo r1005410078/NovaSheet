@@ -1277,6 +1277,47 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
     expect(engine.selectCell).not.toHaveBeenCalled()
   })
 
+  it('does not fall back to original custom registry when resolved type changes and resolved registry misses', () => {
+    const engine = makeEngine()
+    engine.beginCellEdit = mock(() => false)
+    engine.getFrame = mock(() => {
+      const frame = makeFrameWithFields(
+        [{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }],
+        [{ owner: 45672 }],
+      )
+      return {
+        ...frame,
+        resolveCellType: (rowIndex: number, colIndex: number, field: Schema['fields'][number]) =>
+          rowIndex === 0 && colIndex === 0 && field.id === 'owner' ? 'date' : 'text',
+        hasCellTypeOverride: (rowIndex: number, colIndex: number) =>
+          rowIndex === 0 && colIndex === 0,
+      }
+    })
+
+    const onAction = mock(() => {})
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}) }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRendererWithActionHit({
+        rowIndex: 0,
+        colIndex: 0,
+        actionId: 'change-owner',
+      }),
+      cellTypes: { assignee: { onAction } satisfies CellTypeDefinition },
+      cellEditors: { assignee: editor },
+    })
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(false)
+    expect(editor.open).not.toHaveBeenCalled()
+
+    runtime.handleHostPointerDown({ x: 120, y: 44, button: 0, shiftKey: false })
+
+    expect(onAction).not.toHaveBeenCalled()
+    expect(editor.open).not.toHaveBeenCalled()
+    expect(engine.selectCell).toHaveBeenCalledWith({ rowIndex: 0, colIndex: 0 })
+  })
+
   it('选中后直接键入进入编辑（Sheets 式）', () => {
     const engine = makeEngine()
     engine.getSelection = mock(() => ({

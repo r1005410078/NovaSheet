@@ -63,6 +63,8 @@ export interface RenderFrame {
   formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
   /** 当前格 resolved cell type 解析器（view 坐标）。 */
   resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => CellTypeOverride
+  /** 当前格是否存在显式 cell type override（view 坐标）。 */
+  hasCellTypeOverride?: (rowIndex: number, colIndex: number) => boolean
   /**
    * Phase A — 附件读取闭包（view 坐标）。引擎构帧时闭合 coords view→raw 转换 + attachmentStore。
    * `viewRow`/`viewCol` 为 view 空间坐标（渲染时已知），返回 `undefined` 表示该格无此 namespace 数据。

@@ -480,6 +480,7 @@ export class DefaultGridEngine implements GridEngine {
       viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
       viewColToRaw: (viewCol) => this.coords.viewColToRaw(viewCol),
       resolveRawCellType: (row, col, field) => this.cellTypeStore.resolve(row, col, field),
+      hasRawCellTypeOverride: (row, col) => this.cellTypeStore.get(row, col) !== undefined,
       attachmentStore: this.formatState.attachmentStore,
     })
   }

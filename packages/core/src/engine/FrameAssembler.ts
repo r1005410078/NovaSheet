@@ -61,6 +61,8 @@ export interface FrameAssemblerInput {
   readonly viewColToRaw: (viewCol: number) => number
   /** raw cell type resolver，构帧时包成 view resolver。 */
   readonly resolveRawCellType: (rowIndex: number, colIndex: number, field: Field) => CellTypeOverride
+  /** raw cell 是否存在显式 type override，构帧时包成 view probe。 */
+  readonly hasRawCellTypeOverride: (rowIndex: number, colIndex: number) => boolean
   /** 附件存储引用，供 getAttachment 读取。 */
   readonly attachmentStore: CellAttachmentStore
 }
@@ -106,6 +108,11 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     const rawCol = input.viewColToRaw(viewCol)
     return rawCol < 0 ? normalizeFieldType(field.type) : input.resolveRawCellType(rawRow, rawCol, field)
   }
+  const hasCellTypeOverride = (viewRow: number, viewCol: number): boolean => {
+    const rawRow = input.viewRowToRaw(viewRow)
+    const rawCol = input.viewColToRaw(viewCol)
+    return rawCol >= 0 && input.hasRawCellTypeOverride(rawRow, rawCol)
+  }
   const formatCell = buildFormatCell(cellFormats, input.formatters, input.locale, resolveCellType)
   const { viewRowToRaw, viewColToRaw, attachmentStore } = input
   function getAttachment<T>(namespace: string, viewRow: number, viewCol: number): T | undefined {
@@ -127,6 +134,7 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     mergeRegions,
     formatCell,
     resolveCellType,
+    hasCellTypeOverride,
     getAttachment,
   }
 }

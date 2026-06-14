@@ -86,6 +86,7 @@ describe('assembleRenderFrame', () => {
       viewRowToRaw: (v) => v,
       viewColToRaw: (v) => v,
       resolveRawCellType: () => 'text',
+      hasRawCellTypeOverride: () => false,
       attachmentStore: formatState.attachmentStore,
     }
     const frame = assembleRenderFrame(input)
@@ -137,6 +138,7 @@ describe('assembleRenderFrame', () => {
       viewRowToRaw: (v) => v,
       viewColToRaw: (v) => v,
       resolveRawCellType: () => 'text',
+      hasRawCellTypeOverride: () => false,
       attachmentStore: formatState.attachmentStore,
     }
     const frame = assembleRenderFrame(input)
@@ -192,6 +194,7 @@ describe('assembleRenderFrame', () => {
         calls.push([rowIndex, colIndex, field])
         return 'date'
       },
+      hasRawCellTypeOverride: () => false,
       attachmentStore: formatState.attachmentStore,
     }
 
@@ -200,6 +203,62 @@ describe('assembleRenderFrame', () => {
 
     expect(frame.resolveCellType?.(0, 0, field)).toBe('date')
     expect(calls).toEqual([[5, 2, field]])
+  })
+
+  it('hasCellTypeOverride 把 view 坐标翻译为 raw 坐标后再调用 raw override probe', () => {
+    const data = new InMemoryDataSource({ schema, rows: [{ a: 'x' }] })
+    const formatState = new DefaultFormatState()
+    const coords = new CoordinateSpace({
+      getViewData: () => data,
+      getRawSchema: () => schema,
+      isColHidden: () => false,
+    })
+    const frameFormat = new VisibleFormatResolver(
+      formatState.formatStore,
+      formatState.mergeStore,
+      coords,
+    )
+    const viewport: ViewportSnapshot = {
+      regions: [],
+      scrollX: 0,
+      scrollY: 0,
+      contentRect: { width: 200, height: 200 },
+      headerHeight: 32,
+      rowHeaderWidth: 48,
+      version: 0,
+    }
+    const calls: Array<readonly [number, number]> = []
+    const input: FrameAssemblerInput = {
+      data,
+      theme: denseGridTheme,
+      rowsAxis: mockAxis([0, 0], (i) => i * 24),
+      colsAxis: mockAxis([0, 0], (i) => i * 80),
+      viewport,
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 0, colIndex: 0 },
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      },
+      allRowGaps: [],
+      allColGaps: [],
+      frameFormat,
+      formatters: {},
+      locale: 'en-US',
+      viewRowToRaw: () => 7,
+      viewColToRaw: () => 3,
+      resolveRawCellType: () => 'text',
+      hasRawCellTypeOverride: (rowIndex, colIndex) => {
+        calls.push([rowIndex, colIndex])
+        return true
+      },
+      attachmentStore: formatState.attachmentStore,
+    }
+
+    const frame = assembleRenderFrame(input)
+
+    expect(frame.hasCellTypeOverride?.(0, 0)).toBe(true)
+    expect(calls).toEqual([[7, 3]])
   })
 
   it('resolveCellType 在 raw col 无效时回退 normalizeFieldType 且不调用 raw resolver', () => {
@@ -248,6 +307,7 @@ describe('assembleRenderFrame', () => {
         called = true
         return 'date'
       },
+      hasRawCellTypeOverride: () => false,
       attachmentStore: formatState.attachmentStore,
     }
 

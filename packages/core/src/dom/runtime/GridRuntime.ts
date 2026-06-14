@@ -2341,14 +2341,20 @@ export class GridRuntime {
   private resolveRuntimeField(
     frame: RuntimeRenderFrame,
     cell: CellAddress,
-  ): { readonly cell: CellAddress; readonly field: Field; readonly resolvedField: Field } | null {
+  ): {
+    readonly cell: CellAddress
+    readonly field: Field
+    readonly resolvedField: Field
+    readonly hasExplicitCellTypeOverride: boolean
+  } | null {
     const data = frame.data as Partial<Pick<DataSource, 'getSchema'>>
     const editCell = this.resolveEditCell(frame, cell)
     const field = data.getSchema?.().fields[editCell.colIndex]
     if (!field) return null
     const resolvedType = frame.resolveCellType?.(editCell.rowIndex, editCell.colIndex, field) ?? field.type
+    const hasExplicitCellTypeOverride = frame.hasCellTypeOverride?.(editCell.rowIndex, editCell.colIndex) === true
     const resolvedField = resolvedType === field.type ? field : { ...field, type: resolvedType }
-    return { cell: editCell, field, resolvedField }
+    return { cell: editCell, field, resolvedField, hasExplicitCellTypeOverride }
   }
 
   private resolveCellEditorEntry(
@@ -2358,6 +2364,7 @@ export class GridRuntime {
     if (resolvedEditor) {
       return { editor: resolvedEditor, editorField: resolved.resolvedField }
     }
+    if (resolved.hasExplicitCellTypeOverride) return null
     const fieldEditor = this.cellEditors[resolved.field.type]
     if (fieldEditor) {
       return { editor: fieldEditor, editorField: resolved.field }
@@ -2372,6 +2379,7 @@ export class GridRuntime {
     if (resolvedDefinition) {
       return { definition: resolvedDefinition, definitionField: resolved.resolvedField }
     }
+    if (resolved.hasExplicitCellTypeOverride) return null
     const fieldDefinition = this.cellTypes[resolved.field.type]
     if (fieldDefinition) {
       return { definition: fieldDefinition, definitionField: resolved.field }

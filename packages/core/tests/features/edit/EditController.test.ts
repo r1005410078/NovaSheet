@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'bun:test'
+import { InMemoryDataSource } from '../../../src'
 import { EditController } from '../../../src/features/edit/EditController'
 import type { EditControllerContext } from '../../../src/features/edit/EditController'
 import { CellEditModel } from '../../../src/features/edit/CellEditModel'
 import { CellAttachmentStore } from '../../../src/features/attachment/CellAttachmentStore'
 import type { MutableDataSource } from '../../../src/kernel/data/MutableDataSource'
 import type { CellAddress, CellRange } from '../../../src/kernel/coords/SelectionTypes'
+import { dateToSerial } from '../../../src/kernel/protocol/serial'
 
 function makeDataSource(overrides: Partial<MutableDataSource> = {}): MutableDataSource {
   return {
@@ -53,6 +55,30 @@ describe('EditController', () => {
     const ec = new EditController(new CellEditModel(), ctx)
     expect(ec.beginCellEdit({ rowIndex: 5, colIndex: 0 })).toBe(true)
     expect(ec.getSession()?.cell).toEqual(anchor)
+  })
+
+  it('uses resolved type for begin draft formatting and commit parsing', () => {
+    const data = new InMemoryDataSource({
+      schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 100 }] },
+      rows: [{ a: dateToSerial(new Date(Date.UTC(2025, 0, 15))) }],
+    })
+    const { ctx } = makeCtx({
+      getData: () => data,
+      resolveCellType: () => 'date',
+    })
+    const ec = new EditController(new CellEditModel(), ctx)
+
+    expect(ec.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(true)
+    expect(ec.getSession()).toMatchObject({
+      fieldId: 'a',
+      fieldType: 'date',
+      draft: '2025-01-15',
+    })
+
+    ec.updateDraft('2025-01-16')
+
+    expect(ec.commit()).toBe(true)
+    expect(data.getCell(0, 'a')).toBe(dateToSerial(new Date(Date.UTC(2025, 0, 16))))
   })
 
   it('clearRange 入栈 view range，before 条目用 raw rowIndex', () => {
