@@ -3,9 +3,8 @@
  *
  * 实现行集合与 TSV 格式的双向转换，支持多种单元格类型的规范化：
  * - null/undefined → 空串
- * - number：有限数字 → String；NaN/Infinity → 空串
+ * - number：有限数字 → String；NaN/Infinity → 空串；date 列按序列号转 ISO
  * - boolean → 'true'/'false'
- * - Date → ISO 字符串
  * - Array（multiSelect）→ 逗号连接
  *
  * 解析端支持类型强制：number/checkbox 按规则将字符串转换为对应值或 null。
@@ -19,9 +18,8 @@ type ParsedCellValue = string | number | boolean | null
 /**
  * 将单个单元格值序列化为 TSV 表示。
  * - null/undefined → 空串
- * - number：date 列按序列号转 ISO；其他有限数字 → 字符串；NaN/Infinity → 空串
+ * - number：date 列按序列号转 ISO（`serialToDate`）；其他有限数字 → 字符串；NaN/Infinity → 空串
  * - boolean → 'true'/'false'
- * - Date → ISO 字符串（向后兼容，date 值现在以 number serial 存储）
  * - Array → 逗号连接
  * - 其他 → toString()
  */
