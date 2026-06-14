@@ -102,6 +102,9 @@ import type {
 } from '../interaction/CellEditorContract'
 import type { CellTypeRegistry } from '../../features/cell-types'
 
+type RuntimeRenderFrame = ReturnType<GridEngine['getFrame']>
+type RuntimeCellEdit = NonNullable<RuntimeRenderFrame['cellEdit']>
+
 /** Phase 4.1 — TSV FNV-1a 32-bit hash；用于验证 paste 时剪贴板内容是否仍是 grid 自己刚写出去的，决定 typed 缓存命中。 */
 function fnv1aHash(s: string): number {
   let h = 0x811c9dc5
@@ -297,6 +300,8 @@ export class GridRuntime {
   private cellTypes: CellTypeRegistry = {}
   /** 当前由 custom editor registry 打开的 overlay。 */
   private activeCustomEditor: CellEditor | null = null
+  /** Custom editor 不一定能进入 engine edit model；runtime 用该帧标记让 canvas 跳过原 cell 文本。 */
+  private activeCustomEditorCellEdit: RuntimeCellEdit | null = null
   /** 当前 custom editor 会话 token；reopen/close 后旧 ctx 回调必须失效。 */
   private activeCustomEditorToken: number | null = null
   private nextCustomEditorToken = 1
@@ -2035,8 +2040,12 @@ export class GridRuntime {
   /** 获取当前 render frame，并在 view pipeline 存在时注入视图映射。 */
   private getRenderFrame(): ReturnType<GridEngine['getFrame']> {
     const frame = this.engine.getFrame()
-    if (!this.viewPipeline) return frame
-    return { ...frame, viewPipeline: this.viewPipeline }
+    let next = frame
+    if (this.activeCustomEditorCellEdit && !next.cellEdit) {
+      next = { ...next, cellEdit: this.activeCustomEditorCellEdit }
+    }
+    if (!this.viewPipeline) return next
+    return { ...next, viewPipeline: this.viewPipeline }
   }
 
   /** 根据当前 frame 同步 resize handle layer。 */
@@ -2385,14 +2394,22 @@ export class GridRuntime {
     if (!rect) return false
 
     this.closeActiveCustomEditor()
+    const value = data.getCell?.(cell.rowIndex, field.id)
     const token = this.nextCustomEditorToken
     this.nextCustomEditorToken += 1
     this.activeCustomEditor = editor
+    this.activeCustomEditorCellEdit = {
+      cell,
+      fieldId: field.id,
+      fieldType: field.type,
+      draft: value == null ? '' : String(value),
+    }
     this.activeCustomEditorToken = token
+    this.paintSync()
     editor.open({
       cell,
       field,
-      value: data.getCell?.(cell.rowIndex, field.id),
+      value,
       container: this.editorContainer,
       rect,
       trigger: args.trigger,
@@ -2430,16 +2447,20 @@ export class GridRuntime {
     if (this.activeCustomEditor !== editor) return
     if (token !== undefined && this.activeCustomEditorToken !== token) return
     this.activeCustomEditor = null
+    this.activeCustomEditorCellEdit = null
     this.activeCustomEditorToken = null
     editor.close?.()
+    if (!this.destroyed) this.paintSync()
   }
 
   private closeActiveCustomEditor(): void {
     const editor = this.activeCustomEditor
     if (!editor) return
     this.activeCustomEditor = null
+    this.activeCustomEditorCellEdit = null
     this.activeCustomEditorToken = null
     editor.close?.()
+    if (!this.destroyed) this.paintSync()
   }
 
   /** 打开内置 DOM 单元格编辑器，并按需写入初始 draft。 */

@@ -929,6 +929,35 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
     expect(engine.updateCellEditDraft).not.toHaveBeenCalled()
   })
 
+  it('custom editor render frame marks active cell as editing so canvas skips duplicate text', () => {
+    const engine = makeEngine()
+    engine.getColumnIndex = mock((fieldId: string) => (fieldId === 'owner' ? 0 : -1))
+    engine.getFrame = mock(() =>
+      makeFrameWithFields([{ id: 'owner', name: 'Owner', type: 'assignee', width: 160 }]),
+    )
+    const editor = { open: mock((_ctx: CellEditorOpenContext) => {}) }
+    const renderer = makeRenderer()
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer,
+      cellEditors: { assignee: editor },
+    })
+
+    expect(runtime.openCellEditor(0, 'owner')).toBe(true)
+
+    const renderedFrame = (renderer.render as ReturnType<typeof mock>).mock.calls[0]?.[0]
+    expect(renderedFrame).toMatchObject({
+      cellEdit: {
+        cell: { rowIndex: 0, colIndex: 0 },
+        fieldId: 'owner',
+        fieldType: 'assignee',
+        draft: 'Alice',
+      },
+    })
+    expect(engine.beginCellEdit).not.toHaveBeenCalled()
+  })
+
   it('custom editor commit delegates to engine commitCellValue instead of paste', () => {
     const engine = makeEngine()
     engine.getFrame = mock(() =>
