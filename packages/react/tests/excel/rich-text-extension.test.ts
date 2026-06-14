@@ -29,8 +29,9 @@ describe('rich-text Excel L3c', () => {
 
   it('excel.L3c.rich-text-toolbar-bold-substring — cell-kit exposes external toolbar integration points', () => {
     expect(typeof richTextExtension.editor.open).toBe('function')
-    expect(typeof richTextExtension.toolbarExtension).toBe('function')
-    expect(typeof richTextExtension.ToolbarProvider).toBe('function')
+    const extension = richTextExtension as Record<string, unknown>
+    expect(typeof extension['toolbarExtension']).toBe('function')
+    expect(typeof extension['ToolbarProvider']).toBe('function')
   })
 
   it('excel.L3c.rich-text-toolbar-bold-substring — renderer paints bold substring from stored runs', () => {
