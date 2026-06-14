@@ -6,6 +6,8 @@ import type { CoordinateSpace } from '../../kernel/coords/CoordinateSpace'
 import { asRawRange, type RawRange } from '../../kernel/coords/coordinates'
 import type { FillDirection, FillMergeSnap } from './FillTarget'
 import { positiveModulo } from './FillSeries'
+import type { CellAttachmentStore } from '../attachment/CellAttachmentStore'
+import type { CellAttachmentSnapshot } from '../../kernel/protocol/AttachmentTypes'
 
 /** propagateFillStyles 返回的 store 快照（供 commitFill 组装 fill undo 命令）。 */
 export interface FillStyleSnapshots {
@@ -13,6 +15,8 @@ export interface FillStyleSnapshots {
   formatAfter?: readonly FormatLayer[]
   mergeBefore?: readonly MergeRegion[]
   mergeAfter?: readonly MergeRegion[]
+  attachmentBefore?: CellAttachmentSnapshot
+  attachmentAfter?: CellAttachmentSnapshot
 }
 
 /**
@@ -25,6 +29,7 @@ export class FillStylePropagator {
   constructor(
     private readonly formatStore: RangeStyleStore,
     private readonly mergeStore: MergeStore,
+    private readonly attachmentStore: CellAttachmentStore,
     private readonly coords: CoordinateSpace,
   ) {}
 
@@ -54,13 +59,17 @@ export class FillStylePropagator {
 
     const formatBefore = this.formatStore.snapshot()
     const mergeBefore = this.mergeStore.snapshot()
+    const attachmentBefore = this.attachmentStore.snapshot()
     this.tileFillFormat(rawSource, rawFill, direction)
     this.tileFillMerge(rawSource, rawFill, direction)
+    this.tileFillAttachment(rawSource, rawFill, direction)
     return {
       formatBefore,
       formatAfter: this.formatStore.snapshot(),
       mergeBefore,
       mergeAfter: this.mergeStore.snapshot(),
+      attachmentBefore,
+      attachmentAfter: this.attachmentStore.snapshot(),
     }
   }
 
@@ -98,6 +107,32 @@ export class FillStylePropagator {
         if (fmt.borders !== undefined) this.formatStore.apply(target, { borders: fmt.borders })
         if (fmt.textWrap !== undefined) this.formatStore.apply(target, { textWrap: fmt.textWrap })
         if (fmt.valueFormat !== undefined) this.formatStore.apply(target, { valueFormat: fmt.valueFormat })
+      }
+    }
+  }
+
+  /**
+   * 附件平铺：清空目标区每格附件后，按填充轴取源格附件重写（源无 → 清除目标陈旧，对齐 Google）。
+   * 遍历 store 内全部 namespace；仅当 store 含附件时执行，否则快速返回。
+   */
+  private tileFillAttachment(rawSource: RawRange, rawFill: RawRange, direction: FillDirection): void {
+    const namespaces = this.attachmentStore.namespaces()
+    if (namespaces.length === 0) return
+    const sRows = rawSource.endRow - rawSource.startRow + 1
+    const sCols = rawSource.endCol - rawSource.startCol + 1
+    const vertical = direction === 'down' || direction === 'up'
+    for (let row = rawFill.startRow; row <= rawFill.endRow; row += 1) {
+      for (let col = rawFill.startCol; col <= rawFill.endCol; col += 1) {
+        const srcRow = vertical
+          ? rawSource.startRow + positiveModulo(row - rawSource.startRow, sRows)
+          : row
+        const srcCol = vertical
+          ? col
+          : rawSource.startCol + positiveModulo(col - rawSource.startCol, sCols)
+        for (const ns of namespaces) {
+          const data = this.attachmentStore.get(ns, srcRow, srcCol)
+          this.attachmentStore.set(ns, row, col, data) // data===undefined 即清除目标陈旧
+        }
       }
     }
   }

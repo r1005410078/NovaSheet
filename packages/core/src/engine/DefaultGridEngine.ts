@@ -172,6 +172,7 @@ export class DefaultGridEngine implements GridEngine {
   private readonly fillStyles = new FillStylePropagator(
     this.formatState.formatStore,
     this.formatState.mergeStore,
+    this.formatState.attachmentStore,
     this.coords,
   )
   private readonly eventPipeline = new GridEventPipeline([

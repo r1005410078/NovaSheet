@@ -40,6 +40,15 @@ export class CellAttachmentStore {
     for (const e of snap) this.set(e.namespace, e.row, e.col, e.data)
   }
 
+  /** 返回当前 store 中存有数据的全部 namespace key（供 fill/clipboard 遍历）。 */
+  namespaces(): readonly string[] {
+    const set = new Set<string>()
+    for (const cols of this.cells.values())
+      for (const ns of cols.values())
+        for (const key of ns.keys()) set.add(key)
+    return [...set]
+  }
+
   remapAfterRowsInserted(at: number, count: number): void {
     if (count <= 0) return
     // remapSpanAfterInsert never returns null for single-point spans
