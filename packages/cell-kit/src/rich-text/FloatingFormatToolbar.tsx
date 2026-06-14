@@ -18,6 +18,8 @@ export function FloatingFormatToolbar({ editableRef }: FloatingFormatToolbarProp
     if (!sel || sel.rangeCount === 0 || !editableRef.current) return
     const range = sel.getRangeAt(0)
     if (range.collapsed) return
+    // 防御：选区须落在本编辑区内，否则 extractContents 会误操作编辑区外 DOM。
+    if (!editableRef.current.contains(range.commonAncestorContainer)) return
     const span = document.createElement('span')
     apply(span)
     const contents = range.extractContents()

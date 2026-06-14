@@ -14,6 +14,12 @@ describe('richTextToHtml', () => {
   it('newline → <br>', () => {
     expect(richTextToHtml('a\nb', [])).toBe('<span>a</span><br><span>b</span>')
   })
+  it('escapes double-quote in style value (no attribute break)', () => {
+    const runs: RichTextValue = [{ start: 0, end: 1, attrs: { fontFamily: '"Foo' } }]
+    const html = richTextToHtml('x', runs)
+    expect(html).not.toContain('font-family:"Foo"')
+    expect(html).toContain('&quot;Foo')
+  })
 })
 
 describe('htmlElementToRichText', () => {

@@ -12,7 +12,7 @@ export function richTextToHtml(text: string, runs: RichTextValue): string {
     for (let i = 0; i < lines.length; i++) {
       if (i > 0) parts.push('<br>')
       const style = attrsToStyle(attrs)
-      parts.push(style ? `<span style="${style}">${escapeHtml(lines[i]!)}</span>` : `<span>${escapeHtml(lines[i]!)}</span>`)
+      parts.push(style ? `<span style="${escapeAttr(style)}">${escapeHtml(lines[i]!)}</span>` : `<span>${escapeHtml(lines[i]!)}</span>`)
     }
   }
   return parts.join('')
@@ -112,4 +112,9 @@ function attrsToStyle(a: TextRunAttrs): string {
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/** style 属性值转义：在 escapeHtml 基础上转义双引号，防 color/fontFamily 含 `"` 破坏属性边界。 */
+function escapeAttr(s: string): string {
+  return escapeHtml(s).replace(/"/g, '&quot;')
 }
