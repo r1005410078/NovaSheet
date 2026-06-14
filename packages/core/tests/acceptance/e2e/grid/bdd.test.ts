@@ -648,7 +648,20 @@ describe('Core BDD Batch 6 format merge theme scenarios', () => {
     expect(grid.clearCellType(fillRange(2, 2, 0, 0))).toBe(true)
     expect(grid.getCellType(2, 0)).toBe('date')
 
+    expect(
+      grid.getFilterLayer().setSpec({
+        fieldId: 'score',
+        op: { kind: 'number-equals', value: 30 },
+      }),
+    ).toBe(true)
+    expect(grid.setCellType(fillRange(0, 0, 0, 0), 'checkbox')).toBe(true)
+    expect(grid.getCellType(0, 0)).toBe('checkbox')
+    expect(grid.clearCellType(fillRange(0, 0, 0, 0))).toBe(true)
+    expect(grid.getCellType(0, 0)).toBe('date')
+    expect(grid.getFilterLayer().setSpec(null)).toBe(true)
     expect(grid.getSortLayer().setSpec({ fieldId: 'score', direction: 'asc' })).toBe(true)
+    expect(grid.getCellType(2, 0)).toBe('date')
+
     expect(grid.setCellType(fillRange(0, 1, 0, 0), 'checkbox')).toBe(false)
     expect(grid.getCellType(0, 0)).toBe('date')
     expect(grid.getCellType(1, 0)).toBe('date')
