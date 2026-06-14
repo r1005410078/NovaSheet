@@ -133,6 +133,8 @@ export interface GridController {
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean
   /** 读 raw cell 的扩展附件；无则 undefined。 */
   getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown
+  /** 读 raw 坐标单元格文本（String(value)，空为 ''）。cell-kit selection-bold adapter 用。 */
+  getCellText(rawRow: number, rawCol: number): string
   /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时刷新并返回 true。 */
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean
   /** Phase 5-A — 合并 view `range`；成功刷新并返回 true。 */

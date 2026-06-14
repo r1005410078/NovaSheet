@@ -369,6 +369,11 @@ export class Grid {
     return this.delegate.getCellAttachment(namespace, rawRow, rawCol)
   }
 
+  /** 读 raw 坐标单元格文本（String(value)，空为 ''）。cell-kit selection-bold adapter 用。 */
+  getCellText(rawRow: number, rawCol: number): string {
+    return this.delegate.getCellText(rawRow, rawCol)
+  }
+
   /** Phase 5-A — 合并 view `range`；成功返回 true 并重绘。 */
   mergeCells(range: CellRange): boolean {
     return this.delegate.mergeCells(range)

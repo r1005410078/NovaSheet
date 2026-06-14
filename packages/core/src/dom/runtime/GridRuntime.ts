@@ -724,6 +724,16 @@ export class GridRuntime {
     return this.engine.getCellAttachment(namespace, rawRow, rawCol)
   }
 
+  /** 读 raw 坐标单元格文本（String(value)，空为 ''）。cell-kit selection-bold adapter 用。 */
+  getCellText(rawRow: number, rawCol: number): string {
+    if (this.destroyed) return ''
+    const data = this.engine.getData()
+    const field = data.getSchema().fields[rawCol]
+    if (!field) return ''
+    const value = data.getCell(rawRow, field.id)
+    return value == null ? '' : String(value)
+  }
+
   /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时刷新视图。 */
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
     if (this.destroyed) return false

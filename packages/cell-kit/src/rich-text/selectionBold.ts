@@ -40,3 +40,31 @@ function isFullSpanBold(runs: RichTextValue | undefined, len: number): boolean {
     runs[0]!.attrs.bold === true
   )
 }
+
+/** Grid facade 的 raw-coord 子集，供 cell-kit adapter 用，不 import core 类型。 */
+export interface RichTextGrid {
+  getCellText(rawRow: number, rawCol: number): string
+  getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown
+  setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean
+  getSelection(): { selectedRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null }
+}
+
+/** 把 RichTextGrid facade 适配成 RichTextGridAccess（raw 坐标）。 */
+export function createGridAccess(grid: RichTextGrid): RichTextGridAccess {
+  return {
+    getCellText: (r, c) => grid.getCellText(r, c),
+    getRichText: (r, c) => grid.getCellAttachment('richText', r, c) as RichTextValue | undefined,
+    setRichText: (r, c, runs) => grid.setCellAttachment('richText', r, c, runs),
+  }
+}
+
+/**
+ * 对当前选区逐格应用 full-span bold。
+ * view===raw 简化（sort/filter 下 view≠raw 的精确映射留 TODO）。
+ * TODO(rich-text-selection-bold-viewraw): sort/filter 激活时 view range 需转 raw 坐标
+ */
+export function applySelectionBold(grid: RichTextGrid): void {
+  const range = grid.getSelection().selectedRange
+  if (!range) return
+  applyBoldToRange(createGridAccess(grid), range)
+}

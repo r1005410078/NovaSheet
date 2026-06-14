@@ -519,6 +519,10 @@ export class GridControllerImpl implements GridController {
     return this.runtime.getCellAttachment(namespace, rawRow, rawCol)
   }
 
+  getCellText(rawRow: number, rawCol: number): string {
+    return this.runtime.getCellText(rawRow, rawCol)
+  }
+
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
     return this.runtime.setTextWrap(range, mode)
   }
