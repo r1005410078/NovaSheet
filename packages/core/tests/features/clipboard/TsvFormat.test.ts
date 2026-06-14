@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { serializeRowsToTsv, parseTsvToCells } from '../../../src/features/clipboard/TsvFormat'
 import type { Schema } from '../../../src/kernel/data/Schema'
+import { dateToSerial } from '../../../src/kernel/protocol/serial'
 
 const schema: Schema = {
   fields: [
@@ -16,7 +17,7 @@ describe('serializeRowsToTsv', () => {
       { name: 'apple', qty: 3, done: true },
       { name: 'banana', qty: null, done: false },
     ]
-    expect(serializeRowsToTsv(rows, ['name', 'qty', 'done'])).toBe(
+    expect(serializeRowsToTsv(rows, ['name', 'qty', 'done'], schema)).toBe(
       'apple\t3\ttrue\nbanana\t\tfalse',
     )
   })
@@ -25,20 +26,35 @@ describe('serializeRowsToTsv', () => {
     // Note: Row doesn't support undefined in its type, but the function handles missing fields
     // (which coerce to undefined when accessed). Test with missing field instead.
     const rows = [{ qty: NaN } as unknown as Record<string, string | number | boolean | null>]
-    expect(serializeRowsToTsv(rows, ['name', 'qty', 'done'])).toBe('\t\t')
+    expect(serializeRowsToTsv(rows, ['name', 'qty', 'done'], schema)).toBe('\t\t')
   })
 
-  it('Date → ISO 字符串', () => {
+  it('Date → ISO 字符串（instanceof Date 向后兼容）', () => {
     const d = new Date('2026-05-18T00:00:00.000Z')
-    expect(serializeRowsToTsv([{ at: d }], ['at'])).toBe('2026-05-18T00:00:00.000Z')
+    const atSchema: Schema = { fields: [{ id: 'at', name: 'At', type: 'text', width: 100 }] }
+    expect(serializeRowsToTsv([{ at: d }], ['at'], atSchema)).toBe('2026-05-18T00:00:00.000Z')
   })
 
   it('数组（multiSelect）→ 逗号连接', () => {
-    expect(serializeRowsToTsv([{ tags: ['a', 'b'] }], ['tags'])).toBe('a,b')
+    const tagsSchema: Schema = {
+      fields: [{ id: 'tags', name: 'Tags', type: 'multiSelect', width: 100 }],
+    }
+    expect(serializeRowsToTsv([{ tags: ['a', 'b'] }], ['tags'], tagsSchema)).toBe('a,b')
   })
 
   it('空 rows → 空字符串', () => {
-    expect(serializeRowsToTsv([], ['name'])).toBe('')
+    expect(serializeRowsToTsv([], ['name'], schema)).toBe('')
+  })
+
+  it('date 列序列化为 ISO（凭 schema 类型）', () => {
+    const dateSchema: Schema = { fields: [{ id: 'd', name: 'D', type: 'date', width: 100 }] }
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    expect(serializeRowsToTsv([{ d: serial }], ['d'], dateSchema)).toBe('2025-01-15T00:00:00.000Z')
+  })
+
+  it('number 列不转（序列化为数字串）', () => {
+    const numSchema: Schema = { fields: [{ id: 'n', name: 'N', type: 'number', width: 100 }] }
+    expect(serializeRowsToTsv([{ n: 45000 }], ['n'], numSchema)).toBe('45000')
   })
 })
 
@@ -84,9 +100,10 @@ describe('parseTsvToCells', () => {
 describe('TSV 多行单元格转义（RFC-4180 引号）', () => {
   it('含 \\n 的格序列化时加引号、内部 " 翻倍', () => {
     const rows = [{ name: 'line1\nline2', qty: 1, done: false }]
-    const tsv = serializeRowsToTsv(rows, ['name', 'qty', 'done'])
+    const tsv = serializeRowsToTsv(rows, ['name', 'qty', 'done'], schema)
     expect(tsv).toBe('"line1\nline2"\t1\tfalse')
-    const withQuote = serializeRowsToTsv([{ name: 'a"b\nc' }], ['name'])
+    const nameSchema: Schema = { fields: [{ id: 'name', name: 'Name', type: 'text', width: 100 }] }
+    const withQuote = serializeRowsToTsv([{ name: 'a"b\nc' }], ['name'], nameSchema)
     expect(withQuote).toBe('"a""b\nc"')
   })
 
@@ -95,7 +112,7 @@ describe('TSV 多行单元格转义（RFC-4180 引号）', () => {
       { name: 'a\nb', qty: 1, done: false },
       { name: 'plain', qty: 2, done: true },
     ]
-    const tsv = serializeRowsToTsv(rows, ['name', 'qty', 'done'])
+    const tsv = serializeRowsToTsv(rows, ['name', 'qty', 'done'], schema)
     const parsed = parseTsvToCells(tsv, ['name', 'qty', 'done'], schema)
     expect(parsed.length).toBe(2) // 两行，不因 cell 内 \n 散成 3 行
     expect(parsed[0]![0]).toBe('a\nb')

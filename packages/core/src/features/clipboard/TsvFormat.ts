@@ -12,23 +12,25 @@
  */
 
 import type { CellValue, Row, Schema } from '../../kernel/data/Schema'
+import { serialToDate } from '../../kernel/protocol/serial'
 
 type ParsedCellValue = string | number | boolean | null
 
 /**
  * 将单个单元格值序列化为 TSV 表示。
  * - null/undefined → 空串
- * - number：有限数字保留，NaN/Infinity → 空串
+ * - number：date 列按序列号转 ISO；其他有限数字 → 字符串；NaN/Infinity → 空串
  * - boolean → 'true'/'false'
- * - Date → ISO 字符串
+ * - Date → ISO 字符串（向后兼容，date 值现在以 number serial 存储）
  * - Array → 逗号连接
  * - 其他 → toString()
  */
-function serializeValue(v: CellValue | undefined): string {
+function serializeValue(v: CellValue | undefined, type: string | undefined): string {
   if (v === null || v === undefined) return ''
 
   if (typeof v === 'number') {
-    return Number.isFinite(v) ? String(v) : ''
+    if (!Number.isFinite(v)) return ''
+    return type === 'date' ? serialToDate(v).toISOString() : String(v)
   }
 
   if (typeof v === 'boolean') {
@@ -51,17 +53,24 @@ function serializeValue(v: CellValue | undefined): string {
  *
  * @param rows 行集合（每行是 { fieldId: value } 的对象）
  * @param fieldIds 列顺序（决定 TSV 列序）
+ * @param schema 字段定义（用于按列类型序列化，如 date 列输出 ISO 串）
  * @returns TSV 字符串，行用 `\n` 分隔，列用 `\t` 分隔
  */
-export function serializeRowsToTsv(rows: readonly Row[], fieldIds: readonly string[]): string {
+export function serializeRowsToTsv(
+  rows: readonly Row[],
+  fieldIds: readonly string[],
+  schema: Schema,
+): string {
   if (rows.length === 0) {
     return ''
   }
 
+  const typeMap = new Map(schema.fields.map((f) => [f.id, f.type]))
+
   return rows
     .map((row) =>
       fieldIds
-        .map((fieldId) => escapeTsvField(serializeValue(row[fieldId])))
+        .map((fieldId) => escapeTsvField(serializeValue(row[fieldId], typeMap.get(fieldId))))
         .join('\t'),
     )
     .join('\n')

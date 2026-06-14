@@ -24,7 +24,7 @@ it('core.L0.clipboard-tsv-roundtrip serializes and parses typed cells', () => {
       { name: 'banana', qty: null, done: false },
     ] satisfies Row[]
     const fieldIds = ['name', 'qty', 'done']
-    const tsv = serializeRowsToTsv(rows, fieldIds)
+    const tsv = serializeRowsToTsv(rows, fieldIds, tsvSchema)
     // TSV 本身是文本格式契约——serialize 输出入金（含制表符/空值的逐字节形态），parse 往返单独断言。
     expectGolden(import.meta.dir, 'core.L0.clipboard-tsv-roundtrip', `${tsv}\n`)
     expect(parseTsvToCells(tsv, fieldIds, tsvSchema)).toEqual([

@@ -942,7 +942,7 @@ export class GridRuntime {
       for (const fid of fieldIds) row[fid] = data.getCell(r, fid) ?? null
       rows.push(row)
     }
-    return { range, rows, tsv: serializeRowsToTsv(rows, fieldIds) }
+    return { range, rows, tsv: serializeRowsToTsv(rows, fieldIds, data.getSchema()) }
   }
 
   /**
