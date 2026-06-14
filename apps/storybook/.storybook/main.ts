@@ -43,6 +43,9 @@ const config: StorybookConfig = {
           '@novasheet/canvas2d': fileURLToPath(
             new URL('../../../packages/canvas2d/src/index.ts', import.meta.url),
           ),
+          '@novasheet/cell-kit': fileURLToPath(
+            new URL('../../../packages/cell-kit/src/index.ts', import.meta.url),
+          ),
           '@novasheet/react': fileURLToPath(
             new URL('../../../packages/react/src/index.ts', import.meta.url),
           ),
