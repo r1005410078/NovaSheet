@@ -1,22 +1,25 @@
-import { useSyncExternalStore } from 'react'
-import type { ToolbarExtensionItem } from '@novasheet/react'
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
+import { CustomColorPicker, type ToolbarExtensionItem } from '@novasheet/react'
 import type { RichTextToolbarController } from './RichTextToolbarProvider'
 
 const RICH_TEXT_TOOLBAR_GROUP_CLASS = 'inline-flex flex-none items-center gap-0.5'
 const RICH_TEXT_TOOLBAR_BUTTON_CLASS = 'inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded border-0 bg-transparent px-1.5 text-[13px] leading-none text-slate-700 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45'
+const RICH_TEXT_COLOR_PICKER_CLASS = 'fixed z-[10000] w-[260px] rounded bg-white p-3 text-[13px] text-slate-800 shadow-lg ring-1 ring-slate-200'
 
 function commandButton(
   label: string,
   command: string,
   disabled: boolean,
   onClick: () => void,
+  title = label,
 ): JSX.Element {
   return (
     <button
       type="button"
       data-rich-text-command={command}
       disabled={disabled}
-      title={label}
+      title={title}
       className={RICH_TEXT_TOOLBAR_BUTTON_CLASS}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
@@ -41,12 +44,39 @@ function RichTextToolbarControls({
 }: {
   readonly controller: RichTextToolbarController
 }): JSX.Element {
+  const colorButtonRef = useRef<HTMLButtonElement>(null)
+  const [colorPickerOpen, setColorPickerOpen] = useState(false)
+  const [colorPickerPosition, setColorPickerPosition] = useState<{ top: number; left: number } | null>(null)
   const session = useSyncExternalStore(
     controller.subscribe,
     controller.getSession,
     controller.getSession,
   )
   const disabled = !session
+  const activeColor = session?.getActiveAttrs().color ?? '#000000'
+
+  useLayoutEffect(() => {
+    if (!colorPickerOpen) {
+      setColorPickerPosition(null)
+      return
+    }
+
+    const button = colorButtonRef.current
+    if (!button) return
+
+    const update = (): void => {
+      const rect = button.getBoundingClientRect()
+      setColorPickerPosition({ top: rect.bottom + 4, left: rect.left })
+    }
+
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [colorPickerOpen])
 
   return (
     <span
@@ -71,6 +101,40 @@ function RichTextToolbarControls({
         const current = session?.getActiveAttrs().fontSize ?? 14
         session?.setFontSize(Math.max(8, current - 2))
       })}
+      <button
+        ref={colorButtonRef}
+        type="button"
+        data-rich-text-command="color"
+        disabled={disabled}
+        title="文字颜色"
+        className={RICH_TEXT_TOOLBAR_BUTTON_CLASS}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => {
+          if (disabled) return
+          setColorPickerOpen((open) => !open)
+        }}
+      >
+        A
+      </button>
+      {colorPickerOpen && colorPickerPosition && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              data-rich-text-color-picker=""
+              className={RICH_TEXT_COLOR_PICKER_CLASS}
+              style={{ top: colorPickerPosition.top, left: colorPickerPosition.left }}
+            >
+              <CustomColorPicker
+                initialColor={activeColor}
+                onConfirm={(color) => {
+                  session?.setColor(color)
+                  setColorPickerOpen(false)
+                }}
+                onCancel={() => setColorPickerOpen(false)}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </span>
   )
 }

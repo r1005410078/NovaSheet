@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it, mock } from 'bun:test'
 import { act, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
@@ -7,11 +7,21 @@ import {
   useRichTextToolbarController,
 } from '../../src/rich-text'
 import { createRichTextEditingSession } from '../../src/rich-text/editingSession'
+import type { RichTextEditingSession } from '../../src/rich-text/editingSession'
 
 function Harness(): JSX.Element {
   const controller = useRichTextToolbarController()
   const item = richTextToolbarExtension(controller)
   return <>{item.render({ disabledActionIds: new Set(), closePopover: () => undefined })}</>
+}
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+  act(() => {
+    if (setter) setter.call(input, value)
+    else input.value = value
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
 }
 
 describe('richTextToolbarExtension', () => {
@@ -88,5 +98,58 @@ describe('richTextToolbarExtension', () => {
     await act(async () => { bold!.click() })
 
     expect(editable.innerHTML).toContain('font-weight')
+  })
+
+  it('opens text color picker and applies confirmed color to active session', async () => {
+    const setColor = mock((_color: string) => {})
+
+    function ActiveHarness(): JSX.Element {
+      const controller = useRichTextToolbarController()
+      const item = richTextToolbarExtension(controller)
+      useEffect(() => {
+        const session: RichTextEditingSession = {
+          active: true,
+          saveSelection: () => undefined,
+          restoreSelection: () => true,
+          toggleInlineStyle: () => undefined,
+          setColor,
+          setFontSize: () => undefined,
+          setFontFamily: () => undefined,
+          getActiveAttrs: () => ({ color: '#000000' }),
+        }
+        controller.setSession(session)
+        return () => controller.setSession(null)
+      }, [controller])
+      return <>{item.render({ disabledActionIds: new Set(), closePopover: () => undefined })}</>
+    }
+
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    await act(async () => {
+      root.render(
+        <RichTextToolbarProvider>
+          <ActiveHarness />
+        </RichTextToolbarProvider>,
+      )
+    })
+
+    const color = host.querySelector<HTMLButtonElement>('[data-rich-text-command="color"]')
+    expect(color).not.toBeNull()
+    await act(async () => { color!.click() })
+
+    const picker = document.body.querySelector<HTMLElement>('[data-rich-text-color-picker]')
+    expect(picker).not.toBeNull()
+    const hexInput = picker!.querySelector<HTMLInputElement>('input[aria-label="十六进制颜色"]')
+    expect(hexInput).not.toBeNull()
+    setInputValue(hexInput!, '#00ff00')
+    await act(async () => {
+      picker!.querySelector<HTMLButtonElement>('[data-novasheet-color-picker-confirm]')!.click()
+    })
+
+    expect(setColor).toHaveBeenCalledWith('#00ff00')
+    expect(document.body.querySelector('[data-rich-text-color-picker]')).toBeNull()
+
+    await act(async () => { root.unmount() })
+    host.remove()
   })
 })
