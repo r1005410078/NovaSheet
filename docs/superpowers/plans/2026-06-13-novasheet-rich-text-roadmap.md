@@ -24,7 +24,7 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 | B | `@novasheet/canvas2d` styled-text | [`2026-06-13-...-styled-text-phase-b.md`](./2026-06-13-novasheet-styled-text-phase-b.md) | ☑ 已 ship |
 | C-display | `@novasheet/cell-kit` 类型/codec/renderer | [`2026-06-13-...-phase-c-display.md`](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-display.md) | ☑ 已 ship |
 | C-edit-UI | `@novasheet/cell-kit` editor/toolbar/选区加粗/装配/BDD | [`2026-06-13-...-phase-c-edit-ui.md`](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-edit-ui.md) | ☑ 已 ship |
-| C-edit-data | `@novasheet/cell-kit` D1 fill + D2 clipboard（纯 core） | 待展开 | ☐ |
+| C-edit-data | `@novasheet/cell-kit` D1 fill + D2 clipboard（纯 core） | [`2026-06-13-...-phase-c-edit-data.md`](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-edit-data.md) | ☑ 已 ship |
 
 ---
 
@@ -66,8 +66,8 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 | `Grid.setCellAttachment/getCellAttachment` 门面 | A Task5 | ☑ |
 | `GridOptions.cellAttachments` codec 注册 | A Task5 | ☑ |
 | frame 暴露 view 坐标附件解析器（供 B 读） | A Task6 | ☑ |
-| **fill 柄携带 runs**（对齐 Google，bb015ed 同款） | A Task8（**待定时机**，见 §5） | ☐ |
-| **clipboard copy/paste 经 codec** | A Task9 或 C（**待定**，见 §5） | ☐ |
+| **fill 柄携带 runs**（对齐 Google，bb015ed 同款） | C-edit-data T1+T2（`tileFillAttachment` + fill undo） | ☑ |
+| **clipboard copy/paste 经 codec** | C-edit-data T3-T5（typed-cache 携带 + paste bundle undo） | ☑ |
 
 ### 1.4 渲染（Phase B）
 
@@ -203,17 +203,26 @@ Phase B  canvas2d styled-text ──┘ (地基：画多段)
 - **F6（已修）** ~~style 属性引号转义 + toolbar wrap containment guard~~——里程碑 reviewer 两处 Minor 已修（commit c688476）。
 - **F7** Excel L3 测试从 `cell-kit/src` 内部 import 而非 `@novasheet/cell-kit` 包名（避 build 依赖的务实选择）——长期宜改包名 import。
 
-### 4.3 C-edit-data（☐ 待展开成完整 plan）
+### 4.3 C-edit-data（☑ 已 ship）
 
-| # | 任务 | 层 |
-| --- | --- | --- |
-| CD1 | **fill 柄携带 runs**（D1，对齐 Google bb015ed）；sort/filter 打散保守 no-op | core attachment fill |
-| CD2 | **clipboard copy/paste 经 codec**（D2）；跨 Grid/外部安全降级 | core attachment clipboard |
-| CD3 | BDD：`core.L1.cell-attachment-fill-propagate` + clipboard 往返场景 | core L1/L2 |
+完整步骤见 [C-edit-data plan](./2026-06-13-novasheet-cell-kit-rich-text-phase-c-edit-data.md)。6 Task：
 
-**依赖:** A 全绿（attachment 轴）。与 C-edit-UI 互不依赖，可并行。
+| # | 任务 | 层 | 状态 |
+| --- | --- | --- | --- |
+| T1 | `FillStylePropagator` 平铺 attachment（仿 `tileFillFormat`）+ 快照 | core fill | ☑ |
+| T2 | fill undo/redo 恢复 attachment + Core L1 `cell-attachment-fill-propagate` | core undo | ☑ |
+| T3 | engine 暴露 `getAttachmentNamespaces`/`getAttachmentCodec` + paste undo attachment 字段 | core engine | ☑ |
+| T4 | copy/cut 捕获选区 attachment 进 `clipboardCache`（codec serialize，view→raw） | core runtime | ☑ |
+| T5 | paste typed-hit 经 codec 恢复 attachment（bundle 单 undo）+ Core L2 `cell-attachment-clipboard-roundtrip` | core clipboard | ☑ |
+| T6 | 全量 gates + 里程碑 | — | ☑ |
 
-**出口判据:** §1.3 fill/clipboard ☑；Core L1/L2 场景绿。
+**C-edit-data follow-up（Minor，里程碑 reviewer 标，留后续 cleanup）:**
+- **F8** namespace 来源不对称：fill 用 `attachmentStore.namespaces()`（全数据 ns，内存平铺无需 serialize），clipboard 用 `getAttachmentNamespaces()`（codec 注册 ns）。设计合理但隐含「fill 可携无 codec 附件、clipboard 不行」契约——值得 API 文档说明。
+- **F9** cut 不清源格 attachment（`clearRange` 只清值）：剪切后源格留孤儿附件、与 paste 恢复目标组合成「复制」而非「移动」。需 `TODO(phase-c-edit-data-cut-attachment)`——bundle 进 cut undo 清源附件。
+
+**依赖:** A 全绿（attachment 轴）。与 C-edit-UI 互不依赖。
+
+**出口判据:** §1.3 fill/clipboard ☑（达成）；Core L1/L2 场景绿（达成）。
 
 ---
 
@@ -248,3 +257,29 @@ D1/D2 定 (b)，Phase A 出口判据已排除 fill/clipboard（§1.3 标）；fi
 3. 富文本格经 fill/sort/插删行后 runs 正确跟随（或保守 no-op，不错位）。
 4. `grep -rn "TextRun\|fontWeight\|strikethrough" packages/core/src` 为空（core 零污染）。
 5. 四门全绿 + 三 phase 各自 code-reviewer 过。
+
+### 7.1 当前状态（2026-06-14）
+
+五子阶段全 ship：**A**（附件轴）+ **B**（styled-text）+ **C-display**（types/codec/renderer）+ **C-edit-UI**（editor/toolbar/选区加粗/BDD）+ **C-edit-data**（fill/clipboard）。四门全绿（1441 tests），各阶段 code-reviewer 过。
+
+| 判据 | 状态 | 缺口 |
+| --- | --- | --- |
+| ② 注册后加粗/斜/下划/删除线/改色 + 提交重开保持 | ◐ | 改字号工具栏按钮缺（F5）；再编辑从纯文本起（既存 runs 回填 F1）；toggle-off 缺（F2） |
+| ③ fill/sort/插删行 runs 跟随或 no-op | ☑ | — |
+| ④ core 零污染 grep 空 | ☑ | — |
+| ⑤ 四门 + 各 phase reviewer | ☑ | — |
+
+**rich-text 核心链路端到端可用**（选中子串加粗→提交→渲染→fill/copy 携带→undo）。剩余为打磨项，集中在一个 **cleanup batch** 收口：
+
+| FU | 项 | 出处 |
+| --- | --- | --- |
+| F1 | 既存 runs 回填编辑器初值（editor 缝加对称 `getAttachment` 读通道） | C-edit-UI |
+| F2 | toolbar toggle-off（已格再点取消） | C-edit-UI |
+| F3 | 选区加粗真实接线缺 `Grid.getCellValue`（raw cell text 读 API） | C-edit-UI |
+| F4 | storybook story（cell-kit 注册示例） | C-edit-UI |
+| F5 | 工具栏字号 −/+ 按钮 | C-edit-UI |
+| F7 | Excel L3 测试改 `@novasheet/cell-kit` 包名 import | C-edit-UI |
+| F8 | fill/clipboard namespace 来源不对称（文档说明或统一） | C-edit-data |
+| F9 | cut 清源格 attachment（剪切=移动语义，bundle cut undo） | C-edit-data |
+
+无 deferred 外 ☐ 阻断；cleanup batch 后 §7 判据②可全 ☑。
