@@ -1,5 +1,6 @@
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { Field, FieldType } from '../../kernel/data/Schema'
+import type { CellTypeOverride } from '../../kernel/protocol/CellTypeTypes'
 import {
   remapColIndexAfterDelete,
   remapColIndexAfterInsert,
@@ -7,7 +8,7 @@ import {
   remapRowIndexAfterInsert,
 } from '../../kernel/coords/remap'
 
-export type CellTypeOverride = 'text' | 'number' | 'date' | 'checkbox'
+export type { CellTypeOverride } from '../../kernel/protocol/CellTypeTypes'
 
 export interface CellTypeEntry {
   readonly rowIndex: number

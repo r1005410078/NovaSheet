@@ -145,6 +145,118 @@ describe('assembleRenderFrame', () => {
     expect(frame.getAttachment!<RichText>('richText', 0, 0)).toBeUndefined()
     expect(frame.getAttachment!<RichText>('other', 1, 0)).toBeUndefined()
   })
+
+  it('resolveCellType 把 view 坐标翻译为 raw 坐标后再调用 raw resolver', () => {
+    const data = new InMemoryDataSource({ schema, rows: [{ a: 'x' }] })
+    const formatState = new DefaultFormatState()
+    const coords = new CoordinateSpace({
+      getViewData: () => data,
+      getRawSchema: () => schema,
+      isColHidden: () => false,
+    })
+    const frameFormat = new VisibleFormatResolver(
+      formatState.formatStore,
+      formatState.mergeStore,
+      coords,
+    )
+    const viewport: ViewportSnapshot = {
+      regions: [],
+      scrollX: 0,
+      scrollY: 0,
+      contentRect: { width: 200, height: 200 },
+      headerHeight: 32,
+      rowHeaderWidth: 48,
+      version: 0,
+    }
+    const calls: Array<readonly [number, number, Field]> = []
+    const input: FrameAssemblerInput = {
+      data,
+      theme: denseGridTheme,
+      rowsAxis: mockAxis([0, 0], (i) => i * 24),
+      colsAxis: mockAxis([0, 0], (i) => i * 80),
+      viewport,
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 0, colIndex: 0 },
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      },
+      allRowGaps: [],
+      allColGaps: [],
+      frameFormat,
+      formatters: {},
+      locale: 'en-US',
+      viewRowToRaw: () => 5,
+      viewColToRaw: () => 2,
+      resolveRawCellType: (rowIndex, colIndex, field) => {
+        calls.push([rowIndex, colIndex, field])
+        return 'date'
+      },
+      attachmentStore: formatState.attachmentStore,
+    }
+
+    const frame = assembleRenderFrame(input)
+    const field = data.getSchema().fields[0]!
+
+    expect(frame.resolveCellType?.(0, 0, field)).toBe('date')
+    expect(calls).toEqual([[5, 2, field]])
+  })
+
+  it('resolveCellType 在 raw col 无效时回退 normalizeFieldType 且不调用 raw resolver', () => {
+    const data = new InMemoryDataSource({ schema, rows: [{ a: 'x' }] })
+    const formatState = new DefaultFormatState()
+    const coords = new CoordinateSpace({
+      getViewData: () => data,
+      getRawSchema: () => schema,
+      isColHidden: () => false,
+    })
+    const frameFormat = new VisibleFormatResolver(
+      formatState.formatStore,
+      formatState.mergeStore,
+      coords,
+    )
+    const viewport: ViewportSnapshot = {
+      regions: [],
+      scrollX: 0,
+      scrollY: 0,
+      contentRect: { width: 200, height: 200 },
+      headerHeight: 32,
+      rowHeaderWidth: 48,
+      version: 0,
+    }
+    let called = false
+    const input: FrameAssemblerInput = {
+      data,
+      theme: denseGridTheme,
+      rowsAxis: mockAxis([0, 0], (i) => i * 24),
+      colsAxis: mockAxis([0, 0], (i) => i * 80),
+      viewport,
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 0, colIndex: 0 },
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },
+      },
+      allRowGaps: [],
+      allColGaps: [],
+      frameFormat,
+      formatters: {},
+      locale: 'en-US',
+      viewRowToRaw: () => 5,
+      viewColToRaw: () => -1,
+      resolveRawCellType: () => {
+        called = true
+        return 'date'
+      },
+      attachmentStore: formatState.attachmentStore,
+    }
+
+    const frame = assembleRenderFrame(input)
+    const field = data.getSchema().fields[0]!
+
+    expect(frame.resolveCellType?.(0, 0, field)).toBe('text')
+    expect(called).toBe(false)
+  })
 })
 
 const dateField: Field = { id: 'd', name: 'D', type: 'date', width: 100 }

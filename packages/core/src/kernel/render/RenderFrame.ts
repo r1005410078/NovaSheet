@@ -12,9 +12,9 @@ import type { MergeRegion } from '../coords/MergeRegion'
 import type { Axis } from '../geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../geometry/Viewport'
 import type { Theme } from '../theme/Theme'
+import type { CellTypeOverride } from '../protocol/CellTypeTypes'
 import type { ResolvedCellFormat } from '../protocol/FormatTypes'
 import type { CellEditSession, CollapsedGap, HeaderDecorationSource } from './RenderTypes'
-import type { CellTypeOverride } from '../../features/cell-types'
 
 /**
  * Phase 4.5 — `RenderFrame` 中的折叠行间隙，扩展 `CollapsedGap` 加入像素坐标。
