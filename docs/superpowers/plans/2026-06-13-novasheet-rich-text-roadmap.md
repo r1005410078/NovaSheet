@@ -260,26 +260,27 @@ D1/D2 定 (b)，Phase A 出口判据已排除 fill/clipboard（§1.3 标）；fi
 
 ### 7.1 当前状态（2026-06-14）
 
-五子阶段全 ship：**A**（附件轴）+ **B**（styled-text）+ **C-display**（types/codec/renderer）+ **C-edit-UI**（editor/toolbar/选区加粗/BDD）+ **C-edit-data**（fill/clipboard）。四门全绿（1441 tests），各阶段 code-reviewer 过。
+五子阶段全 ship：**A**（附件轴）+ **B**（styled-text）+ **C-display**（types/codec/renderer）+ **C-edit-UI**（editor/toolbar/选区加粗/BDD）+ **C-edit-data**（fill/clipboard）+ **cleanup batch**（F7/F8）。四门全绿（1469 tests），各阶段 code-reviewer 过。
 
 | 判据 | 状态 | 缺口 |
 | --- | --- | --- |
-| ② 注册后加粗/斜/下划/删除线/改色 + 提交重开保持 | ◐ | 改字号工具栏按钮缺（F5）；再编辑从纯文本起（既存 runs 回填 F1）；toggle-off 缺（F2） |
+| ② 注册后加粗/斜/下划/删除线/改色 + 提交重开保持 | ◐ | 改字号工具栏按钮缺（F5 deferred）；再编辑从纯文本起（F1 deferred）；toggle-off 缺（F2 deferred） |
 | ③ fill/sort/插删行 runs 跟随或 no-op | ☑ | — |
 | ④ core 零污染 grep 空 | ☑ | — |
 | ⑤ 四门 + 各 phase reviewer | ☑ | — |
+| cleanup batch F7/F8 | ☑ | — |
 
 **rich-text 核心链路端到端可用**（选中子串加粗→提交→渲染→fill/copy 携带→undo）。剩余为打磨项，集中在一个 **cleanup batch** 收口：
 
-| FU | 项 | 出处 |
-| --- | --- | --- |
-| F1 | 既存 runs 回填编辑器初值（editor 缝加对称 `getAttachment` 读通道） | C-edit-UI |
-| F2 | toolbar toggle-off（已格再点取消） | C-edit-UI |
-| F3 | 选区加粗真实接线缺 `Grid.getCellValue`（raw cell text 读 API） | C-edit-UI |
-| F4 | storybook story（cell-kit 注册示例） | C-edit-UI |
-| F5 | 工具栏字号 −/+ 按钮 | C-edit-UI |
-| F7 | Excel L3 测试改 `@novasheet/cell-kit` 包名 import | C-edit-UI |
-| F8 | fill/clipboard namespace 来源不对称（文档说明或统一） | C-edit-data |
-| F9 | cut 清源格 attachment（剪切=移动语义，bundle cut undo） | C-edit-data |
+| FU | 项 | 出处 | 状态 |
+| --- | --- | --- | --- |
+| F1 | 既存 runs 回填编辑器初值（editor 缝加对称 `getAttachment` 读通道） | C-edit-UI | ☐ deferred |
+| F2 | toolbar toggle-off（已格再点取消） | C-edit-UI | ☐ deferred |
+| F3 | 选区加粗真实接线缺 `Grid.getCellValue`（raw cell text 读 API） | C-edit-UI | ☐ deferred |
+| F4 | storybook story（cell-kit 注册示例） | C-edit-UI | ☐ deferred |
+| F5 | 工具栏字号 −/+ 按钮 | C-edit-UI | ☐ deferred |
+| F7 | Excel L3 测试 src import 注释说明（包名 import 需 build 顺序固定） | C-edit-UI | ☑ |
+| F8 | fill/clipboard namespace 不对称注释（`tileFillAttachment` 上方） | C-edit-data | ☑ |
+| F9 | cut 清源格 attachment（剪切=移动语义，bundle cut undo） | C-edit-data | ☐ deferred |
 
-无 deferred 外 ☐ 阻断；cleanup batch 后 §7 判据②可全 ☑。
+cleanup batch（F7/F8）☑ 已完成；F1/F2/F3/F4/F5/F9 列为后续 deferred，不阻断当前里程碑。
