@@ -15,15 +15,6 @@ function Harness(): JSX.Element {
   return <>{item.render({ disabledActionIds: new Set(), closePopover: () => undefined })}</>
 }
 
-function setInputValue(input: HTMLInputElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
-  act(() => {
-    if (setter) setter.call(input, value)
-    else input.value = value
-    input.dispatchEvent(new Event('input', { bubbles: true }))
-  })
-}
-
 describe('richTextToolbarExtension', () => {
   it('renders disabled controls without active session', async () => {
     const host = document.createElement('div')
@@ -142,11 +133,12 @@ describe('richTextToolbarExtension', () => {
 
     const picker = document.body.querySelector<HTMLElement>('[data-rich-text-color-picker]')
     expect(picker).not.toBeNull()
-    const hexInput = picker!.querySelector<HTMLInputElement>('input[aria-label="十六进制颜色"]')
-    expect(hexInput).not.toBeNull()
-    setInputValue(hexInput!, '#00ff00')
+    const paletteSwatch = picker!.querySelector<HTMLButtonElement>('[data-fill-color="#00ff00"]')
+    expect(paletteSwatch).not.toBeNull()
+    expect(picker!.querySelector('[data-rich-text-custom-color-section]')).not.toBeNull()
+
     await act(async () => {
-      picker!.querySelector<HTMLButtonElement>('[data-novasheet-color-picker-confirm]')!.click()
+      paletteSwatch!.click()
     })
 
     expect(setColor).toHaveBeenCalledWith('#00ff00')
@@ -154,5 +146,53 @@ describe('richTextToolbarExtension', () => {
 
     await act(async () => { root.unmount() })
     host.remove()
+  })
+
+  it('opens the shared custom color picker from the rich-text custom section', async () => {
+    function ActiveHarness(): JSX.Element {
+      const controller = useRichTextToolbarController()
+      const item = richTextToolbarExtension(controller)
+      useEffect(() => {
+        const session: RichTextEditingSession = {
+          active: true,
+          saveSelection: () => undefined,
+          restoreSelection: () => true,
+          toggleInlineStyle: () => undefined,
+          setColor: () => undefined,
+          setFontSize: () => undefined,
+          setFontFamily: () => undefined,
+          getActiveAttrs: () => ({ color: '#000000' }),
+        }
+        controller.setSession(session)
+        return () => controller.setSession(null)
+      }, [controller])
+      return <>{item.render({ disabledActionIds: new Set(), closePopover: () => undefined })}</>
+    }
+
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    await act(async () => {
+      root.render(
+        <RichTextToolbarProvider>
+          <ActiveHarness />
+        </RichTextToolbarProvider>,
+      )
+    })
+
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-rich-text-command="color"]')!.click()
+    })
+    const picker = document.body.querySelector<HTMLElement>('[data-rich-text-color-picker]')
+    expect(picker).not.toBeNull()
+
+    await act(async () => {
+      picker!.querySelector<HTMLButtonElement>('[data-custom-color-add]')!.click()
+    })
+
+    expect(picker!.querySelector('[data-novasheet-color-picker]')).not.toBeNull()
+
+    await act(async () => { root.unmount() })
+    host.remove()
+    document.body.querySelector('[data-rich-text-color-picker]')?.remove()
   })
 })

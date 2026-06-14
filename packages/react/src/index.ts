@@ -28,6 +28,8 @@ export {
   useNovaSheetToolbarState,
   CustomColorPicker,
   CHECKERBOARD_BG,
+  ToolbarColorPalette,
+  ToolbarColorPaletteCustom,
 } from './features/toolbar'
 export type {
   ToolbarStateGridAccess,

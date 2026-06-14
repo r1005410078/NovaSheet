@@ -34,6 +34,20 @@ describe('richTextEditor', () => {
     expect(ce.textContent).toBe('abcd')
   })
 
+  it('matches the grid cell editor typography and spacing variables', async () => {
+    const { ctx, container } = open()
+    await act(async () => { richTextEditor.open(ctx) })
+    const ce = container.querySelector('[contenteditable]') as HTMLElement
+
+    expect(ce.style.fontFamily).toBe('var(--ns-cell-editor-font)')
+    expect(ce.style.fontSize).toBe('var(--ns-cell-editor-font-size)')
+    expect(ce.style.lineHeight).toBe('1.2')
+    expect(ce.style.padding).toBe(
+      'var(--ns-cell-editor-padding-y) var(--ns-cell-editor-padding-x)',
+    )
+    expect(ce.style.boxSizing).toBe('border-box')
+  })
+
   it('commit serializes DOM → value + runs (bold substring preserved)', async () => {
     const { ctx, container, committed } = open()
     await act(async () => { richTextEditor.open(ctx) })

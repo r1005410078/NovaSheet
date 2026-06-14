@@ -1,6 +1,11 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { CustomColorPicker, type ToolbarExtensionItem } from '@novasheet/react'
+import {
+  CustomColorPicker,
+  ToolbarColorPalette,
+  ToolbarColorPaletteCustom,
+  type ToolbarExtensionItem,
+} from '@novasheet/react'
 import type { RichTextToolbarController } from './RichTextToolbarProvider'
 
 const RICH_TEXT_TOOLBAR_GROUP_CLASS = 'inline-flex flex-none items-center gap-0.5'
@@ -47,6 +52,8 @@ function RichTextToolbarControls({
   const colorButtonRef = useRef<HTMLButtonElement>(null)
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
   const [colorPickerPosition, setColorPickerPosition] = useState<{ top: number; left: number } | null>(null)
+  const [colorPickerView, setColorPickerView] = useState<'palette' | 'picker'>('palette')
+  const [customColors, setCustomColors] = useState<readonly string[]>([])
   const session = useSyncExternalStore(
     controller.subscribe,
     controller.getSession,
@@ -54,6 +61,18 @@ function RichTextToolbarControls({
   )
   const disabled = !session
   const activeColor = session?.getActiveAttrs().color ?? '#000000'
+
+  const applyTextColor = (color: string): void => {
+    session?.setColor(color)
+    setColorPickerOpen(false)
+  }
+
+  const addCustomColor = (color: string): void => {
+    setCustomColors((colors) => {
+      if (colors.includes(color)) return colors
+      return [color, ...colors].slice(0, 10)
+    })
+  }
 
   useLayoutEffect(() => {
     if (!colorPickerOpen) {
@@ -111,6 +130,7 @@ function RichTextToolbarControls({
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => {
           if (disabled) return
+          setColorPickerView('palette')
           setColorPickerOpen((open) => !open)
         }}
       >
@@ -134,14 +154,41 @@ function RichTextToolbarControls({
                 event.preventDefault()
               }}
             >
-              <CustomColorPicker
-                initialColor={activeColor}
-                onConfirm={(color) => {
-                  session?.setColor(color)
-                  setColorPickerOpen(false)
-                }}
-                onCancel={() => setColorPickerOpen(false)}
-              />
+              {colorPickerView === 'picker' ? (
+                <CustomColorPicker
+                  initialColor={activeColor}
+                  onConfirm={(color) => {
+                    addCustomColor(color)
+                    applyTextColor(color)
+                  }}
+                  onCancel={() => setColorPickerView('palette')}
+                />
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="mb-2 flex h-7 w-full items-center gap-2 rounded px-1.5 text-left hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                    title="重置文字颜色"
+                    onClick={() => applyTextColor('#000000')}
+                  >
+                    <span aria-hidden className="text-[15px] leading-none">A</span>
+                    <span>重置</span>
+                  </button>
+
+                  <ToolbarColorPalette selectedColor={activeColor} onSelect={applyTextColor} />
+
+                  <div className="my-3 h-px bg-slate-300" />
+
+                  <div data-rich-text-custom-color-section="">
+                    <ToolbarColorPaletteCustom
+                      onSelect={applyTextColor}
+                      onOpenPicker={() => setColorPickerView('picker')}
+                      customColors={customColors}
+                      selectedColor={activeColor}
+                    />
+                  </div>
+                </>
+              )}
             </div>,
             document.body,
           )
