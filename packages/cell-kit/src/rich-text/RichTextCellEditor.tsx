@@ -6,8 +6,10 @@ import { FloatingFormatToolbar } from './FloatingFormatToolbar'
 import type { RichTextValue } from './types'
 
 const RICH_TEXT_NAMESPACE = 'richText'
+/** toolbar 行高（px）；paddingTop 预留同等空间，让 toolbar absolute 叠在 padding 区而不覆盖编辑文本。 */
+const TOOLBAR_HEIGHT = 36
 
-/** contenteditable 编辑器组件；初值由当前 value 回填，既存 runs 经 getAttachment 回填。 */
+/** contenteditable 编辑器组件；toolbar absolute 定位于 padding 区，不与编辑文本重叠。 */
 function RichTextCellEditorComponent(props: ReactCellEditorProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   const { value, commit, setAttachment, getAttachment, cancel } = props
@@ -31,8 +33,11 @@ function RichTextCellEditorComponent(props: ReactCellEditorProps): JSX.Element {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
-      <FloatingFormatToolbar editableRef={ref} />
+    <div style={{ position: 'relative', paddingTop: TOOLBAR_HEIGHT }}>
+      {/* toolbar 绝对定位在 padding 区内，不挤压编辑区——onMouseDown preventDefault 防抢焦点。 */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: TOOLBAR_HEIGHT, display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '4px 4px 0 0', boxShadow: '0 -2px 8px rgba(0,0,0,.1)', zIndex: 1 }}>
+        <FloatingFormatToolbar editableRef={ref} />
+      </div>
       <div
         ref={ref}
         contentEditable
