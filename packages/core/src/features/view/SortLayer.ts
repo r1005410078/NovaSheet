@@ -327,6 +327,7 @@ function compareByFieldType(
   const type = field.type
   if (type === 'number')
     return compareNullable(numberValue(left), numberValue(right), compareNumbers)
+  // date 存储为 Excel/Google serial number（纯数值），与 number 分支走相同比较器
   if (type === 'date') return compareNullable(numberValue(left), numberValue(right), compareNumbers)
   if (type === 'checkbox')
     return compareNullable(checkboxValue(left), checkboxValue(right), compareNumbers)
