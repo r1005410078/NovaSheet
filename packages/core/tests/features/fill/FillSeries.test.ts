@@ -100,22 +100,14 @@ describe('computeFillWrites', () => {
     expect(writes.map((w) => w.value)).toEqual(['Item 0', 'Item 1'])
   })
 
-  it('extends Date series by millisecond delta', () => {
+  it('date 列等差 serial → 线性日填充（通用数值投影器）', () => {
     const writes = computeFillWrites({
-      data: data([
-        { date: new Date('2026-01-01T00:00:00Z') },
-        { date: new Date('2026-01-03T00:00:00Z') },
-        {},
-        {},
-      ]),
+      data: data([{ date: 45000 }, { date: 45001 }, {}, {}]),
       source: r(0, 1, 2, 2),
       fill: r(2, 3, 2, 2),
       direction: 'down',
     })
-    expect(writes.map((w) => (w.value as Date).toISOString().slice(0, 10))).toEqual([
-      '2026-01-05',
-      '2026-01-07',
-    ])
+    expect(writes.map((w) => w.value)).toEqual([45002, 45003])
   })
 
   it('falls back to repeating pattern for mixed or unstable samples', () => {

@@ -108,18 +108,15 @@ function readCell(data: DataSource, rowIndex: number, fieldId: string): CellValu
 
 function inferProjector(samples: readonly CellValue[]): SeriesProjector {
   if (samples.length === 0) return () => null
-  if (samples.length === 1) return () => cloneCellValue(samples[0]!)
+  if (samples.length === 1) return () => samples[0]!
 
   const numberProjector = inferNumberProjector(samples)
   if (numberProjector) return numberProjector
 
-  const dateProjector = inferDateProjector(samples)
-  if (dateProjector) return dateProjector
-
   const textProjector = inferTextTailProjector(samples)
   if (textProjector) return textProjector
 
-  return (offset) => cloneCellValue(samples[positiveModulo(offset, samples.length)]!)
+  return (offset) => samples[positiveModulo(offset, samples.length)]!
 }
 
 function inferNumberProjector(samples: readonly CellValue[]): SeriesProjector | null {
@@ -135,22 +132,6 @@ function inferNumberProjector(samples: readonly CellValue[]): SeriesProjector | 
   }
   const first = samples[0]!
   return (offset) => first + delta * offset
-}
-
-function inferDateProjector(samples: readonly CellValue[]): SeriesProjector | null {
-  if (
-    !samples.every(
-      (sample): sample is Date => sample instanceof Date && Number.isFinite(sample.getTime()),
-    )
-  )
-    return null
-  const times = samples.map((sample) => sample.getTime())
-  const delta = times[1]! - times[0]!
-  for (let i = 2; i < times.length; i += 1) {
-    if (times[i]! - times[i - 1]! !== delta) return null
-  }
-  const first = times[0]!
-  return (offset) => new Date(first + delta * offset)
 }
 
 function inferTextTailProjector(samples: readonly CellValue[]): SeriesProjector | null {
@@ -187,10 +168,6 @@ function parseTextTailSample(value: CellValue): TextTailSample | null {
 function formatTextTailNumber(value: number, width: number): string {
   const sign = value < 0 ? '-' : ''
   return `${sign}${String(Math.abs(value)).padStart(width, '0')}`
-}
-
-function cloneCellValue(value: CellValue): CellValue {
-  return value instanceof Date ? new Date(value.getTime()) : value
 }
 
 /** 始终返回非负余数，使 fill 平铺/取样在源轴上正确循环。 */
