@@ -77,4 +77,24 @@ describe('DefaultGridEngine cell type API', () => {
     expect(frame.resolveCellType?.(0, 0, field)).toBe('date')
     expect(frame.formatCell?.(0, 0, field, serial)).toBe('2025-01-15')
   })
+
+  it('uses resolved type instead of column field.type for built-in edit parse and format', () => {
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [{ id: 'v', name: 'V', type: 'text', width: 100 }],
+      },
+      rows: [{ v: serial }],
+    })
+    const engine = new DefaultGridEngine({ data })
+
+    expect(engine.setCellType(cell, 'date')).toBe(true)
+    expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(true)
+    expect(engine.getFrame().cellEdit?.draft).toBe('2025-01-15')
+
+    engine.updateCellEditDraft('2025-01-16')
+
+    expect(engine.commitCellEdit()).toBe(true)
+    expect(data.getCell(0, 'v')).toBe(dateToSerial(new Date(Date.UTC(2025, 0, 16))))
+  })
 })

@@ -27,6 +27,7 @@ function makeCtx(overrides: Partial<EditControllerContext> = {}): {
     getCellTypes: overrides.getCellTypes ?? (() => ({})),
     getLocale: overrides.getLocale ?? (() => 'en-US'),
     resolveEditCell: overrides.resolveEditCell ?? ((c) => c),
+    resolveCellType: overrides.resolveCellType ?? ((_cell, field) => field.type),
     viewRowToRaw: overrides.viewRowToRaw ?? ((r) => r),
     viewColToRaw: overrides.viewColToRaw ?? ((c) => c),
     pushUndo: overrides.pushUndo ?? ((c) => pushed.push(c)),
@@ -91,6 +92,7 @@ describe('EditController', () => {
       getCellTypes: () => ({}),
       getLocale: () => 'en-US',
       resolveEditCell: (c) => c,
+      resolveCellType: (_cell, field) => field.type,
       viewRowToRaw: (r) => r, // raw = view（简化）
       viewColToRaw: (c) => c, // raw = view（简化）
       pushUndo: (c) => pushed.push(c),

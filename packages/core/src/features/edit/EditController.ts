@@ -1,4 +1,4 @@
-import type { CellValue, Field } from '../../kernel/data/Schema'
+import type { CellValue, Field, FieldType } from '../../kernel/data/Schema'
 import type { DataSource } from '../../kernel/data/DataSource'
 import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
@@ -22,6 +22,8 @@ export interface EditControllerContext {
   getLocale(): string
   /** view 坐标 → 实际编辑格（合并区域时为 anchor）。 */
   resolveEditCell(cell: CellAddress): CellAddress
+  /** 当前 cell 的 resolved type（列默认 + cell override）。 */
+  resolveCellType(cell: CellAddress, field: Field): FieldType
   viewRowToRaw(viewRow: number): number
   /** view 列坐标 → raw 列坐标（attachment store 按 raw 键控）。 */
   viewColToRaw(viewCol: number): number
@@ -40,7 +42,9 @@ export class EditController {
   beginCellEdit(cell: CellAddress): boolean {
     const editCell = this.ctx.resolveEditCell(cell)
     const field = this.fieldAt(editCell.colIndex)
-    if (!field || !isEditableFieldTypeWithTypes(field, this.cellTypes())) return false
+    if (!field) return false
+    const resolvedField = this.resolveField(editCell, field)
+    if (!isEditableFieldTypeWithTypes(resolvedField, this.cellTypes())) return false
     const data = this.mutableData()
     if (!data) return false
 
@@ -48,8 +52,8 @@ export class EditController {
     this.model.begin(
       editCell,
       field.id,
-      field.type,
-      formatCellForEditWithTypes(value, field, this.cellTypes(), this.locale()),
+      resolvedField.type,
+      formatCellForEditWithTypes(value, resolvedField, this.cellTypes(), this.locale()),
     )
     return true
   }
@@ -68,10 +72,11 @@ export class EditController {
 
     const field = this.fieldById(session.fieldId)
     if (!field) return false
+    const resolvedField = this.resolveField(session.cell, field)
 
     const parsed = parseCellEditInputWithTypes(
       session.draft,
-      field,
+      resolvedField,
       this.cellTypes(),
       this.locale(),
     )
@@ -170,6 +175,11 @@ export class EditController {
 
   private locale(): string {
     return this.ctx.getLocale()
+  }
+
+  private resolveField(cell: CellAddress, field: Field): Field {
+    const resolvedType = this.ctx.resolveCellType(cell, field)
+    return resolvedType === field.type ? field : { ...field, type: resolvedType }
   }
 
   private mutableData(): MutableDataSource | null {

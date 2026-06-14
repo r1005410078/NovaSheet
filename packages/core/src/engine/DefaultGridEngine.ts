@@ -122,6 +122,7 @@ export class DefaultGridEngine implements GridEngine {
     resolveEditCell: (cell) =>
       resolveViewMergeRegion(this.formatState.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
         ?.anchor ?? cell,
+    resolveCellType: (cell) => this.getCellType(cell.rowIndex, cell.colIndex),
     viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
     viewColToRaw: (viewCol) => this.coords.viewColToRaw(viewCol),
     pushUndo: (command) => this.undoStack.push(command),

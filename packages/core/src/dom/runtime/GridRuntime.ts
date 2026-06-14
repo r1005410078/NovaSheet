@@ -100,7 +100,7 @@ import type {
   CellEditorRegistry,
   CellEditorTrigger,
 } from '../interaction/CellEditorContract'
-import type { CellTypeOverride, CellTypeRegistry } from '../../features/cell-types'
+import type { CellTypeDefinition, CellTypeOverride, CellTypeRegistry } from '../../features/cell-types'
 
 type RuntimeRenderFrame = ReturnType<GridEngine['getFrame']>
 type RuntimeCellEdit = NonNullable<RuntimeRenderFrame['cellEdit']>
@@ -2338,29 +2338,68 @@ export class GridRuntime {
     return this.openBuiltInDomEditor(args)
   }
 
-  private hasCustomCellEditor(cell: CellAddress): boolean {
-    const frame = this.engine.getFrame()
+  private resolveRuntimeField(
+    frame: RuntimeRenderFrame,
+    cell: CellAddress,
+  ): { readonly cell: CellAddress; readonly field: Field; readonly resolvedField: Field } | null {
     const data = frame.data as Partial<Pick<DataSource, 'getSchema'>>
     const editCell = this.resolveEditCell(frame, cell)
     const field = data.getSchema?.().fields[editCell.colIndex]
-    return field !== undefined && this.cellEditors[field.type] !== undefined
+    if (!field) return null
+    const resolvedType = frame.resolveCellType?.(editCell.rowIndex, editCell.colIndex, field) ?? field.type
+    const resolvedField = resolvedType === field.type ? field : { ...field, type: resolvedType }
+    return { cell: editCell, field, resolvedField }
+  }
+
+  private resolveCellEditorEntry(
+    resolved: NonNullable<ReturnType<GridRuntime['resolveRuntimeField']>>,
+  ): { readonly editor: CellEditor; readonly editorField: Field } | null {
+    const resolvedEditor = this.cellEditors[resolved.resolvedField.type]
+    if (resolvedEditor) {
+      return { editor: resolvedEditor, editorField: resolved.resolvedField }
+    }
+    const fieldEditor = this.cellEditors[resolved.field.type]
+    if (fieldEditor) {
+      return { editor: fieldEditor, editorField: resolved.field }
+    }
+    return null
+  }
+
+  private resolveCellTypeDefinitionEntry(
+    resolved: NonNullable<ReturnType<GridRuntime['resolveRuntimeField']>>,
+  ): { readonly definition: CellTypeDefinition; readonly definitionField: Field } | null {
+    const resolvedDefinition = this.cellTypes[resolved.resolvedField.type]
+    if (resolvedDefinition) {
+      return { definition: resolvedDefinition, definitionField: resolved.resolvedField }
+    }
+    const fieldDefinition = this.cellTypes[resolved.field.type]
+    if (fieldDefinition) {
+      return { definition: fieldDefinition, definitionField: resolved.field }
+    }
+    return null
+  }
+
+  private hasCustomCellEditor(cell: CellAddress): boolean {
+    const frame = this.engine.getFrame()
+    const resolved = this.resolveRuntimeField(frame, cell)
+    return resolved !== null && this.resolveCellEditorEntry(resolved) !== null
   }
 
   private invokeCellAction(action: CellActionHit): void {
     const frame = this.engine.getFrame()
     const data = frame.data as Partial<Pick<DataSource, 'getCell' | 'getSchema'>>
-    const cell = this.resolveEditCell(frame, {
+    const resolved = this.resolveRuntimeField(frame, {
       rowIndex: action.rowIndex,
       colIndex: action.colIndex,
     })
-    const field = data.getSchema?.().fields[cell.colIndex]
-    if (!field) return
+    if (!resolved) return
+    const { cell, field } = resolved
 
     let openEditorPrevented = false
     const value = data.getCell?.(cell.rowIndex, field.id)
-    const definition = this.cellTypes[field.type]
-    definition?.onAction?.({
-      field,
+    const actionEntry = this.resolveCellTypeDefinitionEntry(resolved)
+    actionEntry?.definition.onAction?.({
+      field: actionEntry.definitionField,
       locale: 'en-US',
       cell,
       value,
@@ -2399,12 +2438,13 @@ export class GridRuntime {
   }): boolean {
     const frame = this.engine.getFrame()
     const data = frame.data as Partial<Pick<DataSource, 'getCell' | 'getSchema'>>
-    const cell = this.resolveEditCell(frame, args.cell)
-    const field = data.getSchema?.().fields[cell.colIndex]
-    if (!field) return false
+    const resolved = this.resolveRuntimeField(frame, args.cell)
+    if (!resolved) return false
+    const { cell, field } = resolved
 
-    const editor = this.cellEditors[field.type]
-    if (!editor) return false
+    const editorEntry = this.resolveCellEditorEntry(resolved)
+    if (!editorEntry) return false
+    const { editor, editorField } = editorEntry
 
     const rect = this.computeCellEditorRect(frame, cell)
     if (!rect) return false
@@ -2417,14 +2457,14 @@ export class GridRuntime {
     this.activeCustomEditorCellEdit = {
       cell,
       fieldId: field.id,
-      fieldType: field.type,
+      fieldType: editorField.type,
       draft: value == null ? '' : String(value),
     }
     this.activeCustomEditorToken = token
     this.paintSync()
     editor.open({
       cell,
-      field,
+      field: editorField,
       value,
       container: this.editorContainer,
       rect,

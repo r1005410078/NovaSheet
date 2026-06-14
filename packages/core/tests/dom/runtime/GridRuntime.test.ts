@@ -1221,6 +1221,62 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
     expect(engine.selectCell).not.toHaveBeenCalled()
   })
 
+  it('cell action and custom editor registry use resolved cell type while commit keeps original field id', () => {
+    const engine = makeEngine()
+    engine.commitCellValue = mock(() => true)
+    engine.getFrame = mock(() => {
+      const frame = makeFrameWithFields(
+        [{ id: 'due', name: 'Due', type: 'text', width: 160 }],
+        [{ due: 45672 }],
+      )
+      return {
+        ...frame,
+        resolveCellType: (rowIndex: number, colIndex: number, field: Schema['fields'][number]) =>
+          rowIndex === 0 && colIndex === 0 && field.id === 'due' ? 'date' : 'text',
+      }
+    })
+
+    const calls: string[] = []
+    const onAction = mock((ctx) => {
+      calls.push('onAction')
+      expect(ctx.field).toMatchObject({ id: 'due', type: 'date' })
+      expect(ctx.value).toBe(45672)
+      expect(ctx.actionId).toBe('open-date')
+    })
+    const editor = {
+      open: mock((ctx: CellEditorOpenContext) => {
+        calls.push('editor.open')
+        expect(ctx.field).toMatchObject({ id: 'due', type: 'date' })
+        expect(ctx.value).toBe(45672)
+        expect(ctx.actionId).toBe('open-date')
+        ctx.commit(45673)
+      }),
+      close: mock(() => {}),
+    }
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRendererWithActionHit({
+        rowIndex: 0,
+        colIndex: 0,
+        actionId: 'open-date',
+      }),
+      cellTypes: { date: { onAction } satisfies CellTypeDefinition },
+      cellEditors: { date: editor },
+    })
+
+    runtime.handleHostPointerDown({ x: 120, y: 44, button: 0, shiftKey: false })
+
+    expect(calls).toEqual(['onAction', 'editor.open'])
+    expect(engine.commitCellValue).toHaveBeenCalledWith(
+      { rowIndex: 0, colIndex: 0 },
+      'due',
+      45673,
+    )
+    expect(editor.close).toHaveBeenCalledTimes(1)
+    expect(engine.selectCell).not.toHaveBeenCalled()
+  })
+
   it('选中后直接键入进入编辑（Sheets 式）', () => {
     const engine = makeEngine()
     engine.getSelection = mock(() => ({
