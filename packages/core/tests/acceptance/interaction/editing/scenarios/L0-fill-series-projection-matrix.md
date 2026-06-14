@@ -17,7 +17,7 @@ status: implemented
 
 ## When
 
-- 逐条 `computeFillWrites`，将投影序列 dump（Date 用 ISO）
+- 逐条 `computeFillWrites`，将投影序列 dump（date 用 serial 整数）
 
 ## Then
 
