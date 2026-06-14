@@ -62,6 +62,18 @@ export interface NovaSheetToolbarState {
   readonly cellsMerged?: boolean
 }
 
+export interface ToolbarRenderContext {
+  readonly state?: NovaSheetToolbarState
+  readonly disabledActionIds: ReadonlySet<ToolbarActionId>
+  readonly closePopover: () => void
+}
+
+export interface ToolbarExtensionItem {
+  readonly id: string
+  readonly separatorBefore?: boolean
+  render(ctx: ToolbarRenderContext): ReactNode
+}
+
 export interface NovaSheetToolbarProps {
   readonly ariaLabel?: string
   readonly className?: string
@@ -69,6 +81,8 @@ export interface NovaSheetToolbarProps {
   readonly disabledActionIds?: readonly ToolbarActionId[]
   readonly onAction?: (action: ToolbarAction) => void
   readonly onMenuSearchChange?: (value: string) => void
+  readonly items?: readonly ToolbarItem[]
+  readonly extensionItems?: readonly ToolbarExtensionItem[]
 }
 
 export type ToolbarPopoverId = 'fill-color' | 'borders' | 'merge-cells' | 'value-format'

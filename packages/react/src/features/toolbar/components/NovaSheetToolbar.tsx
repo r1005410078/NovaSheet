@@ -33,6 +33,7 @@ import type {
   ToolbarActionId,
   ToolbarItem,
   ToolbarPopoverId,
+  ToolbarRenderContext,
 } from '../types'
 
 type CommandToolbarActionId = Exclude<
@@ -293,9 +294,16 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
     disabledActionIds = [],
     onAction,
     onMenuSearchChange,
+    items = defaultToolbarItems,
+    extensionItems = [],
   } = props
   const disabled = new Set<ToolbarActionId>(disabledActionIds)
   const [openPopoverId, setOpenPopoverId] = useState<ToolbarPopoverId | null>(null)
+  const extensionContext: ToolbarRenderContext = {
+    state,
+    disabledActionIds: disabled,
+    closePopover: () => setOpenPopoverId(null),
+  }
   const fillAnchorRef = useRef<HTMLSpanElement>(null)
   const bordersAnchorRef = useRef<HTMLSpanElement>(null)
   const mergeAnchorRef = useRef<HTMLSpanElement>(null)
@@ -347,7 +355,7 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
       )}
     >
       <div className="flex h-11 items-center gap-0.5 overflow-x-auto whitespace-nowrap px-2.5 py-1">
-        {defaultToolbarItems.map((item) => (
+        {items.map((item) => (
           <Fragment key={item.id}>
             {item.separatorBefore ? (
               <span aria-hidden className="mx-1.5 h-6 w-px flex-none bg-slate-300" />
@@ -372,6 +380,16 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
                         : undefined
               }
             />
+          </Fragment>
+        ))}
+        {extensionItems.map((item) => (
+          <Fragment key={item.id}>
+            {item.separatorBefore ? (
+              <span aria-hidden className="mx-1.5 h-6 w-px flex-none bg-slate-300" />
+            ) : null}
+            <span data-toolbar-extension-id={item.id} className="inline-flex flex-none">
+              {item.render(extensionContext)}
+            </span>
           </Fragment>
         ))}
       </div>

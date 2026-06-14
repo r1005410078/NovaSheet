@@ -11,6 +11,8 @@ export type {
   ToolbarAction,
   ToolbarActionId,
   ToolbarControlId,
+  ToolbarExtensionItem,
   ToolbarItem,
+  ToolbarRenderContext,
   MergeCellsMode,
 } from './types'

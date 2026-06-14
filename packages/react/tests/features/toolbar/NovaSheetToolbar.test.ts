@@ -309,6 +309,58 @@ describe('NovaSheetToolbar', () => {
 
     unmountReactRoot(root)
   })
+
+  it('renders extensionItems after default controls without dispatching ToolbarAction', async () => {
+    const actions: ToolbarAction[] = []
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, {
+        onAction: (action) => actions.push(action),
+        extensionItems: [
+          {
+            id: 'rich-text-bold',
+            separatorBefore: true,
+            render: () =>
+              React.createElement(
+                'button',
+                {
+                  type: 'button',
+                  'data-rich-text-command': 'bold',
+                  onClick: () => undefined,
+                },
+                'B',
+              ),
+          },
+        ],
+      }),
+    )
+
+    expect(container.querySelector('[data-action-id="copy"]')).not.toBeNull()
+    expect(container.querySelector('[data-rich-text-command="bold"]')?.textContent).toBe('B')
+    expect(actions).toEqual([])
+
+    unmountReactRoot(root)
+  })
+
+  it('allows callers to override built-in toolbar items', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await mountReactRoot(
+      root,
+      React.createElement(NovaSheetToolbar, {
+        items: [{ id: 'undo', kind: 'button', label: '撤销' }],
+      }),
+    )
+
+    expect(container.querySelector('[data-action-id="undo"]')).not.toBeNull()
+    expect(container.querySelector('[data-action-id="copy"]')).toBeNull()
+
+    unmountReactRoot(root)
+  })
 })
 
 describe('defaultToolbarItems', () => {
