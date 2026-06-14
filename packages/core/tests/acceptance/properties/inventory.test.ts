@@ -25,6 +25,7 @@ import {
   type Schema,
   type TextMeasurer,
 } from '../../../src'
+import { asRawRange } from '../../../src/kernel/coords/coordinates'
 import { createHitTestFrame } from '../_helpers/fixtures'
 import { expectGolden } from '../_helpers/golden'
 
@@ -132,13 +133,13 @@ describe('Core acceptance properties', () => {
       { id: 'c', name: 'C', type: 'date', width: 80 },
     ] as const
 
-    store.set({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 }, 'date')
-    store.set({ startRow: 2, endRow: 2, startCol: 2, endCol: 2 }, 'checkbox')
+    store.set(asRawRange({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 }), 'date')
+    store.set(asRawRange({ startRow: 2, endRow: 2, startCol: 2, endCol: 2 }), 'checkbox')
     expect(store.resolve(1, 1, fields[1])).toBe('date')
     expect(store.resolve(0, 1, fields[1])).toBe('number')
 
     const before = store.snapshot()
-    store.clear({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 })
+    store.clear(asRawRange({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 }))
     expect(store.resolve(1, 1, fields[1])).toBe('number')
     store.restore(before)
     expect(store.resolve(1, 1, fields[1])).toBe('date')
@@ -150,8 +151,8 @@ describe('Core acceptance properties', () => {
     expect(store.get(2, 1)).toBeUndefined()
 
     const colDeleteStore = new CellTypeStore()
-    colDeleteStore.set({ startRow: 3, endRow: 3, startCol: 1, endCol: 1 }, 'date')
-    colDeleteStore.set({ startRow: 3, endRow: 3, startCol: 2, endCol: 2 }, 'checkbox')
+    colDeleteStore.set(asRawRange({ startRow: 3, endRow: 3, startCol: 1, endCol: 1 }), 'date')
+    colDeleteStore.set(asRawRange({ startRow: 3, endRow: 3, startCol: 2, endCol: 2 }), 'checkbox')
     colDeleteStore.remapAfterColsDeleted([2])
     expect(colDeleteStore.get(3, 2)).toBeUndefined()
     expect(colDeleteStore.get(3, 1)).toBe('date')

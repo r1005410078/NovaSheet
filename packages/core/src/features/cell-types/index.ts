@@ -1,4 +1,11 @@
 export {
+  CellTypeStore,
+  normalizeFieldType,
+  type CellTypeEntry,
+  type CellTypeOverride,
+  type CellTypeSnapshot,
+} from './CellTypeStore'
+export {
   SKIP_CELL_VALUE,
   formatCellForEditWithTypes,
   getCellTypeDefinition,

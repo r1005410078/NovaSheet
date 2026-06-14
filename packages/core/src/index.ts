@@ -126,10 +126,12 @@ export {
   parseCellEditInput,
 } from './features/edit/CellEdit'
 export {
+  CellTypeStore,
   SKIP_CELL_VALUE,
   formatCellForEditWithTypes,
   getCellTypeDefinition,
   isEditableFieldTypeWithTypes,
+  normalizeFieldType,
   parseCellEditInputWithTypes,
 } from './features/cell-types'
 export type {
@@ -138,7 +140,10 @@ export type {
   CellParseResult,
   CellTypeContext,
   CellTypeDefinition,
+  CellTypeEntry,
+  CellTypeOverride,
   CellTypeRegistry,
+  CellTypeSnapshot,
 } from './features/cell-types'
 export { CellEditModel } from './features/edit/CellEditModel'
 export type { CellEditSession } from './kernel/render/RenderTypes'
