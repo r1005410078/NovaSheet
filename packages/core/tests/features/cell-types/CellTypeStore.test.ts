@@ -78,4 +78,41 @@ describe('CellTypeStore', () => {
     expect(store.get(0, 0)).toBe('date')
     expect(store.get(0, 2)).toBeUndefined()
   })
+
+  it('drops overrides on deleted rows and columns', () => {
+    const store = new CellTypeStore()
+    store.set(asRawRange({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 }), 'date')
+    store.set(asRawRange({ startRow: 2, endRow: 2, startCol: 1, endCol: 1 }), 'checkbox')
+    store.set(asRawRange({ startRow: 4, endRow: 4, startCol: 3, endCol: 3 }), 'number')
+
+    store.remapAfterRowsDeleted([2])
+    expect(store.get(2, 1)).toBeUndefined()
+    expect(store.get(1, 1)).toBe('date')
+    expect(store.get(3, 3)).toBe('number')
+
+    store.remapAfterColsDeleted([3])
+    expect(store.get(3, 3)).toBeUndefined()
+    expect(store.snapshot()).toEqual([{ rowIndex: 1, colIndex: 1, type: 'date' }])
+  })
+
+  it('keeps only explicitly mapped rows and columns when remapping by index maps', () => {
+    const store = new CellTypeStore()
+    store.set(asRawRange({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 }), 'date')
+    store.set(asRawRange({ startRow: 2, endRow: 2, startCol: 2, endCol: 2 }), 'checkbox')
+    store.set(asRawRange({ startRow: 3, endRow: 3, startCol: 3, endCol: 3 }), 'number')
+
+    store.remapByRowIndexMap(new Map([[1, 10], [3, 30]]))
+    expect(store.get(10, 1)).toBe('date')
+    expect(store.get(30, 3)).toBe('number')
+    expect(store.get(2, 2)).toBeUndefined()
+    expect(store.snapshot()).toEqual([
+      { rowIndex: 10, colIndex: 1, type: 'date' },
+      { rowIndex: 30, colIndex: 3, type: 'number' },
+    ])
+
+    store.remapByColIndexMap(new Map([[3, 0]]))
+    expect(store.get(30, 0)).toBe('number')
+    expect(store.get(10, 1)).toBeUndefined()
+    expect(store.snapshot()).toEqual([{ rowIndex: 30, colIndex: 0, type: 'number' }])
+  })
 })
