@@ -17,6 +17,8 @@ export interface CellEditorOpenContext {
   commit(value: CellValue | null): void
   /** 写本单元格附件（namespace 由 GridOptions.cellAttachments 注册）；内部 view→raw 映射，含 undo。 */
   setAttachment?(namespace: string, data: unknown): boolean
+  /** 读本单元格附件（namespace 由 cellAttachments 注册）；内部 view→raw。rich-text 回填既存 runs 用。 */
+  getAttachment?(namespace: string): unknown
   cancel(): void
 }
 

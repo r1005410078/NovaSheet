@@ -43,4 +43,19 @@ describe('richTextEditor', () => {
     expect(committed.value).toBe('abcd')
     expect(committed.runs).toEqual([{ start: 1, end: 3, attrs: { bold: true } }])
   })
+
+  it('seeds contenteditable with existing runs when getAttachment is provided', async () => {
+    const existingRuns = [{ start: 1, end: 3, attrs: { bold: true } }]
+    const { ctx, container } = open({
+      value: 'abcd',
+      getAttachment: (ns) => (ns === 'richText' ? existingRuns : undefined),
+    })
+    await act(async () => { richTextEditor.open(ctx) })
+    const ce = container.querySelector('[contenteditable]') as HTMLElement
+    expect(ce).toBeTruthy()
+    // 'bc' (start=1, end=3) should be wrapped in a bold span
+    const boldSpan = ce.querySelector('span[style*="font-weight"]') ?? ce.querySelector('span[style*="bold"]')
+    expect(boldSpan).toBeTruthy()
+    expect(boldSpan!.textContent).toBe('bc')
+  })
 })

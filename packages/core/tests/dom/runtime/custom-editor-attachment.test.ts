@@ -274,4 +274,70 @@ describe('custom editor open ctx.setAttachment', () => {
       [{ start: 0, end: 5, attrs: { bold: true } }],
     )
   })
+
+  it('ctx.getAttachment reads existing attachment via view→raw mapping', () => {
+    const runs = [{ start: 1, end: 3, attrs: { bold: true } }]
+    const engine = makeEngine()
+    engine.viewRowToRaw = mock((viewRow: number) => viewRow)
+    engine.viewColToRaw = mock((viewCol: number) => viewCol)
+    // 预存附件：row=1, col=0 (raw === view here)
+    engine.getCellAttachment = mock((ns: string, _rawRow: number, _rawCol: number): unknown => {
+      if (ns === 'richText') return runs
+      return undefined
+    })
+
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [{ id: 'text', name: 'Text', type: 'assignee', width: 160 }],
+        [{ text: 'hello' }, { text: 'world' }],
+      ),
+    )
+
+    let capturedCtx: CellEditorOpenContext | undefined
+    const editor = { open: mock((ctx: CellEditorOpenContext) => { capturedCtx = ctx }) }
+
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    // double-click at y=64 → row 1
+    runtime.handleHostDoubleClick({ x: 8, y: 64, shiftKey: false })
+
+    expect(capturedCtx?.getAttachment).toBeDefined()
+    const result = capturedCtx!.getAttachment!('richText')
+    expect(result).toEqual(runs)
+    expect(engine.viewRowToRaw).toHaveBeenCalledWith(1)
+    expect(engine.viewColToRaw).toHaveBeenCalledWith(0)
+    expect(engine.getCellAttachment).toHaveBeenCalledWith('richText', 1, 0)
+  })
+
+  it('ctx.getAttachment returns undefined when no attachment exists', () => {
+    const engine = makeEngine()
+    engine.getCellAttachment = mock((): unknown => undefined)
+
+    engine.getFrame = mock(() =>
+      makeFrameWithFields(
+        [{ id: 'text', name: 'Text', type: 'assignee', width: 160 }],
+        [{ text: 'hello' }],
+      ),
+    )
+
+    let capturedCtx: CellEditorOpenContext | undefined
+    const editor = { open: mock((ctx: CellEditorOpenContext) => { capturedCtx = ctx }) }
+
+    const runtime = new GridRuntime({
+      engine,
+      host: makeHost(),
+      renderer: makeRenderer(),
+      cellEditors: { assignee: editor },
+    })
+
+    runtime.handleHostDoubleClick({ x: 8, y: 36, shiftKey: false })
+
+    expect(capturedCtx?.getAttachment).toBeDefined()
+    expect(capturedCtx!.getAttachment!('richText')).toBeUndefined()
+  })
 })

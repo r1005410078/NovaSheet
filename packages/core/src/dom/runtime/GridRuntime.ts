@@ -2396,6 +2396,8 @@ export class GridRuntime {
           this.engine.viewColToRaw(cell.colIndex),
           data,
         ),
+      getAttachment: (namespace) =>
+        this.engine.getCellAttachment(namespace, this.engine.viewRowToRaw(cell.rowIndex), this.engine.viewColToRaw(cell.colIndex)),
       cancel: () => this.closeCustomEditor(editor, token),
     })
     return true

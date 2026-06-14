@@ -3,22 +3,23 @@ import { createReactCellEditor, type ReactCellEditorProps } from '@novasheet/rea
 import type { CellEditor } from '@novasheet/core'
 import { richTextToHtml, htmlElementToRichText } from './serialize'
 import { FloatingFormatToolbar } from './FloatingFormatToolbar'
+import type { RichTextValue } from './types'
 
 const RICH_TEXT_NAMESPACE = 'richText'
 
-/** contenteditable 编辑器组件；初值由当前 value 回填（既存 runs 回填留 follow-up）。 */
+/** contenteditable 编辑器组件；初值由当前 value 回填，既存 runs 经 getAttachment 回填。 */
 function RichTextCellEditorComponent(props: ReactCellEditorProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
-  const { value, commit, setAttachment, cancel } = props
+  const { value, commit, setAttachment, getAttachment, cancel } = props
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
     const text = value == null ? '' : String(value)
-    // 初值 runs：先以空 runs 回填纯文本；既存 runs 回填留 follow-up 接 getAttachment。
-    el.innerHTML = richTextToHtml(text, [])
+    const runs = (getAttachment?.(RICH_TEXT_NAMESPACE) as RichTextValue | undefined) ?? []
+    el.innerHTML = richTextToHtml(text, runs)
     el.focus()
-  }, [value])
+  }, [value, getAttachment])
 
   const submit = (): void => {
     const el = ref.current
