@@ -985,6 +985,7 @@ git commit -m "feat(cell-kit): rich-text editor 注册外部 toolbar session"
 ## Task 6: Storybook External Toolbar Demo
 
 **Files:**
+- Modify: `apps/storybook/.storybook/main.ts`
 - Modify: `apps/storybook/src/stories/RichText.stories.ts`
 
 - [ ] **Step 1: Update story docs**
@@ -1014,6 +1015,14 @@ Rich-text cell editing via \`@novasheet/cell-kit\`.
 ```
 
 - [ ] **Step 2: Render external React toolbar + grid**
+
+Add the missing source alias in `apps/storybook/.storybook/main.ts`, because Storybook build resolves workspace package exports to `packages/cell-kit/dist` unless aliased:
+
+```ts
+          '@novasheet/cell-kit': fileURLToPath(
+            new URL('../../../packages/cell-kit/src/index.ts', import.meta.url),
+          ),
+```
 
 Modify story imports:
 
