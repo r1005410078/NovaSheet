@@ -116,12 +116,13 @@ In `packages/react/tests/excel/rich-text-extension.test.ts`, add a failing test 
 ```ts
   it('excel.L3c.rich-text-toolbar-bold-substring — cell-kit exposes external toolbar integration points', () => {
     expect(typeof richTextExtension.editor.open).toBe('function')
-    expect(typeof richTextExtension.toolbarExtension).toBe('function')
-    expect(typeof richTextExtension.ToolbarProvider).toBe('function')
+    const extension = richTextExtension as Record<string, unknown>
+    expect(typeof extension['toolbarExtension']).toBe('function')
+    expect(typeof extension['ToolbarProvider']).toBe('function')
   })
 ```
 
-This fails now because `toolbarExtension` and `ToolbarProvider` do not exist.
+This fails at runtime because `toolbarExtension` and `ToolbarProvider` do not exist, but it must still typecheck. Do not access missing properties directly on `richTextExtension`.
 
 - [ ] **Step 4: Run red check**
 
