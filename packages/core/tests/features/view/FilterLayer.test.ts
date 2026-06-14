@@ -35,7 +35,7 @@ function defaultRows(): Row[] {
       name: 'Alpha',
       link: 'https://alpha.test',
       score: 5,
-      due: new Date('2024-01-10T00:00:00.000Z'),
+      due: 45301, // 2024-01-10 as Excel serial
       status: 'Todo',
       tags: ['A'],
       done: false,
@@ -44,7 +44,7 @@ function defaultRows(): Row[] {
       name: 'beta',
       link: '',
       score: 10,
-      due: new Date('2024-02-10T00:00:00.000Z'),
+      due: 45332, // 2024-02-10 as Excel serial
       status: 'Doing',
       tags: ['B', 'C'],
       done: true,
@@ -169,14 +169,14 @@ describe('FilterLayer', () => {
     expect(filteredNames(equals)).toEqual(['Alpha'])
   })
 
-  it('filters date fields by a closed time interval and ignores invalid dates', () => {
+  it('filters date fields by a closed serial interval and ignores invalid date values', () => {
     const layer = new FilterLayer()
     layer.setSpec({
       fieldId: 'due',
       op: {
         kind: 'date-between',
-        start: new Date('2024-01-10T00:00:00.000Z'),
-        end: new Date('2024-02-01T00:00:00.000Z'),
+        start: 45301, // 2024-01-10
+        end: 45315, // 2024-01-25 (between Alpha and beta)
       },
     })
 
@@ -191,7 +191,7 @@ describe('FilterLayer', () => {
     const between = new FilterLayer()
     between.setSpec({
       fieldId: 'due',
-      op: { kind: 'date-between', start: null, end: new Date('2024-12-31T00:00:00.000Z') },
+      op: { kind: 'date-between', start: null, end: 45400 }, // 2024-04-20, covers both serials
     })
     expect(filteredNames(between)).toEqual(['Alpha', 'beta'])
   })

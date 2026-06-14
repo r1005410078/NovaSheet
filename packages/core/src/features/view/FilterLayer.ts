@@ -15,7 +15,7 @@ export type FilterOp =
   | { kind: 'text-equals'; value: string; caseSensitive: boolean }
   | { kind: 'number-between'; min: number | null; max: number | null }
   | { kind: 'number-equals'; value: number }
-  | { kind: 'date-between'; start: Date | null; end: Date | null }
+  | { kind: 'date-between'; start: number | null; end: number | null }
   | { kind: 'select-in'; values: readonly string[] }
   | { kind: 'checkbox-equals'; value: boolean }
   | { kind: 'is-empty' }
@@ -346,11 +346,7 @@ function sameOp(left: FilterOp, right: FilterOp): boolean {
     case 'number-equals':
       return right.kind === left.kind && left.value === right.value
     case 'date-between':
-      return (
-        right.kind === left.kind &&
-        dateTime(left.start) === dateTime(right.start) &&
-        dateTime(left.end) === dateTime(right.end)
-      )
+      return right.kind === left.kind && left.start === right.start && left.end === right.end
     case 'select-in':
       return right.kind === left.kind && sameStringArray(left.values, right.values)
     case 'checkbox-equals':
@@ -402,10 +398,12 @@ function buildPredicate(field: Field, op: FilterOp): FilterPredicate {
       return (value) => numberValue(value) === op.value
     case 'date-between':
       return (value) => {
-        const time = dateValue(value)
-        const start = dateTime(op.start)
-        const end = dateTime(op.end)
-        return time != null && (start == null || time >= start) && (end == null || time <= end)
+        const serial = numberValue(value)
+        return (
+          serial != null &&
+          (op.start == null || serial >= op.start) &&
+          (op.end == null || serial <= op.end)
+        )
       }
     case 'select-in':
       return field.type === 'multiSelect'
@@ -458,17 +456,4 @@ function multiSelectValue(value: CellValue | undefined): readonly string[] {
 
 function numberValue(value: CellValue | undefined): number | null {
   return typeof value === 'number' && !Number.isNaN(value) ? value : null
-}
-
-function dateValue(value: CellValue | undefined): number | null {
-  if (value == null) return null
-  const time =
-    value instanceof Date ? value.getTime() : new Date(value as string | number).getTime()
-  return Number.isNaN(time) ? null : time
-}
-
-function dateTime(value: Date | null): number | null {
-  if (value == null) return null
-  const time = value.getTime()
-  return Number.isNaN(time) ? null : time
 }
