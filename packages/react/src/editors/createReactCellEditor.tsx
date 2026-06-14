@@ -37,10 +37,14 @@ export function createReactCellEditor<TProps extends object = object>(
       host.setAttribute('data-novasheet-react-cell-editor', '')
       host.setAttribute('data-novasheet-react-cell-editor-kind', options.kind ?? 'inline')
       if (options.className) host.className = options.className
+      const kind = options.kind ?? 'inline'
+      const top = kind === 'inline' ? ctx.rect.y : ctx.rect.y + ctx.rect.height
       Object.assign(host.style, {
         position: 'absolute',
         left: `${ctx.rect.x}px`,
-        top: `${ctx.rect.y + ctx.rect.height}px`,
+        top: `${top}px`,
+        width: kind === 'inline' ? `${ctx.rect.width}px` : '',
+        minHeight: kind === 'inline' ? `${ctx.rect.height}px` : '',
         zIndex: '20',
       })
       ctx.container.appendChild(host)

@@ -31,6 +31,26 @@ describe('richTextToolbarExtension', () => {
     expect(bold!.disabled).toBe(true)
   })
 
+  it('renders rich-text commands as compact toolbar buttons', async () => {
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    await act(async () => {
+      root.render(
+        <RichTextToolbarProvider>
+          <Harness />
+        </RichTextToolbarProvider>,
+      )
+    })
+
+    const group = host.querySelector<HTMLElement>('[data-rich-text-toolbar]')
+    const bold = host.querySelector<HTMLButtonElement>('[data-rich-text-command="bold"]')
+    expect(group?.className).toContain('inline-flex')
+    expect(group?.className).toContain('gap-0.5')
+    expect(bold?.className).toContain('h-7')
+    expect(bold?.className).toContain('min-w-7')
+    expect(bold?.className).toContain('hover:bg-slate-200')
+  })
+
   it('calls active session from external bold button', async () => {
     const editable = document.createElement('div')
     editable.innerHTML = '<span>abcd</span>'

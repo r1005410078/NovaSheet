@@ -39,4 +39,40 @@ describe('createReactCellEditor', () => {
     })
     container.remove()
   })
+
+  it('mounts inline editors over the active cell instead of below it', async () => {
+    function InlineEditor() {
+      return React.createElement('input', { defaultValue: 'Alice' })
+    }
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const editor = createReactCellEditor(InlineEditor, { kind: 'inline' })
+
+    await act(async () => {
+      editor.open({
+        cell: { rowIndex: 0, colIndex: 0 },
+        field: { id: 'owner', name: 'Owner', type: 'text', width: 120 },
+        value: 'Alice',
+        rect: { x: 11, y: 17, width: 80, height: 24 },
+        trigger: 'api',
+        container,
+        commit: () => {},
+        cancel: () => {},
+      } satisfies CellEditorOpenContext)
+      await Promise.resolve()
+    })
+
+    const host = container.querySelector<HTMLElement>('[data-novasheet-react-cell-editor]')
+    expect(host).not.toBeNull()
+    expect(host?.style.left).toBe('11px')
+    expect(host?.style.top).toBe('17px')
+    expect(host?.style.width).toBe('80px')
+    expect(host?.style.minHeight).toBe('24px')
+
+    act(() => {
+      editor.destroy?.()
+    })
+    container.remove()
+  })
 })
