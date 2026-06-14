@@ -140,18 +140,16 @@ describe('SortLayer', () => {
     ])
   })
 
-  it('sorts date fields by time with invalid and null values last', () => {
-    const earlier = new Date('2024-01-01T00:00:00.000Z')
-    const later = new Date('2024-03-01T00:00:00.000Z')
+  it('date 列按 serial 升序/降序；非数字与空值殿后', () => {
     const rows: Row[] = [
-      { name: 'A', score: 1, status: 'Todo', tags: [], due: later },
+      { name: 'A', score: 1, status: 'Todo', tags: [], due: 46000 },
       { name: 'B', score: 1, status: 'Todo', tags: [], due: 'not-a-date' },
-      { name: 'C', score: 1, status: 'Todo', tags: [], due: earlier },
+      { name: 'C', score: 1, status: 'Todo', tags: [], due: 44000 },
       { name: 'D', score: 1, status: 'Todo', tags: [], due: null },
     ]
 
-    expect(sortedColumn('due', 'asc', rows)).toEqual([earlier, later, 'not-a-date', null])
-    expect(sortedColumn('due', 'desc', rows)).toEqual([later, earlier, 'not-a-date', null])
+    expect(sortedColumn('due', 'asc', rows)).toEqual([44000, 46000, 'not-a-date', null])
+    expect(sortedColumn('due', 'desc', rows)).toEqual([46000, 44000, 'not-a-date', null])
   })
 
   it('sorts checkbox fields with false before true and non-boolean values last', () => {

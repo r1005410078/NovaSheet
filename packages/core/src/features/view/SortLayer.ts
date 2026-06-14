@@ -327,7 +327,7 @@ function compareByFieldType(
   const type = field.type
   if (type === 'number')
     return compareNullable(numberValue(left), numberValue(right), compareNumbers)
-  if (type === 'date') return compareNullable(dateValue(left), dateValue(right), compareNumbers)
+  if (type === 'date') return compareNullable(numberValue(left), numberValue(right), compareNumbers)
   if (type === 'checkbox')
     return compareNullable(checkboxValue(left), checkboxValue(right), compareNumbers)
   if (type === 'singleSelect') return compareSingleSelect(left, right, field)
@@ -336,7 +336,7 @@ function compareByFieldType(
 
 function isNullishForField(value: CellValue | undefined, field: Field): boolean {
   if (field.type === 'number') return numberValue(value) == null
-  if (field.type === 'date') return dateValue(value) == null
+  if (field.type === 'date') return numberValue(value) == null
   if (field.type === 'checkbox') return checkboxValue(value) == null
   if (field.type === 'singleSelect') {
     const choices = Array.isArray(field.options?.choices)
@@ -394,13 +394,6 @@ function textValue(value: CellValue | undefined): string | null {
 
 function numberValue(value: CellValue | undefined): number | null {
   return typeof value === 'number' && !Number.isNaN(value) ? value : null
-}
-
-function dateValue(value: CellValue | undefined): number | null {
-  if (value == null) return null
-  const time =
-    value instanceof Date ? value.getTime() : new Date(value as string | number).getTime()
-  return Number.isNaN(time) ? null : time
 }
 
 function checkboxValue(value: CellValue | undefined): number | null {
