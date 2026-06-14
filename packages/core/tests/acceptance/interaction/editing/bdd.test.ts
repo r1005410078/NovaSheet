@@ -228,5 +228,71 @@ describe('Core BDD Batch 5 clipboard edit fill scenarios', () => {
     engine.commitFill(fillRange(0, 0, 0, 0), fillRange(1, 2, 0, 0), 'down')
     expect(engine.getViewCellFormat(2, 0)).toBeUndefined()
   })
+
+  it('core.L2.grid-fill-type-format-propagates carries value series, resolved type, and valueFormat', () => {
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 1)))
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({
+        schema: {
+          fields: [
+            { id: 'a', name: 'A', type: 'date', width: 100 },
+            { id: 'b', name: 'B', type: 'text', width: 100 },
+          ],
+        },
+        rows: [
+          { a: serial, b: null },
+          { a: serial + 1, b: null },
+          { a: null, b: 'stale' },
+        ],
+      }),
+    })
+    engine.setValueFormat(fillRange(0, 1, 0, 0), { kind: 'date', pattern: 'YYYY/MM/DD' })
+    engine.setCellType(fillRange(2, 2, 1, 1), 'text')
+    engine.setValueFormat(fillRange(2, 2, 1, 1), { kind: 'number' })
+
+    engine.commitFill(fillRange(0, 1, 0, 0), fillRange(0, 1, 1, 1), 'right')
+
+    expect(engine.getData().getCell(0, 'b')).toBe(serial)
+    expect(engine.getData().getCell(1, 'b')).toBe(serial + 1)
+    expect(engine.getCellType(0, 1)).toBe('date')
+    expect(engine.getViewCellFormat(0, 1)?.valueFormat).toEqual({ kind: 'date', pattern: 'YYYY/MM/DD' })
+    engine.undo()
+    expect(engine.getCellType(0, 1)).toBe('text')
+    engine.redo()
+    expect(engine.getCellType(1, 1)).toBe('date')
+  })
+
+  it('core.L2.grid-clipboard-paste-resolved-cell-type coerces by target resolved type without propagating source type', async () => {
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'a', name: 'A', type: 'text', width: 100 },
+          { id: 'b', name: 'B', type: 'text', width: 100 },
+        ],
+      },
+      rows: [{ a: null, b: null }],
+    })
+    const skipped: PasteSkippedCell[] = []
+    const stub = createClipboardStub('2025-01-15\tnot-a-number')
+    stub.install()
+    const { container, grid } = mountRecordingGrid({
+      data,
+      onPasteSkipped: (cells) => skipped.push(...cells),
+    })
+
+    grid.setCellType(fillRange(0, 0, 0, 0), 'date')
+    grid.setCellType(fillRange(0, 0, 1, 1), 'number')
+    grid.setSelection({ kind: 'cell', active: { rowIndex: 0, colIndex: 0 }, range: fillRange(0, 0, 0, 1) })
+    expect(await grid.paste()).toBe(true)
+
+    expect(data.getCell(0, 'a')).toBe(dateToSerial(new Date(Date.UTC(2025, 0, 15))))
+    expect(data.getCell(0, 'b')).toBeNull()
+    expect(skipped).toEqual([{ rowIndex: 0, fieldId: 'b', reason: 'type' }])
+    expect(grid.getCellType(0, 0)).toBe('date')
+    expect(grid.getCellType(0, 1)).toBe('number')
+
+    grid.destroy()
+    document.body.removeChild(container)
+  })
 })
 })

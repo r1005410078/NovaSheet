@@ -5,6 +5,7 @@ import {
   Grid,
   InMemoryDataSource,
   borderPatchForCell,
+  dateToSerial,
   denseGridTheme,
   type BorderStyle,
   type CellEditorOpenContext,
@@ -607,6 +608,53 @@ describe('Core BDD Batch 6 format merge theme scenarios', () => {
       startCol: 1,
       endCol: 2,
     })
+  })
+
+  it('core.L2.grid-cell-type-override-api sets, clears, reads, and undoes view-coordinate cell type overrides', () => {
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [
+          { id: 'name', name: 'Name', type: 'text', width: 120 },
+          { id: 'due', name: 'Due', type: 'date', width: 100 },
+        ],
+      },
+      rows: [{ name: '45000', due: 45000 }],
+    })
+    const { container, grid } = mountRecordingGrid({ data })
+
+    expect(grid.getCellType(0, 0)).toBe('text')
+    expect(grid.setCellType(fillRange(0, 0, 0, 0), 'date')).toBe(true)
+    expect(grid.getCellType(0, 0)).toBe('date')
+    expect(grid.clearCellType(fillRange(0, 0, 0, 0))).toBe(true)
+    expect(grid.getCellType(0, 0)).toBe('text')
+    grid.undo()
+    expect(grid.getCellType(0, 0)).toBe('date')
+    grid.redo()
+    expect(grid.getCellType(0, 0)).toBe('text')
+
+    grid.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('core.L2.grid-cell-type-edit-display uses resolved type for default date display and edit parsing', () => {
+    const serial = dateToSerial(new Date(Date.UTC(2025, 0, 15)))
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({
+        schema: { fields: [{ id: 'v', name: 'V', type: 'text', width: 100 }] },
+        rows: [{ v: serial }],
+      }),
+    })
+
+    engine.setCellType(fillRange(0, 0, 0, 0), 'date')
+    const frame = engine.getFrame()
+    const field = frame.data.getSchema().fields[0]!
+    expect(frame.resolveCellType?.(0, 0, field)).toBe('date')
+    expect(frame.formatCell?.(0, 0, field, serial)).toBe('2025-01-15')
+
+    expect(engine.beginCellEdit({ rowIndex: 0, colIndex: 0 })).toBe(true)
+    engine.updateCellEditDraft('2025-01-16')
+    expect(engine.commitCellEdit()).toBe(true)
+    expect(engine.getData().getCell(0, 'v')).toBe(dateToSerial(new Date(Date.UTC(2025, 0, 16))))
   })
 })
 })

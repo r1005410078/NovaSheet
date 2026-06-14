@@ -2,10 +2,12 @@ import { describe, expect, it } from 'bun:test'
 
 import {
   DEFAULT_EXCEL_WORKSPACE_POLICY,
+  DefaultGridEngine,
   ExcelWorkspaceController,
   Grid,
   InMemoryDataSource,
   SparseExcelDataSource,
+  SortLayer,
   dateToSerial,
   decideExcelWorkspaceResize,
   formatValue,
@@ -335,5 +337,28 @@ function viewColumnValues(grid: Grid, fieldId: string): unknown[] {
 
     grid.destroy()
     document.body.removeChild(container)
+  })
+
+  it('core.L2.grid-cell-type-sort-mixed orders number/date before text before boolean before empty', () => {
+    const data = new InMemoryDataSource({
+      schema: { fields: [{ id: 'v', name: 'V', type: 'text', width: 100 }] },
+      rows: [{ v: 'z' }, { v: 2 }, { v: true }, { v: null }, { v: 1 }],
+    })
+    const engine = new DefaultGridEngine({ data })
+    engine.setCellType(fillRange(1, 1, 0, 0), 'number')
+    engine.setCellType(fillRange(2, 2, 0, 0), 'checkbox')
+    engine.setCellType(fillRange(4, 4, 0, 0), 'date')
+    const sort = new SortLayer({
+      resolveCellType: (row, field) => engine.resolveRawCellTypeForField(row, field),
+    })
+    sort.setSpec({ fieldId: 'v', direction: 'asc' })
+    const sorted = sort.wrap(data)
+    expect(Array.from({ length: sorted.getRowCount() }, (_, row) => sorted.getCell(row, 'v'))).toEqual([
+      1,
+      2,
+      'z',
+      true,
+      null,
+    ])
   })
 })

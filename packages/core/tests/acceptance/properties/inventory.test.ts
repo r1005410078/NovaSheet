@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 
 import {
   CHUNK_SIZE,
+  CellTypeStore,
   ChunkedAxis,
   FilterLayer,
   FrozenRegions,
@@ -121,5 +122,30 @@ describe('Core acceptance properties', () => {
       fixedTextMeasurer,
     )
     expect(wrapped.lines.length).toBeGreaterThan(1)
+  })
+
+  it('core.L0.cell-type-store-raw-remap stores, clears, restores, and remaps raw cell type overrides', () => {
+    const store = new CellTypeStore()
+    const fields = [
+      { id: 'a', name: 'A', type: 'text', width: 80 },
+      { id: 'b', name: 'B', type: 'number', width: 80 },
+      { id: 'c', name: 'C', type: 'date', width: 80 },
+    ] as const
+
+    store.set({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 }, 'date')
+    store.set({ startRow: 2, endRow: 2, startCol: 2, endCol: 2 }, 'checkbox')
+    expect(store.resolve(1, 1, fields[1])).toBe('date')
+    expect(store.resolve(0, 1, fields[1])).toBe('number')
+
+    const before = store.snapshot()
+    store.clear({ startRow: 1, endRow: 1, startCol: 1, endCol: 1 })
+    expect(store.resolve(1, 1, fields[1])).toBe('number')
+    store.restore(before)
+    expect(store.resolve(1, 1, fields[1])).toBe('date')
+
+    store.remapAfterRowsInserted(1, 1)
+    expect(store.resolve(2, 1, fields[1])).toBe('date')
+    store.remapAfterColsDeleted([2])
+    expect(store.get(3, 2)).toBeUndefined()
   })
 })
