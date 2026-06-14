@@ -117,7 +117,9 @@ export class DefaultGridEngine implements GridEngine {
       resolveViewMergeRegion(this.formatState.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
         ?.anchor ?? cell,
     viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
+    viewColToRaw: (viewCol) => this.coords.viewColToRaw(viewCol),
     pushUndo: (command) => this.undoStack.push(command),
+    getAttachmentStore: () => this.formatState.attachmentStore,
   })
   private readonly pasteController = new PasteController({
     getMutableData: () => (isMutableDataSource(this.data) ? this.data : null),

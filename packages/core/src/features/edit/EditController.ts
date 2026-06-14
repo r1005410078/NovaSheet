@@ -13,6 +13,7 @@ import {
 } from '../cell-types'
 import type { CellEditModel } from './CellEditModel'
 import type { CellEditSession } from './CellEditModel'
+import type { CellAttachmentStore } from '../attachment/CellAttachmentStore'
 
 /** Edit 写入门面所需的 engine 能力（merge 解析、mutable 检查、undo 入栈）。 */
 export interface EditControllerContext {
@@ -22,7 +23,11 @@ export interface EditControllerContext {
   /** view 坐标 → 实际编辑格（合并区域时为 anchor）。 */
   resolveEditCell(cell: CellAddress): CellAddress
   viewRowToRaw(viewRow: number): number
+  /** view 列坐标 → raw 列坐标（attachment store 按 raw 键控）。 */
+  viewColToRaw(viewCol: number): number
   pushUndo(command: UndoCommand): void
+  /** attachment 存储（clearRange 清 attachment 并 bundle 进同一 undo）。 */
+  getAttachmentStore(): CellAttachmentStore
 }
 
 /** 单元格编辑 + clearRange 写入门面（对称 FormatController / SelectionController）。 */
@@ -119,8 +124,35 @@ export class EditController {
         data.updateCell(r, field.id, null)
       }
     }
-    if (before.length > 0) {
-      this.ctx.pushUndo({ kind: 'clearRange', range, before })
+
+    // F9：同时清选区内所有格的 attachment，快照 bundle 进同一 undo。
+    const attachmentStore = this.ctx.getAttachmentStore()
+    const attachmentBefore = attachmentStore.snapshot()
+    const namespaces = attachmentStore.namespaces()
+    if (namespaces.length > 0) {
+      for (let r = range.startRow; r <= range.endRow; r++) {
+        const rawRow = this.ctx.viewRowToRaw(r)
+        for (let c = range.startCol; c <= range.endCol; c++) {
+          const field = fields[c]
+          if (!field) continue
+          const rawCol = this.ctx.viewColToRaw(c)
+          for (const ns of namespaces) {
+            attachmentStore.set(ns, rawRow, rawCol, undefined)
+          }
+        }
+      }
+    }
+    const attachmentAfter = attachmentStore.snapshot()
+
+    const hasAttachmentChange = attachmentBefore.length > 0
+    if (before.length > 0 || hasAttachmentChange) {
+      this.ctx.pushUndo({
+        kind: 'clearRange',
+        range,
+        before,
+        attachmentBefore: hasAttachmentChange ? attachmentBefore : undefined,
+        attachmentAfter: hasAttachmentChange ? attachmentAfter : undefined,
+      })
     }
   }
 

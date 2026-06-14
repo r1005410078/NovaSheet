@@ -24,6 +24,9 @@ export type UndoCommand =
       readonly kind: 'clearRange'
       readonly range: CellRange
       readonly before: ReadonlyArray<CellWrite>
+      // F9：clearRange 同时清 attachment，快照 bundle 进同一命令（Task 4）。
+      readonly attachmentBefore?: CellAttachmentSnapshot
+      readonly attachmentAfter?: CellAttachmentSnapshot
     }
   | {
       readonly kind: 'paste'

@@ -6,12 +6,15 @@ import type { CellValue } from '../../../src/kernel/data/Schema'
 import type { CellRange } from '../../../src/kernel/coords/SelectionTypes'
 import type { CellWrite, UndoCommand } from '../../../src/kernel/undo/UndoCommand'
 
+import type { CellAttachmentSnapshot } from '../../../src/kernel/protocol/AttachmentTypes'
+
 type WriteCall = { op: 'write'; rowIndex: number; fieldId: string; value: CellValue }
 type EditSelCall = { op: 'restoreEdit'; rowIndex: number; fieldId: string }
 type WritesSelCall = { op: 'restoreWrites'; writes: ReadonlyArray<CellWrite>; fallbackRange: CellRange }
-type Call = WriteCall | EditSelCall | WritesSelCall
+type RestoreAttachmentsCall = { op: 'restoreAttachments'; snap: CellAttachmentSnapshot }
+type Call = WriteCall | EditSelCall | WritesSelCall | RestoreAttachmentsCall
 
-function makeRecordingContext(): { ctx: CellUndoContext; calls: Call[] } {
+function makeRecordingContext(withRestoreAttachments = false): { ctx: CellUndoContext; calls: Call[] } {
   const calls: Call[] = []
   const ctx: CellUndoContext = {
     applyCellWrite(rowIndex, fieldId, value) {
@@ -23,6 +26,13 @@ function makeRecordingContext(): { ctx: CellUndoContext; calls: Call[] } {
     restoreSelectionForWrites(writes, fallbackRange) {
       calls.push({ op: 'restoreWrites', writes, fallbackRange })
     },
+    ...(withRestoreAttachments
+      ? {
+          restoreAttachments(snap: CellAttachmentSnapshot) {
+            calls.push({ op: 'restoreAttachments', snap })
+          },
+        }
+      : {}),
   }
   return { ctx, calls }
 }
@@ -97,6 +107,38 @@ describe('CellUndoHandler', () => {
         { op: 'write', rowIndex: 1, fieldId: 'b', value: null },
         { op: 'restoreWrites', writes: before, fallbackRange: RANGE },
       ])
+    })
+
+    describe('携带 attachment 快照', () => {
+      const attachmentBefore: CellAttachmentSnapshot = [
+        { row: 0, col: 0, namespace: 'demo', data: { v: 1 } },
+      ]
+      const attachmentAfter: CellAttachmentSnapshot = []
+      const cmdWithAttachment: UndoCommand = {
+        kind: 'clearRange',
+        range: RANGE,
+        before,
+        attachmentBefore,
+        attachmentAfter,
+      }
+
+      it('undo 恢复 attachmentBefore', () => {
+        const { ctx, calls } = makeRecordingContext(true)
+        new CellUndoHandler(ctx).applyUndo(cmdWithAttachment)
+        expect(calls).toContainEqual({ op: 'restoreAttachments', snap: attachmentBefore })
+      })
+
+      it('redo 恢复 attachmentAfter', () => {
+        const { ctx, calls } = makeRecordingContext(true)
+        new CellUndoHandler(ctx).applyRedo(cmdWithAttachment)
+        expect(calls).toContainEqual({ op: 'restoreAttachments', snap: attachmentAfter })
+      })
+
+      it('无 attachmentBefore 时 undo 不调 restoreAttachments', () => {
+        const { ctx, calls } = makeRecordingContext(true)
+        new CellUndoHandler(ctx).applyUndo(cmd)
+        expect(calls.some((c) => c.op === 'restoreAttachments')).toBe(false)
+      })
     })
   })
 

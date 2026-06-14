@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { EditController } from '../../../src/features/edit/EditController'
 import type { EditControllerContext } from '../../../src/features/edit/EditController'
 import { CellEditModel } from '../../../src/features/edit/CellEditModel'
+import { CellAttachmentStore } from '../../../src/features/attachment/CellAttachmentStore'
 import type { MutableDataSource } from '../../../src/kernel/data/MutableDataSource'
 import type { CellAddress, CellRange } from '../../../src/kernel/coords/SelectionTypes'
 
@@ -27,7 +28,9 @@ function makeCtx(overrides: Partial<EditControllerContext> = {}): {
     getLocale: overrides.getLocale ?? (() => 'en-US'),
     resolveEditCell: overrides.resolveEditCell ?? ((c) => c),
     viewRowToRaw: overrides.viewRowToRaw ?? ((r) => r),
+    viewColToRaw: overrides.viewColToRaw ?? ((c) => c),
     pushUndo: overrides.pushUndo ?? ((c) => pushed.push(c)),
+    getAttachmentStore: overrides.getAttachmentStore ?? (() => new CellAttachmentStore()),
   }
   return { ctx, pushed }
 }
@@ -71,5 +74,44 @@ describe('EditController', () => {
       range,
       before: [{ rowIndex: 100, fieldId: 'a', value: 'x' }],
     })
+  })
+
+  it('clearRange 清除 attachment 并 bundle 进同一 undo（undo 恢复 attachment）', () => {
+    const store = new CellAttachmentStore()
+    // 预置 raw(0,0) 有 attachment
+    store.set('demo', 0, 0, { v: 1 })
+
+    const pushed: unknown[] = []
+    const ctx: EditControllerContext = {
+      getData: () =>
+        makeDataSource({
+          getCell: () => 'x',
+          updateCell: () => {},
+        }),
+      getCellTypes: () => ({}),
+      getLocale: () => 'en-US',
+      resolveEditCell: (c) => c,
+      viewRowToRaw: (r) => r, // raw = view（简化）
+      viewColToRaw: (c) => c, // raw = view（简化）
+      pushUndo: (c) => pushed.push(c),
+      getAttachmentStore: () => store,
+    }
+    const ec = new EditController(new CellEditModel(), ctx)
+    const range: CellRange = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
+    ec.clearRange(range)
+
+    // attachment 被清除
+    expect(store.get('demo', 0, 0)).toBeUndefined()
+
+    // 单一 pushUndo 调用，携带 attachmentBefore/After
+    expect(pushed).toHaveLength(1)
+    const cmd = pushed[0] as { kind: string; attachmentBefore: unknown[]; attachmentAfter: unknown[] }
+    expect(cmd.kind).toBe('clearRange')
+    expect(cmd.attachmentBefore).toEqual([{ row: 0, col: 0, namespace: 'demo', data: { v: 1 } }])
+    expect(cmd.attachmentAfter).toEqual([])
+
+    // 模拟 undo：restore attachmentBefore
+    store.restore(cmd.attachmentBefore as Parameters<CellAttachmentStore['restore']>[0])
+    expect(store.get('demo', 0, 0)).toEqual({ v: 1 })
   })
 })
