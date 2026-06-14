@@ -33,6 +33,8 @@
 | excel.L3c.fill-reflects-toolbar | L3c | draft | 填色后 toolbar 反映 |
 | excel.L3c.no-toolbar-grid-ref | L3c | draft | 无 toolbar 时 ref 仍可用 |
 | excel.L3c.redo-button-state | L3c | draft | redo 按钮启用/禁用 |
+| excel.L3c.rich-text-default-not-bundled | L3c | draft | 默认 Grid 不带 rich-text；未注册 cell-kit 时纯文本无字体组 |
+| excel.L3c.rich-text-toolbar-bold-substring | L3c | draft | 注册 cell-kit 后选中子串加粗→提交→renderer 显示 bold |
 | excel.L3c.sparse-ref-grid | L3c | draft | 稀疏默认工作区 ref.grid |
 | excel.L3c.undo-button-state | L3c | draft | undo 按钮启用/禁用 |
 
@@ -707,6 +709,50 @@
 - redo 初始 disabled
 - undo 后 redo enabled
 - redo 后 redo disabled
+
+## excel.L3c.rich-text-default-not-bundled
+
+- **layer**: L3c
+- **summary**: 默认 Grid 不带 rich-text；未注册 cell-kit 时纯文本无字体组
+- **status**: draft
+
+### User Story
+
+作为集成方，当我不注册 `@novasheet/cell-kit` 时，我希望 NovaSheet 默认渲染纯文本、无任何字体组能力，以保证默认包零基础组件、可 tree-shake。
+
+### Given
+
+- 默认 NovaExcel（未注册 richTextExtension）
+
+### When
+
+- 渲染 text 列
+
+### Then
+
+- 单元格走内置纯文本路径，无 rich-text renderer 介入；richTextExtension 不出现在 @novasheet/react 默认导出
+
+## excel.L3c.rich-text-toolbar-bold-substring
+
+- **layer**: L3c
+- **summary**: 注册 cell-kit 后选中子串加粗→提交→renderer 显示 bold
+- **status**: draft
+
+### User Story
+
+作为用户，当我注册 cell-kit 的 richTextExtension 并对某单元格选中部分文字点加粗时，我希望提交后该子串以粗体渲染，以获得 Excel 同款 rich-text 体验。
+
+### Given
+
+- 注册 richTextExtension（codec+renderer+editor）的 Grid，某 text 单元格值 'abcd'
+
+### When
+
+- 编辑该格，将 'bc' 加粗并提交
+
+### Then
+
+- 'richText' 附件存 [1,3) bold run；renderer 切段绘制时 'bc' 段 font 含 bold
 
 ## excel.L3c.sparse-ref-grid
 
