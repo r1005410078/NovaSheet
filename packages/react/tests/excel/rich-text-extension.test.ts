@@ -27,6 +27,12 @@ describe('rich-text Excel L3c', () => {
     expect(exports['richTextExtension']).toBeUndefined()
   })
 
+  it('excel.L3c.rich-text-toolbar-bold-substring — cell-kit exposes external toolbar integration points', () => {
+    expect(typeof richTextExtension.editor.open).toBe('function')
+    expect(typeof richTextExtension.toolbarExtension).toBe('function')
+    expect(typeof richTextExtension.ToolbarProvider).toBe('function')
+  })
+
   it('excel.L3c.rich-text-toolbar-bold-substring — renderer paints bold substring from stored runs', () => {
     const runs: RichTextValue = [{ start: 1, end: 3, attrs: { bold: true } }]
     const { ctx, ops } = createRecordingContext()
