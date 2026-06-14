@@ -29,7 +29,7 @@ function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-/** v1 固定 token 子集；未识别 token 原样保留。使用 UTC 方法（serial 时区中性）。 */
+/** v1 固定 token 子集（YYYY/MM/DD/HH/mm/ss）；未识别 token 原样保留。UTC 读取以匹配 serial 的时区中性。 */
 function formatDatePattern(d: Date, pattern: string): string {
   return pattern
     .replace(/YYYY/g, String(d.getUTCFullYear()))
