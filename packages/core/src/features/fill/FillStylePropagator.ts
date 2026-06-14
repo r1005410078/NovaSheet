@@ -115,6 +115,8 @@ export class FillStylePropagator {
    * 附件平铺：清空目标区每格附件后，按填充轴取源格附件重写（源无 → 清除目标陈旧，对齐 Google）。
    * 遍历 store 内全部 namespace；仅当 store 含附件时执行，否则快速返回。
    */
+  // 注：fill 遍历 attachmentStore.namespaces()（内存全 ns，无需 serialize）；clipboard 用
+  // codecRegistry（仅可序列化 ns）。fill 可携无 codec 附件、clipboard 不行——刻意不对称（F8）。
   private tileFillAttachment(rawSource: RawRange, rawFill: RawRange, direction: FillDirection): void {
     const namespaces = this.attachmentStore.namespaces()
     if (namespaces.length === 0) return

@@ -9,6 +9,10 @@
  * These stubs satisfy lint:scenario-coverage by naming the scenario ids,
  * while exercising the observable contract within the react package boundary.
  */
+// 注：此处用 relative src import（非 @novasheet/cell-kit 包名）。
+// 包名 import 解析到 dist，需 cell-kit 先 build；测试跑前 build 顺序无保证。
+// 且 @novasheet/cell-kit 未列入 @novasheet/react devDependencies（不属于 react 运行时依赖）。
+// TODO(F7-pkg-import): CI build 顺序固定、cell-kit 加入 react devDeps 后可改为包名 import。
 import { describe, expect, it } from 'bun:test'
 import * as reactPkg from '../../src/index'
 import { richTextExtension } from '../../../cell-kit/src/rich-text/index'
