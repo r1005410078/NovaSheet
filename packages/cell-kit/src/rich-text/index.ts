@@ -1,12 +1,13 @@
 import { richTextCodec } from './richTextCodec'
 import { richTextRenderer } from './richTextRenderer'
-import { richTextEditor } from './RichTextCellEditor'
+import { createRichTextEditor, richTextEditor } from './RichTextCellEditor'
 import { richTextToolbarExtension } from './RichTextToolbarExtension'
 import { RichTextToolbarProvider } from './RichTextToolbarProvider'
 
 export { richTextCodec } from './richTextCodec'
 export { richTextRenderer } from './richTextRenderer'
-export { richTextEditor } from './RichTextCellEditor'
+export { createRichTextEditor, richTextEditor } from './RichTextCellEditor'
+export type { RichTextEditorOptions } from './RichTextCellEditor'
 export { createRichTextEditingSession } from './editingSession'
 export type { RichTextEditingSession, RichTextInlineStyle } from './editingSession'
 export { RichTextToolbarProvider, useRichTextToolbarController, useRichTextSession } from './RichTextToolbarProvider'
@@ -29,6 +30,7 @@ export const richTextExtension = {
   codec: richTextCodec,
   renderer: richTextRenderer,
   editor: richTextEditor,
+  createEditor: createRichTextEditor,
   toolbarExtension: richTextToolbarExtension,
   ToolbarProvider: RichTextToolbarProvider,
 } as const
