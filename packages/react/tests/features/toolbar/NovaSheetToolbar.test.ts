@@ -3,7 +3,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { NovaSheetToolbar, defaultToolbarItems } from '../../../src'
-import type { ToolbarAction } from '../../../src'
+import type { ToolbarAction, ToolbarItem } from '../../../src'
 import {
   clickBody,
   clickElement,
@@ -11,6 +11,27 @@ import {
   mountReactRoot,
   unmountReactRoot,
 } from '../../helpers/dom'
+
+const validToolbarSearchItem: ToolbarItem = {
+  id: 'menu-search',
+  kind: 'search',
+  label: '菜单搜索',
+}
+
+const validToolbarActionItem: ToolbarItem = {
+  id: 'copy',
+  kind: 'button',
+  label: '复制',
+}
+
+// @ts-expect-error menu-search is not a dispatchable toolbar action item.
+const invalidToolbarActionItem: ToolbarItem = {
+  id: 'menu-search',
+  kind: 'button',
+  label: '菜单搜索',
+}
+
+void [validToolbarSearchItem, validToolbarActionItem, invalidToolbarActionItem]
 
 describe('NovaSheetToolbar', () => {
   it('renders the default compact spreadsheet toolbar controls', async () => {

@@ -206,7 +206,7 @@ function ToolbarItemControl({
     )
   }
 
-  const actionId = item.id as ToolbarActionId
+  const actionId = item.id
   const isDisabled = disabled.has(actionId)
   const value = resolveValue(item, state)
   const control = item.kind === 'stepper' ? 'stepper' : item.kind === 'select' ? 'select' : 'button'

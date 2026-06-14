@@ -42,14 +42,24 @@ export type ToolbarAction =
       readonly format: ValueFormat
     }
 
-export interface ToolbarItem {
-  readonly id: ToolbarControlId
-  readonly kind: 'search' | 'button' | 'select' | 'stepper'
+interface ToolbarItemBase {
   readonly label: string
   readonly icon?: ReactNode
   readonly value?: string
   readonly separatorBefore?: boolean
 }
+
+export interface ToolbarSearchItem extends ToolbarItemBase {
+  readonly id: 'menu-search'
+  readonly kind: 'search'
+}
+
+export interface ToolbarActionItem extends ToolbarItemBase {
+  readonly id: ToolbarActionId
+  readonly kind: 'button' | 'select' | 'stepper'
+}
+
+export type ToolbarItem = ToolbarSearchItem | ToolbarActionItem
 
 export interface NovaSheetToolbarState {
   readonly zoom?: string
