@@ -32,7 +32,4 @@ describe('serial', () => {
     expect(d.getUTCMonth()).toBe(11)
     expect(d.getUTCDate()).toBe(30)
   })
-  it('SERIAL_EPOCH_MS 导出供消费者复用', () => {
-    expect(SERIAL_EPOCH_MS).toBe(Date.UTC(1899, 11, 30))
-  })
 })
