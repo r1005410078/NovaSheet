@@ -29,12 +29,6 @@ describe('serializeRowsToTsv', () => {
     expect(serializeRowsToTsv(rows, ['name', 'qty', 'done'], schema)).toBe('\t\t')
   })
 
-  it('Date → ISO 字符串（instanceof Date 向后兼容）', () => {
-    const d = new Date('2026-05-18T00:00:00.000Z')
-    const atSchema: Schema = { fields: [{ id: 'at', name: 'At', type: 'text', width: 100 }] }
-    expect(serializeRowsToTsv([{ at: d }], ['at'], atSchema)).toBe('2026-05-18T00:00:00.000Z')
-  })
-
   it('数组（multiSelect）→ 逗号连接', () => {
     const tagsSchema: Schema = {
       fields: [{ id: 'tags', name: 'Tags', type: 'multiSelect', width: 100 }],

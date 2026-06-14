@@ -37,10 +37,6 @@ function serializeValue(v: CellValue | undefined, type: string | undefined): str
     return v ? 'true' : 'false'
   }
 
-  if (v instanceof Date) {
-    return v.toISOString()
-  }
-
   if (Array.isArray(v)) {
     return v.join(',')
   }
