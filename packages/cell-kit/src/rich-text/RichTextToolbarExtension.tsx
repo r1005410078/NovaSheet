@@ -114,7 +114,13 @@ function RichTextToolbarControls({
           setColorPickerOpen((open) => !open)
         }}
       >
-        A
+        <span
+          data-rich-text-color-indicator=""
+          className="border-b-2 px-0.5 leading-none"
+          style={{ borderBottomColor: activeColor }}
+        >
+          A
+        </span>
       </button>
       {colorPickerOpen && colorPickerPosition && typeof document !== 'undefined'
         ? createPortal(

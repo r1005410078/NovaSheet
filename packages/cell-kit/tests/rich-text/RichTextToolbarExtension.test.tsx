@@ -54,11 +54,14 @@ describe('richTextToolbarExtension', () => {
 
     const group = host.querySelector<HTMLElement>('[data-rich-text-toolbar]')
     const bold = host.querySelector<HTMLButtonElement>('[data-rich-text-command="bold"]')
+    const colorIndicator = host.querySelector<HTMLElement>('[data-rich-text-color-indicator]')
     expect(group?.className).toContain('inline-flex')
     expect(group?.className).toContain('gap-0.5')
     expect(bold?.className).toContain('h-7')
     expect(bold?.className).toContain('min-w-7')
     expect(bold?.className).toContain('hover:bg-slate-200')
+    expect(colorIndicator).not.toBeNull()
+    expect(colorIndicator?.className).toContain('border-b-2')
   })
 
   it('calls active session from external bold button', async () => {

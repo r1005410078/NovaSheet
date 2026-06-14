@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
 import { Grid, InMemoryDataSource } from '@novasheet/core'
+import type { CellRange, TextWrapMode } from '@novasheet/core'
 import { canvas2dBackend } from '@novasheet/canvas2d'
 import {
   createRichTextEditor,
@@ -8,6 +9,7 @@ import {
   useRichTextToolbarController,
 } from '@novasheet/cell-kit'
 import { NovaSheetToolbar } from '@novasheet/react'
+import type { ToolbarAction } from '@novasheet/react'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { basicTextSchema, generateRows } from '../mock-data'
@@ -41,12 +43,85 @@ export default meta
 
 type Story = StoryObj
 
+const DEFAULT_RANGE: CellRange = { startRow: 0, endRow: 0, startCol: 0, endCol: 0 }
+
 function RichTextStoryApp(): React.ReactElement {
   const controller = useRichTextToolbarController()
-  const gridRef = React.useRef<HTMLDivElement | null>(null)
+  const gridHostRef = React.useRef<HTMLDivElement | null>(null)
+  const gridRef = React.useRef<Grid | null>(null)
+
+  const getRange = React.useCallback((): CellRange | null => {
+    const grid = gridRef.current
+    if (!grid) return null
+
+    const selection = grid.getSelection()
+    if (selection.selectedRange) return selection.selectedRange
+
+    grid.setSelection({
+      activeCell: { rowIndex: DEFAULT_RANGE.startRow, colIndex: DEFAULT_RANGE.startCol },
+      anchorCell: { rowIndex: DEFAULT_RANGE.startRow, colIndex: DEFAULT_RANGE.startCol },
+      extentCell: { rowIndex: DEFAULT_RANGE.endRow, colIndex: DEFAULT_RANGE.endCol },
+      selectedRange: DEFAULT_RANGE,
+    })
+    return DEFAULT_RANGE
+  }, [])
+
+  const applyRangeAction = React.useCallback(
+    (action: (range: CellRange) => boolean) => {
+      const range = getRange()
+      if (!range) return
+      action(range)
+    },
+    [getRange],
+  )
+
+  const handleToolbarAction = React.useCallback(
+    (action: ToolbarAction) => {
+      const grid = gridRef.current
+      if (!grid) return
+
+      if (action.id === 'undo') {
+        grid.undo()
+        return
+      }
+      if (action.id === 'redo') {
+        grid.redo()
+        return
+      }
+      if (action.id === 'copy' || action.id === 'cut' || action.id === 'paste') {
+        void grid[action.id]()
+        return
+      }
+      if (action.id === 'fill-color') {
+        applyRangeAction((range) => grid.setFillColor(range, action.color))
+        return
+      }
+      if (action.id === 'borders') {
+        applyRangeAction((range) => grid.setBorders(range, action.preset, action.border))
+        return
+      }
+      if (action.id === 'merge-cells') {
+        if (action.mode === 'all') applyRangeAction((range) => grid.mergeCells(range))
+        return
+      }
+      if (action.id === 'unmerge-cells') {
+        applyRangeAction((range) => grid.unmergeCells(range))
+        return
+      }
+      if (action.id === 'text-wrap') {
+        const next: TextWrapMode = 'wrap'
+        applyRangeAction((range) => grid.setTextWrap(range, next))
+        return
+      }
+      if (action.id === 'value-format') {
+        applyRangeAction((range) => grid.setValueFormat(range, action.format))
+      }
+    },
+    [applyRangeAction],
+  )
 
   React.useEffect(() => {
-    const host = gridRef.current
+    const host = gridHostRef.current
     if (!host) return
 
     const schema = basicTextSchema()
@@ -60,9 +135,11 @@ function RichTextStoryApp(): React.ReactElement {
       backend: canvas2dBackend({ cellRenderers: { text: richTextExtension.renderer } }),
     })
 
+    gridRef.current = grid
     ;(host as HTMLElement & { __grid?: Grid }).__grid = grid
     return () => {
       grid.destroy()
+      gridRef.current = null
       delete (host as HTMLElement & { __grid?: Grid }).__grid
     }
   }, [controller])
@@ -78,10 +155,12 @@ function RichTextStoryApp(): React.ReactElement {
       },
     },
     React.createElement(NovaSheetToolbar, {
+      onAction: handleToolbarAction,
       extensionItems: [richTextExtension.toolbarExtension(controller)],
     }),
     React.createElement('div', {
-      ref: gridRef,
+      ref: gridHostRef,
+      'data-rich-text-grid-host': '',
       style: { position: 'relative', minHeight: 0 },
     }),
   )
