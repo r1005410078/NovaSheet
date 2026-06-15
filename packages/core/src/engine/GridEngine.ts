@@ -28,6 +28,7 @@ import type { Theme } from '../kernel/theme/Theme'
 import type { ExcelWorkspaceSize } from '../features/excel-workspace'
 import type { CellTypeOverride, CellTypeRegistry } from '../features/cell-types'
 import type { CellAttachmentCodec } from '../kernel/protocol/AttachmentTypes'
+import type { ValidationRule, ValidationState } from '../kernel/protocol/ValidationTypes'
 
 /**
  * `DefaultGridEngine` 构造参数。
@@ -85,6 +86,12 @@ export interface GridEngineOptions {
   fillCellTypes?: boolean
   /** 扩展附件 codec 注册表；namespace 唯一，core 不识别 T 语义。 */
   cellAttachments?: readonly import('../kernel/protocol/AttachmentTypes').CellAttachmentCodec<unknown>[]
+  /** 自定义 validator 注册表；与 BUILT_IN_VALIDATORS 合并，custom 优先。 */
+  validators?: Readonly<Record<string, import('../features/validation').ValidatorDefinition>>
+  /** 批量校验每 tick 处理格数上限；默认 50。 */
+  validationBatchSize?: number
+  /** 异步 validator 最大并发数；默认 4。 */
+  validationMaxConcurrent?: number
 }
 
 export interface FillCommitResult {
@@ -376,6 +383,17 @@ export interface GridFormatting {
 
   /** 解析 raw row + field 的 resolved cell type；field 不在 raw schema 中时保守返回 `text`。 */
   resolveRawCellTypeForField?(rowIndex: number, field: Field): CellTypeOverride
+
+  /** 为 raw range 设置校验规则；下次 validateAll / 写入触发时生效。 */
+  setValidationRule(rawRange: import('../kernel/coords/coordinates').RawRange, rule: ValidationRule): void
+  /** 清除 raw range 的校验规则。 */
+  clearValidationRule(rawRange: import('../kernel/coords/coordinates').RawRange): void
+  /** 触发全量重新校验（清空结果缓存，将所有格入队）。 */
+  validateAll(): void
+  /** 读取指定 raw 坐标的最新校验状态；无结果返回 null。 */
+  getValidationState(rawRow: number, rawCol: number): ValidationState | null
+  /** 注入异步校验完成后的重绘回调；由 GridRuntime 在挂载时调用。 */
+  setValidationRedrawCallback(cb: () => void): void
 }
 
 /** 单元格合并能力。 */

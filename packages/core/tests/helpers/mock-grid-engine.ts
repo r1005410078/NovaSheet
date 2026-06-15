@@ -173,6 +173,11 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     getAttachmentCodec: mock((_namespace: string) => undefined),
     viewRowToRaw: mock((viewRow: number) => viewRow),
     viewColToRaw: mock((viewCol: number) => viewCol),
+    setValidationRule: mock((_rawRange, _rule) => undefined),
+    clearValidationRule: mock((_rawRange) => undefined),
+    validateAll: mock(() => undefined),
+    getValidationState: mock((_rawRow: number, _rawCol: number) => null),
+    setValidationRedrawCallback: mock((_cb: () => void) => undefined),
   } satisfies GridEngine
 
   return Object.assign(engine, options.overrides)

@@ -139,6 +139,11 @@ function makeEngine(): GridEngine {
     getAttachmentCodec: mock((_namespace: string) => undefined),
     viewRowToRaw: mock((viewRow: number) => viewRow),
     viewColToRaw: mock((viewCol: number) => viewCol),
+    setValidationRule: mock(() => undefined),
+    clearValidationRule: mock(() => undefined),
+    validateAll: mock(() => undefined),
+    getValidationState: mock(() => null),
+    setValidationRedrawCallback: mock(() => undefined),
   }
 }
 

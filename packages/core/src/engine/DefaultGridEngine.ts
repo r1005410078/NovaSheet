@@ -85,6 +85,14 @@ import { SelectionEventHandler } from '../features/selection/SelectionEventHandl
 import { resolveViewMergeRegion } from '../features/merge/MergeViewResolver'
 import { StructuralMutationCoordinator } from './StructuralMutationCoordinator'
 import { assembleRenderFrame } from './FrameAssembler'
+import { ValidationRuleStore } from '../features/validation/ValidationRuleStore'
+import { ValidationResultStore } from '../features/validation/ValidationResultStore'
+import { ValidationScheduler } from '../features/validation/ValidationScheduler'
+import type { RawCell } from '../features/validation/ValidationScheduler'
+import { ValidationService } from '../features/validation/ValidationService'
+import { ValidationEventHandler } from '../features/validation/ValidationEventHandler'
+import type { ValidationRule, ValidationState } from '../kernel/protocol/ValidationTypes'
+import type { RawRange } from '../kernel/coords/coordinates'
 
 /**
  * `GridEngine` 默认实现。
@@ -167,6 +175,16 @@ export class DefaultGridEngine implements GridEngine {
   private readonly formatState = new DefaultFormatState()
   /** Cell type override store（raw 坐标）。 */
   private readonly cellTypeStore = new CellTypeStore()
+  /** 校验规则 store（raw 坐标）。 */
+  private readonly validationRuleStore = new ValidationRuleStore()
+  /** 校验结果缓存（raw 坐标）。 */
+  private readonly validationResultStore = new ValidationResultStore()
+  /** 校验执行服务；构造函数完成后初始化。 */
+  private readonly validationService: ValidationService
+  /** 批量调度器；构造函数完成后初始化。 */
+  private readonly validationScheduler: ValidationScheduler
+  /** 校验完成后的重绘回调；由 GridRuntime 在挂载时注入（engine 纯层，不直调 DOM）。 */
+  private validationRedrawCallback: () => void = () => undefined
   /**
    * Selection 写入门面；engine 经此写选区，不直连聚合 mutation（invariant #3）。
    * merge lookup 经 resolveViewMergeRegion 做 view→raw→view 翻译，sort/filter/隐藏列下亦正确。
@@ -205,6 +223,7 @@ export class DefaultGridEngine implements GridEngine {
     }),
     new FormatEventHandler(this.formatState),
     new CellTypeEventHandler(this.cellTypeStore),
+    new ValidationEventHandler(this.validationRuleStore, this.validationResultStore),
   ])
   private readonly columnStructure!: DefaultColumnStructure
   private readonly insertColsCommand!: InsertColsCommandHandler
@@ -362,6 +381,29 @@ export class DefaultGridEngine implements GridEngine {
       restoreCellTypes: (snapshot) => this.restoreCellTypes(snapshot),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
+    this.validationService = new ValidationService({
+      ruleStore: this.validationRuleStore,
+      resultStore: this.validationResultStore,
+      getCell: (rawRow, fieldId) => this.data.getCell(rawRow, fieldId),
+      getField: (rawCol) => {
+        const fields = this.data.getSchema().fields
+        return fields[rawCol] ?? undefined
+      },
+      getResolvedType: (rawRow, rawCol) => {
+        const field = this.data.getSchema().fields[rawCol]
+        return field ? this.cellTypeStore.resolve(rawRow, rawCol, field) : 'text'
+      },
+      validators: options.validators,
+      locale: this.locale,
+    })
+    this.validationScheduler = new ValidationScheduler(
+      (r, c) => this.validationService.validateCell(r, c),
+      () => this.validationRedrawCallback(),
+      {
+        batchSize: options.validationBatchSize ?? 50,
+        maxConcurrent: options.validationMaxConcurrent ?? 4,
+      },
+    )
   }
 
   setData(data: DataSource): void {
@@ -462,11 +504,24 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   commitCellEdit(): boolean {
-    return this.editController.commit()
+    const editCell = this.editController.getSession()?.cell
+    const result = this.editController.commit()
+    if (result && editCell) {
+      const rawRow = this.coords.viewRowToRaw(editCell.rowIndex)
+      const rawCol = this.coords.viewColToRaw(editCell.colIndex)
+      if (rawRow >= 0 && rawCol >= 0) this.validationScheduler.push([{ rawRow, rawCol }])
+    }
+    return result
   }
 
   commitCellValue(cell: CellAddress, fieldId: string, value: CellValue | null): boolean {
-    return this.editController.commitCellValue(cell, fieldId, value)
+    const result = this.editController.commitCellValue(cell, fieldId, value)
+    if (result) {
+      const rawRow = this.coords.viewRowToRaw(cell.rowIndex)
+      const rawCol = this.coords.viewColToRaw(cell.colIndex)
+      if (rawRow >= 0 && rawCol >= 0) this.validationScheduler.push([{ rawRow, rawCol }])
+    }
+    return result
   }
 
   isCellEditing(): boolean {
@@ -870,6 +925,7 @@ export class DefaultGridEngine implements GridEngine {
     const cmd = this.undoStack.popUndo()
     if (!cmd) return undefined
     this.undoReplay.undo(cmd)
+    this.pushValidationForCommand(cmd)
     return cmd
   }
 
@@ -877,7 +933,36 @@ export class DefaultGridEngine implements GridEngine {
     const cmd = this.undoStack.popRedo()
     if (!cmd) return undefined
     this.undoReplay.redo(cmd)
+    this.pushValidationForCommand(cmd)
     return cmd
+  }
+
+  private pushValidationForCommand(cmd: UndoCommand): void {
+    const cells: RawCell[] = []
+    if (cmd.kind === 'editCell') {
+      const rawRow = this.coords.viewRowToRaw(cmd.rowIndex)
+      const rawCol = this.data.getSchema().fields.findIndex((f) => f.id === cmd.fieldId)
+      if (rawRow >= 0 && rawCol >= 0) cells.push({ rawRow, rawCol })
+    } else if (cmd.kind === 'paste' || cmd.kind === 'clearRange') {
+      const range = cmd.kind === 'paste' ? cmd.target : cmd.range
+      for (let r = range.startRow; r <= range.endRow; r++) {
+        for (let c = range.startCol; c <= range.endCol; c++) {
+          const rawRow = this.coords.viewRowToRaw(r)
+          const rawCol = this.coords.viewColToRaw(c)
+          if (rawRow >= 0 && rawCol >= 0) cells.push({ rawRow, rawCol })
+        }
+      }
+    } else if (cmd.kind === 'fill') {
+      const range = cmd.result
+      for (let r = range.startRow; r <= range.endRow; r++) {
+        for (let c = range.startCol; c <= range.endCol; c++) {
+          const rawRow = this.coords.viewRowToRaw(r)
+          const rawCol = this.coords.viewColToRaw(c)
+          if (rawRow >= 0 && rawCol >= 0) cells.push({ rawRow, rawCol })
+        }
+      }
+    }
+    if (cells.length > 0) this.validationScheduler.push(cells)
   }
 
   canUndo(): boolean {
@@ -917,6 +1002,15 @@ export class DefaultGridEngine implements GridEngine {
     attachmentWrites?: readonly import('../features/clipboard/PasteController').AttachmentWrite[],
   ): void {
     this.pasteController.commit(source, target, fieldIdsAtCols, onSkipped, attachmentWrites)
+    const cells: RawCell[] = []
+    for (let r = target.startRow; r <= target.endRow; r++) {
+      for (let c = target.startCol; c <= target.endCol; c++) {
+        const rawRow = this.coords.viewRowToRaw(r)
+        const rawCol = this.coords.viewColToRaw(c)
+        if (rawRow >= 0 && rawCol >= 0) cells.push({ rawRow, rawCol })
+      }
+    }
+    if (cells.length > 0) this.validationScheduler.push(cells)
   }
 
   commitFill(
@@ -924,7 +1018,20 @@ export class DefaultGridEngine implements GridEngine {
     fill: CellRange,
     direction: FillDirection,
   ): FillCommitResult | null {
-    return this.fillController.commit(source, fill, direction)
+    const result = this.fillController.commit(source, fill, direction)
+    if (result) {
+      const r = result.result
+      const cells: RawCell[] = []
+      for (let row = r.startRow; row <= r.endRow; row++) {
+        for (let col = r.startCol; col <= r.endCol; col++) {
+          const rawRow = this.coords.viewRowToRaw(row)
+          const rawCol = this.coords.viewColToRaw(col)
+          if (rawRow >= 0 && rawCol >= 0) cells.push({ rawRow, rawCol })
+        }
+      }
+      if (cells.length > 0) this.validationScheduler.push(cells)
+    }
+    return result
   }
 
   /**
@@ -984,6 +1091,35 @@ export class DefaultGridEngine implements GridEngine {
     if (!field) return 'text'
     const rawRow = this.coords.viewRowToRaw(viewRow)
     return this.cellTypeStore.resolve(rawRow, rawCol, field)
+  }
+
+  setValidationRule(rawRange: RawRange, rule: ValidationRule): void {
+    this.validationRuleStore.setRange(rawRange, rule)
+  }
+
+  clearValidationRule(rawRange: RawRange): void {
+    this.validationRuleStore.clearRange(rawRange)
+  }
+
+  validateAll(): void {
+    const rowCount = this.data.getRowCount()
+    const colCount = this.data.getSchema().fields.length
+    const cells: RawCell[] = []
+    for (let r = 0; r < rowCount; r++) {
+      for (let c = 0; c < colCount; c++) {
+        cells.push({ rawRow: r, rawCol: c })
+      }
+    }
+    this.validationResultStore.clear()
+    this.validationScheduler.pushAll(cells)
+  }
+
+  getValidationState(rawRow: number, rawCol: number): ValidationState | null {
+    return this.validationResultStore.get(rawRow, rawCol)
+  }
+
+  setValidationRedrawCallback(cb: () => void): void {
+    this.validationRedrawCallback = cb
   }
 
   private hasCellTypeOverrideAtView(viewRow: number, viewCol: number): boolean {
