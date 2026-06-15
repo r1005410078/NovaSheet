@@ -2,6 +2,7 @@ import type { FormatLayer } from '../kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../kernel/coords/MergeRegion'
 import type { GridSelection } from '../kernel/coords/SelectionTypes'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
+import type { CellTypeSnapshot } from '../kernel/protocol/CellTypeTypes'
 import type { UndoCommand } from '../kernel/undo/UndoCommand'
 
 /** 结构 mutation 协调器注入：只暴露 composer 能力，禁止传入完整 engine。 */
@@ -13,10 +14,12 @@ export interface StructuralMutationContext {
   snapshotFormatMerge(): {
     formatBefore: readonly FormatLayer[]
     mergeBefore: readonly MergeRegion[]
+    cellTypeBefore?: CellTypeSnapshot
   }
   snapshotFormatMergeAfter(): {
     formatAfter: readonly FormatLayer[]
     mergeAfter: readonly MergeRegion[]
+    cellTypeAfter?: CellTypeSnapshot
   }
   getFrozenConfig(): FrozenConfig
 }
@@ -41,6 +44,8 @@ export interface RunCommandStructuralParams<TEvent> {
       formatAfter?: readonly FormatLayer[]
       mergeBefore?: readonly MergeRegion[]
       mergeAfter?: readonly MergeRegion[]
+      cellTypeBefore?: CellTypeSnapshot
+      cellTypeAfter?: CellTypeSnapshot
       frozenBefore?: FrozenConfig
       frozenAfter?: FrozenConfig
     },
@@ -73,6 +78,8 @@ export class StructuralMutationCoordinator {
           formatAfter: fmtAfter?.formatAfter,
           mergeBefore: fmt?.mergeBefore,
           mergeAfter: fmtAfter?.mergeAfter,
+          cellTypeBefore: fmt?.cellTypeBefore,
+          cellTypeAfter: fmtAfter?.cellTypeAfter,
           frozenBefore,
           frozenAfter,
         },

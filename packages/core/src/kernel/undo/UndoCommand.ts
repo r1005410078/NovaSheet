@@ -81,6 +81,8 @@ export type UndoCommand =
       readonly formatAfter: readonly FormatLayer[]
       readonly mergeBefore: readonly MergeRegion[]
       readonly mergeAfter: readonly MergeRegion[]
+      readonly cellTypeBefore?: CellTypeSnapshot
+      readonly cellTypeAfter?: CellTypeSnapshot
     }
   | {
       readonly kind: 'deleteRows'
@@ -93,6 +95,8 @@ export type UndoCommand =
       readonly formatAfter: readonly FormatLayer[]
       readonly mergeBefore: readonly MergeRegion[]
       readonly mergeAfter: readonly MergeRegion[]
+      readonly cellTypeBefore?: CellTypeSnapshot
+      readonly cellTypeAfter?: CellTypeSnapshot
     }
   | {
       readonly kind: 'hideRows'
@@ -126,6 +130,8 @@ export type UndoCommand =
       readonly formatAfter: readonly FormatLayer[]
       readonly mergeBefore: readonly MergeRegion[]
       readonly mergeAfter: readonly MergeRegion[]
+      readonly cellTypeBefore?: CellTypeSnapshot
+      readonly cellTypeAfter?: CellTypeSnapshot
     }
   | {
       readonly kind: 'insertCols'
@@ -140,6 +146,8 @@ export type UndoCommand =
       readonly formatAfter: readonly FormatLayer[]
       readonly mergeBefore: readonly MergeRegion[]
       readonly mergeAfter: readonly MergeRegion[]
+      readonly cellTypeBefore?: CellTypeSnapshot
+      readonly cellTypeAfter?: CellTypeSnapshot
     }
   | {
       readonly kind: 'deleteCols'
@@ -153,6 +161,8 @@ export type UndoCommand =
       readonly formatAfter: readonly FormatLayer[]
       readonly mergeBefore: readonly MergeRegion[]
       readonly mergeAfter: readonly MergeRegion[]
+      readonly cellTypeBefore?: CellTypeSnapshot
+      readonly cellTypeAfter?: CellTypeSnapshot
     }
   | {
       readonly kind: 'hideCols'
@@ -185,6 +195,8 @@ export type UndoCommand =
       readonly formatAfter: readonly FormatLayer[]
       readonly mergeBefore: readonly MergeRegion[]
       readonly mergeAfter: readonly MergeRegion[]
+      readonly cellTypeBefore?: CellTypeSnapshot
+      readonly cellTypeAfter?: CellTypeSnapshot
     }
   | {
       readonly kind: 'format'

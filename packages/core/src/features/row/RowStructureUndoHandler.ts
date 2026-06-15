@@ -2,6 +2,7 @@ import type { DeletedRowSnapshot } from '../../kernel/data/MutableDataSource'
 import type { FormatLayer } from '../../kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { GridSelection } from '../../kernel/coords/SelectionTypes'
+import type { CellTypeSnapshot } from '../../kernel/protocol/CellTypeTypes'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 
@@ -25,6 +26,7 @@ export interface RowStructureUndoContext {
   rebuildRows(): void
   restoreFormat(layers: readonly FormatLayer[]): void
   restoreMerge(regions: readonly MergeRegion[]): void
+  restoreCellTypes?(snapshot: CellTypeSnapshot): void
   restoreSelection(selection: GridSelection): void
 }
 
@@ -53,6 +55,7 @@ export class RowStructureUndoHandler implements UndoHandler {
         this.ctx.rebuildRows()
         this.ctx.restoreFormat(command.formatBefore)
         this.ctx.restoreMerge(command.mergeBefore)
+        if (command.cellTypeBefore) this.ctx.restoreCellTypes?.(command.cellTypeBefore)
         this.ctx.restoreSelection(command.selectionBefore)
         return
       }
@@ -62,12 +65,14 @@ export class RowStructureUndoHandler implements UndoHandler {
         this.ctx.rebuildRows()
         this.ctx.restoreFormat(command.formatBefore)
         this.ctx.restoreMerge(command.mergeBefore)
+        if (command.cellTypeBefore) this.ctx.restoreCellTypes?.(command.cellTypeBefore)
         this.ctx.restoreSelection(command.selectionBefore)
         return
       case 'moveRows':
         this.ctx.replayMoveRows(command.inverseRowIds, command.inverseBeforeRowId, command.selectionBefore)
         this.ctx.restoreFormat(command.formatBefore)
         this.ctx.restoreMerge(command.mergeBefore)
+        if (command.cellTypeBefore) this.ctx.restoreCellTypes?.(command.cellTypeBefore)
         return
       default:
         return
@@ -82,6 +87,7 @@ export class RowStructureUndoHandler implements UndoHandler {
         this.ctx.rebuildRows()
         this.ctx.restoreFormat(command.formatAfter)
         this.ctx.restoreMerge(command.mergeAfter)
+        if (command.cellTypeAfter) this.ctx.restoreCellTypes?.(command.cellTypeAfter)
         this.ctx.restoreSelection(command.selectionAfter)
         return
       case 'deleteRows': {
@@ -93,6 +99,7 @@ export class RowStructureUndoHandler implements UndoHandler {
         this.ctx.rebuildRows()
         this.ctx.restoreFormat(command.formatAfter)
         this.ctx.restoreMerge(command.mergeAfter)
+        if (command.cellTypeAfter) this.ctx.restoreCellTypes?.(command.cellTypeAfter)
         this.ctx.restoreSelection(command.selectionAfter)
         return
       }
@@ -100,6 +107,7 @@ export class RowStructureUndoHandler implements UndoHandler {
         this.ctx.replayMoveRows(command.rowIds, command.beforeRowId, command.selectionAfter)
         this.ctx.restoreFormat(command.formatAfter)
         this.ctx.restoreMerge(command.mergeAfter)
+        if (command.cellTypeAfter) this.ctx.restoreCellTypes?.(command.cellTypeAfter)
         return
       default:
         return

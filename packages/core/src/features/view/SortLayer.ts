@@ -2,6 +2,7 @@ import type { DataSource, DataSourceEvent, DataSourceListener } from '../../kern
 import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { CellValue, Field, Row, Schema } from '../../kernel/data/Schema'
+import type { CellTypeOverride } from '../../kernel/protocol/CellTypeTypes'
 import type {
   ColumnHeaderMenuContext,
   ColumnHeaderMenuItem,
@@ -17,6 +18,10 @@ export interface SortSpec {
   readonly direction: SortDirection
 }
 
+export interface SortLayerOptions {
+  readonly resolveCellType?: (rowIndex: number, field: Field) => CellTypeOverride
+}
+
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
 export class SortLayer implements ViewLayer<SortSpec | null> {
@@ -26,6 +31,8 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
   private notify: ((change: ViewLayerChange) => void) | null = null
   private fieldsById = new Map<string, Field>()
   private schemaKnown = false
+
+  constructor(private readonly options: SortLayerOptions = {}) {}
 
   bindPipeline(notify: (change: ViewLayerChange) => void): void {
     this.notify = notify
@@ -75,6 +82,7 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
         const removedIds = new Set(event.removed.map((removed) => removed.fieldId))
         if (this.spec && removedIds.has(this.spec.fieldId)) this.spec = null
       },
+      this.options,
     )
   }
 
@@ -139,6 +147,7 @@ class SortedDataSource implements DataSource {
     private readonly getSpec: () => SortSpec | null,
     private readonly onUpstreamReset: (source: DataSource) => void,
     private readonly onColumnsChanged: (source: DataSource, event: DataSourceEvent) => void,
+    private readonly options: SortLayerOptions,
   ) {
     const mutableUpstream = isMutableDataSource(this.upstream) ? this.upstream : null
     if (mutableUpstream) {
@@ -289,13 +298,15 @@ class SortedDataSource implements DataSource {
       this.order.sort((leftRow, rightRow) => {
         const leftValue = this.upstream.getCell(leftRow, spec.fieldId)
         const rightValue = this.upstream.getCell(rightRow, spec.fieldId)
-        const leftNullish = isNullishForField(leftValue, field)
-        const rightNullish = isNullishForField(rightValue, field)
+        const leftType = this.options.resolveCellType?.(leftRow, field) ?? field.type
+        const rightType = this.options.resolveCellType?.(rightRow, field) ?? field.type
+        const leftNullish = isNullishForField(leftValue, { ...field, type: leftType })
+        const rightNullish = isNullishForField(rightValue, { ...field, type: rightType })
         if (leftNullish && rightNullish) return leftRow - rightRow
         if (leftNullish) return 1
         if (rightNullish) return -1
-        const result = compareByFieldType(leftValue, rightValue, field)
-        return result === 0 ? leftRow - rightRow : result * direction
+        const result = compareByResolvedType(leftValue, rightValue, leftType, rightType, field, direction)
+        return result === 0 ? leftRow - rightRow : result
       })
     }
 
@@ -309,6 +320,29 @@ class SortedDataSource implements DataSource {
   private emit(event: DataSourceEvent): void {
     for (const listener of this.listeners) listener(event)
   }
+}
+
+function compareByResolvedType(
+  left: CellValue | undefined,
+  right: CellValue | undefined,
+  leftType: Field['type'],
+  rightType: Field['type'],
+  field: Field,
+  direction: number,
+): number {
+  const leftRank = sortTypeRank(leftType)
+  const rightRank = sortTypeRank(rightType)
+  if (leftRank !== rightRank) {
+    const result = leftRank - rightRank
+    return direction === 1 ? result : -result
+  }
+  return compareByFieldType(left, right, { ...field, type: leftType }) * direction
+}
+
+function sortTypeRank(type: Field['type']): number {
+  if (type === 'number' || type === 'date') return 0
+  if (type === 'checkbox') return 2
+  return 1
 }
 
 function sameSpec(left: SortSpec | null, right: SortSpec | null): boolean {

@@ -26,6 +26,7 @@ import {
   registerCellTypeUndo,
   type CellTypeOverride,
   type CellTypeRegistry,
+  type CellTypeSnapshot,
 } from '../features/cell-types'
 import type { CellAttachmentCodec } from '../kernel/protocol/AttachmentTypes'
 import { parseSelectionNavigationKey } from '../features/selection/SelectionNavigation'
@@ -59,6 +60,7 @@ import { FormatController } from '../features/format/FormatController'
 import { FillStylePropagator } from '../features/fill/FillStylePropagator'
 import { GridEventPipeline } from '../kernel/protocol/GridEventPipeline'
 import { FormatEventHandler } from '../features/format/FormatEventHandler'
+import { CellTypeEventHandler } from '../features/cell-types/CellTypeEventHandler'
 import { DeleteRowsCommandHandler } from '../features/row/DeleteRowsCommandHandler'
 import type {
   FillCommitResult,
@@ -208,6 +210,7 @@ export class DefaultGridEngine implements GridEngine {
       getVisibleFieldIds: () => this.data.getSchema().fields.map((field) => field.id),
     }),
     new FormatEventHandler(this.formatState),
+    new CellTypeEventHandler(this.cellTypeStore),
   ])
   private readonly columnStructure!: DefaultColumnStructure
   private readonly insertColsCommand!: InsertColsCommandHandler
@@ -229,10 +232,12 @@ export class DefaultGridEngine implements GridEngine {
     snapshotFormatMerge: () => ({
       formatBefore: this.formatState.formatStore.snapshot(),
       mergeBefore: this.formatState.mergeStore.snapshot(),
+      cellTypeBefore: this.snapshotCellTypes(),
     }),
     snapshotFormatMergeAfter: () => ({
       formatAfter: this.formatState.formatStore.snapshot(),
       mergeAfter: this.formatState.mergeStore.snapshot(),
+      cellTypeAfter: this.snapshotCellTypes(),
     }),
     getFrozenConfig: () => this.layout.getFrozenConfig(),
   })
@@ -333,6 +338,7 @@ export class DefaultGridEngine implements GridEngine {
       rebuildRows: () => this.layout.rebuildRows(this.rowStructure.getViewRowsAxis()),
       restoreFormat: (layers) => this.formatState.restoreFormat(layers),
       restoreMerge: (regions) => this.formatState.restoreMerge(regions),
+      restoreCellTypes: (snapshot) => this.restoreCellTypes(snapshot),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
     registerColumnStructureUndo(this.undoRegistry, {
@@ -345,6 +351,7 @@ export class DefaultGridEngine implements GridEngine {
       rebuildCols: () => this.layout.rebuildCols(this.columnStructure.getViewColsAxis()),
       restoreFormat: (layers) => this.formatState.restoreFormat(layers),
       restoreMerge: (regions) => this.formatState.restoreMerge(regions),
+      restoreCellTypes: (snapshot) => this.restoreCellTypes(snapshot),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
   }
@@ -573,6 +580,8 @@ export class DefaultGridEngine implements GridEngine {
         formatAfter: ex!.formatAfter!,
         mergeBefore: ex!.mergeBefore!,
         mergeAfter: ex!.mergeAfter!,
+        cellTypeBefore: ex!.cellTypeBefore!,
+        cellTypeAfter: ex!.cellTypeAfter!,
       }),
     })
     return event?.newRowIds ?? []
@@ -597,6 +606,8 @@ export class DefaultGridEngine implements GridEngine {
         formatAfter: ex!.formatAfter!,
         mergeBefore: ex!.mergeBefore!,
         mergeAfter: ex!.mergeAfter!,
+        cellTypeBefore: ex!.cellTypeBefore!,
+        cellTypeAfter: ex!.cellTypeAfter!,
       }),
     })
   }
@@ -674,6 +685,8 @@ export class DefaultGridEngine implements GridEngine {
         formatAfter: ex!.formatAfter!,
         mergeBefore: ex!.mergeBefore!,
         mergeAfter: ex!.mergeAfter!,
+        cellTypeBefore: ex!.cellTypeBefore!,
+        cellTypeAfter: ex!.cellTypeAfter!,
       }),
     })
     return event !== null
@@ -706,6 +719,8 @@ export class DefaultGridEngine implements GridEngine {
         formatAfter: ex!.formatAfter!,
         mergeBefore: ex!.mergeBefore!,
         mergeAfter: ex!.mergeAfter!,
+        cellTypeBefore: ex!.cellTypeBefore!,
+        cellTypeAfter: ex!.cellTypeAfter!,
       }),
     })
     return event?.newFields ?? []
@@ -736,6 +751,8 @@ export class DefaultGridEngine implements GridEngine {
         formatAfter: ex!.formatAfter!,
         mergeBefore: ex!.mergeBefore!,
         mergeAfter: ex!.mergeAfter!,
+        cellTypeBefore: ex!.cellTypeBefore!,
+        cellTypeAfter: ex!.cellTypeAfter!,
       }),
     })
     return event?.snapshots ?? []
@@ -829,6 +846,8 @@ export class DefaultGridEngine implements GridEngine {
         formatAfter: ex!.formatAfter!,
         mergeBefore: ex!.mergeBefore!,
         mergeAfter: ex!.mergeAfter!,
+        cellTypeBefore: ex!.cellTypeBefore!,
+        cellTypeAfter: ex!.cellTypeAfter!,
       }),
     })
     return event !== null
@@ -957,6 +976,20 @@ export class DefaultGridEngine implements GridEngine {
     if (!field) return 'text'
     const rawRow = this.coords.viewRowToRaw(viewRow)
     return this.cellTypeStore.resolve(rawRow, rawCol, field)
+  }
+
+  resolveRawCellTypeForField(rowIndex: number, field: Field): CellTypeOverride {
+    const rawCol = this.rawData.getSchema().fields.findIndex((candidate) => candidate.id === field.id)
+    if (rawCol < 0) return 'text'
+    return this.cellTypeStore.resolve(rowIndex, rawCol, field)
+  }
+
+  private snapshotCellTypes(): CellTypeSnapshot {
+    return this.cellTypeStore.snapshot()
+  }
+
+  private restoreCellTypes(snapshot: CellTypeSnapshot): void {
+    this.cellTypeStore.restore(snapshot)
   }
 
   private canTranslateCellTypeRange(range: CellRange): boolean {

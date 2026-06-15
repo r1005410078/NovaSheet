@@ -97,4 +97,73 @@ describe('DefaultGridEngine cell type API', () => {
     expect(engine.commitCellEdit()).toBe(true)
     expect(data.getCell(0, 'v')).toBe(dateToSerial(new Date(Date.UTC(2025, 0, 16))))
   })
+
+  it('keeps overrides aligned after row and column insertions', () => {
+    const engine = makeEngine()
+    engine.setCellType({ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }, 'date')
+
+    engine.insertRows(0, 1)
+    engine.insertCols(1, 1)
+
+    expect(engine.getCellType(1, 2)).toBe('date')
+    expect(engine.getCellType(0, 1)).toBe('text')
+  })
+
+  it('drops deleted override cells and restores them through structural undo/redo', () => {
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({
+        schema: {
+          fields: [
+            { id: 'a', name: 'A', type: 'text', width: 100 },
+            { id: 'b', name: 'B', type: 'number', width: 100 },
+          ],
+        },
+        rows: [{ a: 'x', b: 1 }, { a: 'y', b: 2 }],
+      }),
+    })
+    engine.setCellType({ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }, 'date')
+
+    engine.deleteRows([0])
+    expect(engine.getCellType(0, 1)).toBe('number')
+
+    engine.undo()
+    expect(engine.getCellType(0, 1)).toBe('date')
+
+    engine.redo()
+    expect(engine.getCellType(0, 1)).toBe('number')
+  })
+
+  it('keeps overrides aligned after row and column moves with undo/redo', () => {
+    const engine = new DefaultGridEngine({
+      data: new InMemoryDataSource({
+        schema: {
+          fields: [
+            { id: 'a', name: 'A', type: 'text', width: 100 },
+            { id: 'b', name: 'B', type: 'text', width: 100 },
+            { id: 'c', name: 'C', type: 'text', width: 100 },
+          ],
+        },
+        rows: [
+          { a: 'A1', b: 'B1', c: 'C1' },
+          { a: 'A2', b: 'B2', c: 'C2' },
+          { a: 'A3', b: 'B3', c: 'C3' },
+        ],
+      }),
+    })
+    engine.setCellType({ startRow: 0, endRow: 0, startCol: 1, endCol: 1 }, 'date')
+
+    expect(engine.moveRows([0, 1], null)).toBe(true)
+    expect(engine.moveCols(['a'], null)).toBe(true)
+    expect(engine.getCellType(1, 0)).toBe('date')
+
+    engine.undo()
+    expect(engine.getCellType(1, 1)).toBe('date')
+
+    engine.undo()
+    expect(engine.getCellType(0, 1)).toBe('date')
+
+    engine.redo()
+    engine.redo()
+    expect(engine.getCellType(1, 0)).toBe('date')
+  })
 })

@@ -371,6 +371,9 @@ export interface GridFormatting {
 
   /** 解析 view 坐标的 resolved cell type；越界或缺 field 时保守返回 `text`。 */
   getCellType(viewRow: number, viewCol: number): CellTypeOverride
+
+  /** 解析 raw row + field 的 resolved cell type；field 不在 raw schema 中时保守返回 `text`。 */
+  resolveRawCellTypeForField?(rowIndex: number, field: Field): CellTypeOverride
 }
 
 /** 单元格合并能力。 */
