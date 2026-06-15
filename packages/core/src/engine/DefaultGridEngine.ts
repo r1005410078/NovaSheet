@@ -1185,6 +1185,11 @@ export class DefaultGridEngine implements GridEngine {
   /** view 列 → raw 列。 */
   viewColToRaw(viewCol: number): number { return this.coords.viewColToRaw(viewCol) }
 
+  /** view range → raw range；排序/筛选打乱映射时返回 null。 */
+  viewRangeToRaw(range: CellRange) {
+    return this.coords.viewRangeToRaw(range)
+  }
+
   /** 解析 view 坐标的单元格格式；无格式返回 undefined。 */
   getViewCellFormat(viewRow: number, viewCol: number): CellFormat | undefined {
     const rawRow = this.coords.viewRowToRaw(viewRow)

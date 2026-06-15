@@ -14,6 +14,7 @@ import type {
   Schema,
   Theme,
   Viewport,
+  RawRange,
 } from '@novasheet/core'
 
 export interface MockGridEngineOptions {
@@ -173,6 +174,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     getAttachmentCodec: mock((_namespace: string) => undefined),
     viewRowToRaw: mock((viewRow: number) => viewRow),
     viewColToRaw: mock((viewCol: number) => viewCol),
+    viewRangeToRaw: mock((range: CellRange): RawRange | null => range as RawRange),
     setValidationRule: mock((_rawRange, _rule) => undefined),
     clearValidationRule: mock((_rawRange) => undefined),
     validateAll: mock(() => undefined),

@@ -136,6 +136,20 @@ export interface GridController {
   clearCellType(range: CellRange): boolean
   /** 读取 view 坐标的 resolved cell type；越界保守返回 `text`。 */
   getCellType(viewRow: number, viewCol: number): CellTypeOverride
+  /** 为 view range 设置验证规则；range rule 优先于列默认规则。 */
+  setValidation(range: CellRange, rule: import('../../kernel/protocol/ValidationTypes').ValidationRule): void
+  /** 清除 view range 的区间验证规则。 */
+  clearValidation(range: CellRange): void
+  /** 手动触发全量重校验。 */
+  validateAll(): void
+  /** 查询单格当前校验状态（view 坐标）；null = ok。 */
+  getValidationState(rowIndex: number, colIndex: number): import('../../kernel/protocol/ValidationTypes').ValidationState | null
+  /** view range → raw range；排序/筛选打乱映射时返回 null。 */
+  viewRangeToRaw(range: CellRange): import('../../kernel/coords/coordinates').RawRange | null
+  /** view 行 → raw 行。 */
+  viewRowToRaw(viewRow: number): number
+  /** view 列 → raw 列。 */
+  viewColToRaw(viewCol: number): number
   /** 给 raw cell 写扩展附件；data=undefined 清除；变化时返回 true。 */
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean
   /** 读 raw cell 的扩展附件；无则 undefined。 */

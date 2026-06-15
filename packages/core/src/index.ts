@@ -196,6 +196,7 @@ export type { ComputeFillWritesInput, FillWrite } from './features/fill/FillSeri
 
 // 视图坐标协议（Phase 4.4）
 export { findViewRow, resolveUnderlyingRow } from './kernel/coords/coordinates'
+export type { RawRange } from './kernel/coords/coordinates'
 export { FilterLayer } from './features/view/FilterLayer'
 export { HideRowsLayer } from './features/view/HideRowsLayer'
 export type { CollapsedGap } from './kernel/render/RenderTypes'
@@ -244,6 +245,12 @@ export { dateToSerial, serialToDate, SERIAL_EPOCH_MS } from './kernel/protocol/s
 export type { CellAttachmentCodec, CellAttachmentSnapshot } from './kernel/protocol/AttachmentTypes'
 export { MergeStore } from './features/merge/MergeStore'
 export type { MergeRegion } from './kernel/coords/MergeRegion'
+export type {
+  ValidationRule,
+  ValidationState,
+  ValidatorContext,
+  ValidatorDefinition,
+} from './kernel/protocol/ValidationTypes'
 export type {
   CellActionHit,
   RenderBackend,

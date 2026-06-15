@@ -16,6 +16,7 @@ import type {
   CellEditorRegistry,
   CellTypeOverride,
 } from './index'
+import type { ValidationRule, ValidationState } from './kernel/protocol/ValidationTypes'
 import type { GridEngineOptions } from './engine/GridEngine'
 import type { CellAttachmentCodec } from './kernel/protocol/AttachmentTypes'
 import type { ExcelWorkspacePolicy } from './features/excel-workspace'
@@ -105,6 +106,9 @@ export class Grid {
       cellTypes: options.cellTypes, // 单元格类型语义注册表：驱动 backend-neutral 编辑语义。
       fillCellTypes: options.fillCellTypes, // Fill handle 是否携带源格 resolved cell type。
       cellAttachments: options.cellAttachments, // 扩展附件 codec 注册表。
+      validators: options.validators, // 自定义 validator 注册表。
+      validationBatchSize: options.validationBatchSize, // 批量校验每 tick 处理格数上限。
+      validationMaxConcurrent: options.validationMaxConcurrent, // 异步 validator 最大并发数。
     }
 
     this.delegate = new GridControllerImpl(
@@ -379,6 +383,30 @@ export class Grid {
   /** 读取 view 坐标的 resolved cell type；越界保守返回 `text`。 */
   getCellType(viewRow: number, viewCol: number): CellTypeOverride {
     return this.delegate.getCellType(viewRow, viewCol)
+  }
+
+  /** 为 view range 设置验证规则；range rule 优先于列默认规则（Field.options.validation）。 */
+  setValidation(range: CellRange, rule: ValidationRule): void {
+    this.delegate.setValidation(range, rule)
+  }
+
+  /** 清除 view range 的区间验证规则（不影响 Field.options.validation 列默认）。 */
+  clearValidation(range: CellRange): void {
+    this.delegate.clearValidation(range)
+  }
+
+  /**
+   * 手动触发全量重校验。立即返回；校验异步执行，结果写入 store 后自动重绘。
+   */
+  validateAll(): void {
+    this.delegate.validateAll()
+  }
+
+  /** 查询单格当前校验状态（view 坐标）；null = ok。 */
+  getValidationState(rowIndex: number, colIndex: number): ValidationState | null {
+    const rawRow = this.delegate.viewRowToRaw(rowIndex)
+    const rawCol = this.delegate.viewColToRaw(colIndex)
+    return this.delegate.getValidationState(rawRow, rawCol)
   }
 
   /** 读 raw cell 的扩展附件；无则 undefined。 */

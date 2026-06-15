@@ -731,6 +731,24 @@ export class GridRuntime {
     return changed
   }
 
+  /** 为 view range 设置验证规则。 */
+  setValidation(range: CellRange, rule: import('../../kernel/protocol/ValidationTypes').ValidationRule): void {
+    if (this.destroyed) return
+    const rawRange = this.engine.viewRangeToRaw(range)
+    if (rawRange) {
+      this.engine.setValidationRule(rawRange, rule)
+    }
+  }
+
+  /** 清除 view range 的区间验证规则。 */
+  clearValidation(range: CellRange): void {
+    if (this.destroyed) return
+    const rawRange = this.engine.viewRangeToRaw(range)
+    if (rawRange) {
+      this.engine.clearValidationRule(rawRange)
+    }
+  }
+
   /** 给 raw cell 写扩展附件；变化时刷新视图并返回 true。 */
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {
     if (this.destroyed) return false

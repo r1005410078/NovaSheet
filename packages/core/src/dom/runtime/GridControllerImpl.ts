@@ -524,6 +524,36 @@ export class GridControllerImpl implements GridController {
     return this.engine.getCellType(viewRow, viewCol)
   }
 
+  setValidation(range: CellRange, rule: import('../../kernel/protocol/ValidationTypes').ValidationRule): void {
+    this.runtime.setValidation(range, rule)
+  }
+
+  clearValidation(range: CellRange): void {
+    this.runtime.clearValidation(range)
+  }
+
+  validateAll(): void {
+    this.engine.validateAll()
+  }
+
+  getValidationState(rowIndex: number, colIndex: number): import('../../kernel/protocol/ValidationTypes').ValidationState | null {
+    const rawRow = this.engine.viewRowToRaw(rowIndex)
+    const rawCol = this.engine.viewColToRaw(colIndex)
+    return this.engine.getValidationState(rawRow, rawCol)
+  }
+
+  viewRangeToRaw(range: CellRange) {
+    return this.engine.viewRangeToRaw(range)
+  }
+
+  viewRowToRaw(viewRow: number): number {
+    return this.engine.viewRowToRaw(viewRow)
+  }
+
+  viewColToRaw(viewCol: number): number {
+    return this.engine.viewColToRaw(viewCol)
+  }
+
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {
     return this.runtime.setCellAttachment(namespace, rawRow, rawCol, data)
   }

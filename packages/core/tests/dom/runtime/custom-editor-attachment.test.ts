@@ -6,6 +6,7 @@ import { describe, expect, it, mock } from 'bun:test'
 import { InMemoryDataSource } from '@novasheet/core'
 import type {
   CellEditorOpenContext,
+  CellRange,
   CellTypeOverride,
   DataSource,
   GridEngine,
@@ -139,6 +140,7 @@ function makeEngine(): GridEngine {
     getAttachmentCodec: mock((_namespace: string) => undefined),
     viewRowToRaw: mock((viewRow: number) => viewRow),
     viewColToRaw: mock((viewCol: number) => viewCol),
+    viewRangeToRaw: mock((range: CellRange) => range as any),
     setValidationRule: mock(() => undefined),
     clearValidationRule: mock(() => undefined),
     validateAll: mock(() => undefined),

@@ -360,6 +360,9 @@ export interface GridFormatting {
   /** view 列 → raw 列。 */
   viewColToRaw(viewCol: number): number
 
+  /** view range → raw range；排序/筛选打乱映射时返回 null。 */
+  viewRangeToRaw(range: CellRange): import('../kernel/coords/coordinates').RawRange | null
+
   /** 给 raw cell 写扩展附件；data=undefined 清除；快照前后无变化返回 false。 */
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean
 

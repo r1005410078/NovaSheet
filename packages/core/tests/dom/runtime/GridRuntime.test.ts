@@ -10,6 +10,7 @@ import {
 import type {
   CellAddress,
   CellEditorOpenContext,
+  CellRange,
   CellTypeDefinition,
   CellTypeOverride,
   DataSource,
@@ -145,6 +146,7 @@ function makeEngine(): GridEngine {
     getAttachmentCodec: mock((_namespace: string) => undefined),
     viewRowToRaw: mock((viewRow: number) => viewRow),
     viewColToRaw: mock((viewCol: number) => viewCol),
+    viewRangeToRaw: mock((range: CellRange) => range as any),
     setValidationRule: mock(() => undefined),
     clearValidationRule: mock(() => undefined),
     validateAll: mock(() => undefined),
