@@ -3,7 +3,7 @@ id: core.L2.grid-cell-type-sort-mixed
 layer: L2
 summary: sort 在混合 resolved type 列中使用固定跨类型顺序
 tags: [grid, view, sort, cell-type]
-status: draft
+status: implemented
 ---
 
 ## User Story

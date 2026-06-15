@@ -3,7 +3,7 @@ id: core.L2.grid-fill-type-format-propagates
 layer: L2
 summary: fill 跨列传播值序列、resolved scalar type 与 valueFormat
 tags: [grid, fill, cell-type, format]
-status: draft
+status: implemented
 ---
 
 ## User Story

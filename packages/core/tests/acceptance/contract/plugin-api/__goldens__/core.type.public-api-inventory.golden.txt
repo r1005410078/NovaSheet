@@ -1,5 +1,6 @@
 CHUNK_SIZE
 CellEditModel
+CellTypeStore
 ChunkedAxis
 DEFAULT_EXCEL_WORKSPACE_POLICY
 DefaultGridEngine
@@ -61,6 +62,7 @@ isEditableFieldType
 isEditableFieldTypeWithTypes
 isMutableDataSource
 isTypableEditKey
+normalizeFieldType
 normalizeRange
 parseCellEditInput
 parseCellEditInputWithTypes

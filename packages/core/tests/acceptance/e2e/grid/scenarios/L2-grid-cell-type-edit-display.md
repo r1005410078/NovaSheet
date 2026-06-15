@@ -3,7 +3,7 @@ id: core.L2.grid-cell-type-edit-display
 layer: L2
 summary: cell type override 驱动显示默认格式与编辑解析
 tags: [grid, cell-type, edit, format]
-status: draft
+status: implemented
 ---
 
 ## User Story

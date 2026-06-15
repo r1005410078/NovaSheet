@@ -3,7 +3,7 @@ id: core.L2.grid-clipboard-paste-resolved-cell-type
 layer: L2
 summary: paste 按目标格 resolved type 强转且不传播源类型
 tags: [grid, clipboard, paste, cell-type]
-status: draft
+status: implemented
 ---
 
 ## User Story

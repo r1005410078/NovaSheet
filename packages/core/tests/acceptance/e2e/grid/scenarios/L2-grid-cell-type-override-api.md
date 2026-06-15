@@ -3,7 +3,7 @@ id: core.L2.grid-cell-type-override-api
 layer: L2
 summary: Grid cell type override API 使用 view 坐标设置、清除并读取 resolved type
 tags: [grid, cell-type, api]
-status: draft
+status: implemented
 ---
 
 ## User Story

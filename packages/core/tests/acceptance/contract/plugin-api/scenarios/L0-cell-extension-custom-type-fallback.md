@@ -3,7 +3,7 @@ id: core.L0.cell-extension-custom-type-fallback
 layer: L0
 summary: 未注册 custom FieldType 文本 fallback 且不可编辑
 tags: [cell-extension, plugin-api]
-status: draft
+status: implemented
 ---
 
 ## User Story

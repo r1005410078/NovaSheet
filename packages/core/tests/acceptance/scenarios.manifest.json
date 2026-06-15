@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-14T11:36:03.190Z",
+  "generatedAt": "2026-06-15T09:58:13.544Z",
   "source": "tests/acceptance/**/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -20,7 +20,7 @@
         "cell-extension",
         "plugin-api"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/contract/plugin-api/scenarios/L0-cell-extension-custom-type-fallback.md",
       "given": [
         "schema 中有字段 `{ id: \"score\", type: \"rating\" }`",
@@ -48,7 +48,7 @@
         "plugin-api",
         "filter"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/contract/plugin-api/scenarios/L0-cell-extension-type-definition-contract.md",
       "given": [
         "注册 `rating` 类型定义",
@@ -103,7 +103,7 @@
         "store",
         "remap"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/properties/scenarios/L0-cell-type-store-raw-remap.md",
       "given": [
         "一个空 `CellTypeStore`",
@@ -972,7 +972,7 @@
         "edit",
         "format"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/e2e/grid/scenarios/L2-grid-cell-type-edit-display.md",
       "given": [
         "一个 mounted Grid",
@@ -1002,7 +1002,7 @@
         "cell-type",
         "api"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/e2e/grid/scenarios/L2-grid-cell-type-override-api.md",
       "given": [
         "一个 mounted Grid",
@@ -1032,7 +1032,7 @@
         "sort",
         "cell-type"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L2-grid-cell-type-sort-mixed.md",
       "given": [
         "一个 mounted Grid",
@@ -1087,7 +1087,7 @@
         "paste",
         "cell-type"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/interaction/editing/scenarios/L2-grid-clipboard-paste-resolved-cell-type.md",
       "given": [
         "一个 mounted Grid",
@@ -1351,7 +1351,7 @@
         "cell-type",
         "format"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/interaction/editing/scenarios/L2-grid-fill-type-format-propagates.md",
       "given": [
         "一个 headless engine",

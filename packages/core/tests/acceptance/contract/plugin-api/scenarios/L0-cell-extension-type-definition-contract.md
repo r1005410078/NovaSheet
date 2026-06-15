@@ -3,7 +3,7 @@ id: core.L0.cell-extension-type-definition-contract
 layer: L0
 summary: CellTypeDefinition 锁定编辑、剪贴板、排序与筛选语义
 tags: [cell-extension, plugin-api, filter]
-status: draft
+status: implemented
 ---
 
 ## User Story

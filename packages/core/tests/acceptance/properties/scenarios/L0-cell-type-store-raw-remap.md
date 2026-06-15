@@ -3,7 +3,7 @@ id: core.L0.cell-type-store-raw-remap
 layer: L0
 summary: CellTypeStore 按 raw 坐标保存、清除、恢复与重映射类型覆盖
 tags: [cell-type, store, remap]
-status: draft
+status: implemented
 ---
 
 ## User Story

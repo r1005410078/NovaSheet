@@ -4,10 +4,10 @@
 
 | id | layer | status | summary |
 | --- | --- | --- | --- |
-| core.L0.cell-extension-custom-type-fallback | L0 | draft | 未注册 custom FieldType 文本 fallback 且不可编辑 |
-| core.L0.cell-extension-type-definition-contract | L0 | draft | CellTypeDefinition 锁定编辑、剪贴板、排序与筛选语义 |
+| core.L0.cell-extension-custom-type-fallback | L0 | implemented | 未注册 custom FieldType 文本 fallback 且不可编辑 |
+| core.L0.cell-extension-type-definition-contract | L0 | implemented | CellTypeDefinition 锁定编辑、剪贴板、排序与筛选语义 |
 | core.L0.cell-hit-test | L0 | implemented | hitTestCell 与 computeCellRect 公开几何契约 |
-| core.L0.cell-type-store-raw-remap | L0 | draft | CellTypeStore 按 raw 坐标保存、清除、恢复与重映射类型覆盖 |
+| core.L0.cell-type-store-raw-remap | L0 | implemented | CellTypeStore 按 raw 坐标保存、清除、恢复与重映射类型覆盖 |
 | core.L0.clipboard-paste-target-merge-conflict | L0 | implemented | 粘贴目标与合并区冲突检测 |
 | core.L0.clipboard-tsv-parse-matrix | L0 | implemented | parseTsvToCells 类型强制矩阵与黄金文件一致 |
 | core.L0.clipboard-tsv-roundtrip | L0 | implemented | TSV 序列化与解析往返公开契约 |
@@ -43,11 +43,11 @@
 | core.L2.cell-attachment-store-set-get-undo | L2 | implemented | 经 Grid 门面写/读 per-cell 附件并可撤销 |
 | core.L2.grid-autofit-wrap-rows | L2 | implemented | Grid autofitRows 使用 wrap 字段和 measurer 更新行高 |
 | core.L2.grid-cell-action-opens-editor | L2 | draft | cell action 先 onAction，未拦截则打开同类型 editor |
-| core.L2.grid-cell-type-edit-display | L2 | draft | cell type override 驱动显示默认格式与编辑解析 |
-| core.L2.grid-cell-type-override-api | L2 | draft | Grid cell type override API 使用 view 坐标设置、清除并读取 resolved type |
-| core.L2.grid-cell-type-sort-mixed | L2 | draft | sort 在混合 resolved type 列中使用固定跨类型顺序 |
+| core.L2.grid-cell-type-edit-display | L2 | implemented | cell type override 驱动显示默认格式与编辑解析 |
+| core.L2.grid-cell-type-override-api | L2 | implemented | Grid cell type override API 使用 view 坐标设置、清除并读取 resolved type |
+| core.L2.grid-cell-type-sort-mixed | L2 | implemented | sort 在混合 resolved type 列中使用固定跨类型顺序 |
 | core.L2.grid-clipboard-copy-cut-paste-roundtrip | L2 | implemented | Grid copy/cut/paste 通过 facade 完成选区往返 |
-| core.L2.grid-clipboard-paste-resolved-cell-type | L2 | draft | paste 按目标格 resolved type 强转且不传播源类型 |
+| core.L2.grid-clipboard-paste-resolved-cell-type | L2 | implemented | paste 按目标格 resolved type 强转且不传播源类型 |
 | core.L2.grid-clipboard-paste-skipped-readonly-type | L2 | implemented | 粘贴类型不匹配时 Grid 触发 onPasteSkipped |
 | core.L2.grid-cols-hide-unhide-visible-count | L2 | implemented | Grid hideCols 与 unhideCols 更新隐藏集合和 render frame schema |
 | core.L2.grid-cols-insert-delete-undo-redo | L2 | implemented | Grid 列插入、删除与 undo/redo 通过 facade 保持 schema 一致 |
@@ -57,7 +57,7 @@
 | core.L2.grid-events-on-off | L2 | implemented | Grid event facade 支持 on、onUndo、onRedo 与 onFill 的取消订阅 |
 | core.L2.grid-fill-series-down-right | L2 | implemented | 填充柄目标计算、序列写入与 engine commitFill |
 | core.L2.grid-fill-style-propagates | L2 | implemented | 填充时源格格式（填充色/边框/textWrap/valueFormat）覆盖目标格 |
-| core.L2.grid-fill-type-format-propagates | L2 | draft | fill 跨列传播值序列、resolved scalar type 与 valueFormat |
+| core.L2.grid-fill-type-format-propagates | L2 | implemented | fill 跨列传播值序列、resolved scalar type 与 valueFormat |
 | core.L2.grid-format-borders-presets | L2 | implemented | Grid setBorders 与 borderPatchForCell 边框预设 |
 | core.L2.grid-format-fill-color-set-clear | L2 | implemented | Grid setFillColor 设置与清除填充色 |
 | core.L2.grid-format-text-wrap-cycle | L2 | implemented | Grid setTextWrap 在 overflow/wrap/clip 间切换 |
@@ -90,7 +90,7 @@
 
 - **layer**: L0
 - **summary**: 未注册 custom FieldType 文本 fallback 且不可编辑
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -118,7 +118,7 @@
 
 - **layer**: L0
 - **summary**: CellTypeDefinition 锁定编辑、剪贴板、排序与筛选语义
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -174,7 +174,7 @@
 
 - **layer**: L0
 - **summary**: CellTypeStore 按 raw 坐标保存、清除、恢复与重映射类型覆盖
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1060,7 +1060,7 @@
 
 - **layer**: L2
 - **summary**: cell type override 驱动显示默认格式与编辑解析
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1090,7 +1090,7 @@
 
 - **layer**: L2
 - **summary**: Grid cell type override API 使用 view 坐标设置、清除并读取 resolved type
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1119,7 +1119,7 @@
 
 - **layer**: L2
 - **summary**: sort 在混合 resolved type 列中使用固定跨类型顺序
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1174,7 +1174,7 @@
 
 - **layer**: L2
 - **summary**: paste 按目标格 resolved type 强转且不传播源类型
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1441,7 +1441,7 @@
 
 - **layer**: L2
 - **summary**: fill 跨列传播值序列、resolved scalar type 与 valueFormat
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
