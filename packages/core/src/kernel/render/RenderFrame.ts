@@ -6,13 +6,12 @@
  */
 
 import type { DataSource } from '../data/DataSource'
-import type { CellValue, Field } from '../data/Schema'
+import type { CellValue, Field, FieldType } from '../data/Schema'
 import type { GridSelection } from '../coords/SelectionTypes'
 import type { MergeRegion } from '../coords/MergeRegion'
 import type { Axis } from '../geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../geometry/Viewport'
 import type { Theme } from '../theme/Theme'
-import type { CellTypeOverride } from '../protocol/CellTypeTypes'
 import type { ResolvedCellFormat } from '../protocol/FormatTypes'
 import type { CellEditSession, CollapsedGap, HeaderDecorationSource } from './RenderTypes'
 
@@ -62,7 +61,7 @@ export interface RenderFrame {
    */
   formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
   /** 当前格 resolved cell type 解析器（view 坐标）。 */
-  resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => CellTypeOverride
+  resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => FieldType
   /** 当前格是否存在显式 cell type override（view 坐标）。 */
   hasCellTypeOverride?: (rowIndex: number, colIndex: number) => boolean
   /**

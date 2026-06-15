@@ -103,6 +103,7 @@ export class Grid {
       formatters: options.formatters, // Phase 5-C — 自定义 formatter 注册表。
       locale: options.locale, // Phase 5-C — formatter locale。
       cellTypes: options.cellTypes, // 单元格类型语义注册表：驱动 backend-neutral 编辑语义。
+      fillCellTypes: options.fillCellTypes, // Fill handle 是否携带源格 resolved cell type。
       cellAttachments: options.cellAttachments, // 扩展附件 codec 注册表。
     }
 

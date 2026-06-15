@@ -81,6 +81,8 @@ export interface GridEngineOptions {
   locale?: string
   /** 单元格类型语义注册表：驱动 inline edit parse/format 等 backend-neutral 行为。 */
   cellTypes?: CellTypeRegistry
+  /** Fill handle 是否把目标格 cell type 覆盖为源格 resolved type；默认 true。 */
+  fillCellTypes?: boolean
   /** 扩展附件 codec 注册表；namespace 唯一，core 不识别 T 语义。 */
   cellAttachments?: readonly import('../kernel/protocol/AttachmentTypes').CellAttachmentCodec<unknown>[]
 }

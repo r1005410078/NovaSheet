@@ -1,11 +1,10 @@
-import type { Schema } from '../../kernel/data/Schema'
+import type { FieldType, Schema } from '../../kernel/data/Schema'
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { CellRange } from '../../kernel/coords/SelectionTypes'
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { CellAttachmentStore } from '../attachment/CellAttachmentStore'
-import type { CellTypeOverride } from '../cell-types'
 import {
   applyPaste,
   pasteTargetConflictsWithMerges,
@@ -31,7 +30,7 @@ export interface PasteControllerContext {
   getSchema(): Schema
   viewRowToRaw(viewRow: number): number
   pushUndo(command: UndoCommand): void
-  resolveCellType?(rowIndex: number, colIndex: number, fieldId: string): CellTypeOverride
+  resolveCellType?(rowIndex: number, colIndex: number, fieldId: string): FieldType
   /** attachment 存储（paste 携带附件时需要快照）。 */
   getAttachmentStore(): CellAttachmentStore
 }

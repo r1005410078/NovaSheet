@@ -1,4 +1,7 @@
-export type CellTypeOverride = 'text' | 'number' | 'date' | 'checkbox'
+import type { FieldType } from '../data/Schema'
+
+export type ScalarCellType = 'text' | 'number' | 'date' | 'checkbox'
+export type CellTypeOverride = FieldType
 
 export interface CellTypeEntry {
   readonly rowIndex: number

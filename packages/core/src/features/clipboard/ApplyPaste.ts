@@ -1,8 +1,7 @@
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { CellAddress, CellRange } from '../../kernel/coords/SelectionTypes'
-import type { CellValue, Schema } from '../../kernel/data/Schema'
+import type { CellValue, FieldType, Schema } from '../../kernel/data/Schema'
 import type { MergeRegion } from '../merge/MergeStore'
-import type { CellTypeOverride } from '../cell-types'
 import type { PasteSkippedCell } from './types'
 import { dateToSerial } from '../../kernel/protocol/serial'
 
@@ -36,7 +35,7 @@ export type PasteResolvedTypeResolver = (
   rowIndex: number,
   colIndex: number,
   fieldId: string,
-) => CellTypeOverride
+) => FieldType
 
 export function computePasteTarget(
   active: CellAddress,
@@ -150,7 +149,7 @@ export function applyPaste(
   const sourceCols = source.cells[0]?.length ?? 0
   if (sourceRows === 0 || sourceCols === 0) return
 
-  const fieldTypeById = new Map(schema.fields.map((f) => [f.id, f.type as string]))
+  const fieldTypeById = new Map(schema.fields.map((f) => [f.id, f.type]))
 
   for (let r = target.startRow; r <= target.endRow; r++) {
     for (let c = target.startCol; c <= target.endCol; c++) {

@@ -261,7 +261,7 @@ describe('assembleRenderFrame', () => {
     expect(calls).toEqual([[7, 3]])
   })
 
-  it('resolveCellType 在 raw col 无效时回退 normalizeFieldType 且不调用 raw resolver', () => {
+  it('resolveCellType 在 raw col 无效时回退 field.type 且不调用 raw resolver', () => {
     const data = new InMemoryDataSource({ schema, rows: [{ a: 'x' }] })
     const formatState = new DefaultFormatState()
     const coords = new CoordinateSpace({

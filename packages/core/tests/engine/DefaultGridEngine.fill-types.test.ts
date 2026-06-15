@@ -12,8 +12,26 @@ const schema: Schema = {
   ],
 }
 
+const customTypeSchema: Schema = {
+  fields: [
+    { id: 'title', name: 'Title', type: 'text', width: 80 },
+    { id: 'score', name: 'Score', type: 'rating', width: 80 },
+    { id: 'done', name: 'Done', type: 'progress', width: 80 },
+  ],
+}
+
 function engine(rows: Row[] = [{ a: 1, b: null, c: null }, { a: 2, b: null, c: null }]) {
   return new DefaultGridEngine({ data: new InMemoryDataSource({ schema, rows }) })
+}
+
+function customTypeEngine(
+  rows: Row[] = [{ title: 'Renderer and editor', score: 4, done: 0.2 }],
+  options: { fillCellTypes?: boolean } = {},
+) {
+  return new DefaultGridEngine({
+    data: new InMemoryDataSource({ schema: customTypeSchema, rows }),
+    ...options,
+  })
 }
 
 function cell(rowIndex: number, colIndex: number): CellRange {
@@ -58,5 +76,26 @@ describe('DefaultGridEngine.commitFill — resolved cell type propagation', () =
     expect(e.getCellType(1, 1)).toBe('date')
     e.redo()
     expect(e.getCellType(1, 1)).toBe('text')
+  })
+
+  it('custom field type 跨列填充时覆盖目标单元格类型并支持 undo/redo', () => {
+    const e = customTypeEngine()
+
+    e.commitFill(cell(0, 1), cell(0, 2), 'right')
+
+    expect(e.getCellType(0, 2)).toBe('rating')
+    e.undo()
+    expect(e.getCellType(0, 2)).toBe('progress')
+    e.redo()
+    expect(e.getCellType(0, 2)).toBe('rating')
+  })
+
+  it('fillCellTypes=false 时只填充值，不把目标单元格类型覆盖成源类型', () => {
+    const e = customTypeEngine(undefined, { fillCellTypes: false })
+
+    e.commitFill(cell(0, 0), cell(0, 1), 'right')
+
+    expect(e.getCellType(0, 1)).toBe('rating')
+    expect(e.getData().getCell(0, 'score')).toBe('Renderer and editor')
   })
 })

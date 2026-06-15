@@ -1,8 +1,7 @@
 import type { DataSource, DataSourceEvent, DataSourceListener } from '../../kernel/data/DataSource'
 import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import type { MutableDataSource } from '../../kernel/data/MutableDataSource'
-import type { CellValue, Field, Row, Schema } from '../../kernel/data/Schema'
-import type { CellTypeOverride } from '../../kernel/protocol/CellTypeTypes'
+import type { CellValue, Field, FieldType, Row, Schema } from '../../kernel/data/Schema'
 import type {
   ColumnHeaderMenuContext,
   ColumnHeaderMenuItem,
@@ -19,7 +18,7 @@ export interface SortSpec {
 }
 
 export interface SortLayerOptions {
-  readonly resolveCellType?: (rowIndex: number, field: Field) => CellTypeOverride
+  readonly resolveCellType?: (rowIndex: number, field: Field) => FieldType
 }
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })

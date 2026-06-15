@@ -106,6 +106,8 @@ export class DefaultGridEngine implements GridEngine {
   private readonly locale: string
   /** 单元格类型语义注册表。 */
   private readonly cellTypes: CellTypeRegistry
+  /** Fill handle 是否携带源格 resolved cell type；默认开启。 */
+  private readonly fillCellTypes: boolean
   /** 附件 codec 注册表（namespace → codec）。 */
   private readonly codecRegistry = new Map<string, CellAttachmentCodec<unknown>>()
   /** Layout 领域聚合根：自持 rowsAxis/colsAxis/frozen/viewport，engine 全部委派。 */
@@ -196,18 +198,7 @@ export class DefaultGridEngine implements GridEngine {
     this.coords,
   )
   /** 填充柄「携带格式/合并」平铺逻辑（从 commitFill 抽出，R1）。 */
-  private readonly fillStyles = new FillStylePropagator(
-    this.formatState.formatStore,
-    this.formatState.mergeStore,
-    this.formatState.attachmentStore,
-    this.cellTypeStore,
-    this.coords,
-    (rowIndex, colIndex) => {
-      const field = this.rawData.getSchema().fields[colIndex]
-      return field ? this.cellTypeStore.resolve(rowIndex, colIndex, field) : 'text'
-    },
-    (rawCol) => this.rawData.getSchema().fields[rawCol],
-  )
+  private readonly fillStyles: FillStylePropagator
   private readonly eventPipeline = new GridEventPipeline([
     new SelectionEventHandler(this.selection, {
       getVisibleFieldIds: () => this.data.getSchema().fields.map((field) => field.id),
@@ -253,6 +244,20 @@ export class DefaultGridEngine implements GridEngine {
     this.formatters = options.formatters ?? {}
     this.locale = options.locale ?? 'en-US'
     this.cellTypes = options.cellTypes ?? {}
+    this.fillCellTypes = options.fillCellTypes !== false
+    this.fillStyles = new FillStylePropagator(
+      this.formatState.formatStore,
+      this.formatState.mergeStore,
+      this.formatState.attachmentStore,
+      this.cellTypeStore,
+      this.coords,
+      (rowIndex, colIndex) => {
+        const field = this.rawData.getSchema().fields[colIndex]
+        return field ? this.cellTypeStore.resolve(rowIndex, colIndex, field) : 'text'
+      },
+      (rawCol) => this.rawData.getSchema().fields[rawCol],
+      this.fillCellTypes,
+    )
     for (const codec of options.cellAttachments ?? []) {
       this.codecRegistry.set(codec.namespace, codec)
     }

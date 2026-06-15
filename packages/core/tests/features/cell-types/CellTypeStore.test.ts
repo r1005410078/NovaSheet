@@ -34,6 +34,7 @@ describe('CellTypeStore', () => {
     expect(store.get(1, 1)).toBe('date')
     expect(store.resolve(1, 1, fields.number)).toBe('date')
     expect(store.resolve(0, 1, fields.number)).toBe('number')
+    expect(store.resolve(0, 1, fields.custom)).toBe('rating')
 
     expect(store.snapshot()).toEqual([
       { rowIndex: 1, colIndex: 1, type: 'date' },

@@ -1,17 +1,15 @@
 import type { DataSource } from '../kernel/data/DataSource'
-import type { CellValue, Field } from '../kernel/data/Schema'
+import type { CellValue, Field, FieldType } from '../kernel/data/Schema'
 import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../kernel/geometry/Viewport'
 import type { RenderFrame, RenderFrameCollapsedColGap } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
-import type { CellTypeOverride } from '../kernel/protocol/CellTypeTypes'
 import type { CellEditSession } from '../kernel/render/RenderTypes'
 import type { CellFormatter, ResolvedCellFormat, ValueFormat } from '../kernel/protocol/FormatTypes'
 import type { VisibleFormatResolver } from '../features/format/VisibleFormatResolver'
 import type { GridSelection } from '../kernel/coords/SelectionTypes'
 import type { CollapsedGap } from '../kernel/render/RenderTypes'
 import type { CellAttachmentStore } from '../features/attachment/CellAttachmentStore'
-import { normalizeFieldType } from '../features/cell-types'
 import { formatValue } from '../kernel/protocol/formatValue'
 
 /** date 类型列在没有显式 valueFormat 时使用的默认显示 pattern。 */
@@ -27,7 +25,7 @@ export function buildFormatCell(
   cellFormats: readonly ResolvedCellFormat[],
   formatters: Readonly<Record<string, CellFormatter>>,
   locale: string,
-  resolveCellType: (rowIndex: number, colIndex: number, field: Field) => CellTypeOverride,
+  resolveCellType: (rowIndex: number, colIndex: number, field: Field) => FieldType,
 ): (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined {
   const cellMap = new Map<string, ValueFormat>()
   for (const cf of cellFormats) {
@@ -60,7 +58,7 @@ export interface FrameAssemblerInput {
   /** view→raw 列坐标转换，用于构建 getAttachment 闭包。 */
   readonly viewColToRaw: (viewCol: number) => number
   /** raw cell type resolver，构帧时包成 view resolver。 */
-  readonly resolveRawCellType: (rowIndex: number, colIndex: number, field: Field) => CellTypeOverride
+  readonly resolveRawCellType: (rowIndex: number, colIndex: number, field: Field) => FieldType
   /** raw cell 是否存在显式 type override，构帧时包成 view probe。 */
   readonly hasRawCellTypeOverride: (rowIndex: number, colIndex: number) => boolean
   /** 附件存储引用，供 getAttachment 读取。 */
@@ -103,10 +101,10 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     lastVisibleCol,
     mergeRegions,
   )
-  const resolveCellType = (viewRow: number, viewCol: number, field: Field): CellTypeOverride => {
+  const resolveCellType = (viewRow: number, viewCol: number, field: Field): FieldType => {
     const rawRow = input.viewRowToRaw(viewRow)
     const rawCol = input.viewColToRaw(viewCol)
-    return rawCol < 0 ? normalizeFieldType(field.type) : input.resolveRawCellType(rawRow, rawCol, field)
+    return rawCol < 0 ? field.type : input.resolveRawCellType(rawRow, rawCol, field)
   }
   const hasCellTypeOverride = (viewRow: number, viewCol: number): boolean => {
     const rawRow = input.viewRowToRaw(viewRow)

@@ -3,6 +3,7 @@ import type { Field, FieldType } from '../../kernel/data/Schema'
 import type {
   CellTypeEntry,
   CellTypeOverride,
+  ScalarCellType,
   CellTypeSnapshot,
 } from '../../kernel/protocol/CellTypeTypes'
 import {
@@ -15,10 +16,11 @@ import {
 export type {
   CellTypeEntry,
   CellTypeOverride,
+  ScalarCellType,
   CellTypeSnapshot,
 } from '../../kernel/protocol/CellTypeTypes'
 
-export function normalizeFieldType(type: FieldType): CellTypeOverride {
+export function normalizeFieldType(type: FieldType): ScalarCellType {
   switch (type) {
     case 'number':
       return 'number'
@@ -55,7 +57,7 @@ export class CellTypeStore {
   }
 
   resolve(rowIndex: number, colIndex: number, field: Field): CellTypeOverride {
-    return this.get(rowIndex, colIndex) ?? normalizeFieldType(field.type)
+    return this.get(rowIndex, colIndex) ?? field.type
   }
 
   snapshot(): CellTypeSnapshot {

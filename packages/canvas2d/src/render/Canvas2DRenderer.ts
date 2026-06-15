@@ -446,6 +446,7 @@ export class Canvas2DRenderer implements RenderBackend {
         ctx.frame.cellEdit?.cell,
         ctx.frame.formatCell,
         ctx.frame.getAttachment,
+        ctx.frame.resolveCellType,
       )
     this.paintHeaders(
       paintOrder,
@@ -677,6 +678,7 @@ export class Canvas2DRenderer implements RenderBackend {
     editingCell?: CellAddress,
     formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
     getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined,
+    resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => Field['type'],
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -701,13 +703,14 @@ export class Canvas2DRenderer implements RenderBackend {
         const cellX = rect.x + xLeft - scrollOffsetX
         const colWidth = colsAxis.getSize(c)
         const value = data.getCell(r, field.id)
+        const resolvedField = resolvePaintField(field, r, c, resolveCellType)
         const mode = textWrapLookup.get(`${r}:${c}`) ?? (field.wrap === true ? 'wrap' : 'overflow')
         // overflow：单行文本超出本格且右邻格为空时，把绘制矩形向右扩到第一个非空格/可见列边界，
         // 让文字溢出显示（与 Excel/Sheets 一致）。number 不溢出。
         let paintWidth = colWidth
         if (
           mode === 'overflow' &&
-          field.type === 'text' &&
+          resolvedField.type === 'text' &&
           typeof value === 'string' &&
           value.length > 0 &&
           !value.includes('\n')
@@ -728,7 +731,7 @@ export class Canvas2DRenderer implements RenderBackend {
         this.cellPainter.paint(this.ctx, {
           value,
           rect: { x: cellX, y: cellY, width: paintWidth, height: rowHeight },
-          field,
+          field: resolvedField,
           textWrap: mode,
           rowIndex: r,
           colIndex: c,
@@ -738,7 +741,7 @@ export class Canvas2DRenderer implements RenderBackend {
         this.collectCellActionHits({
           value,
           rect: { x: cellX, y: cellY, width: colWidth, height: rowHeight },
-          field,
+          field: resolvedField,
           textWrap: mode,
           rowIndex: r,
           colIndex: c,
@@ -748,7 +751,18 @@ export class Canvas2DRenderer implements RenderBackend {
       }
     }
 
-    this.paintMergeAnchors(region, data, rowsAxis, colsAxis, merges, textWrapLookup, editingCell, formatCell, getAttachment)
+    this.paintMergeAnchors(
+      region,
+      data,
+      rowsAxis,
+      colsAxis,
+      merges,
+      textWrapLookup,
+      editingCell,
+      formatCell,
+      getAttachment,
+      resolveCellType,
+    )
 
     this.ctx.restore()
   }
@@ -807,6 +821,7 @@ export class Canvas2DRenderer implements RenderBackend {
     editingCell?: CellAddress,
     formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
     getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined,
+    resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => Field['type'],
   ): void {
     if (merges.isEmpty) return
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
@@ -827,10 +842,11 @@ export class Canvas2DRenderer implements RenderBackend {
       const cellY = rect.y + rowsAxis.indexToPosition(ar) - scrollOffsetY
       const { width, height } = mergedRectSize(range, rowsAxis, colsAxis)
       const value = data.getCell(ar, field.id)
+      const resolvedField = resolvePaintField(field, ar, ac, resolveCellType)
       this.cellPainter.paint(this.ctx, {
         value,
         rect: { x: cellX, y: cellY, width, height },
-        field,
+        field: resolvedField,
         textWrap: textWrapLookup.get(`${ar}:${ac}`),
         rowIndex: ar,
         colIndex: ac,
@@ -840,7 +856,7 @@ export class Canvas2DRenderer implements RenderBackend {
       this.collectCellActionHits({
         value,
         rect: { x: cellX, y: cellY, width, height },
-        field,
+        field: resolvedField,
         textWrap: textWrapLookup.get(`${ar}:${ac}`),
         rowIndex: ar,
         colIndex: ac,
@@ -986,6 +1002,16 @@ function ctxClipRect(
   ctx.beginPath()
   ctx.rect(rect.x, rect.y, rect.width, rect.height)
   ctx.clip()
+}
+
+function resolvePaintField(
+  field: Field,
+  rowIndex: number,
+  colIndex: number,
+  resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => Field['type'],
+): Field {
+  const resolvedType = resolveCellType?.(rowIndex, colIndex, field) ?? field.type
+  return resolvedType === field.type ? field : { ...field, type: resolvedType }
 }
 
 /** 把可见 cellFormats（VIEW 坐标）中设了 textWrap 的格收成 `"row:col" → mode` 查表。 */

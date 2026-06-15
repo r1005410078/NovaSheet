@@ -10,7 +10,7 @@ import { positiveModulo } from './FillSeries'
 import type { CellAttachmentStore } from '../attachment/CellAttachmentStore'
 import type { CellAttachmentSnapshot } from '../../kernel/protocol/AttachmentTypes'
 import type { CellTypeOverride, CellTypeSnapshot } from '../../kernel/protocol/CellTypeTypes'
-import { normalizeFieldType, type CellTypeStore } from '../cell-types'
+import type { CellTypeStore } from '../cell-types'
 
 /** propagateFillStyles 返回的 store 快照（供 commitFill 组装 fill undo 命令）。 */
 export interface FillStyleSnapshots {
@@ -39,6 +39,7 @@ export class FillStylePropagator {
     private readonly coords: CoordinateSpace,
     private readonly resolveRawCellType: (rowIndex: number, colIndex: number) => CellTypeOverride,
     private readonly fieldAtRawCol: (rawCol: number) => Field | undefined,
+    private readonly fillCellTypes = true,
   ) {}
 
   /**
@@ -68,11 +69,11 @@ export class FillStylePropagator {
     const formatBefore = this.formatStore.snapshot()
     const mergeBefore = this.mergeStore.snapshot()
     const attachmentBefore = this.attachmentStore.snapshot()
-    const cellTypeBefore = this.cellTypeStore.snapshot()
+    const cellTypeBefore = this.fillCellTypes ? this.cellTypeStore.snapshot() : undefined
     this.tileFillFormat(rawSource, rawFill, direction)
     this.tileFillMerge(rawSource, rawFill, direction)
     this.tileFillAttachment(rawSource, rawFill, direction)
-    this.tileFillType(rawSource, rawFill, direction)
+    if (this.fillCellTypes) this.tileFillType(rawSource, rawFill, direction)
     return {
       formatBefore,
       formatAfter: this.formatStore.snapshot(),
@@ -81,7 +82,7 @@ export class FillStylePropagator {
       attachmentBefore,
       attachmentAfter: this.attachmentStore.snapshot(),
       cellTypeBefore,
-      cellTypeAfter: this.cellTypeStore.snapshot(),
+      cellTypeAfter: this.fillCellTypes ? this.cellTypeStore.snapshot() : undefined,
     }
   }
 
@@ -106,7 +107,7 @@ export class FillStylePropagator {
         const targetField = this.fieldAtRawCol(col)
         if (!targetField) continue
         const sourceType = this.resolveRawCellType(srcRow, srcCol)
-        if (sourceType !== normalizeFieldType(targetField.type)) {
+        if (sourceType !== targetField.type) {
           this.cellTypeStore.set(asRawRange({ startRow: row, endRow: row, startCol: col, endCol: col }), sourceType)
         }
       }

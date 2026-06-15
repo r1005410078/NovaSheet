@@ -171,6 +171,57 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(texts).toContain('Bob')
   })
 
+  it('custom renderer 按 resolved cell type 分派，text override 覆盖 custom 字段 renderer', () => {
+    const { ctx, ops } = createRecordingContext()
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [{ id: 'score', name: 'Score', type: 'rating', width: 140 }],
+      },
+      rows: [{ score: 'Renderer and editor' }],
+    })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
+    const colsAxis = new ChunkedAxis({ count: 1, defaultSize: 140 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, {})
+    const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+    viewport.setSize(240, 120)
+    viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+      cellRenderers: {
+        rating: {
+          paint: (paintCtx, params) => {
+            paintCtx.fillText(`rating:${String(params.value)}`, params.rect.x, params.rect.y)
+          },
+        },
+      },
+    })
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      resolveCellType: () => 'text',
+    })
+
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    expect(texts).toContain('Renderer and edit')
+    expect(texts).not.toContain('rating:Renderer and editor')
+  })
+
   it('横向滚动时 cellX 减去 scrollX', () => {
     const { ops, viewport, renderer } = setup()
     viewport.setScroll(100, 0) // scroll right by 100px = 1 col
