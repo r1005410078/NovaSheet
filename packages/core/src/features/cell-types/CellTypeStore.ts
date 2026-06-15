@@ -1,6 +1,10 @@
 import type { RawRange } from '../../kernel/coords/coordinates'
 import type { Field, FieldType } from '../../kernel/data/Schema'
-import type { CellTypeOverride } from '../../kernel/protocol/CellTypeTypes'
+import type {
+  CellTypeEntry,
+  CellTypeOverride,
+  CellTypeSnapshot,
+} from '../../kernel/protocol/CellTypeTypes'
 import {
   remapColIndexAfterDelete,
   remapColIndexAfterInsert,
@@ -8,15 +12,11 @@ import {
   remapRowIndexAfterInsert,
 } from '../../kernel/coords/remap'
 
-export type { CellTypeOverride } from '../../kernel/protocol/CellTypeTypes'
-
-export interface CellTypeEntry {
-  readonly rowIndex: number
-  readonly colIndex: number
-  readonly type: CellTypeOverride
-}
-
-export type CellTypeSnapshot = readonly CellTypeEntry[]
+export type {
+  CellTypeEntry,
+  CellTypeOverride,
+  CellTypeSnapshot,
+} from '../../kernel/protocol/CellTypeTypes'
 
 export function normalizeFieldType(type: FieldType): CellTypeOverride {
   switch (type) {

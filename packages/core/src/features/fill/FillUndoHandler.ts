@@ -5,6 +5,7 @@ import type { MergeRegion } from '../merge/MergeStore'
 import type { CellWrite, UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 import type { CellAttachmentSnapshot } from '../../kernel/protocol/AttachmentTypes'
+import type { CellTypeSnapshot } from '../../kernel/protocol/CellTypeTypes'
 
 /**
  * fill 域 undo 所需的最小 engine 能力面。
@@ -18,6 +19,8 @@ export interface FillUndoContext {
   restoreMerge(regions: readonly MergeRegion[]): void
   /** 还原附件快照（Phase C-edit-data：fill 携带附件 undo/redo）。 */
   restoreAttachments(snap: CellAttachmentSnapshot): void
+  /** 还原 cell type override 快照（Spec 2 Task 7：fill 携带 resolved type undo/redo）。 */
+  restoreCellTypes(snapshot: CellTypeSnapshot): void
 }
 
 /**
@@ -42,6 +45,7 @@ export class FillUndoHandler implements UndoHandler {
     if (command.formatBefore) this.ctx.restoreFormat(command.formatBefore)
     if (command.mergeBefore) this.ctx.restoreMerge(command.mergeBefore)
     if (command.attachmentBefore) this.ctx.restoreAttachments(command.attachmentBefore)
+    if (command.cellTypeBefore) this.ctx.restoreCellTypes(command.cellTypeBefore)
     this.ctx.restoreSelectionForWrites(command.before, command.source)
   }
 
@@ -51,6 +55,7 @@ export class FillUndoHandler implements UndoHandler {
     if (command.formatAfter) this.ctx.restoreFormat(command.formatAfter)
     if (command.mergeAfter) this.ctx.restoreMerge(command.mergeAfter)
     if (command.attachmentAfter) this.ctx.restoreAttachments(command.attachmentAfter)
+    if (command.cellTypeAfter) this.ctx.restoreCellTypes(command.cellTypeAfter)
     this.ctx.restoreSelectionForWrites(command.after, command.result)
   }
 }

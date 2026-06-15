@@ -195,7 +195,13 @@ export class DefaultGridEngine implements GridEngine {
     this.formatState.formatStore,
     this.formatState.mergeStore,
     this.formatState.attachmentStore,
+    this.cellTypeStore,
     this.coords,
+    (rowIndex, colIndex) => {
+      const field = this.rawData.getSchema().fields[colIndex]
+      return field ? this.cellTypeStore.resolve(rowIndex, colIndex, field) : 'text'
+    },
+    (rawCol) => this.rawData.getSchema().fields[rawCol],
   )
   private readonly eventPipeline = new GridEventPipeline([
     new SelectionEventHandler(this.selection, {
@@ -314,6 +320,7 @@ export class DefaultGridEngine implements GridEngine {
       restoreFormat: (layers) => this.formatState.restoreFormat(layers),
       restoreMerge: (regions) => this.formatState.restoreMerge(regions),
       restoreAttachments: (snap) => this.formatState.restoreAttachments(snap),
+      restoreCellTypes: (snapshot) => this.cellTypeStore.restore(snapshot),
     })
     registerRowStructureUndo(this.undoRegistry, {
       canInsertRows: () => !!(isMutableDataSource(this.rawData) && this.rawData.insertRows),

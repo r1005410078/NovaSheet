@@ -5,12 +5,7 @@ import type { CellRange, GridSelection } from '../coords/SelectionTypes'
 import type { FrozenConfig } from '../geometry/FrozenRegions'
 import type { FormatLayer } from '../protocol/FormatTypes'
 import type { CellAttachmentSnapshot } from '../protocol/AttachmentTypes'
-
-type CellTypeUndoSnapshot = ReadonlyArray<{
-  readonly rowIndex: number
-  readonly colIndex: number
-  readonly type: 'text' | 'number' | 'date' | 'checkbox'
-}>
+import type { CellTypeSnapshot } from '../protocol/CellTypeTypes'
 
 export interface CellWrite {
   readonly rowIndex: number
@@ -59,6 +54,9 @@ export type UndoCommand =
       // Phase C-edit-data fill 携带附件快照（同 format/merge，非连续时缺省）。
       readonly attachmentBefore?: CellAttachmentSnapshot
       readonly attachmentAfter?: CellAttachmentSnapshot
+      // Spec 2 Task 7：fill 携带 resolved cell type 快照（同 format/merge，非连续时缺省）。
+      readonly cellTypeBefore?: CellTypeSnapshot
+      readonly cellTypeAfter?: CellTypeSnapshot
     }
   | {
       readonly kind: 'resizeRow'
@@ -214,8 +212,8 @@ export type UndoCommand =
     }
   | {
       readonly kind: 'cellType'
-      readonly before: CellTypeUndoSnapshot
-      readonly after: CellTypeUndoSnapshot
+      readonly before: CellTypeSnapshot
+      readonly after: CellTypeSnapshot
       readonly selectionBefore: GridSelection
       readonly selectionAfter: GridSelection
     }

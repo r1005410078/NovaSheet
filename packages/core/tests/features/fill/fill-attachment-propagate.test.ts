@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { FillStylePropagator } from '../../../src/features/fill/FillStylePropagator'
 import { CellAttachmentStore } from '../../../src/features/attachment/CellAttachmentStore'
+import { CellTypeStore } from '../../../src/features/cell-types'
 import { RangeStyleStore } from '../../../src/features/format/RangeStyleStore'
 import { MergeStore } from '../../../src/features/merge/MergeStore'
 import { CoordinateSpace } from '../../../src/kernel/coords/CoordinateSpace'
@@ -33,8 +34,20 @@ function setup() {
   const formatStore = new RangeStyleStore()
   const mergeStore = new MergeStore()
   const attachmentStore = new CellAttachmentStore()
+  const cellTypeStore = new CellTypeStore()
   const coords = identityCoords()
-  const propagator = new FillStylePropagator(formatStore, mergeStore, attachmentStore, coords)
+  const propagator = new FillStylePropagator(
+    formatStore,
+    mergeStore,
+    attachmentStore,
+    cellTypeStore,
+    coords,
+    (rowIndex, colIndex) => {
+      const field = schema.fields[colIndex]
+      return field ? cellTypeStore.resolve(rowIndex, colIndex, field) : 'text'
+    },
+    (rawCol) => schema.fields[rawCol],
+  )
   return { formatStore, mergeStore, attachmentStore, coords, propagator }
 }
 

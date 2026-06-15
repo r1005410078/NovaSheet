@@ -4,10 +4,13 @@ import type { FormatLayer } from '../../kernel/protocol/FormatTypes'
 import type { MergeStore, MergeRegion } from '../merge/MergeStore'
 import type { CoordinateSpace } from '../../kernel/coords/CoordinateSpace'
 import { asRawRange, type RawRange } from '../../kernel/coords/coordinates'
+import type { Field } from '../../kernel/data/Schema'
 import type { FillDirection, FillMergeSnap } from './FillTarget'
 import { positiveModulo } from './FillSeries'
 import type { CellAttachmentStore } from '../attachment/CellAttachmentStore'
 import type { CellAttachmentSnapshot } from '../../kernel/protocol/AttachmentTypes'
+import type { CellTypeOverride, CellTypeSnapshot } from '../../kernel/protocol/CellTypeTypes'
+import { normalizeFieldType, type CellTypeStore } from '../cell-types'
 
 /** propagateFillStyles 返回的 store 快照（供 commitFill 组装 fill undo 命令）。 */
 export interface FillStyleSnapshots {
@@ -17,6 +20,8 @@ export interface FillStyleSnapshots {
   mergeAfter?: readonly MergeRegion[]
   attachmentBefore?: CellAttachmentSnapshot
   attachmentAfter?: CellAttachmentSnapshot
+  cellTypeBefore?: CellTypeSnapshot
+  cellTypeAfter?: CellTypeSnapshot
 }
 
 /**
@@ -30,7 +35,10 @@ export class FillStylePropagator {
     private readonly formatStore: RangeStyleStore,
     private readonly mergeStore: MergeStore,
     private readonly attachmentStore: CellAttachmentStore,
+    private readonly cellTypeStore: CellTypeStore,
     private readonly coords: CoordinateSpace,
+    private readonly resolveRawCellType: (rowIndex: number, colIndex: number) => CellTypeOverride,
+    private readonly fieldAtRawCol: (rawCol: number) => Field | undefined,
   ) {}
 
   /**
@@ -60,9 +68,11 @@ export class FillStylePropagator {
     const formatBefore = this.formatStore.snapshot()
     const mergeBefore = this.mergeStore.snapshot()
     const attachmentBefore = this.attachmentStore.snapshot()
+    const cellTypeBefore = this.cellTypeStore.snapshot()
     this.tileFillFormat(rawSource, rawFill, direction)
     this.tileFillMerge(rawSource, rawFill, direction)
     this.tileFillAttachment(rawSource, rawFill, direction)
+    this.tileFillType(rawSource, rawFill, direction)
     return {
       formatBefore,
       formatAfter: this.formatStore.snapshot(),
@@ -70,6 +80,36 @@ export class FillStylePropagator {
       mergeAfter: this.mergeStore.snapshot(),
       attachmentBefore,
       attachmentAfter: this.attachmentStore.snapshot(),
+      cellTypeBefore,
+      cellTypeAfter: this.cellTypeStore.snapshot(),
+    }
+  }
+
+  /**
+   * 类型平铺：先清空目标区 override，再按源格 resolved type 写入必要 override。
+   * 若源 resolved type 等于目标列默认类型，保持清空状态，以免留下冗余或陈旧 override。
+   */
+  private tileFillType(rawSource: RawRange, rawFill: RawRange, direction: FillDirection): void {
+    const sRows = rawSource.endRow - rawSource.startRow + 1
+    const sCols = rawSource.endCol - rawSource.startCol + 1
+    const vertical = direction === 'down' || direction === 'up'
+    this.cellTypeStore.clear(rawFill)
+
+    for (let row = rawFill.startRow; row <= rawFill.endRow; row += 1) {
+      for (let col = rawFill.startCol; col <= rawFill.endCol; col += 1) {
+        const srcRow = vertical
+          ? rawSource.startRow + positiveModulo(row - rawSource.startRow, sRows)
+          : row
+        const srcCol = vertical
+          ? col
+          : rawSource.startCol + positiveModulo(col - rawSource.startCol, sCols)
+        const targetField = this.fieldAtRawCol(col)
+        if (!targetField) continue
+        const sourceType = this.resolveRawCellType(srcRow, srcCol)
+        if (sourceType !== normalizeFieldType(targetField.type)) {
+          this.cellTypeStore.set(asRawRange({ startRow: row, endRow: row, startCol: col, endCol: col }), sourceType)
+        }
+      }
     }
   }
 
