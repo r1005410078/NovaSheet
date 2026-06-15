@@ -38,7 +38,11 @@ export interface Field {
   /** 列级默认值格式（Phase 5-C）；被 cell 级 CellFormat.valueFormat 覆盖。 */
   readonly format?: import('../protocol/FormatTypes').ValueFormat
   /** type-specific 配置，如 singleSelect 的 choices——M2+ 启用 */
-  options?: Record<string, unknown>
+  options?: Record<string, unknown> & {
+    choices?: unknown
+    /** 列级默认验证规则（可被 Grid.setValidation 区间覆盖）。 */
+    validation?: import('../protocol/ValidationTypes').ValidationRule
+  }
   /** 新行插入时该字段的默认值；undefined 表示空 */
   defaultValue?: CellValue
 }
