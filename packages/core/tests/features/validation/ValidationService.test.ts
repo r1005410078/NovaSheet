@@ -7,9 +7,9 @@ import type { Field } from '../../../src/kernel/data/Schema'
 import { asRawRange } from '../../../src/kernel/coords/coordinates'
 
 function makeService(overrides?: {
-  getCell?: (rawRow: number, fieldId: string) => unknown
-  getField?: (rawCol: number) => unknown
-  getResolvedType?: (rawRow: number, rawCol: number) => string
+  getCell?: (rawRow: number, fieldId: string) => import('../../../src/kernel/data/Schema').CellValue | undefined
+  getField?: (rawCol: number) => Field | undefined
+  getResolvedType?: (rawRow: number, rawCol: number) => import('../../../src/kernel/data/Schema').FieldType
 }) {
   const ruleStore = new ValidationRuleStore()
   const resultStore = new ValidationResultStore()
@@ -19,9 +19,9 @@ function makeService(overrides?: {
   const service = new ValidationService({
     ruleStore,
     resultStore,
-    getCell: (overrides?.getCell ?? ((_rawRow: number, _fieldId: string) => null)) as any,
-    getField: (overrides?.getField ?? ((_rawCol: number) => ({ id: 'f', name: 'F', type: 'text', width: 100 } as Field))) as any,
-    getResolvedType: overrides?.getResolvedType ?? ((_rawRow: number, _rawCol: number) => 'text'),
+    getCell: overrides?.getCell ?? ((_rawRow, _fieldId) => null),
+    getField: overrides?.getField ?? ((_rawCol) => ({ id: 'f', name: 'F', type: 'text', width: 100 } satisfies Field)),
+    getResolvedType: overrides?.getResolvedType ?? ((_rawRow, _rawCol) => 'text'),
     validators: { custom: customValidator },
     locale: 'en-US',
   })
@@ -43,7 +43,7 @@ describe('ValidationService', () => {
     await service.validateCell(0, 0)
     const state = resultStore.get(0, 0)
     expect(state?.status).toBe('invalid')
-    expect((state as { message: string })?.message).toContain('数字')
+    expect(state?.status === 'invalid' ? state.message : '').toContain('数字')
   })
 
   it('Layer A short-circuits: rule not run when type fails', async () => {
@@ -61,15 +61,17 @@ describe('ValidationService', () => {
     const { service, ruleStore, resultStore } = makeService({ getCell: () => 'bad' })
     ruleStore.setRange(asRawRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }), { type: 'custom' })
     await service.validateCell(0, 0)
-    expect(resultStore.get(0, 0)?.status).toBe('invalid')
-    expect((resultStore.get(0, 0) as { message: string })?.message).toBe('不允许该值')
+    const state1 = resultStore.get(0, 0)
+    expect(state1?.status).toBe('invalid')
+    expect(state1?.status === 'invalid' ? state1.message : '').toBe('不允许该值')
   })
 
   it('rule.message overrides validator message', async () => {
     const { service, ruleStore, resultStore } = makeService({ getCell: () => 'bad' })
     ruleStore.setRange(asRawRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 }), { type: 'custom', message: '自定义错误' })
     await service.validateCell(0, 0)
-    expect((resultStore.get(0, 0) as { message: string })?.message).toBe('自定义错误')
+    const state2 = resultStore.get(0, 0)
+    expect(state2?.status === 'invalid' ? state2.message : '').toBe('自定义错误')
   })
 
   it('no rule + type ok: result is null (ok)', async () => {
