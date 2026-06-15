@@ -168,6 +168,13 @@ export interface ThemeText {
   readonly lineThroughOffset: number
 }
 
+/** Validation 视觉 token：无效单元格红边框与角标。 */
+export interface ThemeValidation {
+  readonly invalidBorderColor: string
+  readonly markerColor: string
+  readonly markerSize: number
+}
+
 /** 完整主题定义接口，所有视觉值必须从此处读取，禁止在 src/render/ 内硬编码 */
 export interface Theme {
   readonly metrics: ThemeMetrics
@@ -179,4 +186,5 @@ export interface Theme {
   readonly emptyState: ThemeEmptyState
   readonly dimensions: ThemeDimensions
   readonly text: ThemeText
+  readonly validation: ThemeValidation
 }

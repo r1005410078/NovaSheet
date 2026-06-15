@@ -69,4 +69,9 @@ export interface RenderFrame {
    * `viewRow`/`viewCol` 为 view 空间坐标（渲染时已知），返回 `undefined` 表示该格无此 namespace 数据。
    */
   getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined
+  /**
+   * Validation — 单格校验状态查询闭包（view 坐标）；null/'ok' 均表示无错误，'invalid' = 需绘制错误指示器。
+   * 引擎构帧时已闭合 raw→view 坐标转换与 resultStore 访问。
+   */
+  getValidationState?: (rowIndex: number, colIndex: number) => 'ok' | 'invalid' | 'pending'
 }

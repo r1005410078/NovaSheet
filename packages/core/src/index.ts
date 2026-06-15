@@ -42,6 +42,7 @@ export type {
   Theme,
   ThemeCell,
   ThemeColors,
+  ThemeDimensions,
   ThemeEmptyState,
   ThemeEmptyStateLayer,
   ThemeFrozenSeparator,
@@ -49,6 +50,7 @@ export type {
   ThemeMetrics,
   ThemeScrollbar,
   ThemeText,
+  ThemeValidation,
 } from './kernel/theme/Theme'
 
 // 布局层

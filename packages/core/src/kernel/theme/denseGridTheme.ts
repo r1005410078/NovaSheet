@@ -110,6 +110,11 @@ export const denseGridTheme: Theme = {
     lineThroughWidth: 1,
     lineThroughOffset: 0,
   },
+  validation: {
+    invalidBorderColor: '#E53E3E',
+    markerColor: '#E53E3E',
+    markerSize: 5,
+  },
   emptyState: {
     viewBoxWidth: 80,
     viewBoxHeight: 72,

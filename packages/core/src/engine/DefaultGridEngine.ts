@@ -563,6 +563,11 @@ export class DefaultGridEngine implements GridEngine {
       resolveRawCellType: (row, col, field) => this.cellTypeStore.resolve(row, col, field),
       hasRawCellTypeOverride: (row, col) => this.cellTypeStore.get(row, col) !== undefined,
       attachmentStore: this.formatState.attachmentStore,
+      getRawValidationState: (rawRow, rawCol) => {
+        const s = this.validationResultStore.get(rawRow, rawCol)
+        if (!s) return 'ok'
+        return s.status
+      },
     })
   }
 
