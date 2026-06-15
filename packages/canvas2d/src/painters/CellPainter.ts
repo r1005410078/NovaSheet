@@ -47,6 +47,8 @@ export interface CellPaintParams {
   formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined
   /** Phase B — frame 的 view 坐标附件解析器；供 custom renderer（如 rich-text）读 runs。 */
   getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined
+  /** Validation — 'invalid' 时绘制红边框 + 角标；'pending'/'ok'/undefined 不绘制。 */
+  validationState?: 'ok' | 'invalid' | 'pending'
 }
 
 /** Canvas2D custom renderer 收到的单元格绘制上下文。 */
@@ -127,7 +129,10 @@ export class CellPainter {
     const { value, rect, field } = params
     // null / undefined 都不绘制：null = 显式空（与 SQL 语义一致），
     // undefined = 异步源缓存未命中（未来 M2+ 改成绘灰色占位骨架条）。
-    if (value === null || value === undefined) return
+    if (value === null || value === undefined) {
+      if (params.validationState === 'invalid') this.paintValidationIndicator(ctx, rect)
+      return
+    }
 
     // 裁剪到单元格矩形，防止长文本溢出到邻格。
     ctx.save()
@@ -167,6 +172,7 @@ export class CellPainter {
     }
 
     ctx.restore()
+    if (params.validationState === 'invalid') this.paintValidationIndicator(ctx, rect)
   }
 
   /** 返回 custom renderer 声明的 action hit zones；内置/fallback 单元格无 action。 */
@@ -176,6 +182,23 @@ export class CellPainter {
       theme: this.theme,
       measurer: this.measurer,
     }) ?? []
+  }
+
+  private paintValidationIndicator(ctx: CanvasRenderingContext2D, rect: QuadrantRect): void {
+    const v = this.theme.validation
+    ctx.save()
+    ctx.strokeStyle = v.invalidBorderColor
+    ctx.lineWidth = 1
+    ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.width - 1, rect.height - 1)
+    const s = v.markerSize
+    ctx.fillStyle = v.markerColor
+    ctx.beginPath()
+    ctx.moveTo(rect.x + rect.width - s, rect.y)
+    ctx.lineTo(rect.x + rect.width, rect.y)
+    ctx.lineTo(rect.x + rect.width, rect.y + s)
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
   }
 
   private getTextAlign(field: Field): CanvasTextAlign {

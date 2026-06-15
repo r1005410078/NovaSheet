@@ -447,6 +447,7 @@ export class Canvas2DRenderer implements RenderBackend {
         ctx.frame.formatCell,
         ctx.frame.getAttachment,
         ctx.frame.resolveCellType,
+        ctx.frame.getValidationState,
       )
     this.paintHeaders(
       paintOrder,
@@ -679,6 +680,7 @@ export class Canvas2DRenderer implements RenderBackend {
     formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
     getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined,
     resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => Field['type'],
+    getValidationState?: (rowIndex: number, colIndex: number) => 'ok' | 'invalid' | 'pending',
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -737,6 +739,7 @@ export class Canvas2DRenderer implements RenderBackend {
           colIndex: c,
           formatCell,
           getAttachment,
+          validationState: getValidationState ? getValidationState(r, c) : undefined,
         })
         this.collectCellActionHits({
           value,
@@ -762,6 +765,7 @@ export class Canvas2DRenderer implements RenderBackend {
       formatCell,
       getAttachment,
       resolveCellType,
+      getValidationState,
     )
 
     this.ctx.restore()
@@ -822,6 +826,7 @@ export class Canvas2DRenderer implements RenderBackend {
     formatCell?: (rowIndex: number, colIndex: number, field: Field, value: CellValue) => string | undefined,
     getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined,
     resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => Field['type'],
+    getValidationState?: (rowIndex: number, colIndex: number) => 'ok' | 'invalid' | 'pending',
   ): void {
     if (merges.isEmpty) return
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
@@ -852,6 +857,7 @@ export class Canvas2DRenderer implements RenderBackend {
         colIndex: ac,
         formatCell,
         getAttachment,
+        validationState: getValidationState ? getValidationState(ar, ac) : undefined,
       })
       this.collectCellActionHits({
         value,
