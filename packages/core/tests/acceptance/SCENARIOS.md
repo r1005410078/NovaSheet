@@ -33,12 +33,16 @@
 | core.L0.theme-dense-grid-tokens | L0 | implemented | denseGridTheme 整棵 token 树与黄金文件一致 |
 | core.L0.undo-command-serialization | L0 | implemented | UndoCommand JSON 序列化 round-trip smoke |
 | core.L0.undo-command-shape-inventory | L0 | implemented | 全 21 个 UndoCommand kind 的字段集与黄金文件一致 |
+| core.L0.validation-rule-store-remap | L0 | implemented | ValidationRuleStore 按 raw 坐标保存区间规则并在行列结构变化后正确 remap |
+| core.L0.validation-type-conformance | L0 | implemented | checkTypeConformance 对内置字段类型的值域合规矩阵 |
 | core.L0.workspace-autogrow-scroll-intent | L0 | implemented | Excel workspace 只在有效 wheel 边缘意图下自动增长 |
 | core.L1.cell-attachment-fill-propagate | L1 | implemented | fill 柄向下平铺携带源格附件，undo 整体撤销 |
 | core.L1.cell-attachment-follows-row-insert | L1 | implemented | 插入行后附件跟随 raw cell 下移 |
 | core.L1.engine-frame-initial-visible-range | L1 | implemented | DefaultGridEngine 初始 frame 快照与黄金文件一致 |
 | core.L1.engine-rows-move-undo-redo | L1 | implemented | DefaultGridEngine moveRows 移动连续行块并支持 undo/redo |
 | core.L1.engine-structural-event-stream | L1 | implemented | 结构 mutation + undo/redo 的 DataSource 事件流与黄金文件一致 |
+| core.L1.validation-rule-apply-state-query | L1 | implemented | Grid.setValidation 设置区间规则后 validateAll 触发校验，getValidationState 返回 invalid/null |
+| core.L1.validation-write-paths-trigger | L1 | implemented | commitCellEdit / commitCellValue / commitPaste / commitFill / undo / redo 均触发受影响格重校验 |
 | core.L2.cell-attachment-clipboard-roundtrip | L2 | implemented | copy/paste 同 Grid 内携带附件往返，undo 整体撤销；cache miss 安全降级无附件 |
 | core.L2.cell-attachment-store-set-get-undo | L2 | implemented | 经 Grid 门面写/读 per-cell 附件并可撤销 |
 | core.L2.grid-autofit-wrap-rows | L2 | implemented | Grid autofitRows 使用 wrap 字段和 measurer 更新行高 |
@@ -805,6 +809,65 @@
 
 - 21 行 `kind: field, …` 与 `__goldens__/core.L0.undo-command-shape-inventory.golden.txt` 一致；每个 kind 均 JSON 可序列化
 
+## core.L0.validation-rule-store-remap
+
+- **layer**: L0
+- **summary**: ValidationRuleStore 按 raw 坐标保存区间规则并在行列结构变化后正确 remap
+- **status**: implemented
+
+### User Story
+
+作为 Core 维护者，当数据行/列发生 insert/delete/move 时，我希望 `ValidationRuleStore` 按 raw 坐标保存稀疏区间规则，并能正确 remap 跟随数据行/列移动，以便校验规则始终作用于原始数据所在的行/列而非视图位置。
+
+### Given
+
+- 一个空 `ValidationRuleStore`
+- raw cell `(2, 1)` 设置 `{ type: 'number-range', options: { min: 0, max: 100 } }` 规则
+
+### When
+
+- 读取 `(2, 1)` 的规则
+- 在 row 0 插入 2 行（`remapAfterRowsInserted(0, 2)`）
+- 删除 row 2（`remapAfterRowsDeleted([2])`）
+- 在 col 0 插入 1 列（`remapAfterColsInserted(0, 1)`）
+
+### Then
+
+- 初始读取 `(2, 1)` 返回 `{ type: 'number-range' }` 规则
+- 插入 2 行后，规则移动到 `(4, 1)`，原 `(2, 1)` 返回 null
+- 删除 row 2 后，规则从 `(4, 1)` 移动到 `(3, 1)`
+- 插入列后，规则从 `(3, 1)` 移动到 `(3, 2)`，原 `(3, 1)` 返回 null
+
+## core.L0.validation-type-conformance
+
+- **layer**: L0
+- **summary**: checkTypeConformance 对内置字段类型的值域合规矩阵
+- **status**: implemented
+
+### User Story
+
+作为 Core 维护者，我希望 `checkTypeConformance` 为每种内置字段类型提供一致的值域检查（Layer A），null/undefined 始终合法、custom type 跳过检查，以便在 Layer B/C 规则运行前过滤类型不匹配错误。
+
+### Given
+
+- `checkTypeConformance(value, resolvedType)` 函数
+- 内置类型：text、number、date、checkbox、url、singleSelect、multiSelect
+- 已知 number/date 列存储 JS number（serial），checkbox 存储 boolean，multiSelect 存储 string[]
+
+### When
+
+- 对每种类型传入合法值、不合法值、null、undefined
+
+### Then
+
+- null / undefined 对任意类型返回 null（合法）
+- number: number 合法，string 返回含"数字"的错误消息
+- date: number（serial）合法，string 返回含"日期"的错误消息
+- checkbox: boolean 合法，string 返回含"复选框"的错误消息
+- text / url / singleSelect: string 合法，number 返回含对应类型名称的错误消息
+- multiSelect: string[] 合法，string 返回含"多选"的错误消息
+- 未注册 custom type（如 'rating'）：任意值返回 null（跳过检查）
+
 ## core.L0.workspace-autogrow-scroll-intent
 
 - **layer**: L0
@@ -954,6 +1017,61 @@
 ### Then
 
 - 整段事件流与 `__goldens__/core.L1.engine-structural-event-stream.golden.txt` 一致：
+
+## core.L1.validation-rule-apply-state-query
+
+- **layer**: L1
+- **summary**: Grid.setValidation 设置区间规则后 validateAll 触发校验，getValidationState 返回 invalid/null
+- **status**: implemented
+
+### User Story
+
+作为应用开发者，当我为单元格区间设置验证规则后，我希望通过 `Grid.validateAll()` 触发全量校验，并能通过 `Grid.getValidationState(row, col)` 查询每个单元格的校验状态，以便在 UI 层根据状态渲染错误指示器。
+
+### Given
+
+- 一个 `DefaultGridEngine`，数据源有 3 行 2 列（number 列 + text 列）
+- number 列包含值：50, 150, -10
+
+### When
+
+- 通过 `Grid.setValidation` 为 number 列所有行设置 `{ type: 'number-range', options: { min: 0, max: 100 } }`
+- 调用 `Grid.validateAll()` 并等待异步校验完成
+
+### Then
+
+- `getValidationState(0, 0)` 返回 null（50 在范围内，ok）
+- `getValidationState(1, 0)` 返回 `{ status: 'invalid', message: '值必须在 0 到 100 之间' }`（150 超出）
+- `getValidationState(2, 0)` 返回 `{ status: 'invalid', message: '值必须在 0 到 100 之间' }`（-10 超出）
+- text 列（col 1）状态均为 null（无规则）
+
+## core.L1.validation-write-paths-trigger
+
+- **layer**: L1
+- **summary**: commitCellEdit / commitCellValue / commitPaste / commitFill / undo / redo 均触发受影响格重校验
+- **status**: implemented
+
+### User Story
+
+作为应用开发者，我希望每次向单元格写入数据（编辑提交、粘贴、填充、undo/redo）后都自动触发受影响格的校验，以便不需要手动调用 `validateAll()` 就能看到实时的错误状态。
+
+### Given
+
+- 一个 `DefaultGridEngine`，设置了 `number-range` 规则（min: 0, max: 100）
+- `ValidationScheduler` 的 `push` 方法被监听（通过 spy 或 mock）
+
+### When
+
+- `commitCellValue` 写入越界值
+- `commitPaste` 粘贴包含越界值的区域
+- `commitFill` 填充越界值
+- `undo` 撤销上述操作
+
+### Then
+
+- 每次写入操作后，受影响的格被推入调度器（`push` 被调用）
+- undo 后，同一批格再次被推入（以便重新校验撤销后的值）
+- 写入合法值后，格的校验状态变为 null（ok）
 
 ## core.L2.cell-attachment-clipboard-roundtrip
 
