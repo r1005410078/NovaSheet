@@ -28,7 +28,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "bun run typecheck && bun run --filter '*' build",
+    "build": "bun run typecheck && bun run --filter @novasheet/core build && bun run --filter @novasheet/canvas2d build && bun run --filter @novasheet/react build && bun run --filter @novasheet/cell-kit build",
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "bun run lint:architecture && bun run lint:react-boundary && bun run lint:cellkit-boundary && bun run lint:mbd && bun run lint:scenario-coverage && oxlint packages",

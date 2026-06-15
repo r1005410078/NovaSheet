@@ -124,7 +124,10 @@ export class DefaultGridEngine implements GridEngine {
     resolveEditCell: (cell) =>
       resolveViewMergeRegion(this.formatState.mergeStore, this.coords, cell.rowIndex, cell.colIndex)
         ?.anchor ?? cell,
-    resolveCellType: (cell) => this.getCellType(cell.rowIndex, cell.colIndex),
+    resolveCellType: (cell, field) =>
+      this.hasCellTypeOverrideAtView(cell.rowIndex, cell.colIndex)
+        ? this.getCellType(cell.rowIndex, cell.colIndex)
+        : field.type,
     viewRowToRaw: (viewRow) => this.coords.viewRowToRaw(viewRow),
     viewColToRaw: (viewCol) => this.coords.viewColToRaw(viewCol),
     pushUndo: (command) => this.undoStack.push(command),
@@ -976,6 +979,14 @@ export class DefaultGridEngine implements GridEngine {
     if (!field) return 'text'
     const rawRow = this.coords.viewRowToRaw(viewRow)
     return this.cellTypeStore.resolve(rawRow, rawCol, field)
+  }
+
+  private hasCellTypeOverrideAtView(viewRow: number, viewCol: number): boolean {
+    if (viewRow < 0 || viewRow >= this.data.getRowCount()) return false
+    const rawCol = this.coords.viewColToRaw(viewCol)
+    if (rawCol < 0) return false
+    const rawRow = this.coords.viewRowToRaw(viewRow)
+    return this.cellTypeStore.get(rawRow, rawCol) !== undefined
   }
 
   resolveRawCellTypeForField(rowIndex: number, field: Field): CellTypeOverride {
