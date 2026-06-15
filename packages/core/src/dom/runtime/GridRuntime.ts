@@ -171,6 +171,8 @@ export interface GridRuntimeOptions {
   selectionOverlay?: SelectionOverlay
   /** Excel workspace auto-grow/shrink；默认关闭。 */
   excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
+  /** Validation tooltip：悬停 invalid 单元格时显示错误原因。 */
+  validationTooltip?: import('../overlay/ValidationTooltip').ValidationTooltip
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -286,6 +288,8 @@ export class GridRuntime {
   private rowReorderOverlay?: RowReorderOverlay
   /** DOM body selection overlay. */
   private selectionOverlay?: SelectionOverlay
+  /** Validation tooltip overlay。 */
+  private readonly validationTooltip?: import('../overlay/ValidationTooltip').ValidationTooltip
   /** Excel 模式 workspace auto-grow 控制器；未启用时为空。 */
   private excelWorkspaceController?: ExcelWorkspaceController
   /** 当前 Excel workspace frame 是否触发了 engine mutation。 */
@@ -393,6 +397,8 @@ export class GridRuntime {
     this.columnReorderOverlay = opts.columnReorderOverlay
     this.rowReorderOverlay = opts.rowReorderOverlay
     this.selectionOverlay = opts.selectionOverlay
+    this.validationTooltip = opts.validationTooltip
+    this.engine.setValidationRedrawCallback(() => this.invalidate())
     this.scrollMapper = new ScrollMapper()
     if (opts.excelWorkspace) {
       this.excelWorkspaceController = new ExcelWorkspaceController({
@@ -1738,6 +1744,7 @@ export class GridRuntime {
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
     this.renderer.destroy()
     this.host.destroy()
+    this.validationTooltip?.destroy()
   }
 
   /** 处理 host 滚动事件，映射为逻辑滚动并触发重绘。 */
@@ -1748,6 +1755,7 @@ export class GridRuntime {
     this.closeActiveCustomEditor()
     this.syncCellEditorPosition()
     this.contextMenuLayer?.close()
+    this.validationTooltip?.hide()
     this.runExcelWorkspaceFrame()
     this.invalidate()
   }
@@ -1793,6 +1801,54 @@ export class GridRuntime {
     if (this.activeDrag?.move(event)) return
     if (this.destroyed) return
     this.updateHeaderCursor(event)
+    this.updateValidationTooltip(event)
+  }
+
+  private updateValidationTooltip(event: WebPointerEvent): void {
+    if (!this.validationTooltip) return
+    const frame = this.engine.getFrame()
+    const hit = hitTestCell(frame, event)
+    if (!hit) { this.validationTooltip.hide(); return }
+    const state = frame.getValidationState?.(hit.rowIndex, hit.colIndex)
+    if (state !== 'invalid') { this.validationTooltip.hide(); return }
+    const rawRow = this.engine.viewRowToRaw(hit.rowIndex)
+    const rawCol = this.engine.viewColToRaw(hit.colIndex)
+    const result = this.engine.getValidationState(rawRow, rawCol)
+    if (!result || result.status !== 'invalid') { this.validationTooltip.hide(); return }
+    const cellRect = this.computeValidationCellRect(hit.rowIndex, hit.colIndex, frame)
+    if (!cellRect) { this.validationTooltip.hide(); return }
+    const hostRect = this.host.getContainerBoundingRect()
+    const { width: containerWidth } = this.host.getContainerSize()
+    const containerRect = { left: hostRect.left, top: hostRect.top, width: containerWidth }
+    this.validationTooltip.show(result.message, cellRect, containerRect)
+  }
+
+  private computeValidationCellRect(
+    viewRow: number,
+    viewCol: number,
+    frame: ReturnType<GridEngine['getFrame']>,
+  ): { left: number; right: number; top: number; width: number; height: number } | null {
+    const { rowsAxis, colsAxis, viewport } = frame
+    const region = viewport.regions.find(
+      (r) =>
+        viewRow >= r.rowRange[0] &&
+        viewRow <= r.rowRange[1] &&
+        viewCol >= r.colRange[0] &&
+        viewCol <= r.colRange[1],
+    )
+    if (!region) return null
+    const x = colsAxis.indexToPosition(viewCol) - region.scrollOffsetX + region.rect.x
+    const y = rowsAxis.indexToPosition(viewRow) - region.scrollOffsetY + region.rect.y
+    const cellWidth = colsAxis.getSize(viewCol)
+    const cellHeight = rowsAxis.getSize(viewRow)
+    const hostRect = this.host.getContainerBoundingRect()
+    return {
+      left: hostRect.left + x,
+      right: hostRect.left + x + cellWidth,
+      top: hostRect.top + y,
+      width: cellWidth,
+      height: cellHeight,
+    }
   }
 
   /** 处理 host pointerup，结束选区拖拽并恢复 fill handle。 */

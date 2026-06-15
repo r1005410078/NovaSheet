@@ -53,6 +53,7 @@ import { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
 import { RowReorderOverlay } from '../overlay/RowReorderOverlay'
 import { SelectionOverlay } from '../overlay/SelectionOverlay'
+import { ValidationTooltip } from '../overlay/ValidationTooltip'
 import type {
   AutofitRowsOptions,
   AutofitRowsResult,
@@ -202,6 +203,7 @@ export class GridControllerImpl implements GridController {
     this.selectionOverlay.applyTheme(this.engine.getTheme())
     this.columnReorderOverlay = new ColumnReorderOverlay(this.container)
     this.rowReorderOverlay = new RowReorderOverlay(this.container)
+    const validationTooltip = new ValidationTooltip(this.container)
 
     this.host = new DomGridHost({
       container: this.container,
@@ -233,6 +235,7 @@ export class GridControllerImpl implements GridController {
       columnReorderOverlay: this.columnReorderOverlay,
       rowReorderOverlay: this.rowReorderOverlay,
       selectionOverlay: this.selectionOverlay,
+      validationTooltip,
       viewPipeline: this.pipeline,
       sortLayer: this.sortLayer,
       filterLayer: this.filterLayer,
