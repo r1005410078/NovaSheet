@@ -3,6 +3,7 @@ import { InMemoryDataSource } from '@novasheet/core'
 import type { CellRange, Row, Schema, ValidationRule, ValidatorDefinition } from '@novasheet/core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
+import { GeneratedDataSource } from '../generated-data-source'
 
 const meta: Meta = {
   title: 'Table/Validation',
@@ -117,6 +118,143 @@ export const Basic: Story = {
       grid.clearValidation(range)
       grid.validateAll()
       statusEl.textContent = 'Cleared email rules'
+    })
+
+    return wrapper
+  },
+}
+
+/** Stress test: 10 000 rows × 5 columns, 3 columns with column-level validation rules. */
+export const LargeDataset: Story = {
+  name: 'Stress test (10 000 rows)',
+  ...docsStory(
+    '',
+    '10 000 rows × 5 columns with three column-level validation rules (number-range, text-pattern, list-in). ' +
+      'Uses validationBatchSize=500 + validationMaxConcurrent=500 so sync validators drain in ~100 ms. ' +
+      'Click "Apply rules + Validate" to trigger full-grid validation and watch the live invalid-cell counter.',
+  ),
+  render: () => {
+    const ROW_COUNT = 10_000
+    const STATUSES = ['Active', 'Inactive', 'Pending']
+    const DEPTS = ['Engineering', 'Design', 'Product', 'Data', 'Ops']
+
+    const schema: Schema = {
+      fields: [
+        // ~50 % invalid: (i * 37) % 200, values > 100 fall outside [0, 100]
+        {
+          id: 'score', name: 'Score', type: 'number', width: 80,
+          options: { validation: { type: 'number-range', options: { min: 0, max: 100 } } },
+        },
+        // ~33 % invalid: i % 3 === 0 → 'invalid-email'
+        {
+          id: 'email', name: 'Email', type: 'text', width: 220,
+          options: { validation: { type: 'text-pattern', options: { pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$' } } },
+        },
+        // ~33 % invalid: 'Pending' is not in allowed list
+        {
+          id: 'status', name: 'Status', type: 'text', width: 100,
+          options: { validation: { type: 'list-in', options: { values: ['Active', 'Inactive'] } } },
+        },
+        { id: 'dept', name: 'Department', type: 'text', width: 130 },
+        { id: 'notes', name: 'Notes', type: 'text', width: 200 },
+      ],
+    }
+
+    const dataSource = new GeneratedDataSource(ROW_COUNT, schema, (i, fieldId) => {
+      switch (fieldId) {
+        case 'score': return (i * 37) % 200          // 0–199; values > 100 are invalid
+        case 'email': return i % 3 === 0 ? 'invalid-email' : `user${i}@example.com`
+        case 'status': return STATUSES[i % 3]!        // 'Pending' (i % 3 === 2) is invalid
+        case 'dept': return DEPTS[i % DEPTS.length]!
+        case 'notes': return `Row ${i} notes`
+        default: return null
+      }
+    })
+
+    const wrapper = document.createElement('div')
+    Object.assign(wrapper.style, {
+      display: 'flex', flexDirection: 'column', gap: '8px',
+      padding: '8px', width: '760px', height: '500px', boxSizing: 'border-box',
+    })
+
+    const toolbar = document.createElement('div')
+    Object.assign(toolbar.style, { display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' })
+
+    function makeBtn(label: string): HTMLButtonElement {
+      const btn = document.createElement('button')
+      btn.textContent = label
+      Object.assign(btn.style, { padding: '4px 10px', cursor: 'pointer', fontSize: '13px' })
+      return btn
+    }
+
+    const applyBtn = makeBtn('Apply rules + Validate')
+    const revalidateBtn = makeBtn('Re-validate')
+    const clearBtn = makeBtn('Clear rules')
+
+    const statusEl = document.createElement('span')
+    Object.assign(statusEl.style, { fontFamily: 'monospace', fontSize: '12px', color: '#555', marginLeft: '4px' })
+    statusEl.textContent = `${ROW_COUNT.toLocaleString()} rows — click "Apply rules + Validate"`
+
+    toolbar.append(applyBtn, revalidateBtn, clearBtn, statusEl)
+
+    const gridContainer = document.createElement('div')
+    Object.assign(gridContainer.style, { flex: '1', minHeight: '0', position: 'relative' })
+
+    wrapper.append(toolbar, gridContainer)
+
+    const gridEl = createGridHost(
+      { data: dataSource, validationBatchSize: 500, validationMaxConcurrent: 500 },
+      '100%', '100%',
+    )
+    gridContainer.appendChild(gridEl)
+
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/core').Grid }).__grid
+
+    function countInvalid(): number {
+      let n = 0
+      for (let r = 0; r < ROW_COUNT; r++) {
+        for (let c = 0; c < schema.fields.length; c++) {
+          if (grid.getValidationState(r, c) !== null) n++
+        }
+      }
+      return n
+    }
+
+    let pollHandle = 0
+    function startPoll(t0: number): void {
+      cancelAnimationFrame(pollHandle)
+      function tick(): void {
+        const elapsed = Math.round(performance.now() - t0)
+        statusEl.textContent = `${elapsed}ms — ${countInvalid().toLocaleString()} invalid so far…`
+        pollHandle = requestAnimationFrame(tick)
+      }
+      pollHandle = requestAnimationFrame(tick)
+      setTimeout(() => {
+        cancelAnimationFrame(pollHandle)
+        const elapsed = Math.round(performance.now() - t0)
+        statusEl.textContent = `Done in ${elapsed}ms — ${countInvalid().toLocaleString()} invalid cells`
+      }, 5_000)
+    }
+
+    applyBtn.addEventListener('click', () => {
+      startPoll(performance.now())
+      grid.validateAll()
+    })
+
+    revalidateBtn.addEventListener('click', () => {
+      startPoll(performance.now())
+      grid.validateAll()
+    })
+
+    clearBtn.addEventListener('click', () => {
+      cancelAnimationFrame(pollHandle)
+      const fullRange: CellRange = {
+        startRow: 0, endRow: ROW_COUNT - 1,
+        startCol: 0, endCol: schema.fields.length - 1,
+      }
+      grid.clearValidation(fullRange)
+      grid.validateAll()
+      statusEl.textContent = 'Rules cleared'
     })
 
     return wrapper

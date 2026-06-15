@@ -81,39 +81,35 @@ export class ValidationScheduler {
   private async flush(): Promise<void> {
     if (this.destroyed) return
     let processed = 0
-    let node = this.head
 
-    while (node && processed < this.options.batchSize) {
+    while (this.head && processed < this.options.batchSize) {
+      // Pool full: stop here; the .then() chain will continue when space frees up.
+      if (this.asyncPool.size >= this.options.maxConcurrent) break
+
+      const node = this.head
+      this.head = node.next
+
       const k = `${node.rawRow}:${node.rawCol}`
       const canonical = this.taskMap.get(k)
+      // Stale: superseded by newer push (version mismatch) or already processed.
+      if (!canonical || canonical.version !== node.version) continue
 
-      if (canonical && canonical.version === node.version) {
-        this.taskMap.delete(k)
-        const { rawRow, rawCol } = node
-
-        if (this.asyncPool.size < this.options.maxConcurrent) {
-          const p: Promise<void> = this.validate(rawRow, rawCol).then(() => {
-            this.asyncPool.delete(p)
-            if (!this.destroyed) this.scheduleRedraw()
-          })
-          this.asyncPool.add(p)
-        } else {
-          // Pool full: re-queue
-          const requeue: TaskNode = { rawRow, rawCol, version: 0, next: null }
-          this.taskMap.set(k, requeue)
-          if (this.tail) this.tail.next = requeue
-          else this.head = requeue
-          this.tail = requeue
+      this.taskMap.delete(k)
+      const { rawRow, rawCol } = node
+      const p: Promise<void> = this.validate(rawRow, rawCol).then(() => {
+        this.asyncPool.delete(p)
+        if (!this.destroyed && this.asyncPool.size === 0) {
+          // Redraw once per batch drain (not once per cell) to avoid RAF spam.
+          this.scheduleRedraw()
+          // For sync validators this becomes a microtask chain with no setTimeout overhead.
+          // For async validators the pool drains when the last concurrent task finishes.
+          if (this.head) void this.flush()
         }
-        processed++
-      }
-
-      node = node.next
+      })
+      this.asyncPool.add(p)
+      processed++
     }
 
-    this.head = node
-    if (!node) this.tail = null
-
-    if (this.head && !this.destroyed) this.scheduleFlush()
+    if (!this.head) this.tail = null
   }
 }

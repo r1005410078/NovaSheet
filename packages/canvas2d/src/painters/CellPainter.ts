@@ -186,11 +186,8 @@ export class CellPainter {
 
   private paintValidationIndicator(ctx: CanvasRenderingContext2D, rect: QuadrantRect): void {
     const v = this.theme.validation
-    ctx.save()
-    ctx.strokeStyle = v.invalidBorderColor
-    ctx.lineWidth = 1
-    ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.width - 1, rect.height - 1)
     const s = v.markerSize
+    ctx.save()
     ctx.fillStyle = v.markerColor
     ctx.beginPath()
     ctx.moveTo(rect.x + rect.width - s, rect.y)
