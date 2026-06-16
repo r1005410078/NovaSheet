@@ -19,21 +19,21 @@ describe('DefaultGridEngine hovered column header menu frame state', () => {
 
   it('setHoveredColumnHeaderMenu propagates to RenderFrame', () => {
     const engine = makeEngine()
-    engine.setHoveredColumnHeaderMenu({ colIndex: 0 })
-    expect(engine.getFrame().hoveredColumnHeaderMenu).toEqual({ colIndex: 0 })
+    engine.setHoveredColumnHeaderMenu({ colIndex: 0, buttonHovered: false })
+    expect(engine.getFrame().hoveredColumnHeaderMenu).toEqual({ colIndex: 0, buttonHovered: false })
   })
 
   it('setHoveredColumnHeaderMenu(null) clears hoveredColumnHeaderMenu', () => {
     const engine = makeEngine()
-    engine.setHoveredColumnHeaderMenu({ colIndex: 0 })
+    engine.setHoveredColumnHeaderMenu({ colIndex: 0, buttonHovered: false })
     engine.setHoveredColumnHeaderMenu(null)
     expect(engine.getFrame().hoveredColumnHeaderMenu).toBeUndefined()
   })
 
   it('hoveredColumnHeaderMenu colIndex updates correctly', () => {
     const engine = makeEngine()
-    engine.setHoveredColumnHeaderMenu({ colIndex: 0 })
-    engine.setHoveredColumnHeaderMenu({ colIndex: 3 })
-    expect(engine.getFrame().hoveredColumnHeaderMenu).toEqual({ colIndex: 3 })
+    engine.setHoveredColumnHeaderMenu({ colIndex: 0, buttonHovered: false })
+    engine.setHoveredColumnHeaderMenu({ colIndex: 3, buttonHovered: true })
+    expect(engine.getFrame().hoveredColumnHeaderMenu).toEqual({ colIndex: 3, buttonHovered: true })
   })
 })

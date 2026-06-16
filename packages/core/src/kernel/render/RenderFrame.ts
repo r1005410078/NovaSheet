@@ -21,6 +21,8 @@ import type { CellEditSession, CollapsedGap, HeaderDecorationSource } from './Re
  */
 export interface HoveredColumnHeaderMenu {
   readonly colIndex: number
+  /** 鼠标是否正悬在按钮圆形区域上（控制圆形背景是否渲染） */
+  readonly buttonHovered: boolean
 }
 
 export interface RenderFrameCollapsedGap extends CollapsedGap {

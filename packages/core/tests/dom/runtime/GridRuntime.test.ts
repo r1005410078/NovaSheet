@@ -2670,7 +2670,7 @@ describe('GridRuntime header hover menu button', () => {
 
     runtime.handleHostPointerMove({ x: 150, y: 8, clientX: 150, clientY: 8, shiftKey: false })
 
-    expect(engine.setHoveredColumnHeaderMenu).toHaveBeenCalledWith({ colIndex: 1 })
+    expect(engine.setHoveredColumnHeaderMenu).toHaveBeenCalledWith({ colIndex: 1, buttonHovered: false })
   })
 
   it('pointer move outside header clears hoveredColumnHeaderMenu', () => {

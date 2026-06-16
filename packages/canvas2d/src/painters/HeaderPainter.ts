@@ -13,6 +13,7 @@ import {
   columnIndexToLetter,
   type Axis,
   type CellRange,
+  type HoveredColumnHeaderMenu,
   type IconDef,
   type RenderFrameCollapsedColGap,
   type Schema,
@@ -49,7 +50,7 @@ export interface HeaderPaintParams {
   /** Phase 4.7 — 整列选中时需要强高亮的列头范围。 */
   selectedColumnRange?: Pick<CellRange, 'startCol' | 'endCol'>
   /** 当前 hover 的列头菜单按钮状态（来自 RenderFrame）。*/
-  hoveredColumnHeaderMenu?: { readonly colIndex: number }
+  hoveredColumnHeaderMenu?: HoveredColumnHeaderMenu
 }
 
 const MIN_HEADER_HEIGHT_FOR_TRIANGLE = 24
@@ -119,23 +120,31 @@ export class HeaderPainter {
         const field = schema.fields[c]!
         const icons = this.collectStateIcons(params.viewPipeline, field)
         const iconReserve = this.measureIconReserve(icons.length)
+        const hoveredMenu = params.hoveredColumnHeaderMenu
         const showMenuButton =
-          params.hoveredColumnHeaderMenu?.colIndex === c &&
-          colWidth >= MIN_HEADER_MENU_BUTTON_COL_WIDTH
+          hoveredMenu?.colIndex === c && colWidth >= MIN_HEADER_MENU_BUTTON_COL_WIDTH
         const menuButtonReserve = showMenuButton ? HEADER_MENU_BUTTON_SIZE + padX : 0
         const textX = colLeft + padX
         const maxTextWidth = Math.max(0, colWidth - padX * 2 - iconReserve - menuButtonReserve)
         ctx.fillText(field.name, textX, y, maxTextWidth)
+        // filter 图标用强调色，比 headerText 灰色更醒目
+        const iconColor = icons.length > 0 ? this.theme.colors.selectionBorder : textColor
         this.paintStateIcons(ctx, icons, {
           colLeft,
           colWidth,
           y,
           padX,
-          color: textColor,
+          color: iconColor,
           rightReserve: menuButtonReserve,
         })
         if (showMenuButton) {
-          this.paintHeaderMenuButton(ctx, colLeft, colWidth, headerHeight)
+          this.paintHeaderMenuButton(
+            ctx,
+            colLeft,
+            colWidth,
+            headerHeight,
+            hoveredMenu?.buttonHovered ?? false,
+          )
         }
       }
     }
@@ -191,6 +200,7 @@ export class HeaderPainter {
     colLeft: number,
     colWidth: number,
     headerHeight: number,
+    showCircle: boolean,
   ): void {
     const padX = this.theme.metrics.cellPaddingX
     const buttonSize = HEADER_MENU_BUTTON_SIZE
@@ -198,11 +208,12 @@ export class HeaderPainter {
     const centerY = headerHeight / 2
 
     ctx.save()
-    // circle background
-    ctx.fillStyle = this.theme.colors.hoverRowBg
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, buttonSize / 2, 0, Math.PI * 2)
-    ctx.fill()
+    if (showCircle) {
+      ctx.fillStyle = this.theme.colors.headerMenuButtonBg
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, buttonSize / 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
     // triangle (dropdown arrow)
     ctx.fillStyle = this.theme.colors.headerText
     ctx.beginPath()
@@ -221,8 +232,6 @@ export class HeaderPainter {
     const decoration = viewPipeline?.collectHeaderDecorations(field)
     const icons: IconDef[] = []
     if (decoration?.filterActive) icons.push(this.theme.icons.filter)
-    if (decoration?.sortIndicator === 'asc') icons.push(this.theme.icons.sortAsc)
-    if (decoration?.sortIndicator === 'desc') icons.push(this.theme.icons.sortDesc)
     return icons
   }
 

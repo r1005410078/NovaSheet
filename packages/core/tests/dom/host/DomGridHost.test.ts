@@ -67,8 +67,8 @@ describe('DomGridHost — pointer events', () => {
     scrollHost.dispatchEvent(new PointerEvent('pointermove', { clientX: 120, clientY: 72 }))
     scrollHost.dispatchEvent(new PointerEvent('pointerup', { clientX: 120, clientY: 72 }))
 
-    expect(onPointerDown).toHaveBeenCalledWith({ x: 20, y: 44, shiftKey: false, button: 0 })
-    expect(onPointerMove).toHaveBeenCalledWith({ x: 120, y: 72, shiftKey: false, button: 0 })
+    expect(onPointerDown).toHaveBeenCalledWith({ x: 20, y: 44, shiftKey: false, button: 0, clientX: 20, clientY: 44 })
+    expect(onPointerMove).toHaveBeenCalledWith({ x: 120, y: 72, shiftKey: false, button: 0, clientX: 120, clientY: 72 })
     expect(onPointerUp).toHaveBeenCalledTimes(1)
 
     host.destroy()
@@ -156,7 +156,7 @@ describe('DomGridHost — pointer events', () => {
     scrollHost.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 150 }))
 
     expect(onPointerDown).toHaveBeenCalledTimes(1)
-    expect(onPointerDown).toHaveBeenCalledWith({ x: 200, y: 150, shiftKey: false, button: 0 })
+    expect(onPointerDown).toHaveBeenCalledWith({ x: 200, y: 150, shiftKey: false, button: 0, clientX: 200, clientY: 150 })
 
     host.destroy()
     document.body.removeChild(container)

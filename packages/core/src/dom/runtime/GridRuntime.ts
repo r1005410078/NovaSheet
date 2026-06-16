@@ -400,8 +400,8 @@ export class GridRuntime {
   private selectionDrag!: SelectionDrag
   /** pointerdown 按序尝试起拖的 Drag 列表；加新拖拽 = 实现 Drag + 入此数组。 */
   private drags: readonly Drag[] = []
-  /** 当前悬停列头菜单按钮的列索引；null 表示未悬停。 */
-  private lastHoveredColumnMenuIndex: number | null = null
+  /** 当前列头 hover 状态；null 表示未悬停。 */
+  private lastHoveredColumnMenu: { colIndex: number; buttonHovered: boolean } | null = null
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: GridRuntimeOptions) {
@@ -1921,10 +1921,20 @@ export class GridRuntime {
    */
   private updateHoveredColumnHeaderMenu(event: WebPointerEvent): void {
     const hit = this.hitTestColumnHeader(event)
-    const nextIndex = hit ? hit.colIndex : null
-    if (nextIndex === this.lastHoveredColumnMenuIndex) return
-    this.lastHoveredColumnMenuIndex = nextIndex
-    this.engine.setHoveredColumnHeaderMenu(nextIndex !== null ? { colIndex: nextIndex } : null)
+    if (!hit) {
+      if (this.lastHoveredColumnMenu !== null) {
+        this.lastHoveredColumnMenu = null
+        this.engine.setHoveredColumnHeaderMenu(null)
+        this.invalidate()
+      }
+      return
+    }
+    const colIndex = hit.colIndex
+    const buttonHovered = this.hitTestColumnHeaderMenuButton(event) !== null
+    const prev = this.lastHoveredColumnMenu
+    if (prev?.colIndex === colIndex && prev?.buttonHovered === buttonHovered) return
+    this.lastHoveredColumnMenu = { colIndex, buttonHovered }
+    this.engine.setHoveredColumnHeaderMenu({ colIndex, buttonHovered })
     this.invalidate()
   }
 
@@ -1954,7 +1964,7 @@ export class GridRuntime {
   }
 
   /** 打开指定列索引对应的列头上下文菜单（复用 openResolvedContextMenu）。 */
-  private openColumnHeaderContextMenu(colIndex: number, event: WebPointerEvent): void {
+  private openColumnHeaderContextMenu(colIndex: number, _event: WebPointerEvent): void {
     if (!this.viewPipeline) return
     const frame = this.engine.getFrame()
     const fields = frame.data.getSchema().fields
@@ -1976,10 +1986,20 @@ export class GridRuntime {
       ctx,
       this.contextMenus?.columnHeader,
     )
+    // 锚点：按钮左边缘 × header 底部（viewport 坐标）。
+    // DomContextMenuLayer.clampToViewport 负责右边缘溢出时向左推。
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    const scrollX = frame.viewport.scrollX ?? 0
+    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
+    const colLeft = rowHeaderWidth + frame.colsAxis.indexToPosition(colIndex) - scrollX
+    const colWidth = frame.colsAxis.getSize(colIndex)
+    const padX = frame.theme.metrics.cellPaddingX ?? 8
+    const buttonLeft = colLeft + colWidth - padX - COLUMN_HEADER_MENU_BUTTON_SIZE
+    const hostRect = this.host.getContainerBoundingRect()
     this.openResolvedContextMenu({
       ctx,
-      clientX: event.clientX ?? event.x,
-      clientY: event.clientY ?? event.y,
+      clientX: hostRect.left + buttonLeft,
+      clientY: hostRect.top + headerHeight,
       items,
     })
   }

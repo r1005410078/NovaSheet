@@ -49,7 +49,7 @@ describe('HeaderPainter — 列头', () => {
     expect(texts).toContain('Active')
   })
 
-  it('绘制排序筛选状态图标并为文字预留空间', () => {
+  it('绘制过滤状态图标并为文字预留空间（排序箭头不再显示）', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })
     const viewPipeline = {
@@ -65,7 +65,8 @@ describe('HeaderPainter — 列头', () => {
       viewPipeline,
     })
 
-    expect(ops.filter((o) => o.op === 'fillPath')).toHaveLength(2)
+    // 只有 filterActive 图标（1个），sortIndicator 不再渲染
+    expect(ops.filter((o) => o.op === 'fillPath')).toHaveLength(1)
     const nameTxt = ops.find(
       (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
         o.op === 'fillText' && o.args[0] === 'Name',
@@ -197,7 +198,7 @@ describe('HeaderPainter — hover menu button', () => {
     ],
   }
 
-  it('paints arc (circle bg) only for hovered column', () => {
+  it('paints arc (circle bg) only when buttonHovered=true', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
     new HeaderPainter(denseGridTheme).paint(ctx, {
@@ -205,10 +206,27 @@ describe('HeaderPainter — hover menu button', () => {
       colsAxis,
       colRange: [0, 1],
       width: 200,
-      hoveredColumnHeaderMenu: { colIndex: 1 },
+      hoveredColumnHeaderMenu: { colIndex: 1, buttonHovered: true },
     })
     const arcs = ops.filter((o) => o.op === 'arc')
     expect(arcs.length).toBe(1)
+  })
+
+  it('does not paint arc when buttonHovered=false (triangle still shown)', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA_TWO,
+      colsAxis,
+      colRange: [0, 1],
+      width: 200,
+      hoveredColumnHeaderMenu: { colIndex: 1, buttonHovered: false },
+    })
+    const arcs = ops.filter((o) => o.op === 'arc')
+    expect(arcs.length).toBe(0)
+    // triangle fill still present
+    const fills = ops.filter((o) => o.op === 'fill')
+    expect(fills.length).toBeGreaterThan(0)
   })
 
   it('paints triangle fill for hovered column', () => {
@@ -219,7 +237,7 @@ describe('HeaderPainter — hover menu button', () => {
       colsAxis,
       colRange: [0, 1],
       width: 200,
-      hoveredColumnHeaderMenu: { colIndex: 1 },
+      hoveredColumnHeaderMenu: { colIndex: 1, buttonHovered: true },
     })
     const fills = ops.filter((o) => o.op === 'fill')
     expect(fills.length).toBeGreaterThan(0)
@@ -246,7 +264,7 @@ describe('HeaderPainter — hover menu button', () => {
       colsAxis,
       colRange: [0, 0],
       width: 31,
-      hoveredColumnHeaderMenu: { colIndex: 0 },
+      hoveredColumnHeaderMenu: { colIndex: 0, buttonHovered: true },
     })
     const arcs = ops.filter((o) => o.op === 'arc')
     expect(arcs.length).toBe(0)
@@ -260,7 +278,7 @@ describe('HeaderPainter — hover menu button', () => {
       colsAxis,
       colRange: [0, 1],
       width: 200,
-      hoveredColumnHeaderMenu: { colIndex: 0 }, // only col 0 hovered
+      hoveredColumnHeaderMenu: { colIndex: 0, buttonHovered: true }, // only col 0 hovered
     })
     // exactly 1 arc for col 0 (hovered), NOT for col 1
     const arcs = ops.filter((o) => o.op === 'arc')
@@ -278,7 +296,7 @@ describe('HeaderPainter — hover menu button', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 1, defaultSize: 200 })
     const viewPipeline = {
-      collectHeaderDecorations: () => ({ sortIndicator: 'asc' as const }),
+      collectHeaderDecorations: () => ({ filterActive: true }),
     } as Pick<ViewPipeline, 'collectHeaderDecorations'>
 
     new HeaderPainter(denseGridTheme).paint(ctx, {
@@ -287,7 +305,7 @@ describe('HeaderPainter — hover menu button', () => {
       colRange: [0, 0],
       width: 200,
       viewPipeline,
-      hoveredColumnHeaderMenu: { colIndex: 0 },
+      hoveredColumnHeaderMenu: { colIndex: 0, buttonHovered: true },
     })
 
     // The arc center X for the menu button: colLeft + colWidth - padX - buttonSize/2
