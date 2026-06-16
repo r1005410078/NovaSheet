@@ -322,125 +322,125 @@ hover 状态虽然由 DOM/runtime 输入产生，但第一版明确走 `engine.g
 ### 8.1 列头 hover 入口
 
 ```gherkin
-Feature: Column header hover menu entry
+Feature: 列头 hover 菜单入口
 
-  Scenario: Hover column header shows menu button only for that column
-    Given a grid with visible column headers
-    When the pointer moves over column B's header
-    Then column B's header shows the dropdown menu button
-    And other column headers do not show the dropdown menu button
+  Scenario: hover 列头时仅当前列显示菜单按钮
+    Given 表格存在可见列头
+    When 鼠标移动到 B 列列头
+    Then B 列列头显示下拉菜单按钮
+    And 其他列头不显示下拉菜单按钮
 
-  Scenario: Narrow column does not show menu button
-    Given column B has width less than 32px
-    When the pointer moves over column B's header
-    Then column B's header does not show the dropdown menu button
+  Scenario: 窄列不显示菜单按钮
+    Given B 列宽度小于 32px
+    When 鼠标移动到 B 列列头
+    Then B 列列头不显示下拉菜单按钮
 
-  Scenario: Sort and filter icons do not overlap the menu button
-    Given column B has sort or filter state icons
-    When the pointer moves over column B's header
-    Then the sort or filter icons are placed before the dropdown menu button
-    And the icons and button do not overlap
+  Scenario: 排序和筛选图标不与菜单按钮重叠
+    Given B 列存在排序或筛选状态图标
+    When 鼠标移动到 B 列列头
+    Then 排序或筛选图标排列在下拉菜单按钮之前
+    And 图标与按钮不重叠
 ```
 
 ### 8.2 列头菜单打开
 
 ```gherkin
-Feature: Column header dropdown opens unified menu
+Feature: 列头下拉入口打开统一菜单
 
-  Scenario: Click header dropdown opens column menu
-    Given the pointer is over column B's header
-    And the dropdown menu button is visible
-    When the user clicks the dropdown menu button
-    Then the column header context menu opens near the button
-    And the menu context targets column B
+  Scenario: 点击列头下拉入口打开列菜单
+    Given 鼠标位于 B 列列头
+    And 下拉菜单按钮可见
+    When 用户点击下拉菜单按钮
+    Then 列头上下文菜单在按钮附近打开
+    And 菜单上下文指向 B 列
 
-  Scenario: Right click column header opens the same menu model
-    Given column B is visible
-    When the user opens the context menu on column B's header
-    Then the column header context menu opens
-    And the menu items match the header dropdown menu items for column B
+  Scenario: 右键列头打开同一菜单模型
+    Given B 列可见
+    When 用户在 B 列列头打开上下文菜单
+    Then 列头上下文菜单打开
+    And 菜单项与 B 列列头下拉菜单项一致
 
-  Scenario: Open menu remains visible after pointer leaves header
-    Given the column header dropdown menu is open
-    When the pointer leaves the header area
-    Then the menu remains open until an existing close trigger occurs
+  Scenario: 菜单打开后鼠标离开列头仍保持可见
+    Given 列头下拉菜单已打开
+    When 鼠标离开列头区域
+    Then 菜单保持打开，直到现有关闭触发条件发生
 ```
 
 ### 8.3 统一菜单样式
 
 ```gherkin
-Feature: Unified context menu presentation
+Feature: 统一上下文菜单展示
 
-  Scenario: Default menu item renders icon label and shortcut
-    Given the clipboard menu group is available
-    When the menu opens
-    Then cut copy and paste items render built-in icons
-    And cut copy and paste items render platform shortcuts
+  Scenario: 默认菜单项渲染图标、文本和快捷键
+    Given 剪贴板菜单分组可用
+    When 菜单打开
+    Then 剪切、复制、粘贴项渲染内置图标
+    And 剪切、复制、粘贴项渲染当前平台快捷键
 
-  Scenario: Category changes create separators
-    Given menu items have categories clipboard and structure
-    When the menu opens
-    Then a separator is rendered between the two categories
+  Scenario: 类别变化生成分隔线
+    Given 菜单项包含 clipboard 和 structure 两个类别
+    When 菜单打开
+    Then 两个类别之间渲染分隔线
 
-  Scenario: Disabled item is visible but not selectable
-    Given a menu item is disabled
-    When the menu opens
-    Then the item is rendered in disabled style
-    And clicking the item does not dispatch an action
+  Scenario: 禁用项可见但不可选择
+    Given 某个菜单项处于禁用状态
+    When 菜单打开
+    Then 该菜单项以禁用样式渲染
+    And 点击该菜单项不会派发 action
 ```
 
 ### 8.4 配置式扩展
 
 ```gherkin
-Feature: Context menu config extension
+Feature: 上下文菜单配置式扩展
 
-  Scenario: Append custom items after default items
-    Given GridOptions.contextMenus.columnHeader mode is append
-    And a custom menu item is configured
-    When the column header menu opens
-    Then the custom item appears after the default items
+  Scenario: 在默认项之后追加自定义项
+    Given GridOptions.contextMenus.columnHeader mode 为 append
+    And 已配置一个自定义菜单项
+    When 列头菜单打开
+    Then 自定义项出现在默认项之后
 
-  Scenario: Replace default items with custom items
-    Given GridOptions.contextMenus.columnHeader mode is replace
-    And a custom menu item is configured
-    When the column header menu opens
-    Then only the configured custom items are rendered
+  Scenario: 使用自定义项替换默认项
+    Given GridOptions.contextMenus.columnHeader mode 为 replace
+    And 已配置一个自定义菜单项
+    When 列头菜单打开
+    Then 只渲染已配置的自定义项
 
-  Scenario: Transform can remove and regroup items
-    Given GridOptions.contextMenus.columnHeader.transform removes sort actions
-    And changes a custom item's category
-    When the column header menu opens
-    Then sort actions are not rendered
-    And the custom item appears in the transformed category group
+  Scenario: transform 可以移除并重新分组菜单项
+    Given GridOptions.contextMenus.columnHeader.transform 移除排序 action
+    And 修改某个自定义项的 category
+    When 列头菜单打开
+    Then 排序 action 不会被渲染
+    And 自定义项出现在 transform 后的类别分组中
 
-  Scenario: Custom action requires handler
-    Given a custom menu item has a custom action id
-    And GridOptions.onContextMenuAction is not configured
-    When the menu opens
-    Then the custom menu item is disabled
+  Scenario: 自定义 action 需要 handler
+    Given 某个自定义菜单项使用自定义 action id
+    And 未配置 GridOptions.onContextMenuAction
+    When 菜单打开
+    Then 该自定义菜单项处于禁用状态
 ```
 
 ### 8.5 DOM 覆盖
 
 ```gherkin
-Feature: Context menu DOM override
+Feature: 上下文菜单 DOM 覆盖
 
-  Scenario: Custom renderer receives resolved menu options
-    Given GridOptions.contextMenuRenderer is configured
-    When the column header menu opens
-    Then NovaSheet calls contextMenuRenderer.open
-    And the options include targetKind context items anchor select and close
+  Scenario: 自定义 renderer 收到解析后的菜单选项
+    Given 已配置 GridOptions.contextMenuRenderer
+    When 列头菜单打开
+    Then NovaSheet 调用 contextMenuRenderer.open
+    And options 包含 targetKind、context、items、anchor、select 和 close
 
-  Scenario: Custom renderer can dispatch built-in action
-    Given GridOptions.contextMenuRenderer is configured
-    And the custom renderer calls select with a built-in action id
-    When the user activates that menu item
-    Then NovaSheet dispatches the built-in context menu action
+  Scenario: 自定义 renderer 可以派发内置 action
+    Given 已配置 GridOptions.contextMenuRenderer
+    And 自定义 renderer 使用内置 action id 调用 select
+    When 用户激活该菜单项
+    Then NovaSheet 派发内置上下文菜单 action
 
-  Scenario: Grid destroy tears down custom renderer
-    Given GridOptions.contextMenuRenderer is configured
-    When Grid.destroy is called
-    Then contextMenuRenderer.destroy is called once
+  Scenario: Grid destroy 会销毁自定义 renderer
+    Given 已配置 GridOptions.contextMenuRenderer
+    When 调用 Grid.destroy
+    Then contextMenuRenderer.destroy 被调用一次
 ```
 
 ---
