@@ -146,7 +146,7 @@ export class GridControllerImpl implements GridController {
     options: GridEngineOptions,
     gridOptions:
       | {
-          onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+          onContextMenuAction?: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void
           onCopy?: (range: CellRange) => void
           onCut?: (range: CellRange) => void
           onPaste?: (target: CellRange) => void

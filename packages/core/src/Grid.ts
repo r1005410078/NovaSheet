@@ -38,8 +38,8 @@ import type { RenderBackendFactory } from './ports/RenderBackend'
 export interface GridOptions extends GridEngineOptions {
   /** 渲染后端工厂——由调用方注入（如 `@novasheet/canvas2d` 的 `canvas2dBackend`），反转 core→backend 依赖。 */
   backend: RenderBackendFactory
-  /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后不传走默认引擎（grid.copy/cut/paste）。 */
-  onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+  /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后不传走默认引擎（grid.copy/cut/paste）。自定义 id 以 string 到达回调。 */
+  onContextMenuAction?: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void
   /** Phase 4.1 — copy 完成（snapshot 已写剪贴板）。 */
   onCopy?: (range: CellRange) => void
   /** Phase 4.1 — cut 完成（已写剪贴板 + 原格已清）。 */

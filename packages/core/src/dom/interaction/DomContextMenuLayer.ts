@@ -14,7 +14,6 @@ import type { Theme } from '../../kernel/theme/Theme'
 import { applyContextMenuTheme, ensureContextMenuStylesheet } from '../host/context-menu-style'
 
 export interface DomContextMenuLayerCallbacks {
-  // id 可以是内置 ContextMenuAction 也可以是自定义 string；运行时统一当 string 路由
   onSelect: (id: ContextMenuAction | string) => void
   /** 菜单关闭时若焦点确实在菜单内，回调以恢复 grid 焦点（spec §4.5）。 */
   onClose?: () => void
@@ -215,7 +214,7 @@ export class DomContextMenuLayer {
   private activateFocused(): void {
     const active = document.activeElement
     if (!(active instanceof HTMLButtonElement)) return
-    const id = active.getAttribute('data-ns-action') as ContextMenuAction | null
+    const id = active.getAttribute('data-ns-action') as string | null
     if (!id) return
     if (active.getAttribute('aria-disabled') === 'true') return
     this.callbacks.onSelect(id)

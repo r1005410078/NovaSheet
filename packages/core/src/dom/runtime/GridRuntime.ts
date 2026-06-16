@@ -322,7 +322,7 @@ export class GridRuntime {
   /** resize-column-width 操作暂存的 fieldId 列表，供 onSubmit 回调读取。 */
   private pendingColumnWidthFieldIds: string[] = []
   /** 外部接管 context menu action 的回调。 */
-  private onContextMenuAction?: (action: ContextMenuAction, ctx: ContextMenuContext) => void
+  private onContextMenuAction?: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void
   /** 最近一次打开菜单时的上下文，用于菜单项点击分发。 */
   private lastContextMenuContext: ContextMenuContext | null = null
   /** 最近一次打开菜单时的屏幕坐标，用于 filter popover 锚点。 */
@@ -530,7 +530,7 @@ export class GridRuntime {
   }
 
   /** 注册右键菜单 action 回调；设置后 consumer 可接管默认菜单行为。 */
-  setOnContextMenuAction(cb: (action: ContextMenuAction, ctx: ContextMenuContext) => void): void {
+  setOnContextMenuAction(cb: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void): void {
     this.onContextMenuAction = cb
   }
 
@@ -1311,8 +1311,7 @@ export class GridRuntime {
 
     // Phase 4.1：consumer 传了 callback 完全接管；没传走默认引擎
     if (this.onContextMenuAction) {
-      // 自定义 id 在运行时是普通字符串，与 ContextMenuAction 相同基础类型，强转安全
-      if (ctx) this.onContextMenuAction(id as ContextMenuAction, ctx)
+      if (ctx) this.onContextMenuAction(id, ctx)
       return
     }
     if (id === 'copy') {

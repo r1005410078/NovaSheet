@@ -39,6 +39,7 @@ export type BuiltInMenuIconName =
   | 'paste'
   | 'plus'
   | 'trash'
+  // TODO(header-menu): 'clear' 用于取消隐藏操作图标；'more' 用于子菜单项
   | 'clear'
   | 'hide'
   | 'resize'
@@ -85,7 +86,7 @@ export interface ContextMenuItem {
   readonly submenu?: readonly ContextMenuItem[]
 }
 
-// 平台检测：navigator.platform 在非浏览器环境（bun test）下不可用，安全回退 false
+// no navigator in bun test, safe fallback false
 const isMac =
   typeof navigator !== 'undefined' && /\bMac|iPhone|iPad|iPod\b/.test(navigator.platform)
 
@@ -195,7 +196,7 @@ export function getColumnHeaderStructuralMenuItems(
       id: 'unhide-cols',
       label: '显示选区内隐藏列',
       disabled: false,
-      icon: builtinIcon('hide'),
+      icon: builtinIcon('clear'),
       category: 'structure',
       separatorAfter: false,
     })
@@ -264,7 +265,7 @@ export function getRowHeaderContextMenuItems(
       id: 'unhide-rows',
       label: '显示选区内隐藏行',
       disabled: false,
-      icon: builtinIcon('hide'),
+      icon: builtinIcon('clear'),
       category: 'structure',
       separatorAfter: false,
     })
