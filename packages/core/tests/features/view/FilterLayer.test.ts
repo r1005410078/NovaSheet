@@ -351,7 +351,7 @@ describe('FilterLayer', () => {
     const field = schema.fields[2]!
 
     expect(layer.headerDecoration(field)).toBeNull()
-    expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 2 })).toEqual([
+    expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 2 })).toMatchObject([
       { id: 'filter-open', label: '筛选...', disabled: false, checked: false },
       { id: 'filter-clear', label: '清除筛选', disabled: true, checked: false },
     ])
@@ -359,7 +359,7 @@ describe('FilterLayer', () => {
     layer.setSpec({ fieldId: 'score', op: { kind: 'number-equals', value: 5 } })
 
     expect(layer.headerDecoration(field)).toEqual({ filterActive: true })
-    expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 2 })).toEqual([
+    expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 2 })).toMatchObject([
       { id: 'filter-open', label: '筛选...', disabled: false, checked: true },
       { id: 'filter-clear', label: '清除筛选', disabled: false, checked: false },
     ])

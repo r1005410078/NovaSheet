@@ -368,7 +368,7 @@ describe('SortLayer', () => {
     const field = schema.fields[1]!
 
     expect(layer.headerDecoration(field)).toBeNull()
-    expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 1 })).toEqual([
+    expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 1 })).toMatchObject([
       { id: 'sort-asc', label: '升序排序', disabled: false, checked: false },
       { id: 'sort-desc', label: '降序排序', disabled: false, checked: false },
       { id: 'sort-none', label: '清除排序', disabled: true, checked: false },
@@ -377,7 +377,7 @@ describe('SortLayer', () => {
     layer.setSpec({ fieldId: 'score', direction: 'desc' })
 
     expect(layer.headerDecoration(field)).toEqual({ sortIndicator: 'desc' })
-    expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 1 })).toEqual([
+    expect(layer.contextMenuItems({ targetKind: 'columnHeader', field, colIndex: 1 })).toMatchObject([
       { id: 'sort-asc', label: '升序排序', disabled: false, checked: false },
       { id: 'sort-desc', label: '降序排序', disabled: false, checked: true },
       { id: 'sort-none', label: '清除排序', disabled: false, checked: false },

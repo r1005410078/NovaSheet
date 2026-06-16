@@ -1269,7 +1269,7 @@ export class GridRuntime {
   }
 
   /** 处理右键菜单项选择，优先执行内置 sort/filter/clipboard 行为。 */
-  handleContextMenuSelected(id: ContextMenuAction): void {
+  handleContextMenuSelected(id: ContextMenuAction | string): void {
     const ctx = this.lastContextMenuContext
     if (ctx?.targetKind === 'rowHeader') {
       this.invokeRowHeaderContextMenuAction(id, { targetRowIndex: ctx.targetRowIndex })
@@ -1311,7 +1311,8 @@ export class GridRuntime {
 
     // Phase 4.1：consumer 传了 callback 完全接管；没传走默认引擎
     if (this.onContextMenuAction) {
-      if (ctx) this.onContextMenuAction(id, ctx)
+      // 自定义 id 在运行时是普通字符串，与 ContextMenuAction 相同基础类型，强转安全
+      if (ctx) this.onContextMenuAction(id as ContextMenuAction, ctx)
       return
     }
     if (id === 'copy') {

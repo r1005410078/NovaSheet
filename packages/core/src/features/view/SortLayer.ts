@@ -98,18 +98,23 @@ export class SortLayer implements ViewLayer<SortSpec | null> {
         id: 'sort-asc',
         label: '升序排序',
         disabled,
+        icon: { kind: 'builtin', name: 'sortAsc' },
+        category: 'sort',
         checked: activeDirection === 'asc',
       },
       {
         id: 'sort-desc',
         label: '降序排序',
         disabled,
+        icon: { kind: 'builtin', name: 'sortDesc' },
+        category: 'sort',
         checked: activeDirection === 'desc',
       },
       {
         id: 'sort-none',
         label: '清除排序',
         disabled: activeDirection == null,
+        category: 'sort',
         checked: false,
       },
     ]

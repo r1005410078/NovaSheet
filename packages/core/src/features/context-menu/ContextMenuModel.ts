@@ -33,6 +33,25 @@ export type ContextMenuAction =
   | 'unhide-rows'
   | 'resize-row-height'
 
+export type BuiltInMenuIconName =
+  | 'cut'
+  | 'copy'
+  | 'paste'
+  | 'plus'
+  | 'trash'
+  | 'clear'
+  | 'hide'
+  | 'resize'
+  | 'filter'
+  | 'sortAsc'
+  | 'sortDesc'
+  | 'more'
+
+export type MenuIcon =
+  | { readonly kind: 'builtin'; readonly name: BuiltInMenuIconName }
+  | { readonly kind: 'svg-path'; readonly path: string }
+  | { readonly kind: 'text'; readonly text: string }
+
 export interface CellMenuContext {
   readonly targetKind: 'cell'
   readonly cell: CellAddress
@@ -56,17 +75,55 @@ export interface RowHeaderMenuContext {
 export type ContextMenuContext = CellMenuContext | ColumnHeaderMenuContext | RowHeaderMenuContext
 
 export interface ContextMenuItem {
-  readonly id: ContextMenuAction
+  readonly id: ContextMenuAction | (string & {})
   readonly label: string
-  readonly disabled: boolean
+  readonly disabled?: boolean
+  readonly icon?: MenuIcon
+  readonly shortcut?: string
+  readonly category?: string
   readonly separatorAfter?: boolean
+  readonly submenu?: readonly ContextMenuItem[]
+}
+
+// 平台检测：navigator.platform 在非浏览器环境（bun test）下不可用，安全回退 false
+const isMac =
+  typeof navigator !== 'undefined' && /\bMac|iPhone|iPad|iPod\b/.test(navigator.platform)
+
+function shortcut(mac: string, other: string): string {
+  return isMac ? mac : other
+}
+
+function builtinIcon(name: BuiltInMenuIconName): MenuIcon {
+  return { kind: 'builtin', name }
 }
 
 export function getCellContextMenuItems(ctx: CellMenuContext): readonly ContextMenuItem[] {
   return [
-    { id: 'cut', label: '剪切', disabled: !ctx.hasSelection },
-    { id: 'copy', label: '复制', disabled: !ctx.hasSelection, separatorAfter: true },
-    { id: 'paste', label: '粘贴', disabled: !ctx.clipboardReady },
+    {
+      id: 'cut',
+      label: '剪切',
+      disabled: !ctx.hasSelection,
+      icon: builtinIcon('cut'),
+      shortcut: shortcut('⌘X', 'Ctrl+X'),
+      category: 'clipboard',
+    },
+    {
+      id: 'copy',
+      label: '复制',
+      disabled: !ctx.hasSelection,
+      icon: builtinIcon('copy'),
+      shortcut: shortcut('⌘C', 'Ctrl+C'),
+      category: 'clipboard',
+      separatorAfter: true,
+    },
+    {
+      id: 'paste',
+      label: '粘贴',
+      disabled: !ctx.clipboardReady,
+      icon: builtinIcon('paste'),
+      shortcut: shortcut('⌘V', 'Ctrl+V'),
+      category: 'clipboard',
+    },
   ]
 }
 
@@ -100,16 +157,46 @@ export function getColumnHeaderStructuralMenuItems(
   hasHiddenInSelection: boolean,
 ): readonly ContextMenuItem[] {
   const items: ContextMenuItem[] = [
-    { id: 'insert-col-left', label: `在左侧插入 ${n} 列`, disabled: false, separatorAfter: false },
-    { id: 'insert-col-right', label: `在右侧插入 ${n} 列`, disabled: false, separatorAfter: true },
-    { id: 'delete-cols', label: `删除 ${n} 列`, disabled: false, separatorAfter: false },
-    { id: 'hide-cols', label: `隐藏 ${n} 列`, disabled: false, separatorAfter: false },
+    {
+      id: 'insert-col-left',
+      label: `在左侧插入 ${n} 列`,
+      disabled: false,
+      icon: builtinIcon('plus'),
+      category: 'structure',
+      separatorAfter: false,
+    },
+    {
+      id: 'insert-col-right',
+      label: `在右侧插入 ${n} 列`,
+      disabled: false,
+      icon: builtinIcon('plus'),
+      category: 'structure',
+      separatorAfter: true,
+    },
+    {
+      id: 'delete-cols',
+      label: `删除 ${n} 列`,
+      disabled: false,
+      icon: builtinIcon('trash'),
+      category: 'structure',
+      separatorAfter: false,
+    },
+    {
+      id: 'hide-cols',
+      label: `隐藏 ${n} 列`,
+      disabled: false,
+      icon: builtinIcon('hide'),
+      category: 'structure',
+      separatorAfter: false,
+    },
   ]
   if (hasHiddenInSelection) {
     items.push({
       id: 'unhide-cols',
       label: '显示选区内隐藏列',
       disabled: false,
+      icon: builtinIcon('hide'),
+      category: 'structure',
       separatorAfter: false,
     })
   }
@@ -117,6 +204,8 @@ export function getColumnHeaderStructuralMenuItems(
     id: 'resize-column-width',
     label: '调整列宽…',
     disabled: false,
+    icon: builtinIcon('resize'),
+    category: 'structure',
     separatorAfter: false,
   })
   const resizeIdx = items.findIndex((item) => item.id === 'resize-column-width')
@@ -137,15 +226,57 @@ export function getRowHeaderContextMenuItems(
   hasHiddenInSelection: boolean,
 ): readonly ContextMenuItem[] {
   const items: ContextMenuItem[] = [
-    { id: 'insert-above', label: `在上方插入 ${n} 行`, disabled: false, separatorAfter: false },
-    { id: 'insert-below', label: `在下方插入 ${n} 行`, disabled: false, separatorAfter: true },
-    { id: 'delete-rows', label: `删除 ${n} 行`, disabled: false, separatorAfter: false },
-    { id: 'hide-rows', label: `隐藏 ${n} 行`, disabled: false, separatorAfter: false },
+    {
+      id: 'insert-above',
+      label: `在上方插入 ${n} 行`,
+      disabled: false,
+      icon: builtinIcon('plus'),
+      category: 'structure',
+      separatorAfter: false,
+    },
+    {
+      id: 'insert-below',
+      label: `在下方插入 ${n} 行`,
+      disabled: false,
+      icon: builtinIcon('plus'),
+      category: 'structure',
+      separatorAfter: true,
+    },
+    {
+      id: 'delete-rows',
+      label: `删除 ${n} 行`,
+      disabled: false,
+      icon: builtinIcon('trash'),
+      category: 'structure',
+      separatorAfter: false,
+    },
+    {
+      id: 'hide-rows',
+      label: `隐藏 ${n} 行`,
+      disabled: false,
+      icon: builtinIcon('hide'),
+      category: 'structure',
+      separatorAfter: false,
+    },
   ]
   if (hasHiddenInSelection) {
-    items.push({ id: 'unhide-rows', label: '显示选区内隐藏行', disabled: false, separatorAfter: false })
+    items.push({
+      id: 'unhide-rows',
+      label: '显示选区内隐藏行',
+      disabled: false,
+      icon: builtinIcon('hide'),
+      category: 'structure',
+      separatorAfter: false,
+    })
   }
-  items.push({ id: 'resize-row-height', label: '调整行高…', disabled: false, separatorAfter: false })
+  items.push({
+    id: 'resize-row-height',
+    label: '调整行高…',
+    disabled: false,
+    icon: builtinIcon('resize'),
+    category: 'structure',
+    separatorAfter: false,
+  })
   // mark separator after hide-rows (or unhide-rows) before resize-row-height
   const resizeIdx = items.findIndex((i) => i.id === 'resize-row-height')
   if (resizeIdx > 0) {

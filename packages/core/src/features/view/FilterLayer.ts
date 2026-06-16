@@ -94,12 +94,16 @@ export class FilterLayer implements ViewLayer<FilterSpec | null> {
         id: 'filter-open',
         label: '筛选...',
         disabled: !isFilterableField(ctx.field),
+        icon: { kind: 'builtin', name: 'filter' },
+        category: 'filter',
         checked: active,
       },
       {
         id: 'filter-clear',
         label: '清除筛选',
         disabled: !active,
+        icon: { kind: 'builtin', name: 'filter' },
+        category: 'filter',
         checked: false,
       },
     ]

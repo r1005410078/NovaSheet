@@ -14,7 +14,8 @@ import type { Theme } from '../../kernel/theme/Theme'
 import { applyContextMenuTheme, ensureContextMenuStylesheet } from '../host/context-menu-style'
 
 export interface DomContextMenuLayerCallbacks {
-  onSelect: (id: ContextMenuAction) => void
+  // id 可以是内置 ContextMenuAction 也可以是自定义 string；运行时统一当 string 路由
+  onSelect: (id: ContextMenuAction | string) => void
   /** 菜单关闭时若焦点确实在菜单内，回调以恢复 grid 焦点（spec §4.5）。 */
   onClose?: () => void
 }

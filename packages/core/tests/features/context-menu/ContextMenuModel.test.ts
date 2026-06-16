@@ -18,6 +18,23 @@ const baseCtx: ContextMenuContext = {
   clipboardReady: false,
 }
 
+const schema: Schema = {
+  fields: [
+    { id: 'name', name: 'Name', type: 'text', width: 100 },
+    { id: 'score', name: 'Score', type: 'number', width: 100 },
+  ],
+}
+
+function setup() {
+  const source = new InMemoryDataSource({ rows: [{ name: 'Ada', score: 2 }], schema })
+  const pipeline = new ViewPipeline(source)
+  const filterLayer = new FilterLayer()
+  const sortLayer = new SortLayer()
+  pipeline.add(filterLayer)
+  pipeline.add(sortLayer)
+  return { pipeline, filterLayer, sortLayer }
+}
+
 describe('getCellContextMenuItems — Phase 4.0', () => {
   it('returns Cut / Copy / Paste in order', () => {
     expect(getCellContextMenuItems(baseCtx).map((i) => i.id)).toEqual(['cut', 'copy', 'paste'])
@@ -62,23 +79,6 @@ describe('getCellContextMenuItems — Phase 4.0', () => {
 })
 
 describe('getColumnHeaderContextMenuItems — Phase 4.4', () => {
-  const schema: Schema = {
-    fields: [
-      { id: 'name', name: 'Name', type: 'text', width: 100 },
-      { id: 'score', name: 'Score', type: 'number', width: 100 },
-    ],
-  }
-
-  function setup() {
-    const source = new InMemoryDataSource({ rows: [{ name: 'Ada', score: 2 }], schema })
-    const pipeline = new ViewPipeline(source)
-    const filterLayer = new FilterLayer()
-    const sortLayer = new SortLayer()
-    pipeline.add(filterLayer)
-    pipeline.add(sortLayer)
-    return { pipeline, filterLayer, sortLayer }
-  }
-
   it('combines sort and filter items from ViewPipeline', () => {
     const { pipeline } = setup()
     const items = getColumnHeaderContextMenuItems(
@@ -121,5 +121,48 @@ describe('getColumnHeaderContextMenuItems — Phase 4.4', () => {
 
     expect(items.find((item) => item.id === 'sort-asc')!.disabled).toBe(true)
     expect(items.find((item) => item.id === 'sort-desc')!.disabled).toBe(true)
+  })
+})
+
+describe('ContextMenuItem metadata — unified menu', () => {
+  it('cell clipboard items expose icon shortcut and category', () => {
+    const items = getCellContextMenuItems({ ...baseCtx, clipboardReady: true })
+
+    expect(items.find((item) => item.id === 'cut')).toMatchObject({
+      icon: { kind: 'builtin', name: 'cut' },
+      shortcut: expect.any(String),
+      category: 'clipboard',
+    })
+    expect(items.find((item) => item.id === 'copy')).toMatchObject({
+      icon: { kind: 'builtin', name: 'copy' },
+      shortcut: expect.any(String),
+      category: 'clipboard',
+    })
+    expect(items.find((item) => item.id === 'paste')).toMatchObject({
+      icon: { kind: 'builtin', name: 'paste' },
+      shortcut: expect.any(String),
+      category: 'clipboard',
+    })
+  })
+
+  it('column menu structure items expose icon and structure category', () => {
+    const { pipeline } = setup()
+    const items = getColumnHeaderContextMenuItems(
+      { targetKind: 'columnHeader', field: schema.fields[0]!, colIndex: 0 },
+      pipeline,
+    )
+
+    expect(items.find((item) => item.id === 'insert-col-left')).toMatchObject({
+      icon: { kind: 'builtin', name: 'plus' },
+      category: 'structure',
+    })
+    expect(items.find((item) => item.id === 'delete-cols')).toMatchObject({
+      icon: { kind: 'builtin', name: 'trash' },
+      category: 'structure',
+    })
+    expect(items.find((item) => item.id === 'resize-column-width')).toMatchObject({
+      icon: { kind: 'builtin', name: 'resize' },
+      category: 'structure',
+    })
   })
 })
