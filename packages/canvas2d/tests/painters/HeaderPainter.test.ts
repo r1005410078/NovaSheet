@@ -266,4 +266,64 @@ describe('HeaderPainter — hover menu button', () => {
     const arcs = ops.filter((o) => o.op === 'arc')
     expect(arcs.length).toBe(1)
   })
+
+  it('状态图标在 menu button 显示时向左偏移，不与按钮重叠', () => {
+    // 列宽 200px，padX=8，HEADER_MENU_BUTTON_SIZE=24，headerIconSize=16
+    // menuButtonReserve = 24 + 8 = 32
+    // 无修复时图标 X = 200 - 8 - 16 = 176（与按钮圆心 180 重叠）
+    // 有修复后图标 X = 200 - 8 - 32 - 16 = 144（按钮左侧 32px 处）
+    const SCHEMA_ICON: Schema = {
+      fields: [{ id: 'a', name: 'A', type: 'text', width: 200 }],
+    }
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 1, defaultSize: 200 })
+    const viewPipeline = {
+      collectHeaderDecorations: () => ({ sortIndicator: 'asc' as const }),
+    } as Pick<ViewPipeline, 'collectHeaderDecorations'>
+
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA_ICON,
+      colsAxis,
+      colRange: [0, 0],
+      width: 200,
+      viewPipeline,
+      hoveredColumnHeaderMenu: { colIndex: 0 },
+    })
+
+    // The arc center X for the menu button: colLeft + colWidth - padX - buttonSize/2
+    // = 0 + 200 - 8 - 12 = 180
+    const arc = ops.find((o): o is { op: 'arc'; args: [number, number, number, number, number] } =>
+      o.op === 'arc',
+    )
+    expect(arc).toBeDefined()
+    const buttonCenterX = arc!.args[0]
+
+    // The icon is painted via fillPath (paintSvgPath). We cannot read its x directly,
+    // but we can verify the fillPath ops exist AND that the translate used to position
+    // the icon does not overlap the button circle.
+    // paintSvgPath uses ctx.scale + ctx.translate internally; instead check via
+    // the translate op that appears *inside* the save/restore wrapping the icon paint.
+    // Simpler: verify that the icon render occurs before the arc (button painted after icons).
+    const iconFillPathIdx = ops.findIndex((o) => o.op === 'fillPath')
+    const arcIdx = ops.findIndex((o) => o.op === 'arc')
+    expect(iconFillPathIdx).toBeGreaterThan(-1)
+    expect(iconFillPathIdx).toBeLessThan(arcIdx)
+
+    // The menu button circle right edge = buttonCenterX + 12 = 192.
+    // Icon right edge without fix = 0 + 200 - 8 = 192 → same x, overlaps.
+    // With fix the translate x for the icon should be ≤ buttonCenterX - 12 (left of circle).
+    // We find the translate that corresponds to icon placement (first translate in the ops
+    // sequence up to the arc).
+    const translateBeforeArc = ops
+      .slice(0, arcIdx)
+      .filter((o): o is { op: 'translate'; args: [number, number] } => o.op === 'translate')
+    expect(translateBeforeArc.length).toBeGreaterThan(0)
+    const iconTranslateX = translateBeforeArc[translateBeforeArc.length - 1]!.args[0]
+    // iconTranslateX is where the icon SVG origin is placed; the icon is 16px wide,
+    // so its right edge = iconTranslateX + 16.  Must be left of button circle left edge.
+    const buttonCircleLeft = buttonCenterX - 12 // radius = buttonSize/2 = 12
+    expect(iconTranslateX + denseGridTheme.metrics.headerIconSize).toBeLessThanOrEqual(
+      buttonCircleLeft,
+    )
+  })
 })

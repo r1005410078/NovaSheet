@@ -26,6 +26,7 @@ export type RecordedOp =
   | { op: 'set:lineWidth'; value: number }
   | { op: 'set:lineCap'; value: CanvasLineCap }
   | { op: 'arc'; args: [number, number, number, number, number] }
+  | { op: 'closePath' }
 
 const CHAR_WIDTH = 7 // deterministic default for measureText
 
@@ -110,7 +111,7 @@ export function createRecordingContext(
       ops.push({ op: 'beginPath' })
     },
     closePath() {
-      // no-op for recording — path close doesn't need tracking
+      ops.push({ op: 'closePath' })
     },
     clip() {
       ops.push({ op: 'clip' })

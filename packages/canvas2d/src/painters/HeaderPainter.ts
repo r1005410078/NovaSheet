@@ -132,6 +132,7 @@ export class HeaderPainter {
           y,
           padX,
           color: textColor,
+          rightReserve: menuButtonReserve,
         })
         if (showMenuButton) {
           this.paintHeaderMenuButton(ctx, colLeft, colWidth, headerHeight)
@@ -240,12 +241,15 @@ export class HeaderPainter {
       y: number
       padX: number
       color: string
+      /** Extra space reserved on the right (e.g. menu button). Icons shift left by this amount. */
+      rightReserve?: number
     },
   ): void {
     if (icons.length === 0) return
     const { headerIconSize, headerIconGap } = this.theme.metrics
     const totalWidth = icons.length * headerIconSize + (icons.length - 1) * headerIconGap
-    let iconX = params.colLeft + params.colWidth - params.padX - totalWidth
+    const rightReserve = params.rightReserve ?? 0
+    let iconX = params.colLeft + params.colWidth - params.padX - rightReserve - totalWidth
     const iconY = params.y - headerIconSize / 2
 
     for (const icon of icons) {
