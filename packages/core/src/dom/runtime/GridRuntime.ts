@@ -212,6 +212,15 @@ const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
 const DRAG_AUTO_SCROLL_EDGE_PX = 32
 const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
 
+/** 内置 context menu action id 集合；用于区分 builtin 与 custom item。 */
+const BUILTIN_CONTEXT_MENU_ACTIONS = new Set<string>([
+  'cut', 'copy', 'paste',
+  'sort-asc', 'sort-desc', 'sort-none',
+  'filter-open', 'filter-clear',
+  'insert-col-left', 'insert-col-right', 'delete-cols', 'hide-cols', 'unhide-cols', 'resize-column-width',
+  'insert-above', 'insert-below', 'delete-rows', 'hide-rows', 'unhide-rows', 'resize-row-height',
+])
+
 /** 可驱动边缘自动滚动的拖拽种类。 */
 type AutoScrollDragKind = 'active-drag'
 
@@ -556,14 +565,7 @@ export class GridRuntime {
 
   /** 判断 id 是否为内置 action（非 custom id）。 */
   private isBuiltInContextMenuAction(id: string): boolean {
-    const builtins = new Set<string>([
-      'cut', 'copy', 'paste',
-      'sort-asc', 'sort-desc', 'sort-none',
-      'filter-open', 'filter-clear',
-      'insert-col-left', 'insert-col-right', 'delete-cols', 'hide-cols', 'unhide-cols', 'resize-column-width',
-      'insert-above', 'insert-below', 'delete-rows', 'hide-rows', 'unhide-rows', 'resize-row-height',
-    ])
-    return builtins.has(id)
+    return BUILTIN_CONTEXT_MENU_ACTIONS.has(id)
   }
 
   /** 将无 onContextMenuAction 处理器的自定义 item 标记为 disabled。 */
@@ -601,7 +603,7 @@ export class GridRuntime {
         items,
         anchor: { clientX: args.clientX, clientY: args.clientY },
         select: (id) => this.handleContextMenuSelected(id),
-        close: () => this.contextMenuRenderer?.close(),
+        close: () => this.closeContextMenu(),
       })
       return
     }
@@ -1602,7 +1604,7 @@ export class GridRuntime {
     this.resizeSpacer()
     this.remapScroll()
     this.refresh()
-    this.contextMenuLayer?.close()
+    this.closeContextMenu()
     this.closeActiveCustomEditor()
     this.fillLayer?.hidePreview()
     this.activeDrag = null
@@ -1830,7 +1832,7 @@ export class GridRuntime {
     this.engine.setScroll(logicalX, logicalY)
     this.closeActiveCustomEditor()
     this.syncCellEditorPosition()
-    this.contextMenuLayer?.close()
+    this.closeContextMenu()
     this.validationTooltip?.hide()
     this.runExcelWorkspaceFrame()
     this.invalidate()
