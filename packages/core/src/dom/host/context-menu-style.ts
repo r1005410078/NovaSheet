@@ -32,9 +32,13 @@ const CSS = `
   display: block;
 }
 [data-novasheet-context-menu] [role="menuitem"] {
-  display: block;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
   width: 100%;
-  padding: 6px var(--ns-menu-padding-x);
+  min-height: 32px;
+  padding: 0 var(--ns-menu-padding-x);
+  gap: 0 4px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -55,6 +59,52 @@ const CSS = `
   height: 1px;
   margin: 4px 0;
   background: var(--ns-menu-separator);
+}
+[data-novasheet-context-menu] {
+  min-width: 220px;
+}
+[data-ns-menu-icon-slot] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--ns-menu-text);
+  opacity: 0.7;
+}
+[data-ns-menu-label] {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-ns-menu-shortcut] {
+  padding-left: 16px;
+  opacity: 0.56;
+  font-size: 12px;
+  white-space: nowrap;
+}
+[data-ns-submenu] {
+  position: fixed;
+  background: var(--ns-menu-bg);
+  border: 1px solid var(--ns-menu-border);
+  border-radius: 4px;
+  box-shadow: var(--ns-menu-shadow);
+  padding: var(--ns-menu-padding-y) 0;
+  min-width: 180px;
+  z-index: 4;
+}
+[data-ns-submenu] [role="menuitem"] {
+  display: block;
+  width: 100%;
+  padding: 6px var(--ns-menu-padding-x);
+  border: 0;
+  background: transparent;
+  color: var(--ns-menu-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+[data-ns-submenu] [role="menuitem"]:hover:not([aria-disabled="true"]) {
+  background: var(--ns-menu-item-hover);
 }
 `.trim()
 

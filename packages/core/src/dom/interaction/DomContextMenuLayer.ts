@@ -9,9 +9,30 @@
  * 多 Grid：每个实例创建独立 layer，destroy 时各自从 body 移除（spec §6.5 #2）。
  */
 
-import type { ContextMenuAction, ContextMenuItem } from '../../features/context-menu/ContextMenuModel'
+import type {
+  BuiltInMenuIconName,
+  ContextMenuAction,
+  ContextMenuItem,
+  MenuIcon,
+} from '../../features/context-menu/ContextMenuModel'
 import type { Theme } from '../../kernel/theme/Theme'
 import { applyContextMenuTheme, ensureContextMenuStylesheet } from '../host/context-menu-style'
+
+/** builtin icon name → glyph 字符映射（CSS 可通过 data-ns-menu-icon attr 覆盖） */
+const BUILTIN_ICON_GLYPHS: Record<BuiltInMenuIconName, string> = {
+  cut: '✂',
+  copy: '⎘',
+  paste: '⊕',
+  plus: '+',
+  trash: '⌫',
+  clear: '✕',
+  hide: '◫',
+  resize: '↔',
+  filter: '⊟',
+  sortAsc: '↑',
+  sortDesc: '↓',
+  more: '⋯',
+}
 
 export interface DomContextMenuLayerCallbacks {
   onSelect: (id: ContextMenuAction | string) => void
@@ -33,6 +54,7 @@ export class DomContextMenuLayer {
   private attached = false
   private destroyed = false
   private opened = false
+  private currentSubmenu: HTMLElement | null = null
 
   constructor(container: HTMLElement, callbacks: DomContextMenuLayerCallbacks) {
     this.container = container
@@ -97,6 +119,7 @@ export class DomContextMenuLayer {
   close(): void {
     if (!this.attached || !this.opened) return
     const wasFocusInMenu = this.menu.contains(document.activeElement)
+    this.closeSubmenu()
     this.menu.removeAttribute('data-open')
     this.opened = false
     if (wasFocusInMenu) this.callbacks.onClose?.()
@@ -107,6 +130,7 @@ export class DomContextMenuLayer {
     this.destroyed = true
     if (this.attached) {
       const doc = this.container.ownerDocument
+      this.closeSubmenu()
       this.menu.removeEventListener('contextmenu', this.onMenuContextMenu)
       this.menu.removeEventListener('keydown', this.onMenuKeyDown)
       doc.removeEventListener('pointerdown', this.onDocumentPointerDown, true)
@@ -118,28 +142,136 @@ export class DomContextMenuLayer {
 
   private renderItems(items: readonly ContextMenuItem[]): void {
     while (this.menu.firstChild) this.menu.removeChild(this.menu.firstChild)
+    const doc = this.menu.ownerDocument
+    let prevItem: ContextMenuItem | null = null
     for (const item of items) {
-      const btn = document.createElement('button')
+      // category-based separator: insert when category boundary crosses between defined categories
+      const needsSep =
+        prevItem !== null &&
+        ((prevItem.category !== undefined || item.category !== undefined) &&
+          prevItem.category !== item.category)
+      if (needsSep) {
+        this.appendSeparator(doc)
+      }
+
+      const btn = doc.createElement('button')
       btn.setAttribute('role', 'menuitem')
       btn.setAttribute('data-ns-action', item.id)
       btn.setAttribute('tabindex', '-1')
-      btn.textContent = item.label
       if (item.disabled) {
         btn.setAttribute('aria-disabled', 'true')
         // do NOT set btn.disabled — keep focusable per ARIA menu pattern (spec §4.7)
       }
+
+      // icon slot
+      btn.appendChild(this.renderIconSlot(doc, item.icon))
+
+      // label
+      const labelSpan = doc.createElement('span')
+      labelSpan.setAttribute('data-ns-menu-label', '')
+      labelSpan.textContent = item.label
+      btn.appendChild(labelSpan)
+
+      // shortcut / submenu arrow
+      const trailSpan = doc.createElement('span')
+      trailSpan.setAttribute('data-ns-menu-shortcut', '')
+      if (item.submenu?.length) {
+        trailSpan.setAttribute('data-ns-submenu-arrow', '')
+        trailSpan.textContent = '▶'
+      } else {
+        trailSpan.textContent = item.shortcut ?? ''
+      }
+      btn.appendChild(trailSpan)
+
+      if (item.submenu?.length) {
+        btn.addEventListener('mouseenter', () => {
+          this.openSubmenuFor(btn, item)
+        })
+      }
+
       btn.addEventListener('click', () => this.onItemClick(item))
       this.menu.appendChild(btn)
+
+      // separatorAfter backward compat (only if category-based sep wasn't already inserted above)
       if (item.separatorAfter) {
-        const sep = document.createElement('div')
-        sep.setAttribute('role', 'separator')
-        this.menu.appendChild(sep)
+        this.appendSeparator(doc)
       }
+
+      prevItem = item
+    }
+  }
+
+  private appendSeparator(doc: Document): void {
+    const sep = doc.createElement('div')
+    sep.setAttribute('role', 'separator')
+    this.menu.appendChild(sep)
+  }
+
+  private renderIconSlot(doc: Document, icon: MenuIcon | undefined): HTMLSpanElement {
+    const slot = doc.createElement('span')
+    slot.setAttribute('data-ns-menu-icon-slot', '')
+    if (!icon) return slot
+    if (icon.kind === 'builtin') {
+      slot.setAttribute('data-ns-menu-icon', icon.name)
+      slot.textContent = BUILTIN_ICON_GLYPHS[icon.name]
+    } else if (icon.kind === 'text') {
+      slot.textContent = icon.text
+    } else if (icon.kind === 'svg-path') {
+      const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('aria-hidden', 'true')
+      svg.setAttribute('width', '14')
+      svg.setAttribute('height', '14')
+      svg.setAttribute('viewBox', '0 0 16 16')
+      const path = doc.createElementNS('http://www.w3.org/2000/svg', 'path')
+      path.setAttribute('d', icon.path)
+      svg.appendChild(path)
+      slot.appendChild(svg)
+    }
+    return slot
+  }
+
+  private openSubmenuFor(parentBtn: HTMLButtonElement, item: ContextMenuItem): void {
+    this.closeSubmenu()
+    if (!item.submenu?.length || item.disabled) return
+    const doc = this.menu.ownerDocument
+    const sub = doc.createElement('div')
+    sub.setAttribute('data-ns-submenu', '')
+    sub.setAttribute('role', 'menu')
+    for (const subItem of item.submenu) {
+      const subBtn = doc.createElement('button')
+      subBtn.setAttribute('role', 'menuitem')
+      subBtn.setAttribute('data-ns-action', subItem.id)
+      subBtn.setAttribute('tabindex', '-1')
+      subBtn.textContent = subItem.label
+      if (subItem.disabled) subBtn.setAttribute('aria-disabled', 'true')
+      subBtn.addEventListener('click', () => {
+        if (subItem.disabled) return
+        this.callbacks.onSelect(subItem.id)
+        this.closeSubmenu()
+        this.close()
+      })
+      sub.appendChild(subBtn)
+    }
+    // position to the right of parent
+    const rect = parentBtn.getBoundingClientRect()
+    sub.style.position = 'fixed'
+    sub.style.left = `${rect.right}px`
+    sub.style.top = `${rect.top}px`
+    doc.body.appendChild(sub)
+    this.currentSubmenu = sub
+  }
+
+  private closeSubmenu(): void {
+    if (this.currentSubmenu) {
+      this.currentSubmenu.parentNode?.removeChild(this.currentSubmenu)
+      this.currentSubmenu = null
     }
   }
 
   private onItemClick(item: ContextMenuItem): void {
     if (item.disabled) return
+    // items with submenus don't fire onSelect on the parent click
+    if (item.submenu?.length) return
     this.callbacks.onSelect(item.id)
     this.close()
   }

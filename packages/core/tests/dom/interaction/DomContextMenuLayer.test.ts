@@ -291,3 +291,121 @@ describe('DomContextMenuLayer — viewport clamp (spec §4.4)', () => {
     document.body.removeChild(container)
   })
 })
+
+describe('DomContextMenuLayer — unified visual model', () => {
+  it('renders icon slot label shortcut and category separators', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    layer.open({
+      clientX: 0,
+      clientY: 0,
+      items: [
+        {
+          id: 'cut',
+          label: '剪切',
+          disabled: false,
+          icon: { kind: 'builtin', name: 'cut' },
+          shortcut: '⌘X',
+          category: 'clipboard',
+        },
+        {
+          id: 'insert-col-left',
+          label: '在左侧插入 1 列',
+          disabled: false,
+          icon: { kind: 'builtin', name: 'plus' },
+          category: 'structure',
+        },
+      ],
+    })
+
+    expect(document.body.querySelector('[data-ns-menu-icon="cut"]')).toBeTruthy()
+    expect(document.body.querySelector('[data-ns-menu-shortcut]')!.textContent).toBe('⌘X')
+    expect(document.body.querySelectorAll('[role="separator"]').length).toBeGreaterThanOrEqual(1)
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('renders submenu arrow and dispatches submenu item click', () => {
+    const container = makeContainer()
+    const onSelect = mock((_id: string) => {})
+    const layer = new DomContextMenuLayer(container, { onSelect })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    layer.open({
+      clientX: 0,
+      clientY: 0,
+      items: [
+        {
+          id: 'more',
+          label: '查看更多列操作',
+          disabled: false,
+          submenu: [{ id: 'custom.freeze-column', label: '冻结到当前列', disabled: false }],
+        },
+      ],
+    })
+
+    expect(document.body.querySelector('[data-ns-submenu-arrow]')).toBeTruthy()
+    const parent = document.body.querySelector('[data-ns-action="more"]') as HTMLElement
+    parent.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }))
+    ;(document.body.querySelector('[data-ns-action="custom.freeze-column"]') as HTMLElement).click()
+    expect(onSelect).toHaveBeenCalledWith('custom.freeze-column')
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('icon slot is rendered even without icon (empty slot for alignment)', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    layer.open({
+      clientX: 0,
+      clientY: 0,
+      items: [{ id: 'sort-none', label: '无排序', disabled: false }],
+    })
+    expect(document.body.querySelector('[data-ns-menu-icon-slot]')).toBeTruthy()
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('category separator inserted between items with different categories', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    layer.open({
+      clientX: 0,
+      clientY: 0,
+      items: [
+        { id: 'cut', label: '剪切', disabled: false, category: 'clipboard' },
+        { id: 'copy', label: '复制', disabled: false, category: 'clipboard' },
+        { id: 'insert-col-left', label: '插入列', disabled: false, category: 'structure' },
+      ],
+    })
+    // should have exactly 1 separator between clipboard and structure groups
+    const separators = document.body.querySelectorAll('[role="separator"]')
+    expect(separators.length).toBe(1)
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('separatorAfter still inserts separator (backward compat)', () => {
+    const container = makeContainer()
+    const layer = new DomContextMenuLayer(container, { onSelect: mock(() => {}) })
+    layer.attach()
+    layer.applyTheme(denseGridTheme)
+    layer.open({
+      clientX: 0,
+      clientY: 0,
+      items: [
+        { id: 'cut', label: '剪切', disabled: false, separatorAfter: true },
+        { id: 'paste', label: '粘贴', disabled: false },
+      ],
+    })
+    expect(document.body.querySelector('[role="separator"]')).toBeTruthy()
+    layer.destroy()
+    document.body.removeChild(container)
+  })
+})
