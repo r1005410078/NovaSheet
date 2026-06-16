@@ -832,7 +832,7 @@ export class GridRuntime {
         }
       }
     }
-    const menuCtx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: ctx.targetRowIndex }
+    const menuCtx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: ctx.targetRowIndex, selectedRowCount: n }
     return applyContextMenuConfig(
       getRowHeaderContextMenuItems(n, hasHidden),
       menuCtx,
@@ -1220,12 +1220,6 @@ export class GridRuntime {
             },
           })
           this.afterEngineMutation()
-          const ctx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: rowIndex }
-          this.lastContextMenuContext = ctx
-          this.lastContextMenuPoint = {
-            clientX: event.clientX ?? event.x,
-            clientY: event.clientY ?? event.y,
-          }
           const hiddenSet = new Set(this.engine.getHiddenRows())
           const sel = this.engine.getSelection().selectedRange!
           let hasHidden = false
@@ -1234,6 +1228,12 @@ export class GridRuntime {
             if (hiddenSet.has(underlying)) hasHidden = true
           }
           const n = sel.endRow - sel.startRow + 1
+          const ctx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: rowIndex, selectedRowCount: n }
+          this.lastContextMenuContext = ctx
+          this.lastContextMenuPoint = {
+            clientX: event.clientX ?? event.x,
+            clientY: event.clientY ?? event.y,
+          }
           const items = applyContextMenuConfig(
             getRowHeaderContextMenuItems(n, hasHidden),
             ctx,

@@ -220,4 +220,16 @@ describe('applyContextMenuConfig — config extension', () => {
     const result = applyContextMenuConfig(base, baseCtx, undefined)
     expect(result).toBe(base)
   })
+
+  it('passes ctx to transform', () => {
+    let captured: ContextMenuContext | undefined
+    const base = getCellContextMenuItems(baseCtx)
+    applyContextMenuConfig(base, baseCtx, {
+      transform: (items, ctx) => {
+        captured = ctx
+        return items
+      },
+    })
+    expect(captured).toBe(baseCtx)
+  })
 })

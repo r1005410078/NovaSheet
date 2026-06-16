@@ -71,6 +71,7 @@ export interface ColumnHeaderMenuContext extends PipelineColumnHeaderMenuContext
 export interface RowHeaderMenuContext {
   readonly targetKind: 'rowHeader'
   readonly targetRowIndex: number
+  readonly selectedRowCount: number
 }
 
 export type ContextMenuContext = CellMenuContext | ColumnHeaderMenuContext | RowHeaderMenuContext
@@ -95,10 +96,10 @@ export interface ContextMenuExtensionConfig {
 export interface ContextMenuConfig {
   readonly mode?: 'append' | 'prepend' | 'replace'
   readonly items?: readonly ContextMenuItem[]
-  transform?(
+  readonly transform?: (
     items: readonly ContextMenuItem[],
     ctx: ContextMenuContext,
-  ): readonly ContextMenuItem[]
+  ) => readonly ContextMenuItem[]
 }
 
 export function applyContextMenuConfig(
@@ -109,6 +110,7 @@ export function applyContextMenuConfig(
   if (!config) return baseItems
   const extra = config.items ?? []
   const mode = config.mode ?? 'append'
+  if (!config.transform && extra.length === 0 && mode === 'append') return baseItems
   const merged =
     mode === 'replace'
       ? [...extra]
