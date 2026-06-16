@@ -317,7 +317,135 @@ hover 状态虽然由 DOM/runtime 输入产生，但第一版明确走 `engine.g
 
 ---
 
-## 8. 决策记录
+## 8. BDD 验收场景
+
+### 8.1 列头 hover 入口
+
+```gherkin
+Feature: Column header hover menu entry
+
+  Scenario: Hover column header shows menu button only for that column
+    Given a grid with visible column headers
+    When the pointer moves over column B's header
+    Then column B's header shows the dropdown menu button
+    And other column headers do not show the dropdown menu button
+
+  Scenario: Narrow column does not show menu button
+    Given column B has width less than 32px
+    When the pointer moves over column B's header
+    Then column B's header does not show the dropdown menu button
+
+  Scenario: Sort and filter icons do not overlap the menu button
+    Given column B has sort or filter state icons
+    When the pointer moves over column B's header
+    Then the sort or filter icons are placed before the dropdown menu button
+    And the icons and button do not overlap
+```
+
+### 8.2 列头菜单打开
+
+```gherkin
+Feature: Column header dropdown opens unified menu
+
+  Scenario: Click header dropdown opens column menu
+    Given the pointer is over column B's header
+    And the dropdown menu button is visible
+    When the user clicks the dropdown menu button
+    Then the column header context menu opens near the button
+    And the menu context targets column B
+
+  Scenario: Right click column header opens the same menu model
+    Given column B is visible
+    When the user opens the context menu on column B's header
+    Then the column header context menu opens
+    And the menu items match the header dropdown menu items for column B
+
+  Scenario: Open menu remains visible after pointer leaves header
+    Given the column header dropdown menu is open
+    When the pointer leaves the header area
+    Then the menu remains open until an existing close trigger occurs
+```
+
+### 8.3 统一菜单样式
+
+```gherkin
+Feature: Unified context menu presentation
+
+  Scenario: Default menu item renders icon label and shortcut
+    Given the clipboard menu group is available
+    When the menu opens
+    Then cut copy and paste items render built-in icons
+    And cut copy and paste items render platform shortcuts
+
+  Scenario: Category changes create separators
+    Given menu items have categories clipboard and structure
+    When the menu opens
+    Then a separator is rendered between the two categories
+
+  Scenario: Disabled item is visible but not selectable
+    Given a menu item is disabled
+    When the menu opens
+    Then the item is rendered in disabled style
+    And clicking the item does not dispatch an action
+```
+
+### 8.4 配置式扩展
+
+```gherkin
+Feature: Context menu config extension
+
+  Scenario: Append custom items after default items
+    Given GridOptions.contextMenus.columnHeader mode is append
+    And a custom menu item is configured
+    When the column header menu opens
+    Then the custom item appears after the default items
+
+  Scenario: Replace default items with custom items
+    Given GridOptions.contextMenus.columnHeader mode is replace
+    And a custom menu item is configured
+    When the column header menu opens
+    Then only the configured custom items are rendered
+
+  Scenario: Transform can remove and regroup items
+    Given GridOptions.contextMenus.columnHeader.transform removes sort actions
+    And changes a custom item's category
+    When the column header menu opens
+    Then sort actions are not rendered
+    And the custom item appears in the transformed category group
+
+  Scenario: Custom action requires handler
+    Given a custom menu item has a custom action id
+    And GridOptions.onContextMenuAction is not configured
+    When the menu opens
+    Then the custom menu item is disabled
+```
+
+### 8.5 DOM 覆盖
+
+```gherkin
+Feature: Context menu DOM override
+
+  Scenario: Custom renderer receives resolved menu options
+    Given GridOptions.contextMenuRenderer is configured
+    When the column header menu opens
+    Then NovaSheet calls contextMenuRenderer.open
+    And the options include targetKind context items anchor select and close
+
+  Scenario: Custom renderer can dispatch built-in action
+    Given GridOptions.contextMenuRenderer is configured
+    And the custom renderer calls select with a built-in action id
+    When the user activates that menu item
+    Then NovaSheet dispatches the built-in context menu action
+
+  Scenario: Grid destroy tears down custom renderer
+    Given GridOptions.contextMenuRenderer is configured
+    When Grid.destroy is called
+    Then contextMenuRenderer.destroy is called once
+```
+
+---
+
+## 9. 决策记录
 
 | 决策 | 结论 | 原因 |
 |---|---|---|
