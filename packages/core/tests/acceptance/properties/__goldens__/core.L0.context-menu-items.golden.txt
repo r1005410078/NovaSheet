@@ -13,7 +13,7 @@ filter-open "筛选..."
 filter-clear "清除筛选" disabled
 sort-asc "升序排序"
 sort-desc "降序排序"
-sort-none "清除排序" disabled |sep
+sort-none "清除排序" disabled
 insert-col-left "在左侧插入 1 列"
 insert-col-right "在右侧插入 1 列" |sep
 delete-cols "删除 1 列"

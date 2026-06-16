@@ -1431,7 +1431,7 @@ export class GridRuntime {
     const point = this.lastContextMenuPoint ?? { clientX: 0, clientY: 0 }
     const currentSpec = this.filterLayer?.getSpec()
     this.filterPopoverFieldId = ctx.field.id
-    this.contextMenuLayer?.close()
+    this.closeContextMenu()
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.filterPopover.open(point, {

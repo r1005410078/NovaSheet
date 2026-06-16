@@ -188,10 +188,6 @@ export function getColumnHeaderContextMenuItems(
       )
     : pipelineItems
   const merged = [...items]
-  if (merged.length > 0) {
-    const last = merged[merged.length - 1]!
-    merged[merged.length - 1] = { ...last, separatorAfter: true }
-  }
   merged.push(
     ...getColumnHeaderStructuralMenuItems(
       ctx.selectedColCount ?? 1,
