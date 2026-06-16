@@ -142,7 +142,8 @@ describe('Canvas2DRenderer — regions 绘制', () => {
       },
     })
 
-    expect(ops.filter((o) => o.op === 'fillPath')).toHaveLength(2)
+    // 只有 filterActive 图标（1个），sortIndicator 不再渲染
+    expect(ops.filter((o) => o.op === 'fillPath')).toHaveLength(1)
   })
 
   it('编辑中的 cell 内容交给 DOM editor，不再由 canvas 重复绘制', () => {

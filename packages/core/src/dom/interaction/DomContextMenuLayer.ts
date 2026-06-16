@@ -164,7 +164,7 @@ export class DomContextMenuLayer {
       }
 
       // icon slot
-      btn.appendChild(this.renderIconSlot(doc, item.icon))
+      btn.appendChild(this.renderIconSlot(doc, item.icon, item.iconColor))
 
       // label
       const labelSpan = doc.createElement('span')
@@ -207,9 +207,14 @@ export class DomContextMenuLayer {
     this.menu.appendChild(sep)
   }
 
-  private renderIconSlot(doc: Document, icon: MenuIcon | undefined): HTMLSpanElement {
+  private renderIconSlot(
+    doc: Document,
+    icon: MenuIcon | undefined,
+    iconColor?: string,
+  ): HTMLSpanElement {
     const slot = doc.createElement('span')
     slot.setAttribute('data-ns-menu-icon-slot', '')
+    if (iconColor) slot.style.color = iconColor
     if (!icon) return slot
     if (icon.kind === 'builtin') {
       slot.setAttribute('data-ns-menu-icon', icon.name)

@@ -125,6 +125,7 @@ export function applyContextMenuTheme(host: HTMLElement, theme: Theme): void {
   host.style.setProperty('--ns-menu-text-disabled', colors.headerText)
   host.style.setProperty('--ns-menu-item-hover', colors.menuItemHover)
   host.style.setProperty('--ns-menu-separator', colors.gridLine)
+  host.style.setProperty('--ns-menu-accent', colors.selectionBorder)
   host.style.setProperty('--ns-menu-shadow', metrics.menuShadow)
   host.style.setProperty('--ns-menu-font', metrics.fontFamily)
   host.style.setProperty('--ns-menu-font-size', `${metrics.fontSize}px`)

@@ -81,6 +81,8 @@ export interface ContextMenuItem {
   readonly label: string
   readonly disabled?: boolean
   readonly icon?: MenuIcon
+  /** 覆盖图标颜色；支持 CSS color 或 var(--ns-menu-accent) 等变量。 */
+  readonly iconColor?: string
   readonly shortcut?: string
   readonly category?: string
   readonly separatorAfter?: boolean

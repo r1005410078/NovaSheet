@@ -40,6 +40,7 @@ export const denseGridTheme: Theme = {
     gridLineStrong: '#d0d7de',
     frozenShadow: 'rgba(0,0,0,0.08)',
     hoverRowBg: '#f6f8fa',
+    headerMenuButtonBg: '#d0d7de',
     selectionBg: 'rgba(9,105,218,0.10)',
     selectionBorder: '#0969da',
     selectionText: '#ffffff',

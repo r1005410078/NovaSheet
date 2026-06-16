@@ -62,6 +62,8 @@ export interface ThemeColors {
   readonly frozenShadow: string
   /** 行悬停背景色（Phase 4.0） */
   readonly hoverRowBg: string
+  /** 列头 hover 菜单按钮圆形背景色 */
+  readonly headerMenuButtonBg: string
   /** 选区背景色（Phase 4.0） */
   readonly selectionBg: string
   /** 选区边框颜色（Phase 4.0） */
