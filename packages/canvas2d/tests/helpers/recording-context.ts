@@ -25,6 +25,7 @@ export type RecordedOp =
   | { op: 'set:textAlign'; value: CanvasTextAlign }
   | { op: 'set:lineWidth'; value: number }
   | { op: 'set:lineCap'; value: CanvasLineCap }
+  | { op: 'arc'; args: [number, number, number, number, number] }
 
 const CHAR_WIDTH = 7 // deterministic default for measureText
 
@@ -108,6 +109,9 @@ export function createRecordingContext(
     beginPath() {
       ops.push({ op: 'beginPath' })
     },
+    closePath() {
+      // no-op for recording — path close doesn't need tracking
+    },
     clip() {
       ops.push({ op: 'clip' })
     },
@@ -160,6 +164,9 @@ export function createRecordingContext(
     },
     setTransform(a: number, b: number, c: number, d: number, e: number, f: number) {
       ops.push({ op: 'setTransform', args: [a, b, c, d, e, f] })
+    },
+    arc(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
+      ops.push({ op: 'arc', args: [x, y, radius, startAngle, endAngle] })
     },
     measureText(s: string): TextMetrics {
       return { width: s.length * CHAR_WIDTH } as TextMetrics

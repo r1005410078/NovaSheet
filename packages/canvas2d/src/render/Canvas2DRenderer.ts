@@ -403,6 +403,7 @@ export class Canvas2DRenderer implements RenderBackend {
         ctx.frame.viewPipeline,
         ctx.frame.collapsedColGaps,
         this.getSelectedColumnHeaderRange(ctx.frame),
+        ctx.frame.hoveredColumnHeaderMenu,
       )
       this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
       return
@@ -457,6 +458,7 @@ export class Canvas2DRenderer implements RenderBackend {
       ctx.frame.viewPipeline,
       ctx.frame.collapsedColGaps,
       this.getSelectedColumnHeaderRange(ctx.frame),
+      ctx.frame.hoveredColumnHeaderMenu,
     )
     this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
   }
@@ -590,6 +592,7 @@ export class Canvas2DRenderer implements RenderBackend {
     viewPipeline: RenderFrame['viewPipeline'],
     collapsedColGaps: RenderFrame['collapsedColGaps'],
     selectedColumnRange?: Pick<CellRange, 'startCol' | 'endCol'>,
+    hoveredColumnHeaderMenu?: RenderFrame['hoveredColumnHeaderMenu'],
   ): void {
     for (const region of paintOrder.filter((r) => r.rowBand === 'middle')) {
       if (region.colRange[1] < region.colRange[0]) continue
@@ -604,6 +607,7 @@ export class Canvas2DRenderer implements RenderBackend {
         viewPipeline,
         collapsedColGaps,
         selectedColumnRange,
+        hoveredColumnHeaderMenu,
       })
     }
   }

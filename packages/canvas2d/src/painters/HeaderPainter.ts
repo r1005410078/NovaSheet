@@ -48,11 +48,18 @@ export interface HeaderPaintParams {
   collapsedColGaps?: readonly RenderFrameCollapsedColGap[]
   /** Phase 4.7 — 整列选中时需要强高亮的列头范围。 */
   selectedColumnRange?: Pick<CellRange, 'startCol' | 'endCol'>
+  /** 当前 hover 的列头菜单按钮状态（来自 RenderFrame）。*/
+  hoveredColumnHeaderMenu?: { readonly colIndex: number }
 }
 
 const MIN_HEADER_HEIGHT_FOR_TRIANGLE = 24
 const TRIANGLE_WIDTH = 6
 const TRIANGLE_HEIGHT = 8
+
+const HEADER_MENU_BUTTON_SIZE = 24
+const MIN_HEADER_MENU_BUTTON_COL_WIDTH = 32
+const HEADER_MENU_TRIANGLE_WIDTH = 8
+const HEADER_MENU_TRIANGLE_HEIGHT = 5
 
 /**
  * 列头绘制。M1 只画字段名；M2+ 加排序箭头、字段类型 icon、resize handle 命中区时
@@ -112,8 +119,12 @@ export class HeaderPainter {
         const field = schema.fields[c]!
         const icons = this.collectStateIcons(params.viewPipeline, field)
         const iconReserve = this.measureIconReserve(icons.length)
+        const showMenuButton =
+          params.hoveredColumnHeaderMenu?.colIndex === c &&
+          colWidth >= MIN_HEADER_MENU_BUTTON_COL_WIDTH
+        const menuButtonReserve = showMenuButton ? HEADER_MENU_BUTTON_SIZE + padX : 0
         const textX = colLeft + padX
-        const maxTextWidth = Math.max(0, colWidth - padX * 2 - iconReserve)
+        const maxTextWidth = Math.max(0, colWidth - padX * 2 - iconReserve - menuButtonReserve)
         ctx.fillText(field.name, textX, y, maxTextWidth)
         this.paintStateIcons(ctx, icons, {
           colLeft,
@@ -122,6 +133,9 @@ export class HeaderPainter {
           padX,
           color: textColor,
         })
+        if (showMenuButton) {
+          this.paintHeaderMenuButton(ctx, colLeft, colWidth, headerHeight)
+        }
       }
     }
 
@@ -168,6 +182,34 @@ export class HeaderPainter {
     ctx.save()
     ctx.translate(x, y)
     ctx.fill(path)
+    ctx.restore()
+  }
+
+  private paintHeaderMenuButton(
+    ctx: CanvasRenderingContext2D,
+    colLeft: number,
+    colWidth: number,
+    headerHeight: number,
+  ): void {
+    const padX = this.theme.metrics.cellPaddingX
+    const buttonSize = HEADER_MENU_BUTTON_SIZE
+    const centerX = colLeft + colWidth - padX - buttonSize / 2
+    const centerY = headerHeight / 2
+
+    ctx.save()
+    // circle background
+    ctx.fillStyle = this.theme.colors.hoverRowBg
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, buttonSize / 2, 0, Math.PI * 2)
+    ctx.fill()
+    // triangle (dropdown arrow)
+    ctx.fillStyle = this.theme.colors.headerText
+    ctx.beginPath()
+    ctx.moveTo(centerX - HEADER_MENU_TRIANGLE_WIDTH / 2, centerY - HEADER_MENU_TRIANGLE_HEIGHT / 2)
+    ctx.lineTo(centerX + HEADER_MENU_TRIANGLE_WIDTH / 2, centerY - HEADER_MENU_TRIANGLE_HEIGHT / 2)
+    ctx.lineTo(centerX, centerY + HEADER_MENU_TRIANGLE_HEIGHT / 2)
+    ctx.closePath()
+    ctx.fill()
     ctx.restore()
   }
 

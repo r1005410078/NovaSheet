@@ -10,6 +10,7 @@ import type {
   FrozenConfig,
   GridEngine,
   GridSelection,
+  HoveredColumnHeaderMenu,
   RenderFrame,
   Schema,
   Theme,
@@ -179,6 +180,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     validateAll: mock(() => {}),
     getValidationState: mock((_rawRow: number, _rawCol: number) => null),
     setValidationRedrawCallback: mock((_cb: () => void) => {}),
+    setHoveredColumnHeaderMenu: mock((_state: HoveredColumnHeaderMenu | null) => {}),
   } satisfies GridEngine
 
   return Object.assign(engine, options.overrides)

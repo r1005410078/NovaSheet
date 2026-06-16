@@ -188,3 +188,82 @@ describe('HeaderPainter — 列头', () => {
     expect(nameTxt!.args[1]).toBe(8) // x = 0 + padX
   })
 })
+
+describe('HeaderPainter — hover menu button', () => {
+  const SCHEMA_TWO: Schema = {
+    fields: [
+      { id: 'a', name: 'A', type: 'text', width: 100 },
+      { id: 'b', name: 'B', type: 'text', width: 100 },
+    ],
+  }
+
+  it('paints arc (circle bg) only for hovered column', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA_TWO,
+      colsAxis,
+      colRange: [0, 1],
+      width: 200,
+      hoveredColumnHeaderMenu: { colIndex: 1 },
+    })
+    const arcs = ops.filter((o) => o.op === 'arc')
+    expect(arcs.length).toBe(1)
+  })
+
+  it('paints triangle fill for hovered column', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA_TWO,
+      colsAxis,
+      colRange: [0, 1],
+      width: 200,
+      hoveredColumnHeaderMenu: { colIndex: 1 },
+    })
+    const fills = ops.filter((o) => o.op === 'fill')
+    expect(fills.length).toBeGreaterThan(0)
+  })
+
+  it('does not paint button when no hoveredColumnHeaderMenu', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA_TWO,
+      colsAxis,
+      colRange: [0, 1],
+      width: 200,
+    })
+    const arcs = ops.filter((o) => o.op === 'arc')
+    expect(arcs.length).toBe(0)
+  })
+
+  it('does not paint button for column narrower than 32px', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 1, defaultSize: 31 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: { fields: [{ id: 'a', name: 'A', type: 'text', width: 31 }] },
+      colsAxis,
+      colRange: [0, 0],
+      width: 31,
+      hoveredColumnHeaderMenu: { colIndex: 0 },
+    })
+    const arcs = ops.filter((o) => o.op === 'arc')
+    expect(arcs.length).toBe(0)
+  })
+
+  it('does not paint button for non-hovered column', () => {
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 2, defaultSize: 100 })
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA_TWO,
+      colsAxis,
+      colRange: [0, 1],
+      width: 200,
+      hoveredColumnHeaderMenu: { colIndex: 0 }, // only col 0 hovered
+    })
+    // exactly 1 arc for col 0 (hovered), NOT for col 1
+    const arcs = ops.filter((o) => o.op === 'arc')
+    expect(arcs.length).toBe(1)
+  })
+})

@@ -87,6 +87,7 @@ export type {
   SetViewDataOptions,
 } from './engine/GridEngine'
 export type {
+  HoveredColumnHeaderMenu,
   RenderFrame,
   RenderFrameCollapsedColGap,
   RenderFrameCollapsedGap,
