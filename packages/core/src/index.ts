@@ -157,7 +157,9 @@ export {
 export type {
   CellMenuContext,
   ContextMenuAction,
+  ContextMenuConfig,
   ContextMenuContext,
+  ContextMenuExtensionConfig,
   ContextMenuItem,
   ContextMenuTargetKind,
   RowHeaderMenuContext,

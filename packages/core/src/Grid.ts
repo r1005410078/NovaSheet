@@ -7,6 +7,7 @@ import type {
   ContextMenuItem,
   ContextMenuAction,
   ContextMenuContext,
+  ContextMenuExtensionConfig,
   DataSource,
   Field,
   FrozenConfig,
@@ -76,6 +77,8 @@ export interface GridOptions extends GridEngineOptions {
   cellAttachments?: readonly CellAttachmentCodec<unknown>[]
   /** Excel workspace auto-grow/shrink；默认关闭。 */
   excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
+  /** 上下文菜单配置式扩展（append / prepend / replace + transform）。 */
+  readonly contextMenus?: ContextMenuExtensionConfig
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -126,6 +129,7 @@ export class Grid {
         onSelectionChange: options.onSelectionChange,
         cellEditors: options.cellEditors,
         excelWorkspace: options.excelWorkspace,
+        contextMenus: options.contextMenus,
       },
       options.backend,
     )

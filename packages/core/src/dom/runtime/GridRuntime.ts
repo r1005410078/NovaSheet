@@ -52,6 +52,7 @@ import type { ResizeHandleRect } from '../../kernel/interaction/HandleLayout'
 import { computeScrollReveal } from '../../kernel/interaction/scrollCellIntoView'
 import { FrameScheduler } from '../../kernel/util/raf'
 import {
+  applyContextMenuConfig,
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
   getRowHeaderContextMenuItems,
@@ -59,6 +60,7 @@ import {
 import type {
   ContextMenuAction,
   ContextMenuContext,
+  ContextMenuExtensionConfig,
   ContextMenuItem,
 } from '../../features/context-menu/ContextMenuModel'
 import { hitTestCell } from '../../kernel/interaction/HitTest'
@@ -173,6 +175,8 @@ export interface GridRuntimeOptions {
   excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
   /** Validation tooltip：悬停 invalid 单元格时显示错误原因。 */
   validationTooltip?: import('../overlay/ValidationTooltip').ValidationTooltip
+  /** 上下文菜单配置式扩展（append / prepend / replace + transform）。 */
+  contextMenus?: ContextMenuExtensionConfig
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -323,6 +327,8 @@ export class GridRuntime {
   private pendingColumnWidthFieldIds: string[] = []
   /** 外部接管 context menu action 的回调。 */
   private onContextMenuAction?: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void
+  /** 上下文菜单配置式扩展；applyContextMenuConfig 在各菜单打开时应用。 */
+  private contextMenus?: ContextMenuExtensionConfig
   /** 最近一次打开菜单时的上下文，用于菜单项点击分发。 */
   private lastContextMenuContext: ContextMenuContext | null = null
   /** 最近一次打开菜单时的屏幕坐标，用于 filter popover 锚点。 */
@@ -398,6 +404,7 @@ export class GridRuntime {
     this.rowReorderOverlay = opts.rowReorderOverlay
     this.selectionOverlay = opts.selectionOverlay
     this.validationTooltip = opts.validationTooltip
+    this.contextMenus = opts.contextMenus
     this.engine.setValidationRedrawCallback(() => this.invalidate())
     this.scrollMapper = new ScrollMapper()
     if (opts.excelWorkspace) {
@@ -825,7 +832,12 @@ export class GridRuntime {
         }
       }
     }
-    return getRowHeaderContextMenuItems(n, hasHidden)
+    const menuCtx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: ctx.targetRowIndex }
+    return applyContextMenuConfig(
+      getRowHeaderContextMenuItems(n, hasHidden),
+      menuCtx,
+      this.contextMenus?.rowHeader,
+    )
   }
 
   /** Phase 4.5 — 执行行头右键菜单动作。 */
@@ -873,16 +885,18 @@ export class GridRuntime {
     const sel = this.engine.getSelection().selectedRange
     const startCol = sel?.startCol ?? ctx.targetColIndex
     const endCol = sel?.endCol ?? ctx.targetColIndex
-    return getColumnHeaderContextMenuItems(
-      {
-        targetKind: 'columnHeader',
-        field,
-        colIndex: ctx.targetColIndex,
-        multiSelect: field.type === 'multiSelect',
-        selectedColCount: endCol - startCol + 1,
-        hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
-      },
-      this.viewPipeline,
+    const menuCtx = {
+      targetKind: 'columnHeader' as const,
+      field,
+      colIndex: ctx.targetColIndex,
+      multiSelect: field.type === 'multiSelect',
+      selectedColCount: endCol - startCol + 1,
+      hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
+    }
+    return applyContextMenuConfig(
+      getColumnHeaderContextMenuItems(menuCtx, this.viewPipeline),
+      menuCtx,
+      this.contextMenus?.columnHeader,
     )
   }
 
@@ -1171,7 +1185,11 @@ export class GridRuntime {
         clientX: event.clientX ?? event.x,
         clientY: event.clientY ?? event.y,
       }
-      const items = getColumnHeaderContextMenuItems(ctx, this.viewPipeline)
+      const items = applyContextMenuConfig(
+        getColumnHeaderContextMenuItems(ctx, this.viewPipeline),
+        ctx,
+        this.contextMenus?.columnHeader,
+      )
       this.contextMenuLayer.open({
         clientX: event.clientX ?? event.x,
         clientY: event.clientY ?? event.y,
@@ -1216,7 +1234,11 @@ export class GridRuntime {
             if (hiddenSet.has(underlying)) hasHidden = true
           }
           const n = sel.endRow - sel.startRow + 1
-          const items = getRowHeaderContextMenuItems(n, hasHidden)
+          const items = applyContextMenuConfig(
+            getRowHeaderContextMenuItems(n, hasHidden),
+            ctx,
+            this.contextMenus?.rowHeader,
+          )
           this.contextMenuLayer.open({
             clientX: event.clientX ?? event.x,
             clientY: event.clientY ?? event.y,
@@ -1260,7 +1282,11 @@ export class GridRuntime {
       clientX: event.clientX ?? event.x,
       clientY: event.clientY ?? event.y,
     }
-    const items = getCellContextMenuItems(ctx)
+    const items = applyContextMenuConfig(
+      getCellContextMenuItems(ctx),
+      ctx,
+      this.contextMenus?.cell,
+    )
     this.contextMenuLayer.open({
       clientX: event.clientX ?? event.x,
       clientY: event.clientY ?? event.y,

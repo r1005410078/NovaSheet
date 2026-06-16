@@ -86,6 +86,38 @@ export interface ContextMenuItem {
   readonly submenu?: readonly ContextMenuItem[]
 }
 
+export interface ContextMenuExtensionConfig {
+  readonly cell?: ContextMenuConfig
+  readonly columnHeader?: ContextMenuConfig
+  readonly rowHeader?: ContextMenuConfig
+}
+
+export interface ContextMenuConfig {
+  readonly mode?: 'append' | 'prepend' | 'replace'
+  readonly items?: readonly ContextMenuItem[]
+  transform?(
+    items: readonly ContextMenuItem[],
+    ctx: ContextMenuContext,
+  ): readonly ContextMenuItem[]
+}
+
+export function applyContextMenuConfig(
+  baseItems: readonly ContextMenuItem[],
+  ctx: ContextMenuContext,
+  config: ContextMenuConfig | undefined,
+): readonly ContextMenuItem[] {
+  if (!config) return baseItems
+  const extra = config.items ?? []
+  const mode = config.mode ?? 'append'
+  const merged =
+    mode === 'replace'
+      ? [...extra]
+      : mode === 'prepend'
+        ? [...extra, ...baseItems]
+        : [...baseItems, ...extra]
+  return config.transform ? config.transform(merged, ctx) : merged
+}
+
 // no navigator in bun test, safe fallback false
 const isMac =
   typeof navigator !== 'undefined' && /\bMac|iPhone|iPad|iPod\b/.test(navigator.platform)

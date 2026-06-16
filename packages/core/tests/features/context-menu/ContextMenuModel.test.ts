@@ -7,6 +7,7 @@ import type { Schema } from '../../../src/kernel/data/Schema'
 import {
   getCellContextMenuItems,
   getColumnHeaderContextMenuItems,
+  applyContextMenuConfig,
   type ContextMenuContext,
 } from '../../../src/features/context-menu/ContextMenuModel'
 
@@ -164,5 +165,59 @@ describe('ContextMenuItem metadata — unified menu', () => {
       icon: { kind: 'builtin', name: 'resize' },
       category: 'structure',
     })
+  })
+})
+
+describe('applyContextMenuConfig — config extension', () => {
+  const customItem = {
+    id: 'custom.freeze-column',
+    label: '冻结到当前列',
+    category: 'custom',
+    disabled: false,
+  } as const
+
+  it('appends custom items by default (mode undefined)', () => {
+    const base = getCellContextMenuItems(baseCtx)
+    const result = applyContextMenuConfig(base, baseCtx, { items: [customItem] })
+    expect(result.map((item) => item.id)).toEqual(['cut', 'copy', 'paste', 'custom.freeze-column'])
+  })
+
+  it('appends custom items when mode is append', () => {
+    const base = getCellContextMenuItems(baseCtx)
+    const result = applyContextMenuConfig(base, baseCtx, { mode: 'append', items: [customItem] })
+    expect(result[result.length - 1]!.id).toBe('custom.freeze-column')
+  })
+
+  it('prepends custom items', () => {
+    const base = getCellContextMenuItems(baseCtx)
+    const result = applyContextMenuConfig(base, baseCtx, {
+      mode: 'prepend',
+      items: [customItem],
+    })
+    expect(result[0]!.id).toBe('custom.freeze-column')
+  })
+
+  it('replaces default items', () => {
+    const base = getCellContextMenuItems(baseCtx)
+    const result = applyContextMenuConfig(base, baseCtx, {
+      mode: 'replace',
+      items: [customItem],
+    })
+    expect(result.map((item) => item.id)).toEqual(['custom.freeze-column'])
+  })
+
+  it('runs transform after mode/items are applied', () => {
+    const base = getCellContextMenuItems(baseCtx)
+    const result = applyContextMenuConfig(base, baseCtx, {
+      items: [customItem],
+      transform: (items) => items.filter((item) => item.id !== 'copy'),
+    })
+    expect(result.map((item) => item.id)).toEqual(['cut', 'paste', 'custom.freeze-column'])
+  })
+
+  it('returns base items unchanged when config is undefined', () => {
+    const base = getCellContextMenuItems(baseCtx)
+    const result = applyContextMenuConfig(base, baseCtx, undefined)
+    expect(result).toBe(base)
   })
 })
