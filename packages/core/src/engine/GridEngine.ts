@@ -23,7 +23,7 @@ import type {
 import type { Axis } from '../kernel/geometry/ChunkedAxis'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { Viewport } from '../kernel/geometry/Viewport'
-import type { RenderFrame } from '../kernel/render/RenderFrame'
+import type { HoveredColumnHeaderMenu, RenderFrame } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
 import type { ExcelWorkspaceSize } from '../features/excel-workspace'
 import type { CellTypeOverride, CellTypeRegistry } from '../features/cell-types'
@@ -429,6 +429,9 @@ export interface GridFrameReader {
    * Renderer 只能读取此快照与 held viewport，不应绕过 frame 直接访问 axis/data。
    */
   getFrame(): RenderFrame
+
+  /** 设置列头悬停菜单状态；null 清除；下一帧 getFrame() 反映新状态。 */
+  setHoveredColumnHeaderMenu(state: HoveredColumnHeaderMenu | null): void
 }
 
 /**

@@ -150,6 +150,7 @@ function makeEngine(): GridEngine {
     validateAll: mock(() => undefined),
     getValidationState: mock(() => null),
     setValidationRedrawCallback: mock(() => undefined),
+    setHoveredColumnHeaderMenu: mock((_state) => undefined),
   }
 }
 

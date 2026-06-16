@@ -40,7 +40,7 @@ import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { Viewport } from '../kernel/geometry/Viewport'
 import { DefaultLayoutState } from '../features/layout/LayoutState'
-import type { RenderFrame } from '../kernel/render/RenderFrame'
+import type { HoveredColumnHeaderMenu, RenderFrame } from '../kernel/render/RenderFrame'
 import { denseGridTheme } from '../kernel/theme/denseGridTheme'
 import type { Theme } from '../kernel/theme/Theme'
 import { UndoStack } from '../kernel/undo/UndoStack'
@@ -185,6 +185,8 @@ export class DefaultGridEngine implements GridEngine {
   private readonly validationScheduler: ValidationScheduler
   /** 校验完成后的重绘回调；由 GridRuntime 在挂载时注入（engine 纯层，不直调 DOM）。 */
   private validationRedrawCallback: () => void = () => undefined
+  /** 列头悬停菜单状态；null 表示无悬停，构帧时转 undefined。 */
+  private hoveredColumnHeaderMenu: HoveredColumnHeaderMenu | null = null
   /**
    * Selection 写入门面；engine 经此写选区，不直连聚合 mutation（invariant #3）。
    * merge lookup 经 resolveViewMergeRegion 做 view→raw→view 翻译，sort/filter/隐藏列下亦正确。
@@ -568,7 +570,12 @@ export class DefaultGridEngine implements GridEngine {
         if (!s) return 'ok'
         return s.status
       },
+      hoveredColumnHeaderMenu: this.hoveredColumnHeaderMenu ?? undefined,
     })
+  }
+
+  setHoveredColumnHeaderMenu(state: HoveredColumnHeaderMenu | null): void {
+    this.hoveredColumnHeaderMenu = state
   }
 
   getSelection(): GridSelection {

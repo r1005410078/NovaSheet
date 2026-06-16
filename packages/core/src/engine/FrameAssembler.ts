@@ -2,7 +2,7 @@ import type { DataSource } from '../kernel/data/DataSource'
 import type { CellValue, Field, FieldType } from '../kernel/data/Schema'
 import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { ViewportSnapshot } from '../kernel/geometry/Viewport'
-import type { RenderFrame, RenderFrameCollapsedColGap } from '../kernel/render/RenderFrame'
+import type { HoveredColumnHeaderMenu, RenderFrame, RenderFrameCollapsedColGap } from '../kernel/render/RenderFrame'
 import type { Theme } from '../kernel/theme/Theme'
 import type { CellEditSession } from '../kernel/render/RenderTypes'
 import type { CellFormatter, ResolvedCellFormat, ValueFormat } from '../kernel/protocol/FormatTypes'
@@ -65,6 +65,8 @@ export interface FrameAssemblerInput {
   readonly attachmentStore: CellAttachmentStore
   /** raw cell 校验状态读取函数；未提供时 getValidationState 不加入 frame。 */
   readonly getRawValidationState?: (rawRow: number, rawCol: number) => 'ok' | 'invalid' | 'pending'
+  /** 列头悬停菜单状态；undefined 表示无悬停。 */
+  readonly hoveredColumnHeaderMenu?: HoveredColumnHeaderMenu
 }
 
 /** 从 layout/structure 快照装配不可变 `RenderFrame`（纯函数，无 engine 副作用）。 */
@@ -145,5 +147,6 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     hasCellTypeOverride,
     getAttachment,
     getValidationState,
+    hoveredColumnHeaderMenu: input.hoveredColumnHeaderMenu,
   }
 }

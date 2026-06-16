@@ -19,6 +19,10 @@ import type { CellEditSession, CollapsedGap, HeaderDecorationSource } from './Re
  * Phase 4.5 — `RenderFrame` 中的折叠行间隙，扩展 `CollapsedGap` 加入像素坐标。
  * `yPx` 为间隙下边界相对于 canvas 顶部的像素偏移（= view-row `atViewRow` 的底边 − scrollY）。
  */
+export interface HoveredColumnHeaderMenu {
+  readonly colIndex: number
+}
+
 export interface RenderFrameCollapsedGap extends CollapsedGap {
   readonly yPx: number
 }
@@ -74,4 +78,6 @@ export interface RenderFrame {
    * 引擎构帧时已闭合 raw→view 坐标转换与 resultStore 访问。
    */
   getValidationState?: (rowIndex: number, colIndex: number) => 'ok' | 'invalid' | 'pending'
+  /** 列头悬停菜单状态：指示哪列的列头菜单按钮当前应高亮显示。 */
+  hoveredColumnHeaderMenu?: HoveredColumnHeaderMenu
 }
