@@ -13,6 +13,10 @@ import type {
   CellRange,
   CellTypeDefinition,
   CellTypeOverride,
+  ContextMenuExtensionConfig,
+  ContextMenuItem,
+  ContextMenuRenderOptions,
+  ContextMenuRenderer,
   DataSource,
   GridEngine,
   GridSelection,
@@ -1701,7 +1705,12 @@ describe('GridRuntime contextmenu — Phase 4.0', () => {
     ],
   }
 
-  function makeHeaderRuntime(options: { rowHeaderWidth?: number; columnWidth?: number } = {}) {
+  function makeHeaderRuntime(options: {
+    rowHeaderWidth?: number
+    columnWidth?: number
+    contextMenuRenderer?: ContextMenuRenderer
+    contextMenus?: ContextMenuExtensionConfig
+  } = {}) {
     const rowHeaderWidth = options.rowHeaderWidth ?? 0
     const columnWidth = options.columnWidth ?? 100
     const source = new InMemoryDataSource({
@@ -1765,6 +1774,8 @@ describe('GridRuntime contextmenu — Phase 4.0', () => {
       viewPipeline: pipeline,
       sortLayer,
       filterLayer,
+      contextMenus: options.contextMenus,
+      contextMenuRenderer: options.contextMenuRenderer,
     })
     const menu = makeContextMenu()
     runtime.setContextMenuLayer(menu as never)
@@ -2069,6 +2080,80 @@ describe('GridRuntime contextmenu — Phase 4.0', () => {
     menu.close.mockClear()
     runtime.handleHostScroll(100, 0)
     expect(menu.close).toHaveBeenCalled()
+  })
+
+  describe('GridRuntime contextMenuRenderer — DOM override', () => {
+    it('contextMenuRenderer.open receives resolved column header menu options', () => {
+      const renderer: ContextMenuRenderer = {
+        open: mock((_options: ContextMenuRenderOptions) => {}),
+        close: mock(() => {}),
+        destroy: mock(() => {}),
+      }
+      const { runtime } = makeHeaderRuntime({ contextMenuRenderer: renderer })
+
+      runtime.handleHostContextMenu({
+        x: 120,
+        y: 8,
+        clientX: 220,
+        clientY: 108,
+        shiftKey: false,
+      })
+
+      expect(renderer.open).toHaveBeenCalledTimes(1)
+      const opts = (renderer.open as ReturnType<typeof mock>).mock.calls[0]![0] as ContextMenuRenderOptions
+      expect(opts.targetKind).toBe('columnHeader')
+      expect(opts.items.some((item: ContextMenuItem) => item.id === 'insert-col-left')).toBe(true)
+      expect(opts.anchor).toEqual({ clientX: 220, clientY: 108 })
+      expect(typeof opts.select).toBe('function')
+      expect(typeof opts.close).toBe('function')
+    })
+
+    it('contextMenuRenderer.select dispatches built-in sort-asc action', () => {
+      let captured: ContextMenuRenderOptions | null = null
+      const { runtime, sortLayer } = makeHeaderRuntime({
+        contextMenuRenderer: {
+          open: mock((opts: ContextMenuRenderOptions) => { captured = opts }),
+          close: mock(() => {}),
+          destroy: mock(() => {}),
+        },
+      })
+
+      runtime.handleHostContextMenu({ x: 50, y: 8, clientX: 50, clientY: 8, shiftKey: false })
+      captured!.select('sort-asc')
+
+      expect(sortLayer.getSpec()?.direction).toBe('asc')
+    })
+
+    it('custom action without onContextMenuAction handler renders disabled', () => {
+      const renderer: ContextMenuRenderer = {
+        open: mock((_opts: ContextMenuRenderOptions) => {}),
+        close: mock(() => {}),
+        destroy: mock(() => {}),
+      }
+      const { runtime } = makeHeaderRuntime({
+        contextMenuRenderer: renderer,
+        contextMenus: {
+          cell: { items: [{ id: 'custom.foo', label: '自定义', disabled: false }] },
+        },
+      })
+
+      runtime.handleHostContextMenu({ x: 50, y: 50, clientX: 50, clientY: 50, shiftKey: false })
+
+      const opts = (renderer.open as ReturnType<typeof mock>).mock.calls[0]![0] as ContextMenuRenderOptions
+      const customItem = opts.items.find((i: ContextMenuItem) => i.id === 'custom.foo')
+      expect(customItem?.disabled).toBe(true)
+    })
+
+    it('contextMenuRenderer.destroy called on Grid.destroy', () => {
+      const renderer: ContextMenuRenderer = {
+        open: mock(() => {}),
+        close: mock(() => {}),
+        destroy: mock(() => {}),
+      }
+      const { runtime } = makeHeaderRuntime({ contextMenuRenderer: renderer })
+      runtime.destroy()
+      expect(renderer.destroy).toHaveBeenCalledTimes(1)
+    })
   })
 })
 

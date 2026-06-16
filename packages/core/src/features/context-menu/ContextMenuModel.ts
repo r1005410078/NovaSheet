@@ -102,6 +102,21 @@ export interface ContextMenuConfig {
   ) => readonly ContextMenuItem[]
 }
 
+export interface ContextMenuRenderer {
+  open(options: ContextMenuRenderOptions): void
+  close(): void
+  destroy(): void
+}
+
+export interface ContextMenuRenderOptions {
+  readonly targetKind: ContextMenuTargetKind
+  readonly context: ContextMenuContext
+  readonly items: readonly ContextMenuItem[]
+  readonly anchor: { readonly clientX: number; readonly clientY: number }
+  readonly select: (id: string) => void
+  readonly close: () => void
+}
+
 export function applyContextMenuConfig(
   baseItems: readonly ContextMenuItem[],
   ctx: ContextMenuContext,

@@ -62,6 +62,7 @@ import type {
   ContextMenuContext,
   ContextMenuExtensionConfig,
   ContextMenuItem,
+  ContextMenuRenderer,
 } from '../../features/context-menu/ContextMenuModel'
 import { hitTestCell } from '../../kernel/interaction/HitTest'
 import { isTypableEditKey } from '../../features/edit/CellEdit'
@@ -177,6 +178,8 @@ export interface GridRuntimeOptions {
   validationTooltip?: import('../overlay/ValidationTooltip').ValidationTooltip
   /** 上下文菜单配置式扩展（append / prepend / replace + transform）。 */
   contextMenus?: ContextMenuExtensionConfig
+  /** DOM override renderer：替换内置 DomContextMenuLayer，由 consumer 完全接管菜单渲染。 */
+  contextMenuRenderer?: ContextMenuRenderer
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -315,6 +318,8 @@ export class GridRuntime {
   private nextCustomEditorToken = 1
   /** DOM 右键菜单 layer。 */
   private contextMenuLayer?: DomContextMenuLayer
+  /** DOM override renderer：替换内置 DomContextMenuLayer，由 consumer 完全接管菜单渲染。 */
+  private contextMenuRenderer?: ContextMenuRenderer
   /** DOM filter popover。 */
   private filterPopover?: FilterPopover
   /** Phase 4.5 行高调整弹层。 */
@@ -405,6 +410,7 @@ export class GridRuntime {
     this.selectionOverlay = opts.selectionOverlay
     this.validationTooltip = opts.validationTooltip
     this.contextMenus = opts.contextMenus
+    this.contextMenuRenderer = opts.contextMenuRenderer
     this.engine.setValidationRedrawCallback(() => this.invalidate())
     this.scrollMapper = new ScrollMapper()
     if (opts.excelWorkspace) {
@@ -544,7 +550,63 @@ export class GridRuntime {
   /** 关闭右键菜单并清理最近菜单上下文。 */
   closeContextMenu(): void {
     this.contextMenuLayer?.close()
+    this.contextMenuRenderer?.close()
     this.lastContextMenuContext = null
+  }
+
+  /** 判断 id 是否为内置 action（非 custom id）。 */
+  private isBuiltInContextMenuAction(id: string): boolean {
+    const builtins = new Set<string>([
+      'cut', 'copy', 'paste',
+      'sort-asc', 'sort-desc', 'sort-none',
+      'filter-open', 'filter-clear',
+      'insert-col-left', 'insert-col-right', 'delete-cols', 'hide-cols', 'unhide-cols', 'resize-column-width',
+      'insert-above', 'insert-below', 'delete-rows', 'hide-rows', 'unhide-rows', 'resize-row-height',
+    ])
+    return builtins.has(id)
+  }
+
+  /** 将无 onContextMenuAction 处理器的自定义 item 标记为 disabled。 */
+  private markUnhandledCustomItemsDisabled(items: readonly ContextMenuItem[]): readonly ContextMenuItem[] {
+    return items.map((item) => {
+      const submenu = item.submenu
+        ? this.markUnhandledCustomItemsDisabled(item.submenu)
+        : undefined
+      const custom = !this.isBuiltInContextMenuAction(item.id)
+      const shouldDisable = custom && !this.onContextMenuAction
+      if (!shouldDisable && submenu === item.submenu) return item
+      return {
+        ...item,
+        disabled: shouldDisable ? true : item.disabled,
+        ...(submenu !== item.submenu ? { submenu } : {}),
+      }
+    })
+  }
+
+  /** 统一菜单打开入口：设置上下文/坐标，路由到 renderer 或 contextMenuLayer。 */
+  private openResolvedContextMenu(args: {
+    readonly ctx: ContextMenuContext
+    readonly clientX: number
+    readonly clientY: number
+    readonly items: readonly ContextMenuItem[]
+  }): void {
+    const items = this.markUnhandledCustomItemsDisabled(args.items)
+    this.lastContextMenuContext = args.ctx
+    this.lastContextMenuPoint = { clientX: args.clientX, clientY: args.clientY }
+    if (this.contextMenuRenderer) {
+      this.contextMenuLayer?.close()
+      this.contextMenuRenderer.open({
+        targetKind: args.ctx.targetKind,
+        context: args.ctx,
+        items,
+        anchor: { clientX: args.clientX, clientY: args.clientY },
+        select: (id) => this.handleContextMenuSelected(id),
+        close: () => this.contextMenuRenderer?.close(),
+      })
+      return
+    }
+    if (!this.contextMenuLayer) return
+    this.contextMenuLayer.open({ clientX: args.clientX, clientY: args.clientY, items })
   }
 
   /** Phase 4.1 — 注入 clipboard adapter；未注入时 copy/cut/paste 全 silent no-op。 */
@@ -1148,7 +1210,6 @@ export class GridRuntime {
   /** 处理 host contextmenu 事件，并根据列头/单元格命中打开对应菜单。 */
   handleHostContextMenu(event: WebPointerEvent): void {
     if (this.destroyed) return
-    if (!this.contextMenuLayer) return
     if (this.resizeDrag.active || this.activeDrag?.active) return
 
     if (this.engine.isCellEditing()) {
@@ -1180,17 +1241,13 @@ export class GridRuntime {
         selectedColCount: endCol - startCol + 1,
         hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
       }
-      this.lastContextMenuContext = ctx
-      this.lastContextMenuPoint = {
-        clientX: event.clientX ?? event.x,
-        clientY: event.clientY ?? event.y,
-      }
       const items = applyContextMenuConfig(
         getColumnHeaderContextMenuItems(ctx, this.viewPipeline),
         ctx,
         this.contextMenus?.columnHeader,
       )
-      this.contextMenuLayer.open({
+      this.openResolvedContextMenu({
+        ctx,
         clientX: event.clientX ?? event.x,
         clientY: event.clientY ?? event.y,
         items,
@@ -1229,17 +1286,13 @@ export class GridRuntime {
           }
           const n = sel.endRow - sel.startRow + 1
           const ctx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: rowIndex, selectedRowCount: n }
-          this.lastContextMenuContext = ctx
-          this.lastContextMenuPoint = {
-            clientX: event.clientX ?? event.x,
-            clientY: event.clientY ?? event.y,
-          }
           const items = applyContextMenuConfig(
             getRowHeaderContextMenuItems(n, hasHidden),
             ctx,
             this.contextMenus?.rowHeader,
           )
-          this.contextMenuLayer.open({
+          this.openResolvedContextMenu({
+            ctx,
             clientX: event.clientX ?? event.x,
             clientY: event.clientY ?? event.y,
             items,
@@ -1277,17 +1330,13 @@ export class GridRuntime {
       hasSelection: newSelection.activeCell !== null,
       clipboardReady: dataMutable,
     }
-    this.lastContextMenuContext = ctx
-    this.lastContextMenuPoint = {
-      clientX: event.clientX ?? event.x,
-      clientY: event.clientY ?? event.y,
-    }
     const items = applyContextMenuConfig(
       getCellContextMenuItems(ctx),
       ctx,
       this.contextMenus?.cell,
     )
-    this.contextMenuLayer.open({
+    this.openResolvedContextMenu({
+      ctx,
       clientX: event.clientX ?? event.x,
       clientY: event.clientY ?? event.y,
       items,
@@ -1384,7 +1433,7 @@ export class GridRuntime {
 
   /** 按单元格坐标程序化打开右键菜单，锚点位于单元格右下角。 */
   openContextMenuAt(rowIndex: number, fieldId: string): void {
-    if (this.destroyed || !this.contextMenuLayer) return
+    if (this.destroyed || (!this.contextMenuLayer && !this.contextMenuRenderer)) return
     const colIndex = this.engine.getColumnIndex(fieldId)
     if (colIndex < 0) return
     const frame = this.engine.getFrame()
@@ -1771,6 +1820,7 @@ export class GridRuntime {
     this.renderer.destroy()
     this.host.destroy()
     this.validationTooltip?.destroy()
+    this.contextMenuRenderer?.destroy()
   }
 
   /** 处理 host 滚动事件，映射为逻辑滚动并触发重绘。 */

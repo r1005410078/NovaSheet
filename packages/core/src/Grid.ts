@@ -8,6 +8,7 @@ import type {
   ContextMenuAction,
   ContextMenuContext,
   ContextMenuExtensionConfig,
+  ContextMenuRenderer,
   DataSource,
   Field,
   FrozenConfig,
@@ -41,6 +42,8 @@ export interface GridOptions extends GridEngineOptions {
   backend: RenderBackendFactory
   /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后不传走默认引擎（grid.copy/cut/paste）。自定义 id 以 string 到达回调。 */
   onContextMenuAction?: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void
+  /** DOM override renderer：替换内置 DomContextMenuLayer，由 consumer 完全接管菜单渲染。 */
+  contextMenuRenderer?: ContextMenuRenderer
   /** Phase 4.1 — copy 完成（snapshot 已写剪贴板）。 */
   onCopy?: (range: CellRange) => void
   /** Phase 4.1 — cut 完成（已写剪贴板 + 原格已清）。 */
@@ -130,6 +133,7 @@ export class Grid {
         cellEditors: options.cellEditors,
         excelWorkspace: options.excelWorkspace,
         contextMenus: options.contextMenus,
+        contextMenuRenderer: options.contextMenuRenderer,
       },
       options.backend,
     )

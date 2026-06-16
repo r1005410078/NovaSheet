@@ -27,6 +27,7 @@ import type {
   ContextMenuAction,
   ContextMenuContext,
   ContextMenuExtensionConfig,
+  ContextMenuRenderer,
 } from '../../features/context-menu/ContextMenuModel'
 import type { DataSource } from '../../kernel/data/DataSource'
 import type { Field } from '../../kernel/data/Schema'
@@ -159,6 +160,7 @@ export class GridControllerImpl implements GridController {
           cellEditors?: CellEditorRegistry
           excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
           contextMenus?: ContextMenuExtensionConfig
+          contextMenuRenderer?: ContextMenuRenderer
         }
       | undefined,
     backend: RenderBackendFactory,
@@ -243,6 +245,7 @@ export class GridControllerImpl implements GridController {
       filterLayer: this.filterLayer,
       excelWorkspace: gridOptions?.excelWorkspace,
       contextMenus: gridOptions?.contextMenus,
+      contextMenuRenderer: gridOptions?.contextMenuRenderer,
       onSurfaceResize: (w, h) => this.handle.resizeSurface(w, h),
     })
 

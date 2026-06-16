@@ -161,6 +161,8 @@ export type {
   ContextMenuContext,
   ContextMenuExtensionConfig,
   ContextMenuItem,
+  ContextMenuRenderOptions,
+  ContextMenuRenderer,
   ContextMenuTargetKind,
   RowHeaderMenuContext,
 } from './features/context-menu/ContextMenuModel'
