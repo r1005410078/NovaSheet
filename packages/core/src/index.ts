@@ -156,6 +156,7 @@ export {
   getRowHeaderContextMenuItems,
 } from './features/context-menu/ContextMenuModel'
 export type {
+  BuiltInMenuIconName,
   CellMenuContext,
   ContextMenuAction,
   ContextMenuConfig,
@@ -165,6 +166,7 @@ export type {
   ContextMenuRenderOptions,
   ContextMenuRenderer,
   ContextMenuTargetKind,
+  MenuIcon,
   RowHeaderMenuContext,
 } from './features/context-menu/ContextMenuModel'
 export { computeCellRect } from './kernel/interaction/CellLayout'
