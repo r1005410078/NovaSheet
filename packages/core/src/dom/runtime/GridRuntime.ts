@@ -206,6 +206,11 @@ export interface FillEvent {
   readonly direction: FillDirection
 }
 
+/** 列头悬停菜单按钮尺寸（直径），与 HeaderPainter.HEADER_MENU_BUTTON_SIZE 保持一致。 */
+const COLUMN_HEADER_MENU_BUTTON_SIZE = 24
+/** 列宽小于此值时不显示（也不命中）菜单按钮，与 HeaderPainter.MIN_HEADER_MENU_BUTTON_COL_WIDTH 保持一致。 */
+const COLUMN_HEADER_MENU_BUTTON_MIN_COL_WIDTH = 32
+
 /** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
 const HOST_RESIZE_KEY = 'host:resize'
 const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
@@ -395,6 +400,8 @@ export class GridRuntime {
   private selectionDrag!: SelectionDrag
   /** pointerdown 按序尝试起拖的 Drag 列表；加新拖拽 = 实现 Drag + 入此数组。 */
   private drags: readonly Drag[] = []
+  /** 当前悬停列头菜单按钮的列索引；null 表示未悬停。 */
+  private lastHoveredColumnMenuIndex: number | null = null
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: GridRuntimeOptions) {
@@ -1866,6 +1873,12 @@ export class GridRuntime {
       this.invokeCellAction(action)
       return
     }
+    // 列头菜单按钮命中：左键单击时优先打开列头菜单，不进入 drag-select
+    const menuButtonHit = this.hitTestColumnHeaderMenuButton(event)
+    if (menuButtonHit) {
+      this.openColumnHeaderContextMenu(menuButtonHit.colIndex, event)
+      return
+    }
     for (const drag of this.drags) {
       if (drag.tryStart(event)) {
         this.activeDrag = drag
@@ -1880,6 +1893,7 @@ export class GridRuntime {
     if (this.destroyed) return
     this.updateHeaderCursor(event)
     this.updateValidationTooltip(event)
+    this.updateHoveredColumnHeaderMenu(event)
   }
 
   private updateValidationTooltip(event: WebPointerEvent): void {
@@ -1899,6 +1913,75 @@ export class GridRuntime {
     const { width: containerWidth } = this.host.getContainerSize()
     const containerRect = { left: hostRect.left, top: hostRect.top, width: containerWidth }
     this.validationTooltip.show(result.message, cellRect, containerRect)
+  }
+
+  /**
+   * 列头悬停：仅在列头区域内更新 engine 侧的 hoveredColumnHeaderMenu 状态。
+   * 使用去重优化：状态未变时不调用 engine 也不 invalidate。
+   */
+  private updateHoveredColumnHeaderMenu(event: WebPointerEvent): void {
+    const hit = this.hitTestColumnHeader(event)
+    const nextIndex = hit ? hit.colIndex : null
+    if (nextIndex === this.lastHoveredColumnMenuIndex) return
+    this.lastHoveredColumnMenuIndex = nextIndex
+    this.engine.setHoveredColumnHeaderMenu(nextIndex !== null ? { colIndex: nextIndex } : null)
+    this.invalidate()
+  }
+
+  /**
+   * 点击命中检测：判断指针是否落在列头菜单按钮（圆形 hover 按钮）上。
+   * 按钮位置与 HeaderPainter.paintHeaderMenuButton 一致：
+   *   centerX = colLeft + colWidth - padX - buttonSize/2
+   *   button 横跨 [colLeft + colWidth - padX - buttonSize, colLeft + colWidth - padX]
+   */
+  private hitTestColumnHeaderMenuButton(
+    event: WebPointerEvent,
+  ): { colIndex: number } | null {
+    const headerHit = this.hitTestColumnHeader(event)
+    if (!headerHit) return null
+    const frame = this.engine.getFrame()
+    const colIndex = headerHit.colIndex
+    const colWidth = frame.colsAxis.getSize(colIndex)
+    if (colWidth < COLUMN_HEADER_MENU_BUTTON_MIN_COL_WIDTH) return null
+    const padX = frame.theme.metrics.cellPaddingX ?? 8
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    const scrollX = frame.viewport.scrollX ?? 0
+    const colLeft = rowHeaderWidth + frame.colsAxis.indexToPosition(colIndex) - scrollX
+    const buttonLeft = colLeft + colWidth - padX - COLUMN_HEADER_MENU_BUTTON_SIZE
+    const buttonRight = colLeft + colWidth - padX
+    if (event.x < buttonLeft || event.x > buttonRight) return null
+    return { colIndex }
+  }
+
+  /** 打开指定列索引对应的列头上下文菜单（复用 openResolvedContextMenu）。 */
+  private openColumnHeaderContextMenu(colIndex: number, event: WebPointerEvent): void {
+    if (!this.viewPipeline) return
+    const frame = this.engine.getFrame()
+    const fields = frame.data.getSchema().fields
+    const field = fields[colIndex]
+    if (!field) return
+    const sel = this.engine.getSelection().selectedRange
+    const startCol = sel?.startCol ?? colIndex
+    const endCol = sel?.endCol ?? colIndex
+    const ctx: ContextMenuContext = {
+      targetKind: 'columnHeader',
+      field,
+      colIndex,
+      multiSelect: field.type === 'multiSelect',
+      selectedColCount: endCol - startCol + 1,
+      hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
+    }
+    const items = applyContextMenuConfig(
+      getColumnHeaderContextMenuItems(ctx, this.viewPipeline),
+      ctx,
+      this.contextMenus?.columnHeader,
+    )
+    this.openResolvedContextMenu({
+      ctx,
+      clientX: event.clientX ?? event.x,
+      clientY: event.clientY ?? event.y,
+      items,
+    })
   }
 
   private computeValidationCellRect(

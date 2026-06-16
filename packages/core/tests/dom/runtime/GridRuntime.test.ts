@@ -1676,42 +1676,41 @@ describe('GridRuntime keyboard navigation — Phase 3.3', () => {
   })
 })
 
-describe('GridRuntime contextmenu — Phase 4.0', () => {
-  function makeContextMenu() {
-    return {
-      open: mock((_options: unknown) => {}),
-      close: mock(() => {}),
-      isOpen: mock(() => false),
-      applyTheme: mock(() => {}),
-      destroy: mock(() => {}),
-      attach: mock(() => {}),
-    }
+function makeContextMenu() {
+  return {
+    open: mock((_options: unknown) => {}),
+    close: mock(() => {}),
+    isOpen: mock(() => false),
+    applyTheme: mock(() => {}),
+    destroy: mock(() => {}),
+    attach: mock(() => {}),
   }
+}
 
-  function makeFilterPopover() {
-    return {
-      open: mock((_anchor: unknown, _options: unknown) => {}),
-      close: mock(() => {}),
-      isOpen: mock(() => false),
-      applyTheme: mock(() => {}),
-      destroy: mock(() => {}),
-      attach: mock(() => {}),
-    }
+function makeFilterPopover() {
+  return {
+    open: mock((_anchor: unknown, _options: unknown) => {}),
+    close: mock(() => {}),
+    isOpen: mock(() => false),
+    applyTheme: mock(() => {}),
+    destroy: mock(() => {}),
+    attach: mock(() => {}),
   }
+}
 
-  const headerSchema: Schema = {
-    fields: [
-      { id: 'name', name: 'Name', type: 'text', width: 100 },
-      { id: 'score', name: 'Score', type: 'number', width: 100 },
-    ],
-  }
+const headerSchema: Schema = {
+  fields: [
+    { id: 'name', name: 'Name', type: 'text', width: 100 },
+    { id: 'score', name: 'Score', type: 'number', width: 100 },
+  ],
+}
 
-  function makeHeaderRuntime(options: {
-    rowHeaderWidth?: number
-    columnWidth?: number
-    contextMenuRenderer?: ContextMenuRenderer
-    contextMenus?: ContextMenuExtensionConfig
-  } = {}) {
+function makeHeaderRuntime(options: {
+  rowHeaderWidth?: number
+  columnWidth?: number
+  contextMenuRenderer?: ContextMenuRenderer
+  contextMenus?: ContextMenuExtensionConfig
+} = {}) {
     const rowHeaderWidth = options.rowHeaderWidth ?? 0
     const columnWidth = options.columnWidth ?? 100
     const source = new InMemoryDataSource({
@@ -1731,7 +1730,7 @@ describe('GridRuntime contextmenu — Phase 4.0', () => {
     engine.getData = mock(() => pipeline.getComposed() as never)
     engine.getFrame = mock(() => ({
       data: pipeline.getComposed(),
-      theme: { metrics: { headerHeight: 32 } } as Theme,
+      theme: { metrics: { headerHeight: 32, cellPaddingX: 8 } } as Theme,
       rowsAxis: {
         getCount: () => 2,
         positionToIndex: (pos: number) => Math.floor(pos / 28),
@@ -1781,8 +1780,9 @@ describe('GridRuntime contextmenu — Phase 4.0', () => {
     const menu = makeContextMenu()
     runtime.setContextMenuLayer(menu as never)
     return { engine, runtime, menu, sortLayer, filterLayer }
-  }
+}
 
+describe('GridRuntime contextmenu — Phase 4.0', () => {
   it('drag-select 进行中不开菜单', () => {
     const engine = makeEngine()
     const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
@@ -2661,5 +2661,59 @@ describe('GridRuntime.getCellText — F3 facade', () => {
     engine.getData = mock(() => data as never)
     const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
     expect(runtime.getCellText(0, 99)).toBe('')
+  })
+})
+
+describe('GridRuntime header hover menu button', () => {
+  it('pointer move over column header sets hoveredColumnHeaderMenu', () => {
+    const { engine, runtime } = makeHeaderRuntime({ columnWidth: 100 })
+
+    runtime.handleHostPointerMove({ x: 150, y: 8, clientX: 150, clientY: 8, shiftKey: false })
+
+    expect(engine.setHoveredColumnHeaderMenu).toHaveBeenCalledWith({ colIndex: 1 })
+  })
+
+  it('pointer move outside header clears hoveredColumnHeaderMenu', () => {
+    const { engine, runtime } = makeHeaderRuntime({ columnWidth: 100 })
+
+    runtime.handleHostPointerMove({ x: 150, y: 8, clientX: 150, clientY: 8, shiftKey: false })
+    runtime.handleHostPointerMove({ x: 150, y: 80, clientX: 150, clientY: 80, shiftKey: false })
+
+    expect(engine.setHoveredColumnHeaderMenu).toHaveBeenLastCalledWith(null)
+  })
+
+  it('pointer move not in drag does not set hover if drag is active', () => {
+    const { engine, runtime } = makeHeaderRuntime({ columnWidth: 100 })
+
+    // start a drag by pointerdown in cell area
+    runtime.handleHostPointerDown({ x: 50, y: 50, clientX: 50, clientY: 50, shiftKey: false })
+    const callCountBefore = (engine.setHoveredColumnHeaderMenu as ReturnType<typeof mock>).mock.calls.length
+
+    runtime.handleHostPointerMove({ x: 150, y: 8, clientX: 150, clientY: 8, shiftKey: false })
+
+    const callCountAfter = (engine.setHoveredColumnHeaderMenu as ReturnType<typeof mock>).mock.calls.length
+    expect(callCountAfter).toBe(callCountBefore)
+  })
+
+  it('clicking header menu button opens column header menu', () => {
+    const { runtime, menu } = makeHeaderRuntime({ columnWidth: 100 })
+
+    // hover first (sets state)
+    runtime.handleHostPointerMove({ x: 188, y: 8, clientX: 188, clientY: 8, shiftKey: false })
+    // click in button area (right side of col 1: x=100..199, button at ~168..192)
+    runtime.handleHostPointerDown({ x: 188, y: 8, clientX: 188, clientY: 8, shiftKey: false })
+
+    expect(menu.open).toHaveBeenCalled()
+    const opts = (menu.open as ReturnType<typeof mock>).mock.calls[0]![0] as { items: Array<{id: string}> }
+    expect(opts.items.some((i) => i.id === 'insert-col-left')).toBe(true)
+  })
+
+  it('clicking outside button area in header does not open menu via button path', () => {
+    const { runtime, menu } = makeHeaderRuntime({ columnWidth: 100 })
+
+    // click in middle of col header (not the button area)
+    runtime.handleHostPointerDown({ x: 50, y: 8, clientX: 50, clientY: 8, shiftKey: false })
+
+    expect(menu.open).not.toHaveBeenCalled()
   })
 })
