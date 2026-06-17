@@ -1,103 +1,119 @@
 # `@novasheet/react`
 
-> React adapter package for NovaSheet. This package is the React-facing business integration layer, not a spreadsheet engine or renderer.
+[中文 README](README.zh-CN.md)
 
-## 职责
+React adapter for NovaSheet. This package wraps `@novasheet/core`'s imperative `Grid` (rendered through `@novasheet/canvas2d`) into React components, hooks, and a ready-made Excel-style shell. It is **not** an engine or a renderer — it owns no grid state, no mutation logic, no Canvas painting. Every capability below ultimately calls a public `Grid` method; see [`@novasheet/core`](../core/README.md) for what those methods guarantee.
 
-`@novasheet/react` 负责把 NovaSheet 的 imperative browser API 包装成 React 可消费的组件与 hooks，让业务应用可以用 React 生命周期、安全的 ref、受控/非受控 props 和事件回调来使用表格。
+Behavior is also specified as Given/When/Then scenarios under [`tests/excel/scenarios/*.md`](tests/excel) (index: [`tests/excel/SCENARIOS.md`](tests/excel/SCENARIOS.md)), layered L3a (shell/DOM/props/ref/StrictMode) → L3b (toolbar click → `grid.*` wiring) → L3c (user journeys) — see [Testing](#testing).
 
-| 职责 | 说明 |
-| --- | --- |
-| React 生命周期绑定 | 在 mount 时创建 `Grid`，在 unmount 时调用 `Grid.destroy()`；必须兼容 React Strict Mode 的 mount → unmount → mount 流程。 |
-| DOM 容器管理 | 持有表格宿主元素，把 container ref 与 `Grid` facade 连接起来；不直接绘制 canvas。 |
-| 后端默认装配 | 默认组合 `@novasheet/core` 的 `Grid` 与 `@novasheet/canvas2d` 的 `canvas2dBackend`，同时保留显式注入 backend 的能力。 |
-| React API 适配 | 提供面向 React 的组件、hooks、ref handle、事件回调和 props diff 策略。 |
-| 业务工具栏 | 提供 `NovaSheetToolbar` 等业务 UI 组件；首版只负责展示和派发 typed action，不在 React 层实现引擎能力。 |
-| 业务集成入口 | 为应用层接入数据源、schema、theme、frozen、selection、editing、clipboard、undo/redo 等能力提供稳定入口。 |
-| 示例与类型文档 | 在 README / Storybook 中说明 React 用法、生命周期约束、性能注意事项和可组合模式。 |
+## Install
 
-## 非职责
-
-| 不做什么 | 原因 |
-| --- | --- |
-| 不实现引擎状态 | `DefaultGridEngine`、mutation、undo、view/raw 坐标、data source 协议属于 `@novasheet/core`。 |
-| 不实现 Canvas 绘制 | renderer、painters、HighDPI、text measure 属于 `@novasheet/canvas2d`。 |
-| 不绕过 `Grid` facade | 所有 mutation 必须经 `Grid` 或 `DefaultGridEngine` 的公开入口。 |
-| 不读取 renderer 内部状态 | React 层只持有 public handle，不依赖 `Canvas2DRenderer` 或 painter 私有结构。 |
-| 不硬编码视觉值 | 视觉值仍来自 core theme tokens；React 层只负责容器尺寸与业务 props。 |
-| 不替代 Storybook 根应用 | `apps/storybook` 仍是 demo / variant showcase；React package 只提供可复用适配层。 |
-
-## 依赖方向
-
-```text
-@novasheet/core      Grid facade · engine · DOM runtime · contracts
-        ↑
-@novasheet/canvas2d Canvas2D RenderBackend implementation
-        ↑
-@novasheet/react    React component/hooks adapter
-        ↑
-business apps       React applications
+```bash
+bun add @novasheet/react react react-dom
 ```
 
-`@novasheet/react` 可以依赖 `@novasheet/core` 与 `@novasheet/canvas2d`。反向依赖禁止：core 和 canvas2d 不得 import React package。
+`@novasheet/core` and `@novasheet/canvas2d` come in as this package's own dependencies; `react`/`react-dom` (>=18.3) are peer dependencies.
 
-## 架构（Bulletproof 适配）
+## Quick start
 
-源码按 [Bulletproof React](https://github.com/alan2207/bulletproof-react) 思想分层，并适配**可发布库**（非 SPA）：
+```tsx
+import { NovaExcel } from '@novasheet/react'
 
-| 层 | 路径 | 内容 |
-| --- | --- | --- |
-| 大组件 | `src/excel/` | `NovaExcel`（grid + toolbar 编排） |
-| Feature | `src/features/grid/` | `NovaSheetGrid`、`useNovaSheetGrid` |
-| Feature | `src/features/toolbar/` | `NovaSheetToolbar`、工具栏状态推导 |
-| 共享 UI | `src/components/` | `Button`、`Input` primitive |
-| 工具 | `src/lib/` | `cn` 等 |
-
-详细规则见 [`docs/project-structure.md`](docs/project-structure.md)、[`docs/project-standards.md`](docs/project-standards.md)。依赖边界由 `bun run lint:react-boundary` 强制。
-
-## 计划中的公开入口
-
-当前包只建立边界与发布壳，尚未实现 React API。后续 API 应优先保持小而稳定：
-
-| 入口 | 预期用途 |
-| --- | --- |
-| `NovaSheetGrid` | 默认 React 组件，负责 mount/destroy、container、backend 装配与基础 props diff。 |
-| `useNovaSheetGrid` | hook 形式的低层适配入口，供业务组件自定义 DOM 与布局。 |
-| `NovaSheetGridRef` | 暴露经过筛选的 imperative handle，例如 `scrollToCell`、`setColumnWidth`、`setFrozen`、`destroy`。 |
-| `NovaSheetGridProps` | React 组件 props 类型，围绕 core `GridOptions` 收敛，不复制引擎协议。 |
-
-## 已提供的公开入口
-
-| 入口 | 用途 |
-| --- | --- |
-| `NovaSheetGrid` | React 版**普通表格**入口；不含工具栏，内部组合 core `Grid` 与 `canvas2dBackend`。 |
-| `NovaExcel` | **开箱即用 Excel 组件**：`NovaSheetGrid` + `NovaSheetToolbar` + 内置 action 编排；默认 `SparseExcelDataSource` + `excelHeaders: true` + `excelWorkspace: true`（A–Z × 1000 无限稀疏单元格）。 |
-| `useNovaExcelToolbar` | 低层 hook；从 `NovaExcel` 抽出的 toolbar ↔ Grid 编排，供自定义布局复用。 |
-| `useNovaSheetGrid` | 低层 hook；返回 `containerRef` / `gridRef`，用于自定义布局。 |
-| `NovaSheetGridRef` / `NovaExcelRef` | React ref handle；暴露 core `Grid` facade 和常用 imperative 方法。 |
-| `NovaSheetToolbar` | 紧凑电子表格工具栏；可单独使用，由业务层接 `onAction`。 |
-| `defaultToolbarItems` | 默认工具栏 item 顺序；用于测试、定制和业务侧 diff。 |
-| `ToolbarAction` / `ToolbarActionId` | 工具栏 action 协议；业务层按 `id` 决定是否调用 `Grid` facade 或打开自定义面板。 |
-| `NovaSheetToolbarState` | 受控展示状态，例如 `zoom`、`textWrap`。 |
-
-`NovaSheetGrid` 是**不含工具栏**的 React 表格入口。它在 mount 时创建 core `Grid`，在 unmount
-时调用 `destroy()`；`data`、`theme`、`frozen` 更新时走现有 `Grid` facade，不重新创建
-实例。
+// Zero-config: an empty, infinitely-scrollable A–Z × 1000 sparse workbook with a built-in toolbar.
+export function BlankWorkbook() {
+  return <NovaExcel className="h-[600px] w-full" />
+}
+```
 
 ```tsx
 import { InMemoryDataSource } from '@novasheet/core'
 import { NovaSheetGrid } from '@novasheet/react'
 
-const data = new InMemoryDataSource({ /* schema + rows */ })
+const data = new InMemoryDataSource({
+  schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 160 }] },
+  rows: [{ name: 'Alice' }, { name: 'Bob' }],
+})
 
+// Bare grid, no toolbar chrome.
 export function PlainGrid() {
   return <NovaSheetGrid data={data} className="h-[480px] w-full" />
 }
 ```
 
-`NovaExcel` 面向需要 Excel 风格、开箱即用的场景：默认 `SparseExcelDataSource`（省略 `data` 时自动创建）
-+ `excelWorkspace: true` 无限单元格模式；内置工具栏与 Grid 之间的 undo/redo、
-clipboard、fill、borders、merge、text-wrap 编排；默认开启 `excelHeaders`。
+`@novasheet/react` does not ship global CSS. The built-in toolbar uses Tailwind utility classes, so consuming apps must load Tailwind and include `packages/react/src/**/*` (or the published component code) in their content scan.
+
+## Responsibilities
+
+| Does | Detail |
+| --- | --- |
+| React lifecycle binding | Creates `Grid` on mount, calls `Grid.destroy()` on unmount; compatible with Strict Mode's mount → unmount → mount cycle. |
+| DOM container management | Owns the grid host element and wires the container ref to the `Grid` facade; never paints a canvas itself. |
+| Default backend assembly | Composes core's `Grid` with `@novasheet/canvas2d`'s `canvas2dBackend` by default. |
+| React-shaped API | Components, hooks, ref handles, typed event callbacks, and a props-diff strategy on top of the imperative facade. |
+| Business toolbar | Ships `NovaSheetToolbar` — display + typed action dispatch only, no engine logic in the React layer. |
+| Stable integration entry points | Surfaces data source, schema, theme, frozen, selection, editing, clipboard, and undo/redo wiring for application code. |
+
+| Does not | Why |
+| --- | --- |
+| Implement engine state | `DefaultGridEngine`, mutation, undo, view/raw coordinates, and the `DataSource` protocol live in `@novasheet/core`. |
+| Implement Canvas painting | Renderer, painters, HighDPI, text measurement live in `@novasheet/canvas2d`. |
+| Bypass the `Grid` facade | Every mutation goes through `Grid`'s public methods. |
+| Read renderer internals | Only holds the public `Grid` handle; never touches `Canvas2DRenderer`/painter private state. |
+| Hardcode visual values | Visual tokens still come from core's `Theme`; this layer only owns container sizing and business props. |
+
+## Dependency direction
+
+```text
+@novasheet/core      Grid facade · engine · DOM runtime · contracts
+        ↑
+@novasheet/canvas2d  Canvas2D RenderBackend implementation
+        ↑
+@novasheet/react     React component/hook adapter
+        ↑
+business apps        React applications
+```
+
+`@novasheet/react` may depend on `core` and `canvas2d`. The reverse is forbidden — neither may import this package. Source layering inside this package (`excel/` vs `features/grid` vs `features/toolbar` vs `components`/`lib`) and its import-direction rules are documented in [`docs/project-structure.md`](docs/project-structure.md) and [`docs/project-standards.md`](docs/project-standards.md); enforced by `bun run lint:react-boundary`.
+
+## Components
+
+| Component | What it is |
+| --- | --- |
+| `NovaSheetGrid` | Bare React grid, no toolbar. Wraps core `Grid` + `canvas2dBackend`; mount/destroy lifecycle is Strict-Mode-safe. Props mirror `GridOptions` (minus `backend`) plus standard `div` props. |
+| `useNovaSheetGrid` | The hook powering `NovaSheetGrid`. Returns `{ containerRef, gridRef }` for building your own layout around the same mount/update logic. |
+| `NovaExcel` | Batteries-included Excel shell: `NovaSheetGrid` + `NovaSheetToolbar` + built-in action wiring. Defaults to an internal `SparseExcelDataSource` + `excelWorkspace: true` + `excelHeaders: true` when `data` is omitted. |
+| `useNovaExcelToolbar` | The headless hook powering `NovaExcel`'s toolbar wiring (undo/redo/clipboard/fill/border/merge/text-wrap/value-format → `grid.*`, plus toolbar-state sync). Use it to drive a fully custom toolbar UI off the same action routing. |
+| `NovaSheetToolbar` | Standalone compact spreadsheet toolbar component. Dispatches a typed `ToolbarAction` via `onAction` — it never calls `Grid` itself. |
+| `createReactCellEditor` | Adapter: wrap a React component as a core `CellEditor` (inline/popover/modal), for `GridOptions.cellEditors`. |
+| `createReactCellFilterEditor` | Adapter: wrap a React component as a `CellFilterEditor` for a custom type's filter UI, decoupled from `CellTypeDefinition.filterOperators` predicate logic. |
+| `defaultToolbarItems`, `deriveToolbarStateFromGrid`, `useNovaSheetToolbarState`, `CustomColorPicker`, `CHECKERBOARD_BG`, `ToolbarColorPalette`, `ToolbarColorPaletteCustom` | Lower-level building blocks behind `NovaSheetToolbar` (default item order, pure Grid→toolbar-state derivation, color-picker UI) for assembling a customized toolbar without forking the whole component. |
+
+## Usage examples
+
+### Bare grid
+
+```tsx
+import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { NovaSheetGrid, type NovaSheetGridRef } from '@novasheet/react'
+import { useRef } from 'react'
+
+export function Sheet({ data }: { data: InMemoryDataSource }) {
+  const ref = useRef<NovaSheetGridRef>(null)
+  return (
+    <NovaSheetGrid
+      ref={ref}
+      data={data}
+      theme={denseGridTheme}
+      frozen={{ topRows: 1 }}
+      onSelectionChange={(selection) => console.log(selection)}
+      className="h-[480px] w-full"
+    />
+  )
+}
+```
+`ref.current.grid` is the underlying core `Grid` instance — anything not exposed directly on `NovaSheetGridRef` (`refresh`, `destroy`, `scrollToRow`, `scrollToCell`, `setColumnWidth`, `setFrozen`) is still reachable through it (`ref.current.grid.setValueFormat(...)`, `.mergeCells(...)`, etc.).
+
+### Excel shell, with and without data
 
 ```tsx
 import { SparseExcelDataSource } from '@novasheet/core'
@@ -105,7 +121,6 @@ import { NovaExcel } from '@novasheet/react'
 
 const data = new SparseExcelDataSource()
 data.updateCell(0, 'A', 'NovaSheet')
-data.updateCell(999, 'A', 'edge content')
 
 export function ExcelSheet() {
   return (
@@ -117,20 +132,51 @@ export function ExcelSheet() {
   )
 }
 
-// 或省略 data，使用内部 SparseExcelDataSource + excelWorkspace
+// Omit `data` to get the internal SparseExcelDataSource + excelWorkspace mode for free.
 export function BlankExcel() {
   return <NovaExcel className="h-[560px] w-full" />
 }
 ```
+`showToolbar={false}` drops the built-in `NovaSheetToolbar` DOM while keeping the grid and `ref` fully usable — for embedding a read-only sheet or driving an entirely custom toolbar via `ref.current.grid`.
 
-工具栏使用 Tailwind CSS class、CVA (`class-variance-authority`) 变体、`clsx` +
-`tailwind-merge` 的 `cn` 工具，以及 shadcn/ui 风格的本地 `Button` / `Input`
-primitive。`@novasheet/react` 不内置全局 CSS；消费方需要在应用构建中加载 Tailwind
-CSS，并把 `packages/react/src/**/*` 或发布后的组件代码纳入 Tailwind content scan。
+### Structural and selection callbacks via ref
 
-`NovaSheetToolbar` 首版不直接持有 `Grid`，也不直接调用 `setFillColor` / `setBorders`
-等命令。它通过 `onAction({ id })` 把用户意图交给业务层；默认入口只覆盖当前已
-实现的 undo / redo / clipboard / fill / border / merge / text-wrap 能力。
+```tsx
+<NovaExcel
+  onSelectionChange={(s) => console.log(s.activeCell)}
+  onRowsInserted={(e) => console.log('inserted at', e.at, e.newIds)}
+  onColumnsDeleted={(e) => console.log('removed', e.removed)}
+  onUndo={(e) => console.log(e.command)}
+/>
+```
+These mirror `GridOptions`' callbacks one-for-one; `NovaExcel` composes them with its own toolbar-state sync (your callback runs first, then the toolbar re-derives its state) rather than replacing them.
+
+### A fully custom toolbar (`useNovaExcelToolbar`)
+
+```tsx
+import { useRef } from 'react'
+import { NovaSheetGrid, useNovaExcelToolbar, type NovaSheetGridRef } from '@novasheet/react'
+
+function CustomToolbarSheet({ data }) {
+  const gridRef = useRef<NovaSheetGridRef>(null)
+  const { toolbarState, disabledActionIds, handleToolbarAction } = useNovaExcelToolbar({
+    getGrid: () => gridRef.current?.grid ?? null,
+  })
+
+  return (
+    <div className="flex h-full flex-col">
+      <button disabled={disabledActionIds.includes('undo')} onClick={() => handleToolbarAction({ id: 'undo' })}>
+        Undo
+      </button>
+      <button onClick={() => handleToolbarAction({ id: 'fill-color', color: '#fff2cc' })}>Highlight</button>
+      <NovaSheetGrid ref={gridRef} data={data} className="flex-1" />
+    </div>
+  )
+}
+```
+`handleToolbarAction` resolves a selection (falling back to a default range if there isn't one, mirroring `setValueFormat`-style toolbar actions), calls the matching `grid.*` method, and re-derives `toolbarState`/`disabledActionIds` — the exact same routing `NovaExcel` uses internally, just without its bundled UI.
+
+### Standalone `NovaSheetToolbar`
 
 ```tsx
 import { NovaSheetToolbar } from '@novasheet/react'
@@ -140,27 +186,76 @@ export function SheetToolbar() {
     <NovaSheetToolbar
       state={{ zoom: '100%', textWrap: '溢出' }}
       disabledActionIds={['undo', 'redo']}
-      onAction={(action) => {
-        console.log(action.id)
-      }}
+      onAction={(action) => console.log(action.id)}
     />
   )
 }
 ```
+`NovaSheetToolbar` never touches `Grid` — it just renders `state`/`disabledActionIds` and hands user intent to `onAction({ id })`. Pairing it with `useNovaExcelToolbar` (above) is how `NovaExcel` itself is built.
 
-## 实现约束
+### Custom cell editor
 
-- 使用 `bun` 构建、测试和发布；不要使用 `npm` / `yarn` / `pnpm`。
-- 使用 `bun:test` 编写测试；React 生命周期测试应覆盖 Strict Mode 下的重复 mount/destroy。
-- 类型导入遵守 `verbatimModuleSyntax`，只读类型使用 `import type`。
-- React 层只做适配，不新增跨包共享状态；每个 mounted grid 仍拥有自己的 scheduler/runtime/backend 实例。
-- props diff 必须有明确规则：高频数据或大对象不要在 render path 深比较。
-- 任何新增 public API 都应先在本 README 或设计文档中说明职责，再实现。
+```tsx
+import { createReactCellEditor, type ReactCellEditorProps } from '@novasheet/react'
 
-## 当前状态
+function AssigneePicker({ value, commit, cancel }: ReactCellEditorProps) {
+  return (
+    <div>
+      {['Alice', 'Bob', 'Carol'].map((name) => (
+        <button key={name} onClick={() => commit(name)}>{name}</button>
+      ))}
+      <button onClick={cancel}>Cancel</button>
+    </div>
+  )
+}
 
-`@novasheet/react` 是可构建、可发布的 React 适配包：
+const assigneeEditor = createReactCellEditor(AssigneePicker, { kind: 'popover' })
 
-- Bulletproof 分层：`excel`、`features/grid`、`features/toolbar`、`components`、`lib`。
-- 公开 API：`NovaSheetGrid`、`NovaExcel`、`NovaSheetToolbar` 及配套 hooks / types。
-- 边界检查：`bun run lint:react-boundary`（根）或 `bun run --filter @novasheet/react lint:boundary`。
+<NovaSheetGrid data={data} cellEditors={{ assignee: assigneeEditor }} />
+```
+`createReactCellEditor` mounts/unmounts a React root per open/close cycle and forwards the full core `CellEditorOpenContext` as props (`value`, `field`, `rect`, `trigger`, `getAttachment`/`setAttachment`, ...) alongside `commit`/`cancel`. `kind: 'inline'` (default) positions the editor over the cell rect; `'popover'`/`'modal'` position it below.
+
+### Custom filter editor
+
+```tsx
+import { createReactCellFilterEditor, type ReactCellFilterEditorProps } from '@novasheet/react'
+
+function AssigneeFilter({ value, apply, cancel }: ReactCellFilterEditorProps) {
+  const selected = new Set(Array.isArray(value) ? value : [])
+  return (
+    <div>
+      {['Alice', 'Bob', 'Carol'].map((name) => (
+        <label key={name}>
+          <input type="checkbox" checked={selected.has(name)} onChange={() => { /* toggle */ }} />
+          {name}
+        </label>
+      ))}
+      <button onClick={() => apply({ operatorId: 'assignee-is-any-of', value: [...selected] })}>Apply</button>
+      <button onClick={cancel}>Cancel</button>
+    </div>
+  )
+}
+
+const assigneeFilterEditor = createReactCellFilterEditor(AssigneeFilter)
+```
+The React component only collects an `operatorId` + `value` — actual filter semantics still live in `cellTypes[type].filterOperators[...].matches(...)` on the `core` side. This editor has no business logic; it's purely a UI surface for picking which registered operator/value to apply.
+
+### Putting a custom type together in React
+
+The flagship example combining `createReactCellEditor`, `cellAttachments`, a canvas renderer, and a `NovaSheetToolbar` extension item is the rich-text cell type shipped in `@novasheet/cell-kit`, wired end to end in [`apps/storybook/src/stories/RichText.stories.ts`](../../apps/storybook/src/stories/RichText.stories.ts). Its `richTextExtension.toolbarExtension(controller)` plugs into `NovaSheetToolbar`'s `extensionItems` prop — the same seam used for any custom React control (a color picker, a formula bar button, ...) that needs to act on the currently-open cell editor rather than on the grid selection.
+
+## Known gap: not every `GridOptions` field is forwarded
+
+`NovaSheetGridProps` types as `Omit<GridOptions, 'backend'>`, so TypeScript happily accepts any core `GridOptions` field as a prop. At runtime, today, `NovaSheetGrid` / `useNovaSheetGrid` only forward: `data`, `theme`, `frozen`, `defaultRowHeight`, `excelHeaders`, `excelWorkspace`, `locale`, `formatters`, `cellEditors`, and the documented callbacks (`onContextMenuAction`, clipboard/`onCopy`/`onCut`/`onPaste`/`onPasteSkipped`, `onUndo`/`onRedo`/`onFill`, structural `onRows*`/`onColumns*`/`onHide*Change`, `onSelectionChange`).
+
+**Not yet forwarded**: `cellTypes`, `cellAttachments`, `validators`, `validationBatchSize`, `validationMaxConcurrent`, `contextMenus`, `contextMenuRenderer`, `fillCellTypes`. Passing one of these as a JSX prop is not a type error, but it is a no-op for configuring the grid — and for `<NovaSheetGrid>`/`<NovaExcel>` specifically, the unrecognized prop falls through to the host `<div>` as a raw DOM attribute (React will warn about it in the console). If you need one of these options today, construct `Grid` directly (see [`@novasheet/core`](../core/README.md)) instead of going through this adapter, or extend `useNovaSheetGrid`'s destructure list.
+
+## Testing
+
+```bash
+bun test                      # tests/excel/**, tests/features/**
+bun run lint:scenario-coverage
+bun run typecheck
+```
+
+`tests/excel/` is the primary behavior-test surface for this package (Core's own L0–L2 behavior suite lives in `@novasheet/core`; see its README). Scenarios layer as **L3a** shell/DOM/props/ref/StrictMode, **L3b** toolbar-click→`grid.*` wiring, **L3c** user journeys — index in [`tests/excel/SCENARIOS.md`](tests/excel/SCENARIOS.md), full text in `tests/excel/scenarios/*.md`. `lint:scenario-coverage` fails on scenarios with no matching test and on tests with no matching scenario.
