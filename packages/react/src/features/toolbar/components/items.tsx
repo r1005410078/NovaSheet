@@ -39,7 +39,7 @@ export function FillColorIcon({
 
   return (
     <span className="inline-flex flex-col items-center gap-0.5" aria-hidden>
-      <PaintBucket className="size-3.5 shrink-0 text-slate-700" strokeWidth={stroke} />
+      <PaintBucket className="size-3.5 shrink-0 text-[#3c4043]" strokeWidth={stroke} />
       <span
         className="block h-1 w-4 rounded-[1px] ring-1 ring-slate-400/80"
         style={{ backgroundColor: swatch }}

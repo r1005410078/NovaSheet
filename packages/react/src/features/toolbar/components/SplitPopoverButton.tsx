@@ -57,7 +57,7 @@ export function SplitPopoverButton({
           onToggleMenu()
         }}
       >
-        <span aria-hidden className="inline-flex text-slate-500">
+        <span aria-hidden className="inline-flex text-[#5f6368]">
           <ChevronDown aria-hidden className={TOOLBAR_ICON_SM_CLASS} strokeWidth={1.75} />
         </span>
       </Button>
