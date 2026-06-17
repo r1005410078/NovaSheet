@@ -52,8 +52,8 @@ describe('formatValue — 数字字符串解析', () => {
   it('number: 字符串 "1234567" → 千分位', () => {
     expect(formatValue('1234567', { kind: 'number' }, ctx, noReg)).toBe('1,234,567')
   })
-  it('currency: 字符串 "1234.5" → CN¥（en-US ctx）', () => {
-    expect(formatValue('1234.5', { kind: 'currency', currency: 'CNY' }, ctx, noReg)).toBe('CN¥1,234.50')
+  it('currency: 字符串 "1234.5" → ¥（不加国家缩写）', () => {
+    expect(formatValue('1234.5', { kind: 'currency', currency: 'CNY' }, ctx, noReg)).toBe('¥1,234.50')
   })
   it('percent: 字符串 "0.1357" → 13.57%', () => {
     expect(formatValue('0.1357', { kind: 'percent', decimals: 2 }, ctx, noReg)).toBe('13.57%')

@@ -31,8 +31,7 @@ describe('Phase 5-C value formatting — getFrame().formatCell 端到端', () =>
   it('列级 Field.format 对数字格输出格式化文本', () => {
     const { engine, field } = makeEngine({ columnFormat: { kind: 'currency', currency: 'CNY' } })
     const frame = engine.getFrame()
-    // en-US 默认 locale 下 CNY 渲染为 CN¥（消歧）；zh-CN 才是 ¥。
-    expect(frame.formatCell?.(0, 0, field, 1234.5)).toBe('CN¥1,234.50')
+    expect(frame.formatCell?.(0, 0, field, 1234.5)).toBe('¥1,234.50')
   })
 
   it('cell 级 setValueFormat（toolbar 路径）写入并经 formatCell 格式化', () => {
@@ -84,6 +83,6 @@ describe('Phase 5-C value formatting — getFrame().formatCell 端到端', () =>
         { kind: 'currency', currency: 'CNY' },
       ),
     ).toBe(true)
-    expect(engine.getFrame().formatCell?.(0, 0, field, '1234.5')).toBe('CN¥1,234.50')
+    expect(engine.getFrame().formatCell?.(0, 0, field, '1234.5')).toBe('¥1,234.50')
   })
 })

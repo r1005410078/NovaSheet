@@ -67,6 +67,7 @@ export function formatValue(
       return new Intl.NumberFormat(format.locale ?? ctx.locale, {
         style: 'currency',
         currency: format.currency,
+        currencyDisplay: 'narrowSymbol',
         minimumFractionDigits: format.decimals,
         maximumFractionDigits: format.decimals,
       }).format(n)
