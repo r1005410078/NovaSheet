@@ -49,7 +49,7 @@ const config: StorybookConfig = {
           '@novasheet/react': fileURLToPath(
             new URL('../../../packages/react/src/index.ts', import.meta.url),
           ),
-          // @novasheet/react source uses @/* path aliases (see packages/react/tsconfig.json).
+          // @novasheet/react source uses `@/` imports (tsconfig paths); Vite needs the same base.
           '@': fileURLToPath(new URL('../../../packages/react/src', import.meta.url)),
         },
       },

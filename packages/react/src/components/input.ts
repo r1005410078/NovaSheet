@@ -6,7 +6,7 @@ import type { InputHTMLAttributes, ReactElement } from 'react'
 import { cn } from '@/lib/utils'
 
 export const inputVariants = cva(
-  'h-7 w-[98px] rounded-full border-0 bg-white px-3 py-0 pl-7 text-[13px] text-slate-700 outline-none placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-slate-400',
+  'h-7 w-[112px] rounded-full border-0 bg-white px-3 py-0 pl-7 text-[13px] text-[#3c4043] shadow-none outline-none ring-1 ring-[#dadce0] placeholder:text-[#5f6368] focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40',
   {
     variants: {
       variant: {

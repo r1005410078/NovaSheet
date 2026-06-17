@@ -27,6 +27,11 @@ import {
 import { useCustomColors } from '../lib/use-custom-colors'
 import { defaultToolbarItems, FillColorIcon } from './items'
 import { TOOLBAR_ICON_CLASS, TOOLBAR_ICON_SM_CLASS } from '../lib/icon-class'
+import {
+  TOOLBAR_GROUP_SEPARATOR_CLASS,
+  TOOLBAR_SCROLL_ROW_CLASS,
+  TOOLBAR_SHELL_CLASS,
+} from '../lib/toolbar-shell'
 import { primaryMergeToolbarAction } from '../lib/toolbar-primary-actions'
 import type {
   NovaSheetToolbarProps,
@@ -189,10 +194,10 @@ function ToolbarItemControl({
 }): JSX.Element {
   if (item.kind === 'search') {
     return (
-      <label className="relative mr-2 inline-flex items-center">
+      <label className="relative mr-1 inline-flex shrink-0 items-center">
         <span
           aria-hidden
-          className="pointer-events-none absolute left-2.5 inline-flex text-slate-500"
+          className="pointer-events-none absolute left-2.5 inline-flex text-[#5f6368]"
         >
           <Search aria-hidden className={TOOLBAR_ICON_CLASS} strokeWidth={1.75} />
         </span>
@@ -276,8 +281,8 @@ function ToolbarItemControl({
           <span aria-hidden>{item.icon}</span>
         ) : null}
         {value ? <span>{value}</span> : null}
-        {item.kind === 'select' || isFillColor || isBorders || isValueFormat ? (
-          <span aria-hidden className="inline-flex text-slate-500">
+        {item.kind === 'select' || isFillColor || isBorders ? (
+          <span aria-hidden className="inline-flex text-[#5f6368]">
             <ChevronDown aria-hidden className={TOOLBAR_ICON_SM_CLASS} strokeWidth={1.75} />
           </span>
         ) : null}
@@ -346,19 +351,12 @@ export function NovaSheetToolbar(props: NovaSheetToolbarProps): JSX.Element {
   }, [openPopoverId])
 
   return (
-    <div
-      role="toolbar"
-      aria-label={ariaLabel}
-      className={cn(
-        'relative z-20 overflow-visible border-b border-slate-300 bg-slate-100 text-[13px] text-slate-700',
-        className,
-      )}
-    >
-      <div className="flex h-11 items-center gap-0.5 overflow-x-auto whitespace-nowrap px-2.5 py-1">
+    <div role="toolbar" aria-label={ariaLabel} className={cn(TOOLBAR_SHELL_CLASS, className)}>
+      <div className={TOOLBAR_SCROLL_ROW_CLASS}>
         {items.map((item) => (
           <Fragment key={item.id}>
             {item.separatorBefore ? (
-              <span aria-hidden className="mx-1.5 h-6 w-px flex-none bg-slate-300" />
+              <span aria-hidden className={TOOLBAR_GROUP_SEPARATOR_CLASS} />
             ) : null}
             <ToolbarItemControl
               item={item}

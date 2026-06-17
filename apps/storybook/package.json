@@ -6,6 +6,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "sync:excel-scenario-board": "bun scripts/sync-excel-scenario-board.ts",
+    "prestorybook": "bun run sync:excel-scenario-board",
+    "prebuild-storybook": "bun run sync:excel-scenario-board",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "typecheck": "tsc --noEmit"
@@ -17,6 +20,7 @@
     "@novasheet/react": "workspace:*"
   },
   "devDependencies": {
+    "@novasheet/mbd": "workspace:*",
     "@tailwindcss/vite": "^4.3.0",
     "@storybook/addon-docs": "10.4.0",
     "@storybook/html": "^10.4.0",

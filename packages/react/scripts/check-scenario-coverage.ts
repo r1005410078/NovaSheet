@@ -98,6 +98,11 @@ function collectFoundIds(testRoots: readonly string[]): string[] {
   return [...found]
 }
 
+/** Collect scenario ids from bun:test titles under `testRoots` (absolute or cwd-relative). */
+export function collectScenarioIdsFromTestRoots(testRoots: readonly string[]): string[] {
+  return collectFoundIds(testRoots.map((root) => resolve(root)))
+}
+
 function formatReport(report: ScenarioCoverageReport): string {
   const lines = [
     `scenario coverage: ${report.covered.length}/${report.expectedIds.length} (${(report.structuralRate * 100).toFixed(1)}%)`,

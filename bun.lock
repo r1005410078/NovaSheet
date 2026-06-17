@@ -21,6 +21,7 @@
         "@novasheet/react": "workspace:*",
       },
       "devDependencies": {
+        "@novasheet/mbd": "workspace:*",
         "@storybook/addon-docs": "10.4.0",
         "@storybook/html": "^10.4.0",
         "@storybook/html-vite": "^10.4.0",
