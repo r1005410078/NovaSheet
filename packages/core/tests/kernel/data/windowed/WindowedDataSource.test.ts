@@ -279,8 +279,15 @@ describe('WindowedDataSource — push channel (rowCount/resync) and subscription
     expect(source.getCell(0, 'name')).toBe('x')
     events.length = 0
 
-    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 }) // ensure no pending unrelated request before resync
+    // Scroll to a genuinely different, single-row window far from the first: reusing the same
+    // window here would be short-circuited as a no-op by windowsEqual (hintWindow's early-return),
+    // leaving nothing new in-flight for the abort-loop assertion below to exercise. A 1-row visible
+    // span keeps preloadScreens's margin expansion (floor(1*(preloadScreens-1)/2) = 0 for the
+    // default preloadScreens: 2) from spilling across a block-row boundary, so this reliably
+    // produces exactly one new loadRange request regardless of this test's blockRows value.
+    source.hintWindow({ startRow: 200, endRow: 200, startCol: 0, endCol: 1 })
     const inFlightBeforeResync = fake.pendingLoads()
+    expect(inFlightBeforeResync.length).toBeGreaterThan(0) // sanity: a real request exists to abort
 
     fake.emit({ type: 'resync', rowCount: 500 })
 
@@ -289,7 +296,13 @@ describe('WindowedDataSource — push channel (rowCount/resync) and subscription
     expect(source.getRowCount()).toBe(500)
     expect(events).toContainEqual({ type: 'rowCountChanged', newCount: 500 })
     expect(events).toContainEqual({ type: 'reset' })
-    expect(fake.pendingLoads().length).toBeGreaterThan(0) // re-fetch issued for current window
+    // Identity-compare rather than bare length>0: the fake provider never removes an entry from
+    // pendingLoads() on abort() (only on resolve()/reject()), so the aborted-but-never-settled
+    // request above would still be sitting there and could satisfy a naive length check even if
+    // handleResyncEvent's re-fetch never ran. Requiring an entry that is NOT one of
+    // inFlightBeforeResync can only pass if planAndFetch genuinely issued a brand-new request.
+    const afterResync = fake.pendingLoads()
+    expect(afterResync.some((load) => !inFlightBeforeResync.includes(load))).toBe(true)
     source.dispose()
   })
 
