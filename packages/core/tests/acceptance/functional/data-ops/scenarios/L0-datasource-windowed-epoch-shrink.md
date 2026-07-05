@@ -3,7 +3,7 @@ id: core.L0.datasource-windowed-epoch-shrink
 layer: L0
 summary: 拉取响应捎带的 rowCount 收缩时整体软失效，rowCountChanged 广播且驻留块标 stale 优先重拉
 tags: [datasource, windowed]
-status: draft
+status: implemented
 ---
 
 ## User Story

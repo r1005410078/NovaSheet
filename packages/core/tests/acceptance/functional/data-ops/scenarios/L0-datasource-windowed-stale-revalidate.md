@@ -3,7 +3,7 @@ id: core.L0.datasource-windowed-stale-revalidate
 layer: L0
 summary: 块离开订阅窗口超时后滚回，旧值先可读、后台重新拉取、新值到达后替换
 tags: [datasource, windowed]
-status: draft
+status: implemented
 ---
 
 ## User Story

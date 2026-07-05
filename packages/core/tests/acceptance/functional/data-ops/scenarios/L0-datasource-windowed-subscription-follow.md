@@ -3,7 +3,7 @@ id: core.L0.datasource-windowed-subscription-follow
 layer: L0
 summary: 滚动停稳超过防抖时限后 setWindow 收到最新可视窗口，连续滚动期间不触发
 tags: [datasource, windowed]
-status: draft
+status: implemented
 ---
 
 ## User Story

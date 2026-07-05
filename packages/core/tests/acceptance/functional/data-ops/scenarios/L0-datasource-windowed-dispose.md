@@ -3,7 +3,7 @@ id: core.L0.datasource-windowed-dispose
 layer: L0
 summary: dispose 关闭订阅、abort 未完成请求，此后到达的事件与 hintWindow 均无副作用；dispose 幂等
 tags: [datasource, windowed]
-status: draft
+status: implemented
 ---
 
 ## User Story

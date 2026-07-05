@@ -46,11 +46,12 @@ acceptance/
 
 ---
 
-## 测试文件职责（当前 67 条场景）
+## 测试文件职责（当前 75 条场景）
 
 | 测试文件 | 场景数 | Layer | 职责 |
 | --- | ---: | --- | --- |
 | [`functional/data-ops/bdd.test.ts`](./functional/data-ops/bdd.test.ts) | 13 | L0+L2 | DataSource / Workspace / `formatValue`；View pipeline 排序、筛选、hide 组合、format/merge raw 键 |
+| [`functional/data-ops/windowed-bdd.test.ts`](./functional/data-ops/windowed-bdd.test.ts) | 8 | L0 | `WindowedDataSource`：骨架优先、overscan 预取、推送更新、订阅跟随、SWR 新鲜度、epoch 收缩、resync、dispose |
 | [`e2e/engine/bdd.test.ts`](./e2e/engine/bdd.test.ts) | 3 | L1 | `DefaultGridEngine` headless oracle：`getFrame` golden、`moveRows` undo/redo、结构 mutation 事件流 golden |
 | [`e2e/grid/bdd.test.ts`](./e2e/grid/bdd.test.ts) | 20 | L2 | `Grid` 门面旅程：生命周期、data/theme、布局/冻结/滚动、autofit、行列结构、表头菜单、格式、合并 |
 | [`properties/spatial.test.ts`](./properties/spatial.test.ts) | 4 | L0 | 坐标 / range / scroll / hit-test 不变量 |

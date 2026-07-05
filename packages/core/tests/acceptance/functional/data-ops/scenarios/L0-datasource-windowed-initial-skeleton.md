@@ -3,7 +3,7 @@ id: core.L0.datasource-windowed-initial-skeleton
 layer: L0
 summary: WindowedDataSource 构造即得完整骨架，hintWindow 驱动首次拉取落地后单元格从 miss 变为实际值
 tags: [datasource, windowed]
-status: draft
+status: implemented
 ---
 
 ## User Story

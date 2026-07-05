@@ -3,7 +3,7 @@ id: core.L0.datasource-windowed-push-update
 layer: L0
 summary: cells 推送对已驻留块立即生效，对 in-flight 块进 pending buffer 回放，对未加载块安全丢弃
 tags: [datasource, windowed]
-status: draft
+status: implemented
 ---
 
 ## User Story

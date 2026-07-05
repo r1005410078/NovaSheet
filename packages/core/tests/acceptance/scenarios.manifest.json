@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-05T13:13:24.583Z",
+  "generatedAt": "2026-07-05T22:58:32.056Z",
   "source": "tests/acceptance/**/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -397,7 +397,7 @@
         "datasource",
         "windowed"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L0-datasource-windowed-dispose.md",
       "given": [
         "`WindowedDataSource` 有一个 in-flight 的 `loadRange` 请求",
@@ -426,7 +426,7 @@
         "datasource",
         "windowed"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L0-datasource-windowed-epoch-shrink.md",
       "given": [
         "`WindowedDataSource` 初始 `rowCount = 1000`，多个块已驻留（分布在预取窗口内外）",
@@ -451,7 +451,7 @@
         "datasource",
         "windowed"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L0-datasource-windowed-initial-skeleton.md",
       "given": [
         "`rowCount = 100000`、2 列 schema 的 `WindowedDataSourceOptions`",
@@ -481,7 +481,7 @@
         "datasource",
         "windowed"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L0-datasource-windowed-push-update.md",
       "given": [
         "`WindowedDataSource` 已建立 `provider.subscribe` 通道",
@@ -508,7 +508,7 @@
         "datasource",
         "windowed"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L0-datasource-windowed-resync.md",
       "given": [
         "`WindowedDataSource` 有若干驻留块，且至少一个 `loadRange` 请求处于 in-flight",
@@ -534,7 +534,7 @@
         "datasource",
         "windowed"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L0-datasource-windowed-scroll-prefetch.md",
       "given": [
         "`WindowedDataSource`，`preloadScreens = 2`、`blockRows = 128`、`blockCols = 16`",
@@ -560,7 +560,7 @@
         "datasource",
         "windowed"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L0-datasource-windowed-stale-revalidate.md",
       "given": [
         "`staleAfterMs = 30000` 的 `WindowedDataSource`",
@@ -586,7 +586,7 @@
         "datasource",
         "windowed"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/data-ops/scenarios/L0-datasource-windowed-subscription-follow.md",
       "given": [
         "`subscribeDebounceMs = 150` 的 `WindowedDataSource`",

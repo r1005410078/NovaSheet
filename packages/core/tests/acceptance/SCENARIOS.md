@@ -19,14 +19,14 @@
 | core.L0.datasource-in-memory-move-fields | L0 | implemented | InMemoryDataSource 移动字段只改变 schema 顺序，cell 值按 fieldId 锚定 |
 | core.L0.datasource-in-memory-read-cell | L0 | draft | InMemoryDataSource 读取单元格与 inclusive getRows |
 | core.L0.datasource-sparse-default-workspace | L0 | implemented | SparseExcelDataSource 默认 A-Z x 1000 且只物化非空单元格 |
-| core.L0.datasource-windowed-dispose | L0 | draft | dispose 关闭订阅、abort 未完成请求，此后到达的事件与 hintWindow 均无副作用；dispose 幂等 |
-| core.L0.datasource-windowed-epoch-shrink | L0 | draft | 拉取响应捎带的 rowCount 收缩时整体软失效，rowCountChanged 广播且驻留块标 stale 优先重拉 |
-| core.L0.datasource-windowed-initial-skeleton | L0 | draft | WindowedDataSource 构造即得完整骨架，hintWindow 驱动首次拉取落地后单元格从 miss 变为实际值 |
-| core.L0.datasource-windowed-push-update | L0 | draft | cells 推送对已驻留块立即生效，对 in-flight 块进 pending buffer 回放，对未加载块安全丢弃 |
-| core.L0.datasource-windowed-resync | L0 | draft | resync 事件 abort 全部 in-flight、清缓存、广播 reset 并重拉当前窗口，可携新 rowCount |
-| core.L0.datasource-windowed-scroll-prefetch | L0 | draft | 预取区域内滚动零请求，滚出后按块对齐合并拉取，离场 in-flight 请求被 abort |
-| core.L0.datasource-windowed-stale-revalidate | L0 | draft | 块离开订阅窗口超时后滚回，旧值先可读、后台重新拉取、新值到达后替换 |
-| core.L0.datasource-windowed-subscription-follow | L0 | draft | 滚动停稳超过防抖时限后 setWindow 收到最新可视窗口，连续滚动期间不触发 |
+| core.L0.datasource-windowed-dispose | L0 | implemented | dispose 关闭订阅、abort 未完成请求，此后到达的事件与 hintWindow 均无副作用；dispose 幂等 |
+| core.L0.datasource-windowed-epoch-shrink | L0 | implemented | 拉取响应捎带的 rowCount 收缩时整体软失效，rowCountChanged 广播且驻留块标 stale 优先重拉 |
+| core.L0.datasource-windowed-initial-skeleton | L0 | implemented | WindowedDataSource 构造即得完整骨架，hintWindow 驱动首次拉取落地后单元格从 miss 变为实际值 |
+| core.L0.datasource-windowed-push-update | L0 | implemented | cells 推送对已驻留块立即生效，对 in-flight 块进 pending buffer 回放，对未加载块安全丢弃 |
+| core.L0.datasource-windowed-resync | L0 | implemented | resync 事件 abort 全部 in-flight、清缓存、广播 reset 并重拉当前窗口，可携新 rowCount |
+| core.L0.datasource-windowed-scroll-prefetch | L0 | implemented | 预取区域内滚动零请求，滚出后按块对齐合并拉取，离场 in-flight 请求被 abort |
+| core.L0.datasource-windowed-stale-revalidate | L0 | implemented | 块离开订阅窗口超时后滚回，旧值先可读、后台重新拉取、新值到达后替换 |
+| core.L0.datasource-windowed-subscription-follow | L0 | implemented | 滚动停稳超过防抖时限后 setWindow 收到最新可视窗口，连续滚动期间不触发 |
 | core.L0.edit-parse-format | L0 | implemented | 单元格编辑解析与可编辑类型判定 |
 | core.L0.fill-series-projection-matrix | L0 | implemented | computeFillWrites 序列外推矩阵与黄金文件一致 |
 | core.L0.format-value-number | L0 | implemented | formatValue 描述符矩阵（number/percent/currency/date）与黄金文件一致 |
@@ -493,7 +493,7 @@
 
 - **layer**: L0
 - **summary**: dispose 关闭订阅、abort 未完成请求，此后到达的事件与 hintWindow 均无副作用；dispose 幂等
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -523,7 +523,7 @@
 
 - **layer**: L0
 - **summary**: 拉取响应捎带的 rowCount 收缩时整体软失效，rowCountChanged 广播且驻留块标 stale 优先重拉
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -549,7 +549,7 @@
 
 - **layer**: L0
 - **summary**: WindowedDataSource 构造即得完整骨架，hintWindow 驱动首次拉取落地后单元格从 miss 变为实际值
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -580,7 +580,7 @@
 
 - **layer**: L0
 - **summary**: cells 推送对已驻留块立即生效，对 in-flight 块进 pending buffer 回放，对未加载块安全丢弃
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -608,7 +608,7 @@
 
 - **layer**: L0
 - **summary**: resync 事件 abort 全部 in-flight、清缓存、广播 reset 并重拉当前窗口，可携新 rowCount
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -635,7 +635,7 @@
 
 - **layer**: L0
 - **summary**: 预取区域内滚动零请求，滚出后按块对齐合并拉取，离场 in-flight 请求被 abort
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -662,7 +662,7 @@
 
 - **layer**: L0
 - **summary**: 块离开订阅窗口超时后滚回，旧值先可读、后台重新拉取、新值到达后替换
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -689,7 +689,7 @@
 
 - **layer**: L0
 - **summary**: 滚动停稳超过防抖时限后 setWindow 收到最新可视窗口，连续滚动期间不触发
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 

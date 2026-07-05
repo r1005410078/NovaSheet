@@ -3,7 +3,7 @@ id: core.L0.datasource-windowed-resync
 layer: L0
 summary: resync 事件 abort 全部 in-flight、清缓存、广播 reset 并重拉当前窗口，可携新 rowCount
 tags: [datasource, windowed]
-status: draft
+status: implemented
 ---
 
 ## User Story

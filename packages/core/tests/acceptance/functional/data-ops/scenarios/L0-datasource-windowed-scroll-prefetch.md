@@ -3,7 +3,7 @@ id: core.L0.datasource-windowed-scroll-prefetch
 layer: L0
 summary: 预取区域内滚动零请求，滚出后按块对齐合并拉取，离场 in-flight 请求被 abort
 tags: [datasource, windowed]
-status: draft
+status: implemented
 ---
 
 ## User Story
