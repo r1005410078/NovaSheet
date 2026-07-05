@@ -17,7 +17,7 @@ export type {
   WindowedDataEvent,
   WindowedDataProvider,
   WindowSubscription,
-} from './kernel/data/windowed/WindowedDataProvider'
+} from './ports/WindowedDataProvider'
 export { isMutableDataSource } from './kernel/data/MutableDataSource'
 export type { MutableDataSource, RemovedFieldSnapshot } from './kernel/data/MutableDataSource'
 export type {

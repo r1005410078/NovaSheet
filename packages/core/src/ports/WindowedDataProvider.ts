@@ -1,7 +1,7 @@
-import type { CellValue, Row } from '../Schema'
-import type { DataWindow } from '../DataSource'
+import type { CellValue, Row } from '../kernel/data/Schema'
+import type { DataWindow } from '../kernel/data/DataSource'
 
-export type { DataWindow } from '../DataSource'
+export type { DataWindow } from '../kernel/data/DataSource'
 
 /** 单元格推送更新。行按 raw 行号，列按 fieldId 锚定（与全仓 cell 值锚定惯例一致）。 */
 export interface CellUpdate {

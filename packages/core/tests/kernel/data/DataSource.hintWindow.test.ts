@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { DataSource, DataWindow } from '../../../src/kernel/data/DataSource'
-import type { WindowedDataProvider } from '../../../src/kernel/data/windowed/WindowedDataProvider'
+import type { WindowedDataProvider } from '../../../src/ports/WindowedDataProvider'
 
 describe('DataSource.hintWindow seam', () => {
   it('DataSource remains satisfied by implementations without hintWindow', () => {
