@@ -31,6 +31,7 @@ SortLayer
 SparseExcelDataSource
 ViewPipeline
 Viewport
+WindowedDataSource
 applyPaste
 applySelectionNavigation
 autofitRowHeights
