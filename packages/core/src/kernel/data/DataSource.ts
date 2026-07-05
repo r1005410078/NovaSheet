@@ -27,6 +27,17 @@ export type DataSourceEvent =
 export type DataSourceListener = (event: DataSourceEvent) => void
 
 /**
+ * 矩形数据窗口，四端 INCLUSIVE——与 CellRange / DataSource.getRows 语义一致。
+ * 独立于 kernel/coords 的 CellRange 命名：selection 与 data 是不同域。
+ */
+export interface DataWindow {
+  readonly startRow: number
+  readonly endRow: number
+  readonly startCol: number
+  readonly endCol: number
+}
+
+/**
  * 渲染引擎与数据后端之间的通用抽象。同/异步双兼容——
  * M1 内置同步实现 InMemoryDataSource；M4+ 接入服务端分页源时，新实现仍是这个接口，
  * 调用方（Renderer / Grid）零改动（CLAUDE.md ADR）。
@@ -53,4 +64,9 @@ export interface DataSource {
   findViewRow?(underlyingRow: number): number
   /** 订阅变更事件。返回取消订阅的函数。 */
   subscribe(listener: DataSourceListener): () => void
+  /**
+   * 可视窗口提示。engine 每帧调用；窗口未变时实现须 O(1) 短路。
+   * 同步数据源无需实现——异步/窗口化数据源（如 WindowedDataSource）据此驱动预取。
+   */
+  hintWindow?(window: DataWindow): void
 }

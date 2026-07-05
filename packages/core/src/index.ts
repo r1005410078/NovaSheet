@@ -10,7 +10,14 @@ export type { GridOptions } from './Grid'
 export { InMemoryDataSource } from './kernel/data/InMemoryDataSource'
 export { SparseExcelDataSource } from './kernel/data/SparseExcelDataSource'
 export type { BuiltInFieldType, CellValue, Field, FieldType, Row, Schema } from './kernel/data/Schema'
-export type { DataSource, DataSourceEvent, DataSourceListener } from './kernel/data/DataSource'
+export type { DataSource, DataSourceEvent, DataSourceListener, DataWindow } from './kernel/data/DataSource'
+export type {
+  CellUpdate,
+  RangeSlice,
+  WindowedDataEvent,
+  WindowedDataProvider,
+  WindowSubscription,
+} from './kernel/data/windowed/WindowedDataProvider'
 export { isMutableDataSource } from './kernel/data/MutableDataSource'
 export type { MutableDataSource, RemovedFieldSnapshot } from './kernel/data/MutableDataSource'
 export type {
