@@ -1,5 +1,5 @@
 import type { CellValue, Row, Schema } from './Schema'
-import type { DataSource, DataSourceEvent, DataSourceListener } from './DataSource'
+import type { DataSource, DataSourceEvent, DataSourceListener, DataWindow } from './DataSource'
 import { isMutableDataSource } from './MutableDataSource'
 import type { MutableDataSource } from './MutableDataSource'
 
@@ -62,6 +62,26 @@ export class VisibleColumnsDataSource implements DataSource {
 
   findViewRow(underlyingRow: number): number {
     return this.upstream.findViewRow?.(underlyingRow) ?? underlyingRow
+  }
+
+  // 参数名用 `win` 而非 `window`：lint:architecture 的 DOM_GLOBAL_RE 朴素正则匹配
+  // 全局对象成员访问前缀，无法区分局部遮蔽与真实 DOM 全局（同 blockGeometry.ts 先例）。
+  hintWindow(win: DataWindow): void {
+    if (!this.upstream.hintWindow) return
+    const visibleFields = this.getSchema().fields // already filtered by hidden id set
+    const startField = visibleFields[win.startCol]
+    const endField = visibleFields[win.endCol]
+    if (!startField || !endField) return
+    const upstreamFields = this.upstream.getSchema().fields
+    const startCol = upstreamFields.findIndex((f) => f.id === startField.id)
+    const endCol = upstreamFields.findIndex((f) => f.id === endField.id)
+    if (startCol < 0 || endCol < 0) return
+    this.upstream.hintWindow({
+      startRow: win.startRow,
+      endRow: win.endRow,
+      startCol,
+      endCol,
+    })
   }
 
   subscribe(listener: DataSourceListener): () => void {

@@ -266,6 +266,29 @@ class HiddenDataSource implements DataSource {
     return idx >= 0 ? idx : -1
   }
 
+  // 参数名用 `win` 而非 `window`：lint:architecture 的 DOM_GLOBAL_RE 朴素正则匹配
+  // 全局对象成员访问前缀，无法区分局部遮蔽与真实 DOM 全局（同 blockGeometry.ts 先例）。
+  hintWindow(win: import('../../kernel/data/DataSource').DataWindow): void {
+    if (!this.upstream.hintWindow) return
+    const visibleRows = this.layer.getVisibleRows()
+    let minRaw = Infinity
+    let maxRaw = -Infinity
+    for (let viewRow = win.startRow; viewRow <= win.endRow; viewRow += 1) {
+      const upstreamRow = visibleRows[viewRow]
+      if (upstreamRow == null) continue
+      const raw = this.upstream.resolveUnderlyingRow?.(upstreamRow) ?? upstreamRow
+      if (raw < minRaw) minRaw = raw
+      if (raw > maxRaw) maxRaw = raw
+    }
+    if (minRaw > maxRaw) return
+    this.upstream.hintWindow({
+      startRow: minRaw,
+      endRow: maxRaw,
+      startCol: win.startCol,
+      endCol: win.endCol,
+    })
+  }
+
   subscribe(listener: DataSourceListener): () => void {
     this.listeners.add(listener)
     return () => {

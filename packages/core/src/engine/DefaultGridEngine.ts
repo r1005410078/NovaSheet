@@ -547,7 +547,7 @@ export class DefaultGridEngine implements GridEngine {
   }
 
   getFrame(): RenderFrame {
-    return assembleRenderFrame({
+    const frame = assembleRenderFrame({
       data: this.data,
       theme: this.theme,
       rowsAxis: this.layout.getRowsAxis(),
@@ -572,6 +572,16 @@ export class DefaultGridEngine implements GridEngine {
       },
       hoveredColumnHeaderMenu: this.hoveredColumnHeaderMenu ?? undefined,
     })
+    const main = frame.viewport.regions.find((region) => region.id === 'main')
+    if (main && main.rowRange[1] >= main.rowRange[0] && main.colRange[1] >= main.colRange[0]) {
+      this.data.hintWindow?.({
+        startRow: main.rowRange[0],
+        endRow: main.rowRange[1],
+        startCol: main.colRange[0],
+        endCol: main.colRange[1],
+      })
+    }
+    return frame
   }
 
   setHoveredColumnHeaderMenu(state: HoveredColumnHeaderMenu | null): void {
