@@ -16,35 +16,35 @@ export function windowsEqual(a: DataWindow | null, b: DataWindow | null): boolea
   )
 }
 
-export function clampWindow(window: DataWindow, rowCount: number, colCount: number): DataWindow {
+export function clampWindow(win: DataWindow, rowCount: number, colCount: number): DataWindow {
   const maxRow = Math.max(rowCount - 1, 0)
   const maxCol = Math.max(colCount - 1, 0)
   return {
-    startRow: Math.max(0, Math.min(window.startRow, maxRow)),
-    endRow: Math.max(0, Math.min(window.endRow, maxRow)),
-    startCol: Math.max(0, Math.min(window.startCol, maxCol)),
-    endCol: Math.max(0, Math.min(window.endCol, maxCol)),
+    startRow: Math.max(0, Math.min(win.startRow, maxRow)),
+    endRow: Math.max(0, Math.min(win.endRow, maxRow)),
+    startCol: Math.max(0, Math.min(win.startCol, maxCol)),
+    endCol: Math.max(0, Math.min(win.endCol, maxCol)),
   }
 }
 
 /** 可视窗口按 preloadScreens 对称外扩（总面积 ≈ 可视区 × preloadScreens）并 clamp 到数据边界。 */
 export function expandWindow(
-  window: DataWindow,
+  win: DataWindow,
   preloadScreens: number,
   rowCount: number,
   colCount: number,
 ): DataWindow {
-  const rowSpan = window.endRow - window.startRow + 1
-  const colSpan = window.endCol - window.startCol + 1
+  const rowSpan = win.endRow - win.startRow + 1
+  const colSpan = win.endCol - win.startCol + 1
   const factor = Math.max(preloadScreens - 1, 0)
   const rowMargin = Math.floor((rowSpan * factor) / 2)
   const colMargin = Math.floor((colSpan * factor) / 2)
   return clampWindow(
     {
-      startRow: window.startRow - rowMargin,
-      endRow: window.endRow + rowMargin,
-      startCol: window.startCol - colMargin,
-      endCol: window.endCol + colMargin,
+      startRow: win.startRow - rowMargin,
+      endRow: win.endRow + rowMargin,
+      startCol: win.startCol - colMargin,
+      endCol: win.endCol + colMargin,
     },
     rowCount,
     colCount,
@@ -56,12 +56,12 @@ export function blockKey(blockRow: number, blockCol: number): string {
 }
 
 /** 窗口相交的所有块坐标，行优先顺序。空窗口返回空数组。 */
-export function windowToBlocks(window: DataWindow, blockRows: number, blockCols: number): BlockCoord[] {
-  if (window.endRow < window.startRow || window.endCol < window.startCol) return []
-  const startBlockRow = Math.floor(window.startRow / blockRows)
-  const endBlockRow = Math.floor(window.endRow / blockRows)
-  const startBlockCol = Math.floor(window.startCol / blockCols)
-  const endBlockCol = Math.floor(window.endCol / blockCols)
+export function windowToBlocks(win: DataWindow, blockRows: number, blockCols: number): BlockCoord[] {
+  if (win.endRow < win.startRow || win.endCol < win.startCol) return []
+  const startBlockRow = Math.floor(win.startRow / blockRows)
+  const endBlockRow = Math.floor(win.endRow / blockRows)
+  const startBlockCol = Math.floor(win.startCol / blockCols)
+  const endBlockCol = Math.floor(win.endCol / blockCols)
   const blocks: BlockCoord[] = []
   for (let blockRow = startBlockRow; blockRow <= endBlockRow; blockRow += 1) {
     for (let blockCol = startBlockCol; blockCol <= endBlockCol; blockCol += 1) {
