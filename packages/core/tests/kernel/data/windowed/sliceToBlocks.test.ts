@@ -53,4 +53,31 @@ describe('applySliceToBlocks', () => {
     expect(cache.get('0:0', 0, 0)).toBe('r0a')
     expect(cache.get('0:0', 1, 0)).toBeUndefined()
   })
+
+  it('warns via console.warn when rows.length does not match the expected row span', () => {
+    const cache = new BlockCache({ maxCachedBlocks: 10 })
+    const warn = console.warn
+    let warned = false
+    console.warn = (...args: unknown[]) => {
+      warned = true
+      warn(...args)
+    }
+    try {
+      applySliceToBlocks(
+        cache,
+        { startRow: 0, endRow: 2, startCol: 0, endCol: 0 },
+        [{ blockRow: 0, blockCol: 0 }],
+        { rows: [{ a: 'only-one' }] }, // expected 3 rows
+        schema,
+        3,
+        1,
+        1000,
+        3,
+        5000,
+      )
+      expect(warned).toBe(true)
+    } finally {
+      console.warn = warn
+    }
+  })
 })

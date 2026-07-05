@@ -360,3 +360,87 @@ describe('WindowedDataSource — push channel (rowCount/resync) and subscription
     source.dispose()
   })
 })
+
+describe('WindowedDataSource — error boundaries (§7)', () => {
+  it('provider.subscribe throwing at construction degrades to fetch-only mode without throwing', () => {
+    const fake = createFakeWindowedProvider()
+    fake.subscribeThrows = new Error('ws unavailable')
+    const warn = console.warn
+    let warned = false
+    console.warn = (...args: unknown[]) => {
+      warned = true
+      warn(...args)
+    }
+    try {
+      expect(() => new WindowedDataSource({ schema, rowCount: 100, provider: fake.provider })).not.toThrow()
+      expect(warned).toBe(true)
+    } finally {
+      console.warn = warn
+    }
+  })
+
+  it('a genuinely malformed cells payload (updates: null) throws internally but is caught and contained, not propagated', () => {
+    const fake = createFakeWindowedProvider()
+    const source = new WindowedDataSource({ schema, rowCount: 100, provider: fake.provider })
+    const warn = console.warn
+    let warned = false
+    console.warn = (...args: unknown[]) => {
+      warned = true
+      warn(...args)
+    }
+    try {
+      // `for (const update of event.updates)` throws TypeError when updates is null —
+      // a real shape a misbehaving provider could send. Must not escape handleEvent.
+      expect(() => fake.emit({ type: 'cells', updates: null as never })).not.toThrow()
+      expect(warned).toBe(true)
+    } finally {
+      console.warn = warn
+      source.dispose()
+    }
+  })
+
+  it('reject that is not an AbortError puts affected blocks into cooldown (no immediate retry loop)', async () => {
+    const fake = createFakeWindowedProvider()
+    // blockRows=16: both the initial window {0,9} and the re-probe window {1,10} must expand
+    // (default preloadScreens=2, margin=floor(rowSpan/2)=5) to a range fully inside ONE block-row
+    // (block 0 spans rows 0..15) — otherwise a second, never-touched block would also come into
+    // play and its own fresh request would pollute the pendingLoads() count this test reads,
+    // independently of whether cooldown does anything at all.
+    const source = new WindowedDataSource({ schema, rowCount: 100, provider: fake.provider, blockRows: 16, blockCols: 2 })
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    const [load] = fake.pendingLoads()
+    load!.reject(new Error('network down'))
+    // handleReject runs off the rejected promise's `.then` continuation, which is always a
+    // microtask — without draining it here, the block would still look "in flight" to
+    // planAndFetch below for a stale bookkeeping reason unrelated to cooldown, which would make
+    // this test pass even with the cooldown-setting line deleted.
+    await tick()
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    source.hintWindow({ startRow: 1, endRow: 10, startCol: 0, endCol: 1 }) // force short-circuit bypass
+    // immediately after rejection, the same block should not be re-requested (cooldown active)
+    expect(fake.pendingLoads()).toHaveLength(0)
+    source.dispose()
+  })
+
+  it('a rejection named AbortError is silent — no cooldown, block is immediately re-requestable', async () => {
+    const fake = createFakeWindowedProvider()
+    // Same blockRows=16 reasoning as the cooldown test above. No scroll-away/abort() theater here:
+    // once WindowedDataSource itself calls controller.abort() on a request (e.g. via scrolling
+    // away), it also immediately deletes that request from `this.requests`, so any later
+    // rejection — AbortError or not — becomes a no-op via the `!request` guard before the
+    // AbortError-name check is even reached. Rejecting directly, while the request is still
+    // tracked, is the only way to exercise that check in isolation (a real provider can also
+    // reject with an AbortError for reasons other than our own controller.abort()).
+    const source = new WindowedDataSource({ schema, rowCount: 100, provider: fake.provider, blockRows: 16, blockCols: 2 })
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    const [load] = fake.pendingLoads()
+    load!.reject(new DOMException('The operation was aborted', 'AbortError'))
+    await tick() // drain handleReject's promise-continuation microtask before probing state
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    source.hintWindow({ startRow: 1, endRow: 10, startCol: 0, endCol: 1 }) // force short-circuit bypass
+    expect(fake.pendingLoads().length).toBeGreaterThan(0) // no cooldown — re-requested right away
+    source.dispose()
+  })
+})
