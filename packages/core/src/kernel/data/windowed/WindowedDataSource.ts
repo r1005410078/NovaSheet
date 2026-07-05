@@ -330,10 +330,25 @@ export class WindowedDataSource implements DataSource {
 
   private handleEvent(event: WindowedDataEvent): void {
     if (this.disposed) return
-    if (event.type !== 'cells') return
+    try {
+      if (event.type === 'cells') {
+        this.handleCellsEvent(event.updates)
+        return
+      }
+      if (event.type === 'rowCount') {
+        this.handleRowCountEvent(event.rowCount, event.version)
+        return
+      }
+      this.handleResyncEvent(event.rowCount)
+    } catch (error) {
+      console.warn('[WindowedDataSource] error handling provider event', error)
+    }
+  }
+
+  private handleCellsEvent(updates: readonly CellUpdate[]): void {
     const now = Date.now()
     let touched: { minRow: number; maxRow: number } | null = null
-    for (const update of event.updates) {
+    for (const update of updates) {
       const col = this.fieldIdToCol.get(update.fieldId)
       if (col === undefined) continue
       const blockRow = Math.floor(update.row / this.blockRowsSize)
@@ -351,5 +366,31 @@ export class WindowedDataSource implements DataSource {
         : { minRow: update.row, maxRow: update.row }
     }
     if (touched) this.emitRowsChanged(touched.minRow, touched.maxRow)
+  }
+
+  private handleRowCountEvent(rowCount: number, version?: number): void {
+    if (version !== undefined) this.currentVersion = version
+    const changed = rowCount !== this.rowCount
+    this.cache.markAllStale()
+    if (changed) {
+      this.rowCount = rowCount
+      this.emit({ type: 'rowCountChanged', newCount: rowCount })
+    }
+    if (this.lastHintWindow) this.planAndFetch(this.lastHintWindow)
+  }
+
+  private handleResyncEvent(rowCount?: number): void {
+    for (const request of this.requests.values()) request.controller.abort()
+    this.requests.clear()
+    this.inFlightByBlock.clear()
+    this.cooldownUntil.clear()
+    this.cache.clear()
+
+    if (rowCount !== undefined && rowCount !== this.rowCount) {
+      this.rowCount = rowCount
+      this.emit({ type: 'rowCountChanged', newCount: rowCount })
+    }
+    this.emit({ type: 'reset' })
+    if (this.lastHintWindow) this.planAndFetch(this.lastHintWindow)
   }
 }

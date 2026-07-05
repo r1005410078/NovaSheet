@@ -215,3 +215,112 @@ describe('WindowedDataSource — construction, sync reads, prefetch', () => {
     source.dispose() // idempotent, no throw
   })
 })
+
+describe('WindowedDataSource — push channel (rowCount/resync) and subscription follow', () => {
+  it('rowCount event with a smaller value shrinks rowCount, emits rowCountChanged, marks cache stale, and re-plans the current window immediately', async () => {
+    const fake = createFakeWindowedProvider()
+    const source = new WindowedDataSource({ schema, rowCount: 1000, provider: fake.provider, blockRows: 10, blockCols: 2 })
+    const events: DataSourceEvent[] = []
+    source.subscribe((e) => events.push(e))
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    const [firstLoad] = fake.pendingLoads()
+    firstLoad!.resolve({
+      rows: Array.from(
+        { length: firstLoad!.window.endRow - firstLoad!.window.startRow + 1 },
+        () => ({ name: 'x', score: 1 }),
+      ),
+    })
+    await tick()
+    events.length = 0
+
+    fake.emit({ type: 'rowCount', rowCount: 800 })
+
+    expect(source.getRowCount()).toBe(800)
+    expect(events).toContainEqual({ type: 'rowCountChanged', newCount: 800 })
+    // re-plan for the still-active hinted window fires a fresh loadRange for the now-stale block
+    expect(fake.pendingLoads().length).toBeGreaterThan(0)
+    source.dispose()
+  })
+
+  it('resync aborts in-flight requests, clears the cache, emits reset (and rowCountChanged if rowCount provided), and re-fetches the current window', async () => {
+    const fake = createFakeWindowedProvider()
+    const source = new WindowedDataSource({ schema, rowCount: 1000, provider: fake.provider, blockRows: 10, blockCols: 2 })
+    const events: DataSourceEvent[] = []
+    source.subscribe((e) => events.push(e))
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    const [firstLoad] = fake.pendingLoads()
+    firstLoad!.resolve({ rows: Array.from({ length: firstLoad!.window.endRow - firstLoad!.window.startRow + 1 }, () => ({ name: 'x', score: 1 })) })
+    await tick()
+    expect(source.getCell(0, 'name')).toBe('x')
+    events.length = 0
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 }) // ensure no pending unrelated request before resync
+    const inFlightBeforeResync = fake.pendingLoads()
+
+    fake.emit({ type: 'resync', rowCount: 500 })
+
+    for (const load of inFlightBeforeResync) expect(load.signal.aborted).toBe(true)
+    expect(source.getCell(0, 'name')).toBeUndefined() // cache cleared
+    expect(source.getRowCount()).toBe(500)
+    expect(events).toContainEqual({ type: 'rowCountChanged', newCount: 500 })
+    expect(events).toContainEqual({ type: 'reset' })
+    expect(fake.pendingLoads().length).toBeGreaterThan(0) // re-fetch issued for current window
+    source.dispose()
+  })
+
+  it('setWindow is called once, with the visible (unexpanded) window, only after the debounce interval settles', async () => {
+    const fake = createFakeWindowedProvider()
+    const source = new WindowedDataSource({
+      schema,
+      rowCount: 1000,
+      provider: fake.provider,
+      subscribeDebounceMs: 20,
+    })
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    source.hintWindow({ startRow: 1, endRow: 10, startCol: 0, endCol: 1 })
+    source.hintWindow({ startRow: 2, endRow: 11, startCol: 0, endCol: 1 })
+    expect(fake.setWindowCalls).toHaveLength(0) // still within debounce window
+
+    await new Promise((resolve) => setTimeout(resolve, 40))
+
+    expect(fake.setWindowCalls).toEqual([{ startRow: 2, endRow: 11, startCol: 0, endCol: 1 }])
+    source.dispose()
+  })
+
+  it('a block that goes stale (staleAfterMs elapsed) is refetched in the background when it re-enters the preload window, without clearing its old value first', async () => {
+    const fake = createFakeWindowedProvider()
+    const source = new WindowedDataSource({
+      schema,
+      rowCount: 1000,
+      provider: fake.provider,
+      blockRows: 10,
+      blockCols: 2,
+      staleAfterMs: 10,
+    })
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    const [firstLoad] = fake.pendingLoads()
+    firstLoad!.resolve({ rows: Array.from({ length: 10 }, () => ({ name: 'old', score: 1 })) })
+    await tick()
+    expect(source.getCell(0, 'name')).toBe('old')
+
+    source.hintWindow({ startRow: 500, endRow: 509, startCol: 0, endCol: 1 }) // scroll far away
+    await new Promise((resolve) => setTimeout(resolve, 20)) // exceed staleAfterMs
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 }) // scroll back
+
+    expect(source.getCell(0, 'name')).toBe('old') // stale value still readable, not cleared
+    const refetch = fake.pendingLoads().find(
+      (l) => l.window.startRow <= 0 && l.window.endRow >= 9 && l.window.startCol === 0,
+    )
+    expect(refetch).toBeDefined()
+
+    refetch!.resolve({ rows: Array.from({ length: refetch!.window.endRow - refetch!.window.startRow + 1 }, () => ({ name: 'new', score: 2 })) })
+    await tick()
+    expect(source.getCell(0, 'name')).toBe('new')
+    source.dispose()
+  })
+})
