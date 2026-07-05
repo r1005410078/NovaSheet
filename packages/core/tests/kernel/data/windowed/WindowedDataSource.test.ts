@@ -219,7 +219,18 @@ describe('WindowedDataSource — construction, sync reads, prefetch', () => {
 describe('WindowedDataSource — push channel (rowCount/resync) and subscription follow', () => {
   it('rowCount event with a smaller value shrinks rowCount, emits rowCountChanged, marks cache stale, and re-plans the current window immediately', async () => {
     const fake = createFakeWindowedProvider()
-    const source = new WindowedDataSource({ schema, rowCount: 1000, provider: fake.provider, blockRows: 10, blockCols: 2 })
+    const source = new WindowedDataSource({
+      schema,
+      rowCount: 1000,
+      provider: fake.provider,
+      // blockRows=15: initial hintWindow's preload (rows 0..14) must fit in a single block-row —
+      // see the blockRows=30 note further up. A smaller value (e.g. 10) fans the first
+      // planAndFetch out into two loadRange calls; resolving only [firstLoad] then leaves the
+      // second permanently pending in the fake provider, which alone would make the
+      // "re-plans immediately" assertion below true even if handleRowCountEvent never re-fetched.
+      blockRows: 15,
+      blockCols: 2,
+    })
     const events: DataSourceEvent[] = []
     source.subscribe((e) => events.push(e))
 
@@ -245,7 +256,19 @@ describe('WindowedDataSource — push channel (rowCount/resync) and subscription
 
   it('resync aborts in-flight requests, clears the cache, emits reset (and rowCountChanged if rowCount provided), and re-fetches the current window', async () => {
     const fake = createFakeWindowedProvider()
-    const source = new WindowedDataSource({ schema, rowCount: 1000, provider: fake.provider, blockRows: 10, blockCols: 2 })
+    const source = new WindowedDataSource({
+      schema,
+      rowCount: 1000,
+      provider: fake.provider,
+      // blockRows=15: initial hintWindow's preload (rows 0..14) must fit in a single block-row —
+      // see the blockRows=30 note further up. A smaller value (e.g. 10) fans the first
+      // planAndFetch out into two loadRange calls; resolving only [firstLoad] then leaves the
+      // second permanently pending in the fake provider, which alone would make the
+      // "re-fetches the current window" assertion below true even if handleResyncEvent never
+      // re-fetched.
+      blockRows: 15,
+      blockCols: 2,
+    })
     const events: DataSourceEvent[] = []
     source.subscribe((e) => events.push(e))
 
