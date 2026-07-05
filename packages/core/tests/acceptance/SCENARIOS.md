@@ -19,6 +19,14 @@
 | core.L0.datasource-in-memory-move-fields | L0 | implemented | InMemoryDataSource 移动字段只改变 schema 顺序，cell 值按 fieldId 锚定 |
 | core.L0.datasource-in-memory-read-cell | L0 | draft | InMemoryDataSource 读取单元格与 inclusive getRows |
 | core.L0.datasource-sparse-default-workspace | L0 | implemented | SparseExcelDataSource 默认 A-Z x 1000 且只物化非空单元格 |
+| core.L0.datasource-windowed-dispose | L0 | draft | dispose 关闭订阅、abort 未完成请求，此后到达的事件与 hintWindow 均无副作用；dispose 幂等 |
+| core.L0.datasource-windowed-epoch-shrink | L0 | draft | 拉取响应捎带的 rowCount 收缩时整体软失效，rowCountChanged 广播且驻留块标 stale 优先重拉 |
+| core.L0.datasource-windowed-initial-skeleton | L0 | draft | WindowedDataSource 构造即得完整骨架，hintWindow 驱动首次拉取落地后单元格从 miss 变为实际值 |
+| core.L0.datasource-windowed-push-update | L0 | draft | cells 推送对已驻留块立即生效，对 in-flight 块进 pending buffer 回放，对未加载块安全丢弃 |
+| core.L0.datasource-windowed-resync | L0 | draft | resync 事件 abort 全部 in-flight、清缓存、广播 reset 并重拉当前窗口，可携新 rowCount |
+| core.L0.datasource-windowed-scroll-prefetch | L0 | draft | 预取区域内滚动零请求，滚出后按块对齐合并拉取，离场 in-flight 请求被 abort |
+| core.L0.datasource-windowed-stale-revalidate | L0 | draft | 块离开订阅窗口超时后滚回，旧值先可读、后台重新拉取、新值到达后替换 |
+| core.L0.datasource-windowed-subscription-follow | L0 | draft | 滚动停稳超过防抖时限后 setWindow 收到最新可视窗口，连续滚动期间不触发 |
 | core.L0.edit-parse-format | L0 | implemented | 单元格编辑解析与可编辑类型判定 |
 | core.L0.fill-series-projection-matrix | L0 | implemented | computeFillWrites 序列外推矩阵与黄金文件一致 |
 | core.L0.format-value-number | L0 | implemented | formatValue 描述符矩阵（number/percent/currency/date）与黄金文件一致 |
@@ -42,8 +50,8 @@
 | core.L1.engine-rows-move-undo-redo | L1 | implemented | DefaultGridEngine moveRows 移动连续行块并支持 undo/redo |
 | core.L1.engine-structural-event-stream | L1 | implemented | 结构 mutation + undo/redo 的 DataSource 事件流与黄金文件一致 |
 | core.L1.validation-rule-apply-state-query | L1 | implemented | Grid.setValidation 设置区间规则后 validateAll 触发校验，getValidationState 返回 invalid/null |
-| core.L1.validation-write-paths-trigger | L1 | implemented | commitCellEdit / commitCellValue / commitPaste / commitFill / undo / redo 均触发受影响格重校验 |
 | core.L1.validation-scheduler-large-batch | L1 | implemented | ValidationScheduler 在 10 000 格大批量下顺序完整处理、无遗漏、无乱序 |
+| core.L1.validation-write-paths-trigger | L1 | implemented | commitCellEdit / commitCellValue / commitPaste / commitFill / undo / redo 均触发受影响格重校验 |
 | core.L2.cell-attachment-clipboard-roundtrip | L2 | implemented | copy/paste 同 Grid 内携带附件往返，undo 整体撤销；cache miss 安全降级无附件 |
 | core.L2.cell-attachment-store-set-get-undo | L2 | implemented | 经 Grid 门面写/读 per-cell 附件并可撤销 |
 | core.L2.grid-autofit-wrap-rows | L2 | implemented | Grid autofitRows 使用 wrap 字段和 measurer 更新行高 |
@@ -480,6 +488,229 @@
 - row count 为 1000
 - schema 首尾为 `A` / `Z`
 - 只写入的 `B3` 进入 content bounds
+
+## core.L0.datasource-windowed-dispose
+
+- **layer**: L0
+- **summary**: dispose 关闭订阅、abort 未完成请求，此后到达的事件与 hintWindow 均无副作用；dispose 幂等
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当我调用 `dispose()` 时，我希望订阅通道关闭、所有未完成请求被 abort，且此后到达的任何 resolve、推送事件、`hintWindow` 调用均不再产生副作用；`dispose()` 本身可重复调用且不抛错。
+
+### Given
+
+- `WindowedDataSource` 有一个 in-flight 的 `loadRange` 请求
+- 已建立的 `provider.subscribe` 通道，其 `WindowSubscription.close` 为可观测 spy
+
+### When
+
+- 调用 `dispose()`
+- dispose 后 resolve 那个此前处于 in-flight 状态的 `loadRange` Promise
+- dispose 后调用 `hintWindow`（新窗口）
+- 再次调用 `dispose()`
+
+### Then
+
+- `WindowSubscription.close()` 恰好被调用一次
+- dispose 时 in-flight 请求的 `AbortSignal.aborted` 变为 `true`
+- dispose 后到达的 resolve 不写入缓存、不 emit 任何事件
+- dispose 后的 `hintWindow` 调用不触发新的 `loadRange`
+- 二次调用 `dispose()` 不抛出异常
+
+## core.L0.datasource-windowed-epoch-shrink
+
+- **layer**: L0
+- **summary**: 拉取响应捎带的 rowCount 收缩时整体软失效，rowCountChanged 广播且驻留块标 stale 优先重拉
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当拉取响应携带的 `rowCount` 小于当前值（服务端删行导致行号整体收缩）时，我希望 `rowCount` 立即更新、全部驻留块标记为 stale 并优先重拉当前预取窗口；不清空当前显示（stale-while-revalidate），也不需要细粒度结构事件。
+
+### Given
+
+- `WindowedDataSource` 初始 `rowCount = 1000`，多个块已驻留（分布在预取窗口内外）
+- 一次新的 `loadRange` 请求即将 resolve，其 `RangeSlice.rowCount = 800`（无 `version`，走弱 epoch 判定）
+
+### When
+
+- resolve 该请求，携带 `rowCount = 800`
+
+### Then
+
+- `getRowCount()` 立即返回 `800`
+- 订阅的 listener 收到一次 `rowCountChanged(800)`
+- 此前驻留的其他块（非本次落地块）被标记为 stale：此刻读取仍返回旧值（不清空），但会在下次进入预取窗口时触发重新拉取
+- 当前预取窗口内的 stale 块被立即优先重新规划拉取（不等待用户再次滚动）
+
+## core.L0.datasource-windowed-initial-skeleton
+
+- **layer**: L0
+- **summary**: WindowedDataSource 构造即得完整骨架，hintWindow 驱动首次拉取落地后单元格从 miss 变为实际值
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当我用 10 万行 schema 构造 `WindowedDataSource` 时，我希望立即获得完整的行数与 schema（无需等待任何网络 IO），使 Grid 能渲染骨架结构；随后首个 `hintWindow` 触发的拉取落地后，对应区域的 `getCell` 从 `undefined` 变为实际值。
+
+### Given
+
+- `rowCount = 100000`、2 列 schema 的 `WindowedDataSourceOptions`
+- `FakeProvider.loadRange` 返回一个可手动 resolve 的 Promise，尚未 resolve
+- 尚未调用 `hintWindow`
+
+### When
+
+- 构造 `WindowedDataSource`
+- 读取 `getRowCount()` / `getSchema()`
+- 读取窗口内某单元格 `getCell(0, 'name')`（拉取前）
+- 调用 `hintWindow({ startRow: 0, endRow: 39, startCol: 0, endCol: 1 })`
+- resolve `FakeProvider.loadRange` 的 Promise，携带该窗口的 `rows`
+
+### Then
+
+- 构造后立即 `getRowCount()` 返回 `100000`，`getSchema()` 返回传入 schema（不等待 IO）
+- 拉取前 `getCell(0, 'name')` 返回 `undefined`
+- `hintWindow` 恰好触发一次 `loadRange` 调用，窗口按 `preloadScreens` 对称外扩并 clamp 到数据边界
+- resolve 后 `getCell(0, 'name')` 返回落地的值，订阅的 listener 收到一次 `rowsChanged`
+
+## core.L0.datasource-windowed-push-update
+
+- **layer**: L0
+- **summary**: cells 推送对已驻留块立即生效，对 in-flight 块进 pending buffer 回放，对未加载块安全丢弃
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当订阅通道推送 `cells` 事件时，我希望已驻留块立即改值并广播一次 `rowsChanged`；正在拉取中的块把更新暂存，等拉取落地后回放（避免被拉取快照覆盖）；从未加载的块的推送被安全丢弃。
+
+### Given
+
+- `WindowedDataSource` 已建立 `provider.subscribe` 通道
+- 块 A 已驻留（`loadRange` 已 resolve）
+- 块 B 正在 in-flight（`loadRange` 尚未 resolve）
+- 块 C 从未被拉取
+
+### When
+
+- 触发 `onEvent({ type: 'cells', updates: [块A内一格, 块B内一格, 块C内一格] })`
+- 之后 resolve 块 B 的 `loadRange`（响应中该格的值是拉取发起时的旧值，不含推送值）
+
+### Then
+
+- 块 A 对应单元格立即变为推送值，触发一次 `rowsChanged`
+- 块 B 落地前该格仍不可读（未加载）；`loadRange` resolve 后该格以推送值为准（pending buffer 回放覆盖了响应中的旧值）
+- 块 C 对应单元格保持 `undefined`，且不产生任何可观测副作用（不 emit 事件、不建缓存条目）
+
+## core.L0.datasource-windowed-resync
+
+- **layer**: L0
+- **summary**: resync 事件 abort 全部 in-flight、清缓存、广播 reset 并重拉当前窗口，可携新 rowCount
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当推送通道发出 `resync` 事件（如断线重连）时，我希望所有 in-flight 请求被 abort、缓存与 pending buffer 清空、广播一次 `reset`，并对当前预取窗口发起全新拉取；若 `resync` 携带 `rowCount`，一并更新并广播 `rowCountChanged`。
+
+### Given
+
+- `WindowedDataSource` 有若干驻留块，且至少一个 `loadRange` 请求处于 in-flight
+- 已建立 `provider.subscribe` 通道
+
+### When
+
+- 触发 `onEvent({ type: 'resync', rowCount: 500 })`
+
+### Then
+
+- in-flight 请求的 `AbortSignal.aborted` 变为 `true`
+- 缓存被清空：resync 后立即读取此前驻留块的单元格返回 `undefined`
+- `getRowCount()` 返回 `500`，订阅的 listener 收到一次 `rowCountChanged(500)`
+- 订阅的 listener 收到一次 `reset`
+- 当前预取窗口触发一次新的 `loadRange` 请求
+
+## core.L0.datasource-windowed-scroll-prefetch
+
+- **layer**: L0
+- **summary**: 预取区域内滚动零请求，滚出后按块对齐合并拉取，离场 in-flight 请求被 abort
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当用户在预取区域内滚动时，我希望零网络请求；只有滚出预取区域才触发新的 `loadRange`，且请求按缓存块对齐、合并相邻块；已发出但已离场的请求应被 abort。
+
+### Given
+
+- `WindowedDataSource`，`preloadScreens = 2`、`blockRows = 128`、`blockCols = 16`
+- 首个 `hintWindow` 已 resolve，预取区域内的块已全部驻留
+
+### When
+
+- 连续多次调用 `hintWindow`，窗口始终落在已驻留的预取区域内
+- 之后调用 `hintWindow`，窗口显著超出当前预取区域（触发新块规划，其中一个新块的 `loadRange` 尚未 resolve）
+- 紧接着再次调用 `hintWindow`，使刚发出请求的那个新块也退出预取区域
+
+### Then
+
+- 预取区域内的多次 `hintWindow` 调用均不触发新的 `loadRange`
+- 超出后触发的 `loadRange` 请求与块规划对齐，同一行内水平相邻的待拉取块合并为一个矩形请求
+- 退出预取区域后，对应 in-flight 请求的 `AbortSignal.aborted` 变为 `true`
+
+## core.L0.datasource-windowed-stale-revalidate
+
+- **layer**: L0
+- **summary**: 块离开订阅窗口超时后滚回，旧值先可读、后台重新拉取、新值到达后替换
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当一个块离开订阅窗口超过 `staleAfterMs` 后再次进入预取窗口时，我希望旧值先被读取（不清空、不阻塞渲染），同时后台发起重新拉取；新响应落地后替换旧值并重绘。
+
+### Given
+
+- `staleAfterMs = 30000` 的 `WindowedDataSource`
+- 块 A 已驻留且已完成拉取
+- 可控虚拟时钟；块 A 离开订阅窗口后的新鲜时钟已超过 `staleAfterMs`
+
+### When
+
+- 调用 `hintWindow`，使块 A 重新进入预取窗口
+- resolve 该次针对块 A 触发的新 `loadRange` 请求，返回新值
+
+### Then
+
+- 重新进入预取窗口的瞬间，`getCell` 仍返回块 A 的旧值（不被清空、不绘骨架）
+- 重新进入触发了一次新的 `loadRange` 请求覆盖块 A
+- 新请求 resolve 后 `getCell` 返回新值，且触发一次 `rowsChanged`
+
+## core.L0.datasource-windowed-subscription-follow
+
+- **layer**: L0
+- **summary**: 滚动停稳超过防抖时限后 setWindow 收到最新可视窗口，连续滚动期间不触发
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，当用户滚动停稳超过 `subscribeDebounceMs` 后，我希望 `WindowSubscription.setWindow` 被调用且参数是最新的可视窗口（而非预取窗口）；连续滚动期间不应频繁调用，避免刷屏式订阅切换。
+
+### Given
+
+- `subscribeDebounceMs = 150` 的 `WindowedDataSource`
+- 可控的虚拟时钟
+- `WindowSubscription.setWindow` 为可观测 spy
+
+### When
+
+- 在 150ms 内连续多次调用 `hintWindow`（模拟连续滚动），每次窗口不同
+- 停止调用后，虚拟时钟推进超过 150ms
+
+### Then
+
+- 连续滚动期间 `setWindow` 不被调用
+- 停稳超时后 `setWindow` 恰好调用一次
+- 该次调用参数为最后一次 `hintWindow` 的可视窗口本身，不含 `preloadScreens` 外扩
 
 ## core.L0.edit-parse-format
 
@@ -1045,6 +1276,33 @@
 - `getValidationState(1, 0)` 返回 `{ status: 'invalid', message: '值必须在 0 到 100 之间' }`（150 超出）
 - `getValidationState(2, 0)` 返回 `{ status: 'invalid', message: '值必须在 0 到 100 之间' }`（-10 超出）
 - text 列（col 1）状态均为 null（无规则）
+
+## core.L1.validation-scheduler-large-batch
+
+- **layer**: L1
+- **summary**: ValidationScheduler 在 10 000 格大批量下顺序完整处理、无遗漏、无乱序
+- **status**: implemented
+
+### User Story
+
+作为引擎消费者，当我对一个 10 000 格（1 000 行 × 10 列）的数据集调用 `validateAll()` 时，我希望所有格最终都能被校验、结果不乱序、不遗漏，以确保调度器在 pool 满时不丢失任何待处理单元格。
+
+### Given
+
+- `DefaultGridEngine`，1 000 行 × 10 列
+- 所有列均配置 `Field.options.validation: { type: 'number-range', options: { min: 0, max: 999 } }`（同步 validator）
+- 第 0 列所有行的值超出范围（值 = 1 000），其余列值合法（值 = row index % 999）
+
+### When
+
+- 调用 `engine.validateAll()` 并等待所有异步调度完成（通过 flush 直到 scheduler 队列为空）
+
+### Then
+
+- 第 0 列的全部 1 000 个单元格状态为 `{ status: 'invalid' }`
+- 第 1–9 列的全部 9 000 个单元格状态为 `null`（无错误）
+- 处理顺序：行 0 col 0 先于行 999 col 0 完成（FIFO 顺序保证，不因 pool 满而乱序）
+- 无单元格在 resultStore 中缺失（所有 invalid 格均有记录）
 
 ## core.L1.validation-write-paths-trigger
 
@@ -2254,32 +2512,3 @@
 - 无 type 导出断裂
 - 运行时 value 导出名排序清单与 `__goldens__/core.type.public-api-inventory.golden.txt` 一致——公开 API 面增删显式过 review
 - 文档矩阵标记 type-only，type 导出仍由 strict typecheck 覆盖
-
----
-
-## core.L1.validation-scheduler-large-batch
-
-- **layer**: L1
-- **summary**: ValidationScheduler 在 10 000 格大批量下顺序完整处理、无遗漏、无乱序
-- **status**: implemented
-
-### User Story
-
-作为引擎消费者，当我对一个 10 000 格（1 000 行 × 10 列）的数据集调用 `validateAll()` 时，我希望所有格最终都能被校验、结果不乱序、不遗漏，以确保调度器在 pool 满时不丢失任何待处理单元格。
-
-### Given
-
-- `DefaultGridEngine`，1 000 行 × 10 列
-- 所有列均配置 `Field.options.validation: { type: 'number-range', options: { min: 0, max: 999 } }`（同步 validator）
-- 第 0 列所有行的值超出范围（值 = 1 000），其余列值合法（值 = row index % 999）
-
-### When
-
-- 调用 `engine.validateAll()` 并等待所有异步调度完成（通过 flush 直到 scheduler 队列为空）
-
-### Then
-
-- 第 0 列的全部 1 000 个单元格状态为 `{ status: 'invalid' }`
-- 第 1–9 列的全部 9 000 个单元格状态为 `null`（无错误）
-- 处理顺序：行 0 col 0 先于行 999 col 0 完成（FIFO 顺序保证，不因 pool 满而乱序）
-- 无单元格在 resultStore 中缺失（所有 invalid 格均有记录）
