@@ -4,7 +4,7 @@
  * 容器 `pointer-events: none`，单个 handle `pointer-events: auto`，不挡滚动。
  */
 
-import type { ResizeHandleRect } from '../../kernel/interaction/HandleLayout'
+import type { ResizeHandleKind, ResizeHandleRect } from '../../kernel/interaction/HandleLayout'
 import type { ThemeColors, ThemeMetrics } from '../../kernel/theme/Theme'
 import {
   MIN_RESIZE_SIZE,
@@ -36,7 +36,13 @@ export class DomHandleLayer {
   private callbacks: DomHandleLayerCallbacks
   private layer!: HTMLDivElement
   private indicator!: HTMLDivElement
-  private pool = new Map<string, HTMLDivElement>()
+  /**
+   * 位置复用池（列/行分池）：滚动时 handle 数量基本不变而行列号整体位移，
+   * 按池内下标复用元素、只重写 dataset 与位置，避免整池 DOM 拆重建
+   * 触发的每帧 Layout/Recalculate Style（profiler 实证 ~57% 帧时间）。
+   */
+  private colPool: HTMLDivElement[] = []
+  private rowPool: HTMLDivElement[] = []
   private attached = false
   private destroyed = false
 
@@ -88,12 +94,27 @@ export class DomHandleLayer {
 
   sync(handles: readonly ResizeHandleRect[]): void {
     if (!this.attached || this.destroyed) return
+    const cols: ResizeHandleRect[] = []
+    const rows: ResizeHandleRect[] = []
+    for (const handle of handles) (handle.kind === 'column' ? cols : rows).push(handle)
+    this.syncKind(this.colPool, cols, 'column')
+    this.syncKind(this.rowPool, rows, 'row')
+  }
 
-    const nextKeys = new Set<string>()
-    for (const handle of handles) {
-      const key = handleKey(handle)
-      nextKeys.add(key)
-      const el = this.ensureHandle(key, handle)
+  private syncKind(
+    pool: HTMLDivElement[],
+    handles: readonly ResizeHandleRect[],
+    kind: ResizeHandleKind,
+  ): void {
+    for (let i = 0; i < handles.length; i++) {
+      const handle = handles[i]!
+      const el = pool[i] ?? this.createHandle(kind, pool)
+      if (handle.fieldId !== undefined) el.dataset['fieldId'] = handle.fieldId
+      else delete el.dataset['fieldId']
+      if (handle.colIndex !== undefined) el.dataset['colIndex'] = String(handle.colIndex)
+      else delete el.dataset['colIndex']
+      if (handle.rowIndex !== undefined) el.dataset['rowIndex'] = String(handle.rowIndex)
+      else delete el.dataset['rowIndex']
       Object.assign(el.style, {
         left: `${handle.x}px`,
         top: `${handle.y}px`,
@@ -101,13 +122,7 @@ export class DomHandleLayer {
         height: `${handle.height}px`,
       })
     }
-
-    for (const [key, el] of this.pool) {
-      if (!nextKeys.has(key)) {
-        el.remove()
-        this.pool.delete(key)
-      }
-    }
+    while (pool.length > handles.length) pool.pop()!.remove()
   }
 
   showIndicator(line: ResizeIndicatorLine): void {
@@ -137,26 +152,22 @@ export class DomHandleLayer {
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
-    for (const el of this.pool.values()) el.remove()
-    this.pool.clear()
+    for (const el of this.colPool) el.remove()
+    for (const el of this.rowPool) el.remove()
+    this.colPool.length = 0
+    this.rowPool.length = 0
     if (this.layer?.parentNode === this.container) {
       this.container.removeChild(this.layer)
     }
     this.attached = false
   }
 
-  private ensureHandle(key: string, handle: ResizeHandleRect): HTMLDivElement {
-    let el = this.pool.get(key)
-    if (el) return el
-
-    el = document.createElement('div')
+  private createHandle(kind: ResizeHandleKind, pool: HTMLDivElement[]): HTMLDivElement {
+    const el = document.createElement('div')
     el.setAttribute('data-novasheet-resize-handle', '')
-    el.dataset.nsResize = handle.kind
-    if (handle.fieldId) el.dataset.fieldId = handle.fieldId
-    if (handle.colIndex !== undefined) el.dataset.colIndex = String(handle.colIndex)
-    if (handle.rowIndex !== undefined) el.dataset.rowIndex = String(handle.rowIndex)
+    el.dataset['nsResize'] = kind
 
-    const vertical = handle.kind === 'column'
+    const vertical = kind === 'column'
     el.setAttribute('role', 'separator')
     el.setAttribute('aria-orientation', vertical ? 'vertical' : 'horizontal')
     el.tabIndex = 0
@@ -182,7 +193,7 @@ export class DomHandleLayer {
     el.addEventListener('pointercancel', this.onPointerUp)
     el.addEventListener('keydown', this.onKeyDown)
     this.layer.appendChild(el)
-    this.pool.set(key, el)
+    pool.push(el)
     return el
   }
 
@@ -285,11 +296,6 @@ export class DomHandleLayer {
       height,
     }
   }
-}
-
-function handleKey(handle: ResizeHandleRect): string {
-  if (handle.kind === 'column') return `col:${handle.colIndex ?? handle.id}`
-  return `row:${handle.rowIndex ?? handle.id}`
 }
 
 export { MIN_RESIZE_SIZE, RESIZE_HANDLE_HIT_SIZE }
