@@ -158,6 +158,7 @@ function makeEngine(): GridEngine {
     setValidationRedrawCallback: mock(() => undefined),
     setDataChangeRedrawCallback: mock(() => undefined),
     setHoveredColumnHeaderMenu: mock((_state) => undefined),
+    dispose: mock(() => undefined),
   }
 }
 
@@ -628,6 +629,31 @@ describe('GridRuntime drag selection — 拖拽框选', () => {
     runtime.handleHostPointerMove({ x: 220, y: 100, shiftKey: false })
 
     expect(engine.selectCell).not.toHaveBeenCalled()
+  })
+})
+
+describe('GridRuntime.destroy — engine teardown', () => {
+  it('destroy() calls engine.dispose() so the injected engine unsubscribes from its data source', () => {
+    const engine = makeEngine()
+    const host = makeHost()
+    const renderer = makeRenderer()
+    const runtime = new GridRuntime({ engine, host, renderer })
+
+    runtime.destroy()
+
+    expect(engine.dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it('destroy() is idempotent — a second call does not re-invoke engine.dispose()', () => {
+    const engine = makeEngine()
+    const host = makeHost()
+    const renderer = makeRenderer()
+    const runtime = new GridRuntime({ engine, host, renderer })
+
+    runtime.destroy()
+    runtime.destroy()
+
+    expect(engine.dispose).toHaveBeenCalledTimes(1)
   })
 })
 

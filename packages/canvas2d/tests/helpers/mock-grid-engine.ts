@@ -182,6 +182,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     setValidationRedrawCallback: mock((_cb: () => void) => {}),
     setDataChangeRedrawCallback: mock((_cb: () => void) => {}),
     setHoveredColumnHeaderMenu: mock((_state: HoveredColumnHeaderMenu | null) => {}),
+    dispose: mock(() => {}),
   } satisfies GridEngine
 
   return Object.assign(engine, options.overrides)

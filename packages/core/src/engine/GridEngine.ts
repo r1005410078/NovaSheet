@@ -465,4 +465,7 @@ export interface GridEngine
     GridColumnStructure,
     GridFormatting,
     GridMerging,
-    GridFrameReader {}
+    GridFrameReader {
+  /** 释放 engine 持有的外部订阅（当前为 DataSource 事件订阅）；调用方（GridRuntime）在自身 destroy() 时调用。 */
+  dispose(): void
+}

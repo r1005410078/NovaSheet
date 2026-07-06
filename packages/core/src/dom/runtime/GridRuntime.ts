@@ -1816,6 +1816,7 @@ export class GridRuntime {
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
+    this.engine.dispose()
     this.closeActiveCustomEditor()
     this.cancelCellEdit()
     this.activeDrag?.cancel()

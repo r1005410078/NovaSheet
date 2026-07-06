@@ -35,6 +35,12 @@ export interface RowStructure extends RowCommands {
   setRowHeightsMulti(underlyingRows: readonly number[], height: number): void
   setDefaultRowHeight(height: number): void
 
+  /**
+   * 当前行高轴认为的 raw 行数（构造/`rebuild()`/`insertRows`/`deleteRows` 后与 dataSource 同步）。
+   * 供调用方判断某次外部行数变化事件是否已被同步 mutation 路径处理过。
+   */
+  getRawRowCount(): number
+
   /** 从行高轴按可见行顺序派生的视图行轴。 */
   getViewRowsAxis(): ChunkedAxis
   /** 行隐藏后的视图数据源（engine 在其上再叠列隐藏）。 */

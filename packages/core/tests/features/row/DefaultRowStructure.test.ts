@@ -205,6 +205,21 @@ describe('DefaultRowStructure（自持状态）', () => {
     expect(firstDisposeCalls).toBe(1)
   })
 
+  it('getRawRowCount reflects the raw row axis, staying in sync across insert/delete/rebuild', () => {
+    const data = makeData(['A', 'B', 'C'])
+    const rows = makeRows(data)
+    expect(rows.getRawRowCount()).toBe(3)
+
+    rows.insertRows({ kind: 'insertRows', at: 1, count: 2 })
+    expect(rows.getRawRowCount()).toBe(5)
+
+    rows.deleteRows({ kind: 'deleteRows', rowIds: [0] })
+    expect(rows.getRawRowCount()).toBe(4)
+
+    rows.rebuild(makeData(['X', 'Y']), () => DEFAULT_HEIGHT)
+    expect(rows.getRawRowCount()).toBe(2)
+  })
+
   it('clearHidden empties the hidden set', () => {
     const rows = makeRows(makeData(['A', 'B', 'C']))
     rows.addHidden([1])

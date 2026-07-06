@@ -216,6 +216,12 @@ class HiddenDataSource implements DataSource {
           mutableUpstream.moveRows!(underlyingRowIds, beforeRowId)
       }
     }
+    // 若在 upstream 自己 emit() 的活 for-of 遍历（其 listeners Set）尚未展开完时构造一个新
+    // HiddenDataSource（如 DefaultRowStructure.rebuild() 同步跑在事件监听器里），这里的订阅会被
+    // 同一次遍历继续访问到——JS Set/for-of 会看到遍历期间新增的项。若监听器对该事件的反应又是
+    // 同步再包一层（再次订阅），则无限递归（DefaultGridEngine 的 rowCountChanged/reset 桥接曾在
+    // 2026-07-05 windowed-data-source 审查中踩到这个坑，见 DefaultGridEngine.scheduleDataRebuild）。
+    // 不要在 DataSourceEvent 监听器里同步做 rebuildData 等价操作——需要反应就 queueMicrotask。
     this.unsubscribeFromUpstream = this.upstream.subscribe((event) =>
       this.handleUpstreamEvent(event),
     )

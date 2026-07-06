@@ -125,6 +125,10 @@ export class DefaultRowStructure implements RowStructure {
     return this.rawRowsAxis.getSize(underlyingRow)
   }
 
+  getRawRowCount(): number {
+    return this.rawRowsAxis.getCount()
+  }
+
   setRowHeight(underlyingRow: number, height: number): void {
     this.rawRowsAxis.setSize(underlyingRow, height)
   }

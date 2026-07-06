@@ -500,15 +500,38 @@ export class DefaultGridEngine implements GridEngine {
    * 新增的项），再次触发 handleDataSourceEvent → rebuildData → 再次新增监听器……无限递归。
    * queueMicrotask 保证 rebuildData 在当前同步派发栈完全展开之后才跑，从根上掐断重入；
    * 布尔位合并同一轮同步事件里的多次触发，避免排队多个冗余 rebuild。
+   *
+   * 幂等检查（回归修复，见下方 if）：InMemoryDataSource 的 insertRows/deleteRows 等结构性
+   * mutation 走 *CommandHandler 同步执行——mutable.xxxRows() 触发本函数排队之后，同一个调用栈里
+   * 紧接着就会同步更新 rowStructure.rawRowsAxis（见 DefaultRowStructure.insertRows/deleteRows），
+   * 使其在这个 microtask 真正跑之前就已经与 rawData.getRowCount() 一致；此时若仍无条件
+   * rebuildData()，等于用默认行高、不保留 scroll 的 layout.initView() 覆盖掉命令处理器刚同步做
+   * 对的事（丢自定义行高、滚动归零）。只有真正没有同步调用点处理过的行数漂移（WindowedDataSource
+   * 后台 epoch 收缩/resync）才会在这里持续不一致，需要真正 rebuild。
+   * 重绘回调不受这个判断影响、始终执行——`reset` 也可能在行数不变时发出（如
+   * WindowedDataSource.handleResyncEvent 整体标记缓存失效但行数未变），此时行/列轴不需要重建，
+   * 但仍需要一次重绘去 hintWindow 重新拉取已失效的缓存；这个回调本身是幂等的重绘请求（同
+   * rowsChanged 分支），与已有的同步 invalidate 合并到同一帧，多调一次没有副作用。
    */
   private scheduleDataRebuild(): void {
     if (this.dataRebuildScheduled) return
     this.dataRebuildScheduled = true
     queueMicrotask(() => {
       this.dataRebuildScheduled = false
-      this.rebuildData(this.rawData)
+      if (this.rawData.getRowCount() !== this.rowStructure.getRawRowCount()) {
+        this.rebuildData(this.rawData)
+      }
       this.dataChangeRedrawCallback()
     })
+  }
+
+  /**
+   * 释放 engine 持有的外部订阅（当前仅 this.data 的 DataSourceEvent 订阅）。
+   * `DefaultGridEngine` 可脱离 `GridControllerImpl` 直接构造/使用（测试即如此）；此前只靠
+   * `GridControllerImpl.destroy()` 先 dispose ViewPipeline 顺带切断上游，并非引擎自身的保证。
+   */
+  dispose(): void {
+    this.unsubscribeFromData()
   }
 
   setTheme(theme: Theme): void {
