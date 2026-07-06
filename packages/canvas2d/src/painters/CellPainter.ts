@@ -30,6 +30,9 @@ import { wrapText } from '@novasheet/core'
 /** 行高倍数（默认 1.4 倍 fontSize）。可在 theme 里加 token 让它可配。 */
 const LINE_HEIGHT_MULTIPLIER = 1.4
 
+/** 截断缓存上限；推送型数据每 tick 产生新字符串，无上限会无界增长。超限整体清空。 */
+const TRUNCATION_CACHE_MAX = 8192
+
 /** 单次单元格绘制所需参数 */
 export interface CellPaintParams {
   /** undefined：异步源未加载；null：显式空。两者都不绘制。 */
@@ -325,6 +328,15 @@ export class CellPainter {
   }
 
   /**
+   * 缓存截断结果，超过容量上限时整体清空。
+   */
+  private cacheTruncation(key: string, value: string): string {
+    if (this.truncationCache.size >= TRUNCATION_CACHE_MAX) this.truncationCache.clear()
+    this.truncationCache.set(key, value)
+    return value
+  }
+
+  /**
    * 找出 `text` 能放进 `maxWidth` 的最长前缀（**硬裁断、无省略号**），整串放得下返回原文。
    * 二分把 measureText 压到 O(log n)；缓存 key 含 `hc|` 前缀以与省略号截断区分。
    */
@@ -344,8 +356,7 @@ export class CellPainter {
       }
       result = text.slice(0, lo)
     }
-    this.truncationCache.set(cacheKey, result)
-    return result
+    return this.cacheTruncation(cacheKey, result)
   }
 
   /**
@@ -363,14 +374,12 @@ export class CellPainter {
 
     const fullWidth = ctx.measureText(text).width
     if (fullWidth <= maxWidth) {
-      this.truncationCache.set(cacheKey, text)
-      return text
+      return this.cacheTruncation(cacheKey, text)
     }
     const ellipsis = '…'
     const ellipsisWidth = ctx.measureText(ellipsis).width
     if (ellipsisWidth > maxWidth) {
-      this.truncationCache.set(cacheKey, '')
-      return ''
+      return this.cacheTruncation(cacheKey, '')
     }
     // 二分：找最大的 lo，使 prefix[0..lo) + '…' 仍能放进 maxWidth。
     let lo = 0
@@ -382,7 +391,6 @@ export class CellPainter {
       else hi = mid - 1
     }
     const result = text.slice(0, lo) + ellipsis
-    this.truncationCache.set(cacheKey, result)
-    return result
+    return this.cacheTruncation(cacheKey, result)
   }
 }

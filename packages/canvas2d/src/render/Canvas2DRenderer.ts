@@ -117,6 +117,9 @@ interface Canvas2DCellActionHit {
 /** scheduler key——每个 Renderer 实例同一时间最多一个待执行 flush */
 const RENDERER_KEY = 'renderer:flush'
 
+/** overflow 扫描文本宽度缓存上限；超限整体清空（无 LRU，简单可预测）。 */
+const TEXT_WIDTH_CACHE_MAX = 8192
+
 interface Canvas2DPaintFrameContext {
   frame: RenderFrame
   snapshot: RenderFrame['viewport']
@@ -178,6 +181,13 @@ export class Canvas2DRenderer implements RenderBackend {
   private formatBorderPainter: FormatBorderPainter
   /** 最近一帧 custom renderer 声明的单元格 action hit zones。 */
   private cellActionHits: Canvas2DCellActionHit[] = []
+
+  /**
+   * overflow 扫描的文本宽度缓存。key 只含文本：content pass 字体一帧一设且只由
+   * theme 决定，overflowExtra 只在 paintCellContentRegion 内执行（先于 paintHeaders
+   * 的字体改写），theme 变更必经 setTheme 并在那里清空。
+   */
+  private textWidthCache = new Map<string, number>()
 
   /**
    * 组装单帧绘制管线。
@@ -246,6 +256,7 @@ export class Canvas2DRenderer implements RenderBackend {
     this.headerPainter.setTheme(theme)
     this.rowHeaderPainter.setTheme(theme)
     this.emptyStatePainter.setTheme(theme)
+    this.textWidthCache.clear()
   }
 
   /** 替换数据源；重绘由 runtime 负责。 */
@@ -776,6 +787,19 @@ export class Canvas2DRenderer implements RenderBackend {
   }
 
   /**
+   * 测量文本宽度，使用缓存避免重复调用 ctx.measureText。
+   * 缓存超过上限时整体清空。
+   */
+  private measureTextWidth(text: string): number {
+    const cached = this.textWidthCache.get(text)
+    if (cached !== undefined) return cached
+    const width = this.ctx.measureText(text).width
+    if (this.textWidthCache.size >= TEXT_WIDTH_CACHE_MAX) this.textWidthCache.clear()
+    this.textWidthCache.set(text, width)
+    return width
+  }
+
+  /**
    * overflow 模式下，文本超出本格可用宽度时，沿右侧扫描连续空格（非空/合并/列边界即停），
    * 返回可溢出的额外宽度（px）。`ctx.measureText` 已用一帧统一字体，量度准确。
    *
@@ -796,7 +820,7 @@ export class Canvas2DRenderer implements RenderBackend {
   ): number {
     const padX = this.theme.metrics.cellPaddingX
     // 文字左端从 padX 起绘制；textRight 为相对本格左边的文字右端坐标。
-    const textRight = padX + this.ctx.measureText(text).width
+    const textRight = padX + this.measureTextWidth(text)
     if (textRight <= colWidth - padX) return 0
     let extra = 0
     let boundary = colWidth
