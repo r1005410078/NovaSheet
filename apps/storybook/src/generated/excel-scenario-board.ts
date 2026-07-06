@@ -9,7 +9,7 @@ export interface ExcelScenarioBoardRow {
   readonly fillColor: '#34a353' | '#ea4335'
 }
 
-export const EXCEL_SCENARIO_BOARD_GENERATED_AT = "2026-06-17T08:13:37.299Z"
+export const EXCEL_SCENARIO_BOARD_GENERATED_AT = "2026-07-06T10:39:43.792Z"
 
 export const EXCEL_SCENARIO_BOARD_STATS = {"covered":33,"total":33} as const
 
