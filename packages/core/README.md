@@ -51,7 +51,7 @@ grid.setColumnWidth('revenue', 140)
 | Component | What it is |
 | --- | --- |
 | `Grid` ([`Grid.ts`](src/Grid.ts)) | Public facade. One instance per mounted container; every method below hangs off it. |
-| `DataSource` (`InMemoryDataSource`, `SparseExcelDataSource`) | Row storage. `InMemoryDataSource` holds a plain array (~300k rows × 50 cols); `SparseExcelDataSource` is a sparse, auto-growing Excel-like workspace. Both implement the same sync `DataSource` interface — bring your own paginated implementation if you need one. |
+| `DataSource` (`InMemoryDataSource`, `SparseExcelDataSource`, `WindowedDataSource`) | Row storage. `InMemoryDataSource` holds a plain array (~300k rows × 50 cols); `SparseExcelDataSource` is a sparse, auto-growing Excel-like workspace; `WindowedDataSource` fetches/subscribes a sliding visible-region window against a transport-agnostic `WindowedDataProvider` port (HTTP + WebSocket). All implement the same sync `DataSource` interface — bring your own paginated implementation if you need one. |
 | `RenderBackend` / `RenderBackendFactory` ([`ports/RenderBackend.ts`](src/ports/RenderBackend.ts)) | The seam `core` renders through. `@novasheet/canvas2d` is the shipped implementation; anything implementing the port (WebGL, WebGPU, a test stub) can be passed as `GridOptions.backend`. |
 | `Theme` (`denseGridTheme`) | The single source of truth for every color/font/spacing token painters use. Swap with `grid.setTheme(theme)`. |
 | `CellTypeRegistry` | Per-`Field.type` business semantics: how a value is edited, parsed, sorted, filtered, and clipboard-serialized. Built-ins cover `text`/`number`/`date`; register your own (e.g. `rating`) for everything else. Column-scoped. |
@@ -181,6 +181,28 @@ grid.hideCols(['joined'])
 grid.getHiddenCols() // ['joined']
 ```
 All three layers compose into one final frame; mutation APIs (`setCellType`, `setValueFormat`, ...) keep taking **view** coordinates and resolve back to raw internally.
+
+### Remote / windowed data (`WindowedDataSource`)
+
+```ts
+import { WindowedDataSource, type WindowedDataProvider } from '@novasheet/core'
+
+const provider: WindowedDataProvider = {
+  loadRange: (window, signal) => fetch(`/api/rows?${toQuery(window)}`, { signal }).then((r) => r.json()),
+  subscribe: (onEvent) => {
+    const ws = new WebSocket('/api/rows/stream')
+    ws.onmessage = (e) => onEvent(JSON.parse(e.data))
+    return {
+      setWindow: (window) => ws.send(JSON.stringify({ type: 'setWindow', window })),
+      close: () => ws.close(),
+    }
+  },
+}
+
+const data = new WindowedDataSource({ schema, rowCount: 100_000, provider, preloadScreens: 2 })
+const grid = new Grid(container, { backend: canvas2dBackend(), data })
+```
+`Grid` calls `hintWindow(visibleWindow)` on every frame (a no-op once the window stops changing); `WindowedDataSource` expands it by `preloadScreens` screens, dedupes against an LRU block cache, and only fetches what's missing — scrolling within the preloaded margin issues zero requests. `loadRange` responses and `subscribe` push events (`cells` / `rowCount` / `resync`) reconcile through a stale-while-revalidate epoch, so scrolling back to an already-visited region repaints instantly from cache while a background refetch (if stale) replaces it. `hintWindow` forwards through `SortLayer` / `FilterLayer` / `HideRowsLayer` / `VisibleColumnsDataSource`, so sort/filter/hide compose on top transparently. See [`apps/storybook/src/stories/WindowedDataSource.stories.ts`](../../apps/storybook/src/stories/WindowedDataSource.stories.ts) for a runnable example with a simulated network fetch and tick-by-tick push feed.
 
 ### Validation
 

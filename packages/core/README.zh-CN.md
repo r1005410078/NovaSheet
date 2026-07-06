@@ -51,7 +51,7 @@ grid.setColumnWidth('revenue', 140)
 | 组件 | 是什么 |
 | --- | --- |
 | `Grid`（[`Grid.ts`](src/Grid.ts)） | 公开门面。每个挂载容器对应一个实例；下面所有方法都挂在它上面。 |
-| `DataSource`（`InMemoryDataSource`、`SparseExcelDataSource`） | 行存储层。`InMemoryDataSource` 持有纯数组（约 30 万行 × 50 列）；`SparseExcelDataSource` 是稀疏、自增长的 Excel 风格工作区。两者实现同一个同步 `DataSource` 接口——需要分页实现可自行接入。 |
+| `DataSource`（`InMemoryDataSource`、`SparseExcelDataSource`、`WindowedDataSource`） | 行存储层。`InMemoryDataSource` 持有纯数组（约 30 万行 × 50 列）；`SparseExcelDataSource` 是稀疏、自增长的 Excel 风格工作区；`WindowedDataSource` 针对可视区域滑动窗口做拉取/订阅，背后是一个传输无关的 `WindowedDataProvider` 端口（HTTP + WebSocket）。三者都实现同一个同步 `DataSource` 接口——需要分页实现可自行接入。 |
 | `RenderBackend` / `RenderBackendFactory`（[`ports/RenderBackend.ts`](src/ports/RenderBackend.ts)） | `core` 渲染所经过的端口。`@novasheet/canvas2d` 是已交付实现；任何实现该端口的后端（WebGL、WebGPU、测试 stub）都可作为 `GridOptions.backend` 传入。 |
 | `Theme`（`denseGridTheme`） | painter 使用的所有颜色/字体/间距 token 的唯一来源。用 `grid.setTheme(theme)` 替换。 |
 | `CellTypeRegistry` | 按 `Field.type` 定义的**业务**语义：值如何被编辑、解析、排序、过滤与剪贴板序列化。内置覆盖 `text`/`number`/`date`；其余类型（如 `rating`）自行注册。作用域是整列。 |
@@ -181,6 +181,28 @@ grid.hideCols(['joined'])
 grid.getHiddenCols() // ['joined']
 ```
 三层会组合成同一个最终帧；所有 mutation API（`setCellType`、`setValueFormat` 等）始终使用**view** 坐标，内部再解析回 raw。
+
+### 远程 / 滑动窗口数据（`WindowedDataSource`）
+
+```ts
+import { WindowedDataSource, type WindowedDataProvider } from '@novasheet/core'
+
+const provider: WindowedDataProvider = {
+  loadRange: (window, signal) => fetch(`/api/rows?${toQuery(window)}`, { signal }).then((r) => r.json()),
+  subscribe: (onEvent) => {
+    const ws = new WebSocket('/api/rows/stream')
+    ws.onmessage = (e) => onEvent(JSON.parse(e.data))
+    return {
+      setWindow: (window) => ws.send(JSON.stringify({ type: 'setWindow', window })),
+      close: () => ws.close(),
+    }
+  },
+}
+
+const data = new WindowedDataSource({ schema, rowCount: 100_000, provider, preloadScreens: 2 })
+const grid = new Grid(container, { backend: canvas2dBackend(), data })
+```
+`Grid` 在每一帧都会调用 `hintWindow(visibleWindow)`（窗口不变时是空操作）；`WindowedDataSource` 按 `preloadScreens` 屏数外扩这个窗口，与 LRU 块缓存去重后只拉取缺失的部分——在预取边界内滚动零请求。`loadRange` 响应与 `subscribe` 推送事件（`cells` / `rowCount` / `resync`）通过一套 stale-while-revalidate 的 epoch 机制对账：滚回已经访问过的区域时先用缓存旧值立即重绘，同时若判定为陈旧则在后台发起重新拉取并在落地后替换。`hintWindow` 会经 `SortLayer` / `FilterLayer` / `HideRowsLayer` / `VisibleColumnsDataSource` 转发，所以排序/筛选/隐藏可以透明地叠加在它之上。完整可运行示例（含模拟网络拉取与逐笔推送）见 [`apps/storybook/src/stories/WindowedDataSource.stories.ts`](../../apps/storybook/src/stories/WindowedDataSource.stories.ts)。
 
 ### 校验
 
