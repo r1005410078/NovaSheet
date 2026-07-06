@@ -199,6 +199,13 @@ export class DefaultGridEngine implements GridEngine {
    * 用于合并同一轮同步事件里的多次触发，避免排队多个冗余 rebuild。
    */
   private dataRebuildScheduled = false
+  /**
+   * dispose() 是否已调用（回归修复，见 dispose() 与 scheduleDataRebuild() 注释）。
+   * scheduleDataRebuild 用 queueMicrotask 延迟执行；若该 microtask 在 dispose() 调用前已排队，
+   * dispose 之后它仍会跑到，命中行数不一致分支会调 rebuildData()，其收尾的 subscribeToData()
+   * 会把刚被 dispose 掉的订阅重新建立起来——必须在 microtask 真正执行时（而非排队时）重新检查。
+   */
+  private disposed = false
   /** 列头悬停菜单状态；null 表示无悬停，构帧时转 undefined。 */
   private hoveredColumnHeaderMenu: HoveredColumnHeaderMenu | null = null
   /**
@@ -478,6 +485,7 @@ export class DefaultGridEngine implements GridEngine {
    * command-handler 的同步调用点处理（含 layout.rebuildRows + facade invalidate），此处忽略避免重复处理。
    */
   private handleDataSourceEvent(event: DataSourceEvent): void {
+    if (this.disposed) return
     switch (event.type) {
       case 'rowsChanged':
         this.dataChangeRedrawCallback()
@@ -518,6 +526,9 @@ export class DefaultGridEngine implements GridEngine {
     this.dataRebuildScheduled = true
     queueMicrotask(() => {
       this.dataRebuildScheduled = false
+      // 若此 microtask 在 dispose() 调用前已排队，dispose 之后仍会跑到这里——此时决不能再碰
+      // rebuildData()/subscribeToData()，否则会把刚被 dispose 掉的订阅重新建立起来。
+      if (this.disposed) return
       if (this.rawData.getRowCount() !== this.rowStructure.getRawRowCount()) {
         this.rebuildData(this.rawData)
       }
@@ -529,8 +540,14 @@ export class DefaultGridEngine implements GridEngine {
    * 释放 engine 持有的外部订阅（当前仅 this.data 的 DataSourceEvent 订阅）。
    * `DefaultGridEngine` 可脱离 `GridControllerImpl` 直接构造/使用（测试即如此）；此前只靠
    * `GridControllerImpl.destroy()` 先 dispose ViewPipeline 顺带切断上游，并非引擎自身的保证。
+   *
+   * 幂等：先置 disposed 再退订，重复调用安全（unsubscribeFromData 本身也允许重复调用）。
+   * disposed 同时是 handleDataSourceEvent 与 scheduleDataRebuild 的 microtask 回调的门槛——
+   * 后者尤其关键：dispose() 调用前已排队的 microtask 不受这次退订影响，必须在真正执行时
+   * 重新检查这个标志，否则会经 rebuildData() 的收尾 subscribeToData() 复活刚被切断的订阅。
    */
   dispose(): void {
+    this.disposed = true
     this.unsubscribeFromData()
   }
 
