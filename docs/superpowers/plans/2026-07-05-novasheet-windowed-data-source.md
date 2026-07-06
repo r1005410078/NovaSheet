@@ -772,7 +772,10 @@ EOF
 
 ```ts
 // packages/core/src/kernel/data/windowed/sliceToBlocks.ts
-import type { RangeSlice } from './WindowedDataProvider'
+// NOTE: WindowedDataProvider now lives in packages/core/src/ports/WindowedDataProvider.ts
+// (relocated during Task 1's review — DOM-lib types like AbortSignal belong in ports/,
+// not kernel/, per CLAUDE.md invariant #9). Import from '../../../ports/WindowedDataProvider'.
+import type { RangeSlice } from '../../../ports/WindowedDataProvider'
 import type { BlockCache } from './BlockCache'
 import type { BlockCoord } from './blockGeometry'
 import { blockKey, blockToWindow } from './blockGeometry'
@@ -898,7 +901,7 @@ import type {
   WindowedDataEvent,
   WindowedDataProvider,
   WindowSubscription,
-} from '../../../../src/kernel/data/windowed/WindowedDataProvider'
+} from '../../../../src/ports/WindowedDataProvider'
 import type { DataWindow } from '../../../../src/kernel/data/DataSource'
 
 export interface PendingLoad {
@@ -1225,7 +1228,12 @@ import {
 } from './blockGeometry'
 import { BlockCache } from './BlockCache'
 import { applySliceToBlocks } from './sliceToBlocks'
-import type { CellUpdate, RangeSlice, WindowedDataProvider, WindowSubscription } from './WindowedDataProvider'
+import type {
+  CellUpdate,
+  RangeSlice,
+  WindowedDataProvider,
+  WindowSubscription,
+} from '../../../ports/WindowedDataProvider'
 
 export interface WindowedDataSourceOptions {
   readonly schema: Schema
@@ -1532,7 +1540,7 @@ export class WindowedDataSource implements DataSource {
     for (const listener of this.listeners) listener(event)
   }
 
-  private handleEvent(event: import('./WindowedDataProvider').WindowedDataEvent): void {
+  private handleEvent(event: import('../../../ports/WindowedDataProvider').WindowedDataEvent): void {
     if (this.disposed) return
     if (event.type !== 'cells') return
     const now = Date.now()
@@ -1572,7 +1580,7 @@ export type {
   WindowedDataEvent,
   WindowedDataProvider,
   WindowSubscription,
-} from './WindowedDataProvider'
+} from '../../../ports/WindowedDataProvider'
 ```
 
 Add to `packages/core/src/index.ts` (near the other `kernel/data` exports):
@@ -1746,7 +1754,7 @@ Expected: FAIL — `handleEvent` currently ignores `rowCount` and `resync` (ts c
 In `packages/core/src/kernel/data/windowed/WindowedDataSource.ts`, replace the `handleEvent` method body (the `if (event.type !== 'cells') return` early-return version from Task 4) with:
 
 ```ts
-  private handleEvent(event: import('./WindowedDataProvider').WindowedDataEvent): void {
+  private handleEvent(event: import('../../../ports/WindowedDataProvider').WindowedDataEvent): void {
     if (this.disposed) return
     try {
       if (event.type === 'cells') {
@@ -2511,11 +2519,11 @@ Expected: FAIL — none of the wrapper classes forward `hintWindow` yet; `hints`
 In `packages/core/src/features/view/SortLayer.ts`, add this method to the `SortedDataSource` class (near `resolveUnderlyingRow`):
 
 ```ts
-  hintWindow(window: import('../../kernel/data/DataSource').DataWindow): void {
+  hintWindow(win: import('../../kernel/data/DataSource').DataWindow): void {
     if (!this.upstream.hintWindow) return
     let minRaw = Infinity
     let maxRaw = -Infinity
-    for (let viewRow = window.startRow; viewRow <= window.endRow; viewRow += 1) {
+    for (let viewRow = win.startRow; viewRow <= win.endRow; viewRow += 1) {
       const upstreamRow = this.order[viewRow]
       if (upstreamRow == null) continue
       const raw = this.upstream.resolveUnderlyingRow?.(upstreamRow) ?? upstreamRow
@@ -2526,8 +2534,8 @@ In `packages/core/src/features/view/SortLayer.ts`, add this method to the `Sorte
     this.upstream.hintWindow({
       startRow: minRaw,
       endRow: maxRaw,
-      startCol: window.startCol,
-      endCol: window.endCol,
+      startCol: win.startCol,
+      endCol: win.endCol,
     })
   }
 ```
@@ -2537,11 +2545,11 @@ In `packages/core/src/features/view/SortLayer.ts`, add this method to the `Sorte
 `FilteredDataSource` (from line 129 of `FilterLayer.ts`) uses the identical field name to `SortedDataSource`: `private order: number[] = []` (view row → upstream row). Add this method to the class (near its `resolveUnderlyingRow`):
 
 ```ts
-  hintWindow(window: import('../../kernel/data/DataSource').DataWindow): void {
+  hintWindow(win: import('../../kernel/data/DataSource').DataWindow): void {
     if (!this.upstream.hintWindow) return
     let minRaw = Infinity
     let maxRaw = -Infinity
-    for (let viewRow = window.startRow; viewRow <= window.endRow; viewRow += 1) {
+    for (let viewRow = win.startRow; viewRow <= win.endRow; viewRow += 1) {
       const upstreamRow = this.order[viewRow]
       if (upstreamRow == null) continue
       const raw = this.upstream.resolveUnderlyingRow?.(upstreamRow) ?? upstreamRow
@@ -2552,8 +2560,8 @@ In `packages/core/src/features/view/SortLayer.ts`, add this method to the `Sorte
     this.upstream.hintWindow({
       startRow: minRaw,
       endRow: maxRaw,
-      startCol: window.startCol,
-      endCol: window.endCol,
+      startCol: win.startCol,
+      endCol: win.endCol,
     })
   }
 ```
@@ -2563,12 +2571,12 @@ In `packages/core/src/features/view/SortLayer.ts`, add this method to the `Sorte
 In `packages/core/src/features/view/HideRowsLayer.ts`, add to the `HiddenDataSource` class (near `resolveUnderlyingRow`):
 
 ```ts
-  hintWindow(window: import('../../kernel/data/DataSource').DataWindow): void {
+  hintWindow(win: import('../../kernel/data/DataSource').DataWindow): void {
     if (!this.upstream.hintWindow) return
     const visibleRows = this.layer.getVisibleRows()
     let minRaw = Infinity
     let maxRaw = -Infinity
-    for (let viewRow = window.startRow; viewRow <= window.endRow; viewRow += 1) {
+    for (let viewRow = win.startRow; viewRow <= win.endRow; viewRow += 1) {
       const upstreamRow = visibleRows[viewRow]
       if (upstreamRow == null) continue
       const raw = this.upstream.resolveUnderlyingRow?.(upstreamRow) ?? upstreamRow
@@ -2579,8 +2587,8 @@ In `packages/core/src/features/view/HideRowsLayer.ts`, add to the `HiddenDataSou
     this.upstream.hintWindow({
       startRow: minRaw,
       endRow: maxRaw,
-      startCol: window.startCol,
-      endCol: window.endCol,
+      startCol: win.startCol,
+      endCol: win.endCol,
     })
   }
 ```
@@ -2590,19 +2598,19 @@ In `packages/core/src/features/view/HideRowsLayer.ts`, add to the `HiddenDataSou
 In `packages/core/src/kernel/data/VisibleColumnsDataSource.ts`, add (near `findViewRow`):
 
 ```ts
-  hintWindow(window: DataWindow): void {
+  hintWindow(win: DataWindow): void {
     if (!this.upstream.hintWindow) return
     const visibleFields = this.getSchema().fields // already filtered by hidden id set
-    const startField = visibleFields[window.startCol]
-    const endField = visibleFields[window.endCol]
+    const startField = visibleFields[win.startCol]
+    const endField = visibleFields[win.endCol]
     if (!startField || !endField) return
     const upstreamFields = this.upstream.getSchema().fields
     const startCol = upstreamFields.findIndex((f) => f.id === startField.id)
     const endCol = upstreamFields.findIndex((f) => f.id === endField.id)
     if (startCol < 0 || endCol < 0) return
     this.upstream.hintWindow({
-      startRow: window.startRow,
-      endRow: window.endRow,
+      startRow: win.startRow,
+      endRow: win.endRow,
       startCol,
       endCol,
     })
