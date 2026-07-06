@@ -268,7 +268,9 @@ export class WindowedDataSource implements DataSource {
     const rowCountChanged = slice.rowCount !== undefined && slice.rowCount !== this.rowCount
     if (slice.version !== undefined) this.currentVersion = slice.version
 
-    if (versionAdvanced || (slice.version === undefined && rowCountChanged)) {
+    // rowCountChanged 是独立探测通道（RangeSlice.rowCount 文档承诺）：即使 version 存在且未变，
+    // rowCount 独立漂移也必须触发软失效——不能被 "slice.version === undefined" 短路掉。
+    if (versionAdvanced || rowCountChanged) {
       if (rowCountChanged) {
         this.rowCount = slice.rowCount!
         this.cache.markAllStale()

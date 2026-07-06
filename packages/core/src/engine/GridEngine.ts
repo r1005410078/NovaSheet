@@ -397,6 +397,12 @@ export interface GridFormatting {
   getValidationState(rawRow: number, rawCol: number): ValidationState | null
   /** 注入异步校验完成后的重绘回调；由 GridRuntime 在挂载时调用。 */
   setValidationRedrawCallback(cb: () => void): void
+
+  /**
+   * 注入数据源变更（rowsChanged/rowCountChanged/reset）后的重绘回调；由 GridRuntime 在挂载时调用。
+   * 桥接 WindowedDataSource 等异步/推送数据源——无同步调用点时靠此回调触发重绘。
+   */
+  setDataChangeRedrawCallback(cb: () => void): void
 }
 
 /** 单元格合并能力。 */

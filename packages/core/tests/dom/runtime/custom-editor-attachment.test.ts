@@ -146,6 +146,7 @@ function makeEngine(): GridEngine {
     validateAll: mock(() => undefined),
     getValidationState: mock(() => null),
     setValidationRedrawCallback: mock(() => undefined),
+    setDataChangeRedrawCallback: mock(() => undefined),
     setHoveredColumnHeaderMenu: mock((_state) => undefined),
   }
 }

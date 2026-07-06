@@ -175,6 +175,36 @@ describe('DefaultRowStructure（自持状态）', () => {
     expect(rows.getRowHeight(0)).toBe(DEFAULT_HEIGHT)
   })
 
+  it('rebuild disposes the previous rowViewData wrapper before replacing it — repeated rebuild on the SAME rawData (e.g. an async rowCountChanged-driven rebuild) must not leak an ever-growing chain of undisposed HiddenDataSource wrappers still subscribed to that rawData', () => {
+    const data = makeData(['A', 'B'])
+    const rows = makeRows(data)
+
+    const firstRowViewData = rows.getRowViewData() as DataSource & { dispose?: () => void }
+    let firstDisposeCalls = 0
+    firstRowViewData.dispose = () => {
+      firstDisposeCalls++
+    }
+
+    // Same rawData reference on both calls — mirrors DefaultGridEngine.rebuildData(this.rawData)
+    // being invoked repeatedly off a single long-lived async source, not a genuine data swap.
+    rows.rebuild(data, () => DEFAULT_HEIGHT)
+    expect(firstDisposeCalls).toBe(1)
+
+    const secondRowViewData = rows.getRowViewData() as DataSource & { dispose?: () => void }
+    expect(secondRowViewData).not.toBe(firstRowViewData)
+    let secondDisposeCalls = 0
+    secondRowViewData.dispose = () => {
+      secondDisposeCalls++
+    }
+
+    rows.rebuild(data, () => DEFAULT_HEIGHT)
+    expect(secondDisposeCalls).toBe(1)
+    // The first wrapper was already disposed by the PREVIOUS rebuild — a second rebuild must not
+    // touch it again (proves rebuild disposes exactly the immediately-preceding wrapper, not all
+    // historical ones, and doesn't double-dispose).
+    expect(firstDisposeCalls).toBe(1)
+  })
+
   it('clearHidden empties the hidden set', () => {
     const rows = makeRows(makeData(['A', 'B', 'C']))
     rows.addHidden([1])

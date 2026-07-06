@@ -180,6 +180,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
     validateAll: mock(() => undefined),
     getValidationState: mock((_rawRow: number, _rawCol: number) => null),
     setValidationRedrawCallback: mock((_cb: () => void) => undefined),
+    setDataChangeRedrawCallback: mock((_cb: () => void) => undefined),
     setHoveredColumnHeaderMenu: mock((_state) => undefined),
   } satisfies GridEngine
 

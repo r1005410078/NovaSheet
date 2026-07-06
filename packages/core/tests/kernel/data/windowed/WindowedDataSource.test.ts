@@ -194,6 +194,41 @@ describe('WindowedDataSource — construction, sync reads, prefetch', () => {
     source.dispose()
   })
 
+  it('applyEpoch: a stable (unchanged) version with an independently changed rowCount still soft-invalidates — rowCount updated, rowCountChanged emitted', async () => {
+    const fake = createFakeWindowedProvider()
+    const source = new WindowedDataSource({
+      schema,
+      rowCount: 1000,
+      provider: fake.provider,
+      // blockRows=15: same reasoning as the "higher version" test above — first window's
+      // preload (rows 0..14) must fit in a single block-row so `[firstLoad]` picks the one
+      // and only request.
+      blockRows: 15,
+      blockCols: 2,
+      staleAfterMs: 100_000, // freshness clock alone would never explain a later refetch
+    })
+    const events: DataSourceEvent[] = []
+    source.subscribe((e) => events.push(e))
+
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    const [firstLoad] = fake.pendingLoads()
+    firstLoad!.resolve({ rows: Array.from({ length: 10 }, () => ({ name: 'v1', score: 1 })), version: 7, rowCount: 1000 })
+    await tick()
+    events.length = 0
+
+    source.hintWindow({ startRow: 100, endRow: 109, startCol: 0, endCol: 1 })
+    const [secondLoad] = fake.pendingLoads()
+    // SAME version as before (7, unchanged) — a naive "version defines the epoch, rowCount is
+    // only consulted when version is absent" reading would ignore this rowCount drop entirely.
+    // RangeSlice.rowCount is documented as an independent detection channel and must still fire.
+    secondLoad!.resolve({ rows: Array.from({ length: 10 }, () => ({ name: 'v1b', score: 1 })), version: 7, rowCount: 700 })
+    await tick()
+
+    expect(source.getRowCount()).toBe(700)
+    expect(events).toContainEqual({ type: 'rowCountChanged', newCount: 700 })
+    source.dispose()
+  })
+
   it('dispose aborts in-flight requests, closes the subscription, and ignores late resolutions', async () => {
     const fake = createFakeWindowedProvider()
     const source = new WindowedDataSource({ schema, rowCount: 1000, provider: fake.provider })

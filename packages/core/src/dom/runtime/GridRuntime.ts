@@ -428,6 +428,7 @@ export class GridRuntime {
     this.contextMenus = opts.contextMenus
     this.contextMenuRenderer = opts.contextMenuRenderer
     this.engine.setValidationRedrawCallback(() => this.invalidate())
+    this.engine.setDataChangeRedrawCallback(() => this.invalidate())
     this.scrollMapper = new ScrollMapper()
     if (opts.excelWorkspace) {
       this.excelWorkspaceController = new ExcelWorkspaceController({

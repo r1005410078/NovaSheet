@@ -1,5 +1,5 @@
 import type { CellValue, Field } from '../kernel/data/Schema'
-import type { DataSource } from '../kernel/data/DataSource'
+import type { DataSource, DataSourceEvent } from '../kernel/data/DataSource'
 import { isMutableDataSource } from '../kernel/data/MutableDataSource'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
 import type { ExcelWorkspaceSize } from '../features/excel-workspace'
@@ -185,6 +185,20 @@ export class DefaultGridEngine implements GridEngine {
   private readonly validationScheduler: ValidationScheduler
   /** 校验完成后的重绘回调；由 GridRuntime 在挂载时注入（engine 纯层，不直调 DOM）。 */
   private validationRedrawCallback: () => void = () => undefined
+  /**
+   * 数据源变更（rowsChanged/rowCountChanged/reset）后的重绘回调；由 GridRuntime 在挂载时注入
+   * （同 validationRedrawCallback 模式，engine 纯层不直调 DOM）。桥接 WindowedDataSource 等
+   * 异步/推送数据源到重绘管线——静止页面上后台拉取完成或推送到达时，无任何同步调用点会触发
+   * invalidate，必须靠此订阅回调。
+   */
+  private dataChangeRedrawCallback: () => void = () => undefined
+  /** 当前对 this.data 的取消订阅函数；rebuildData 换 this.data 引用后需先退订旧引用再订阅新引用。 */
+  private unsubscribeFromData: () => void = () => undefined
+  /**
+   * rowCountChanged/reset 触发的 rebuildData 是否已排入下一个 microtask；
+   * 用于合并同一轮同步事件里的多次触发，避免排队多个冗余 rebuild。
+   */
+  private dataRebuildScheduled = false
   /** 列头悬停菜单状态；null 表示无悬停，构帧时转 undefined。 */
   private hoveredColumnHeaderMenu: HoveredColumnHeaderMenu | null = null
   /**
@@ -406,6 +420,7 @@ export class DefaultGridEngine implements GridEngine {
         maxConcurrent: options.validationMaxConcurrent ?? 4,
       },
     )
+    this.subscribeToData()
   }
 
   setData(data: DataSource): void {
@@ -445,6 +460,55 @@ export class DefaultGridEngine implements GridEngine {
       this.rowStructure.getViewRowsAxis(),
       this.columnStructure.getViewColsAxis(),
     )
+    this.subscribeToData()
+  }
+
+  /** 订阅当前 this.data（outermost 装饰链）的 DataSourceEvent 流；先退订旧引用，防止监听孤儿对象或漏订新引用。 */
+  private subscribeToData(): void {
+    this.unsubscribeFromData()
+    this.unsubscribeFromData = this.data.subscribe((event) => this.handleDataSourceEvent(event))
+  }
+
+  /**
+   * 桥接数据源事件到重绘管线（无同步调用点时的兜底通道，如 WindowedDataSource 后台拉取/推送）。
+   * rowsChanged 直接触发重绘；rowCountChanged/reset 需要 rebuildData 重建行/列轴——
+   * HideRowsLayer._handleUpstreamEvent 对裸 rowCountChanged 不会重算 visibleRows（只认
+   * rowsInserted/rowsDeleted/reset），必须靠 rebuildData 从 rawData.getRowCount() 重新派生
+   * （复用同一 HideRowsLayer 实例，隐藏行集合不丢）。其余结构事件（rowsInserted 等）已由各自
+   * command-handler 的同步调用点处理（含 layout.rebuildRows + facade invalidate），此处忽略避免重复处理。
+   */
+  private handleDataSourceEvent(event: DataSourceEvent): void {
+    switch (event.type) {
+      case 'rowsChanged':
+        this.dataChangeRedrawCallback()
+        break
+      case 'rowCountChanged':
+      case 'reset':
+        this.scheduleDataRebuild()
+        break
+      default:
+        break
+    }
+  }
+
+  /**
+   * rebuildData 绝不能在这个事件的同步派发栈里跑：this.data 装饰链上游（SortLayer/FilterLayer/
+   * HideRowsLayer 各自的转发 wrapper）都用活 Set 做 `for (const listener of this.listeners)`
+   * 分发（SortLayer 自己也留了注释记录过同一个坑——见 SortLayer.ts handleUpstreamEvent 附近）。
+   * rebuildData 会新建一个 HiddenDataSource 并在其构造函数里同步订阅同一个 upstream；若仍在
+   * 这轮 emit 的 for-of 里执行，新订阅的监听器会被同一次遍历继续访问（Set 迭代器会看到遍历期间
+   * 新增的项），再次触发 handleDataSourceEvent → rebuildData → 再次新增监听器……无限递归。
+   * queueMicrotask 保证 rebuildData 在当前同步派发栈完全展开之后才跑，从根上掐断重入；
+   * 布尔位合并同一轮同步事件里的多次触发，避免排队多个冗余 rebuild。
+   */
+  private scheduleDataRebuild(): void {
+    if (this.dataRebuildScheduled) return
+    this.dataRebuildScheduled = true
+    queueMicrotask(() => {
+      this.dataRebuildScheduled = false
+      this.rebuildData(this.rawData)
+      this.dataChangeRedrawCallback()
+    })
   }
 
   setTheme(theme: Theme): void {
@@ -1142,6 +1206,10 @@ export class DefaultGridEngine implements GridEngine {
 
   setValidationRedrawCallback(cb: () => void): void {
     this.validationRedrawCallback = cb
+  }
+
+  setDataChangeRedrawCallback(cb: () => void): void {
+    this.dataChangeRedrawCallback = cb
   }
 
   private hasCellTypeOverrideAtView(viewRow: number, viewCol: number): boolean {

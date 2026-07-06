@@ -38,6 +38,9 @@ export class DefaultRowStructure implements RowStructure {
   }
 
   rebuild(rawData: DataSource, resolveDefaultRowHeight: () => number): void {
+    // 捕获旧引用先于 wrap()：首次调用（构造期）时 rowViewData 尚未赋值（definite-assignment，
+    // 运行时是 undefined），下方 dispose 前须判空。
+    const oldRowViewData: DataSource | undefined = this.rowViewData
     this.rawData = rawData
     this.resolveDefaultRowHeight = resolveDefaultRowHeight
     this.rawRowsAxis = new ChunkedAxis({
@@ -45,6 +48,12 @@ export class DefaultRowStructure implements RowStructure {
       defaultSize: resolveDefaultRowHeight(),
     })
     this.rowViewData = this.hideLayer.wrap(rawData)
+    // rebuild() 可能被反复调用且 rawData 引用不变（如 rowCountChanged 驱动的
+    // DefaultGridEngine.rebuildData）：hideLayer.wrap() 每次都新建一个 HiddenDataSource 并在其
+    // 构造函数里订阅同一个 upstream。不释放旧引用会让旧 HiddenDataSource 永久挂在 upstream 的
+    // 监听器集合上——没有下游再消费它，却仍白白转发每一次 upstream 事件。与
+    // ViewPipeline.disposeViewSources 同款 idiom（DataSource 接口未声明 dispose，按约定 duck-type）。
+    ;(oldRowViewData as { dispose?: () => void } | undefined)?.dispose?.()
   }
 
   clearHidden(): void {

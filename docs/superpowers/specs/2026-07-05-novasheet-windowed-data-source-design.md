@@ -62,7 +62,7 @@ core   Grid({ data: windowedSource, backend })
 
 - **控制反转方向**：core 调业务（provider 被动应答）。备选方案 B（业务调 core：facade 暴露窗口事件 + 数据推入方法）经对比否决，见 ADR A1。
 - **代码落点**：`packages/core/src/kernel/data/windowed/`（纯层——零 DOM/平台 UI 全局；`WebSocket` 实例只存在于业务层适配器）。`index.ts` re-export 全部公开类型。
-- **架构不变量对齐**：mutation 全部经 DataSource 事件（`rowsChanged`/`rowCountChanged`/`reset`）进入既有失效管线，不触 undo 栈；每 Grid 一个 frameScheduler 的 RAF 合并不受影响（本模块只 emit 事件，不自行调度渲染）。
+- **架构不变量对齐**：mutation 全部经 DataSource 事件（`rowsChanged`/`rowCountChanged`/`reset`）进入既有失效管线，不触 undo 栈；每 Grid 一个 frameScheduler 的 RAF 合并不受影响（本模块只 emit 事件，不自行调度渲染）。该管线由 `DefaultGridEngine.setDataChangeRedrawCallback` + `GridRuntime` 的注入（`this.engine.setDataChangeRedrawCallback(() => this.invalidate())`）桥接实现（task 9，仿 `validationRedrawCallback` 模式）。
 
 ## 3. Port 契约
 
