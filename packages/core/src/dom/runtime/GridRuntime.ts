@@ -2289,11 +2289,11 @@ export class GridRuntime {
       this.renderer.render(frame)
       this.syncSelectionOverlay(frame)
       this.notifySelectionChange(frame)
-      this.syncResizeHandles()
-      this.syncFillHandle()
-      this.syncHideToggleHandles()
-      this.syncHideColToggleHandles()
-      this.syncCellEditorPosition()
+      this.syncResizeHandles(frame)
+      this.syncFillHandle(frame)
+      this.syncHideToggleHandles(frame)
+      this.syncHideColToggleHandles(frame)
+      this.syncCellEditorPosition(frame)
     })
   }
 
@@ -2303,11 +2303,11 @@ export class GridRuntime {
     this.renderer.render(frame)
     this.syncSelectionOverlay(frame)
     this.notifySelectionChange(frame)
-    this.syncResizeHandles()
-    this.syncFillHandle()
-    this.syncHideToggleHandles()
-    this.syncHideColToggleHandles()
-    this.syncCellEditorPosition()
+    this.syncResizeHandles(frame)
+    this.syncFillHandle(frame)
+    this.syncHideToggleHandles(frame)
+    this.syncHideColToggleHandles(frame)
+    this.syncCellEditorPosition(frame)
   }
 
   /** 获取当前 render frame，并在 view pipeline 存在时注入视图映射。 */
@@ -2321,47 +2321,47 @@ export class GridRuntime {
     return { ...next, viewPipeline: this.viewPipeline }
   }
 
-  /** 根据当前 frame 同步 resize handle layer。 */
-  private syncResizeHandles(): void {
+  /** 根据当前 frame 同步 resize handle layer；flush 路径复用已构建的 frame，避免重复 getFrame。 */
+  private syncResizeHandles(frame?: ReturnType<GridEngine['getFrame']>): void {
     if (!this.handleLayer || this.resizeDrag.active) return
-    const frame = this.engine.getFrame()
-    this.handleLayer.sync(computeResizeHandles(frame))
+    const f = frame ?? this.engine.getFrame()
+    this.handleLayer.sync(computeResizeHandles(f))
   }
 
-  /** 根据当前 frame 同步 hide-toggle handle layer。 */
-  private syncHideToggleHandles(): void {
+  /** 根据当前 frame 同步 hide-toggle handle layer；flush 路径复用已构建的 frame，避免重复 getFrame。 */
+  private syncHideToggleHandles(frame?: ReturnType<GridEngine['getFrame']>): void {
     if (!this.hideToggleHandle) return
-    const frame = this.engine.getFrame()
-    this.hideToggleHandle.update(frame.collapsedRowGaps, {
-      rowHeaderWidth: frame.viewport.rowHeaderWidth,
+    const f = frame ?? this.engine.getFrame()
+    this.hideToggleHandle.update(f.collapsedRowGaps, {
+      rowHeaderWidth: f.viewport.rowHeaderWidth,
     })
   }
 
-  /** 根据当前 frame 同步 hide-col-toggle handle layer。 */
-  private syncHideColToggleHandles(): void {
+  /** 根据当前 frame 同步 hide-col-toggle handle layer；flush 路径复用已构建的 frame，避免重复 getFrame。 */
+  private syncHideColToggleHandles(frame?: ReturnType<GridEngine['getFrame']>): void {
     if (!this.hideColToggleHandle) return
-    const frame = this.engine.getFrame()
-    this.hideColToggleHandle.update(frame.collapsedColGaps, {
-      headerHeight: frame.viewport.headerHeight,
+    const f = frame ?? this.engine.getFrame()
+    this.hideColToggleHandle.update(f.collapsedColGaps, {
+      headerHeight: f.viewport.headerHeight,
     })
   }
 
-  /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。 */
-  private syncFillHandle(): void {
+  /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。flush 路径复用已构建的 frame，避免重复 getFrame。 */
+  private syncFillHandle(frame?: ReturnType<GridEngine['getFrame']>): void {
     if (!this.fillLayer) return
     if (this.resizeDrag.active || this.activeDrag?.active || this.engine.isCellEditing()) {
       this.fillLayer.sync(null)
       return
     }
-    const frame = this.engine.getFrame()
-    const range = frame.selection?.selectedRange
+    const f = frame ?? this.engine.getFrame()
+    const range = f.selection?.selectedRange
     if (!range) {
       this.fillLayer.sync(null)
       return
     }
     // 与选区边框一致：active cell 落在合并区内时锚定整个合并区，填充柄才在合并区右下角。
-    const visualRange = mergeVisualRange(frame.mergeRegions, range, frame.selection?.activeCell)
-    this.fillLayer.sync(computeFillHandleRect(frame, visualRange))
+    const visualRange = mergeVisualRange(f.mergeRegions, range, f.selection?.activeCell)
+    this.fillLayer.sync(computeFillHandleRect(f, visualRange))
   }
 
   /** 根据 renderer 同一份 frame 同步 DOM body selection overlay。 */
@@ -2863,16 +2863,16 @@ export class GridRuntime {
     this.editingMultilineOriginalRowHeight = null
   }
 
-  /** 根据当前单元格 rect 同步编辑器位置；不可见时取消编辑。 */
-  private syncCellEditorPosition(): void {
+  /** 根据当前单元格 rect 同步编辑器位置；不可见时取消编辑。flush 路径复用已构建的 frame，避免重复 getFrame。 */
+  private syncCellEditorPosition(frame?: ReturnType<GridEngine['getFrame']>): void {
     if (!this.cellEditor?.isOpen()) return
-    const frame = this.engine.getFrame()
-    const session = frame.cellEdit
+    const f = frame ?? this.engine.getFrame()
+    const session = f.cellEdit
     if (!session) {
       this.cellEditor.close()
       return
     }
-    const rect = this.computeCellEditorRect(frame, session.cell)
+    const rect = this.computeCellEditorRect(f, session.cell)
     if (!rect) {
       this.cancelCellEdit()
       return
