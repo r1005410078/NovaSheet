@@ -8,8 +8,7 @@
  *     `String(value)` → 走 text 路径。M2/M3 加专属编辑器与绘制时只在此处补 case。
  *
  * 文本截断：二分搜索最长能容纳的前缀 + `…`，结果按 `${ctx.font}|${maxWidth}|${text}`
- * 缓存到 `truncationCache`（Map）。`setTheme` 会清空缓存（字体可能变）。M1 没有 LRU 上限，
- * M2 启用滚动后建议加上限以防极端场景内存爆涨（见 spec §9.1 风险）。
+ * 缓存到 `truncationCache`（Map）。`setTheme` 会清空缓存（字体可能变）。缓存上限 `TRUNCATION_CACHE_MAX`（8192），超限整体清空。
  *
  * `null` / `undefined` 值在最前面短路返回——既不 save/clip 也不 fillText，0 副作用。
  *

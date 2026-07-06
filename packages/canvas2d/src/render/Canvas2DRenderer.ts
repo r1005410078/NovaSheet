@@ -801,7 +801,7 @@ export class Canvas2DRenderer implements RenderBackend {
 
   /**
    * overflow 模式下，文本超出本格可用宽度时，沿右侧扫描连续空格（非空/合并/列边界即停），
-   * 返回可溢出的额外宽度（px）。`ctx.measureText` 已用一帧统一字体，量度准确。
+   * 返回可溢出的额外宽度（px）。宽度经 `measureTextWidth` 缓存量度，一帧统一字体保证准确。
    *
    * 同时把文字实际穿越的列边界记入 `crossings`（`"row:col"` = row 行 col|col+1 边界），
    * grid layer 据此跳过被压住的竖线段。被非空邻格截停的边界不算穿越——该处保留格线。

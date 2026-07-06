@@ -63,12 +63,17 @@ describe('Canvas2DRenderer — 文本宽度缓存', () => {
     const { ctx, renderer, frame } = setup()
     renderer.render(frame(denseGridTheme))
 
-    const spy = spyOn(ctx, 'measureText')
-    spy.mockClear()
     const theme2: Theme = {
       ...denseGridTheme,
       metrics: { ...denseGridTheme.metrics, fontSize: denseGridTheme.metrics.fontSize + 2 },
     }
+    renderer.setTheme(theme2)
+    expect(
+      (renderer as unknown as { textWidthCache: Map<string, number> }).textWidthCache.size,
+    ).toBe(0)
+
+    const spy = spyOn(ctx, 'measureText')
+    spy.mockClear()
     renderer.render(frame(theme2))
     expect(spy.mock.calls.length).toBeGreaterThan(0)
   })

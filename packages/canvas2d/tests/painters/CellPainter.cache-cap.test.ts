@@ -21,6 +21,8 @@ describe('CellPainter — truncationCache 上限', () => {
     }
 
     const cache = (painter as unknown as { truncationCache: Map<string, string> }).truncationCache
+    // clear() 在 insert 8193 处触发，剩余 9000 - 8192 = 808 条
+    expect(cache.size).toBe(808)
     expect(cache.size).toBeLessThanOrEqual(8192)
   })
 })
