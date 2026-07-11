@@ -20,6 +20,8 @@
 import type { AutofitRowsResult } from '../../features/row/AutofitRowHeights'
 import type { DataSource } from '../../kernel/data/DataSource'
 import { ExcelWorkspaceBinding } from './controllers/ExcelWorkspaceBinding'
+import { ViewportController } from './controllers/ViewportController'
+import type { RuntimeRenderFrame, RuntimeCellEdit } from './runtime-frame'
 import type { ExcelWorkspacePolicy } from '../../features/excel-workspace'
 import type { CellValue, Field, Row } from '../../kernel/data/Schema'
 import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
@@ -46,7 +48,6 @@ import {
   MIN_RESIZE_SIZE,
 } from '../../kernel/interaction/HandleLayout'
 import type { ResizeHandleRect } from '../../kernel/interaction/HandleLayout'
-import { computeScrollReveal } from '../../kernel/interaction/scrollCellIntoView'
 import { FrameScheduler } from '../../kernel/util/raf'
 import {
   applyContextMenuConfig,
@@ -93,7 +94,6 @@ import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/Host'
 import type { RenderBackend } from '../../ports/RenderBackend'
 import type { CellActionHit } from '../../ports/RenderBackend'
-import { ScrollMapper } from '../scroll/ScrollMapper'
 import type { NativeScrollSource } from '../scroll/NativeScroller'
 import type {
   CellEditor,
@@ -101,9 +101,6 @@ import type {
   CellEditorTrigger,
 } from '../interaction/CellEditorContract'
 import type { CellTypeDefinition, CellTypeOverride, CellTypeRegistry } from '../../features/cell-types'
-
-type RuntimeRenderFrame = ReturnType<GridEngine['getFrame']>
-type RuntimeCellEdit = NonNullable<RuntimeRenderFrame['cellEdit']>
 
 /** Phase 4.1 — TSV FNV-1a 32-bit hash；用于验证 paste 时剪贴板内容是否仍是 grid 自己刚写出去的，决定 typed 缓存命中。 */
 function fnv1aHash(s: string): number {
@@ -208,8 +205,6 @@ const COLUMN_HEADER_MENU_BUTTON_SIZE = 24
 /** 列宽小于此值时不显示（也不命中）菜单按钮，与 HeaderPainter.MIN_HEADER_MENU_BUTTON_COL_WIDTH 保持一致。 */
 const COLUMN_HEADER_MENU_BUTTON_MIN_COL_WIDTH = 32
 
-/** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
-const HOST_RESIZE_KEY = 'host:resize'
 const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
 const DRAG_AUTO_SCROLL_EDGE_PX = 32
 const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
@@ -259,8 +254,8 @@ export class GridRuntime {
   private renderer: RenderBackend
   /** 每个 grid 独立的帧调度器，用于合并 resize/scroll/render。 */
   private scheduler: FrameScheduler
-  /** DOM scroll 与逻辑 scroll 坐标之间的映射器。 */
-  private scrollMapper: ScrollMapper
+  /** viewport scroll/resize/spacer 域 controller（GridRuntime 拆分 Task 2）。 */
+  private viewport: ViewportController
   /** 绘制表面 resize 回调，通常用于同步 canvas bitmap 与 DPR。 */
   private onSurfaceResize?: GridRuntimeOptions['onSurfaceResize']
   /** 文本量度器，用于 wrap 字段自动行高。 */
@@ -407,7 +402,24 @@ export class GridRuntime {
     this.contextMenuRenderer = opts.contextMenuRenderer
     this.engine.setValidationRedrawCallback(() => this.invalidate())
     this.engine.setDataChangeRedrawCallback(() => this.invalidate())
-    this.scrollMapper = new ScrollMapper()
+    this.viewport = new ViewportController({
+      engine: this.engine,
+      host: this.host,
+      scheduler: this.scheduler,
+      isDestroyed: () => this.destroyed,
+      invalidate: () => this.invalidate(),
+      paintSync: () => this.paintSync(),
+      getRenderer: () => this.renderer,
+      onSurfaceResize: this.onSurfaceResize,
+      beforeApplyScroll: (source) => this.excelWorkspace?.recordScroll(source),
+      afterApplyScroll: () => {
+        this.closeActiveCustomEditor()
+        this.syncCellEditorPosition()
+        this.closeContextMenu()
+        this.validationTooltip?.hide()
+        this.excelWorkspace?.runFrame()
+      },
+    })
     if (opts.excelWorkspace) {
       this.excelWorkspace = new ExcelWorkspaceBinding({
         policy: typeof opts.excelWorkspace === 'object' ? opts.excelWorkspace.policy : undefined,
@@ -433,7 +445,7 @@ export class GridRuntime {
       isWholeColumnSelection: (range) => this.isWholeColumnSelection(range),
       selectWholeColumn: (col) => this.selectWholeColumn(col),
       selectWholeColumnRange: (anchor, extent) => this.selectWholeColumnRange(anchor, extent),
-      getColsTotalSize: () => this.getColsTotalSizeForFrame(this.engine.getFrame()),
+      getColsTotalSize: () => this.viewport.getColsTotalSizeForFrame(this.engine.getFrame()),
     })
     this.rowHeaderDrag = new RowHeaderDrag({
       engine: this.engine,
@@ -1450,7 +1462,7 @@ export class GridRuntime {
     const dpr = this.host.getDpr()
     this.engine.setViewportSize(width, height)
     this.onSurfaceResize?.(width, height, dpr)
-    this.resizeSpacer()
+    this.viewport.resizeSpacer()
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
     this.syncCellEditorTheme()
@@ -1587,8 +1599,8 @@ export class GridRuntime {
   afterEngineMutation(): void {
     const { width, height } = this.host.getContainerSize()
     this.engine.setViewportSize(width, height)
-    this.resizeSpacer()
-    this.remapScroll()
+    this.viewport.resizeSpacer()
+    this.viewport.remapScroll()
     this.refresh()
     this.closeContextMenu()
     this.closeActiveCustomEditor()
@@ -1597,36 +1609,13 @@ export class GridRuntime {
   }
 
   /** 滚动到指定行，并按给定对齐方式放入 viewport。 */
-  scrollToRow(rowIndex: number, align: 'start' | 'center' | 'end' = 'start'): void {
-    const rowsAxis = this.engine.getRowsAxis()
-    if (rowIndex < 0 || rowIndex >= rowsAxis.getCount()) return
-    const top = rowsAxis.indexToPosition(rowIndex)
-    const size = rowsAxis.getSize(rowIndex)
-    const { height: clientH } = this.host.getContainerSize()
-    const vpContentH = clientH - this.engine.getTheme().metrics.headerHeight
-    let logicalY: number
-    if (align === 'start') logicalY = top
-    else if (align === 'end') logicalY = top + size - vpContentH
-    else logicalY = top + size / 2 - vpContentH / 2
-
-    const scrollTop = this.logicalToScrollY(logicalY)
-    const { scrollLeft } = this.host.getScrollPosition()
-    this.host.scrollTo(scrollTop, scrollLeft)
+  scrollToRow(rowIndex: number, align?: 'start' | 'center' | 'end'): void {
+    this.viewport.scrollToRow(rowIndex, align)
   }
 
   /** 滚动到指定单元格的左上角。 */
   scrollToCell(rowIndex: number, fieldId: string): void {
-    const rowsAxis = this.engine.getRowsAxis()
-    const colsAxis = this.engine.getColsAxis()
-    const colIndex = this.engine.getColumnIndex(fieldId)
-    if (rowIndex < 0 || rowIndex >= rowsAxis.getCount()) return
-    if (colIndex < 0) return
-
-    const top = rowsAxis.indexToPosition(rowIndex)
-    const left = colsAxis.indexToPosition(colIndex)
-    const scrollTop = this.logicalToScrollY(top)
-    const scrollLeft = this.logicalToScrollX(left)
-    this.host.scrollTo(scrollTop, scrollLeft)
+    this.viewport.scrollToCell(rowIndex, fieldId)
   }
 
   /** 开始鼠标/触控 resize 拖拽并显示尺寸指示线。 */
@@ -1731,7 +1720,7 @@ export class GridRuntime {
     this.rowReorderOverlay?.hide()
     for (const editor of Object.values(this.cellEditors)) editor.destroy?.()
     this.scheduler.cancel('renderer:flush')
-    this.scheduler.cancel(HOST_RESIZE_KEY)
+    this.viewport.destroy()
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
     this.renderer.destroy()
     this.host.destroy()
@@ -1741,29 +1730,17 @@ export class GridRuntime {
 
   /** 处理 host 滚动事件，映射为逻辑滚动并触发重绘。 */
   handleHostScroll(scrollTop: number, scrollLeft: number, source?: NativeScrollSource): void {
-    const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
-    this.excelWorkspace?.recordScroll(source)
-    this.engine.setScroll(logicalX, logicalY)
-    this.closeActiveCustomEditor()
-    this.syncCellEditorPosition()
-    this.closeContextMenu()
-    this.validationTooltip?.hide()
-    this.excelWorkspace?.runFrame()
-    this.invalidate()
+    this.viewport.handleHostScroll(scrollTop, scrollLeft, source)
   }
 
   /** 处理 host 尺寸变化；实际 resize 工作合并到 RAF 中执行。 */
-  handleHostResize(_cssWidth: number, _cssHeight: number, _dpr: number): void {
-    void _cssWidth
-    void _cssHeight
-    void _dpr
-    this.scheduleHostResize()
+  handleHostResize(cssWidth: number, cssHeight: number, dpr: number): void {
+    this.viewport.handleHostResize(cssWidth, cssHeight, dpr)
   }
 
   /** 处理 DPR 变化；实际 resize 工作合并到 RAF 中执行。 */
-  handleHostDprChange(_dpr: number): void {
-    void _dpr
-    this.scheduleHostResize()
+  handleHostDprChange(dpr: number): void {
+    this.viewport.handleHostDprChange(dpr)
   }
 
   /** 处理 host pointerdown，开始单元格选择或扩展选择。 */
@@ -2035,8 +2012,8 @@ export class GridRuntime {
 
     if (!this.engine.navigateSelection(event.key, event.shiftKey)) return false
 
-    const focus = this.getSelectionScrollTarget()
-    if (focus) this.ensureCellVisible(focus)
+    const focus = this.viewport.getSelectionScrollTarget()
+    if (focus) this.viewport.ensureCellVisible(focus)
     this.refresh()
     return true
   }
@@ -2096,7 +2073,7 @@ export class GridRuntime {
     if (event.x < rowHeaderWidth) return null
     const scrollX = frame.viewport.scrollX ?? 0
     const logicalX = event.x - rowHeaderWidth + scrollX
-    const totalSize = this.getColsTotalSizeForFrame(frame)
+    const totalSize = this.viewport.getColsTotalSizeForFrame(frame)
     if (logicalX < 0 || logicalX >= totalSize) return null
     const colIndex = frame.colsAxis.positionToIndex(logicalX)
     if (typeof frame.data.getSchema !== 'function') return null
@@ -2151,38 +2128,9 @@ export class GridRuntime {
     })
   }
 
-  private getColsTotalSizeForFrame(frame: ReturnType<GridEngine['getFrame']>): number {
-    const axis = frame.colsAxis
-    if (typeof axis.getTotalSize === 'function') return axis.getTotalSize()
-    const engineTotal = this.engine.getColsTotalSize()
-    if (engineTotal > 0) return engineTotal
-    const count = axis.getCount()
-    if (count <= 0) return 0
-    return axis.indexToPosition(count - 1) + axis.getSize(count - 1)
-  }
-
-  /**
-   * 合并 ResizeObserver / DPR 变更：在同一 RAF 内完成 viewport、位图缩放与同步绘制。
-   * 避免 HighDPI.resize 清空 canvas 后等到 `renderer:flush` 才画（中间空白帧会闪烁）。
-   */
-  private scheduleHostResize(): void {
-    if (this.destroyed) return
-    this.scheduler.schedule(HOST_RESIZE_KEY, () => {
-      if (this.destroyed) return
-      const { width, height } = this.host.getContainerSize()
-      const dpr = this.host.getDpr()
-      this.engine.setViewportSize(width, height)
-      this.onSurfaceResize?.(width, height, dpr)
-      this.renderer.resize(width, height, dpr)
-      this.remapScroll()
-      this.paintSync()
-    })
-  }
-
   /** @internal 供集成测试模拟 ResizeObserver 回调 */
   onContainerResize(): void {
-    const { width, height } = this.host.getContainerSize()
-    this.handleHostResize(width, height, this.host.getDpr())
+    this.viewport.onContainerResize()
   }
 
   /** 调度下一帧 render flush，并同步 overlay 与编辑器位置。 */
@@ -2341,7 +2289,7 @@ export class GridRuntime {
     if (step.x === 0 && step.y === 0) return
 
     const { scrollTop, scrollLeft } = this.host.getScrollPosition()
-    const limits = this.getScrollLimits()
+    const limits = this.viewport.getScrollLimits()
     const nextTop = clamp(scrollTop + step.y, 0, limits.maxTop)
     const nextLeft = clamp(scrollLeft + step.x, 0, limits.maxLeft)
     if (nextTop === scrollTop && nextLeft === scrollLeft) return
@@ -2383,77 +2331,6 @@ export class GridRuntime {
       x: horizontal ? edgeVelocity(pointer.x, width) : 0,
       y: vertical ? edgeVelocity(pointer.y, height) : 0,
     }
-  }
-
-  /** 计算当前 DOM scrollTop/scrollLeft 的最大边界。 */
-  private getScrollLimits(): { maxTop: number; maxLeft: number } {
-    const headerH = this.engine.getTheme().metrics.headerHeight
-    const { width, height } = this.host.getContainerSize()
-    return {
-      maxTop: Math.max(
-        0,
-        this.scrollMapper.computeSpacerSize(this.engine.getRowsTotalSize() + headerH) - height,
-      ),
-      maxLeft: Math.max(0, this.scrollMapper.computeSpacerSize(this.getColsContentWidth()) - width),
-    }
-  }
-
-  /** 将 DOM scrollTop/scrollLeft 映射为 engine 使用的逻辑 scroll 坐标。 */
-  private mapScrollToLogical(
-    scrollTop: number,
-    scrollLeft: number,
-  ): { logicalX: number; logicalY: number } {
-    const headerH = this.engine.getTheme().metrics.headerHeight
-    const contentH = this.engine.getRowsTotalSize()
-    const contentW = this.getColsContentWidth()
-    const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
-    const spacerW = this.scrollMapper.computeSpacerSize(contentW)
-    const { width: clientW, height: clientH } = this.host.getContainerSize()
-    return {
-      logicalX: this.scrollMapper.scrollToLogical(scrollLeft, spacerW, contentW, clientW),
-      logicalY: this.scrollMapper.scrollToLogical(scrollTop, spacerH, contentH + headerH, clientH),
-    }
-  }
-
-  /** 将逻辑 Y 滚动坐标映射回 DOM scrollTop。 */
-  private logicalToScrollY(logicalY: number): number {
-    const headerH = this.engine.getTheme().metrics.headerHeight
-    const contentH = this.engine.getRowsTotalSize()
-    const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
-    const { height: clientH } = this.host.getContainerSize()
-    return this.scrollMapper.logicalToScroll(logicalY, spacerH, contentH + headerH, clientH)
-  }
-
-  /** 将逻辑 X 滚动坐标映射回 DOM scrollLeft。 */
-  private logicalToScrollX(logicalX: number): number {
-    const contentW = this.getColsContentWidth()
-    const spacerW = this.scrollMapper.computeSpacerSize(contentW)
-    const { width: clientW } = this.host.getContainerSize()
-    return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, clientW)
-  }
-
-  /** 读取当前 DOM 滚动位置并同步到 engine 的逻辑 viewport。 */
-  private remapScroll(): void {
-    const { scrollTop, scrollLeft } = this.host.getScrollPosition()
-    const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
-    this.engine.setScroll(logicalX, logicalY)
-  }
-
-  /**
-   * 水平内容总宽 = 列总宽 + 行号 gutter。与垂直轴加 `headerH` 对称：
-   * gutter（Excel 模式行号列）是固定不滚动的左侧偏移，必须计入 spacer/滚动数学，
-   * 否则原生横向滚动条会比真实可滚列区短 gutter px（右缘缺口、最右列滚不到）。
-   */
-  private getColsContentWidth(): number {
-    return this.engine.getColsTotalSize() + this.engine.getViewport().getRowHeaderWidth()
-  }
-
-  /** 按内容尺寸与 header 尺寸更新 host scroll spacer。 */
-  private resizeSpacer(): void {
-    const headerH = this.engine.getTheme().metrics.headerHeight
-    const w = this.scrollMapper.computeSpacerSize(this.getColsContentWidth())
-    const h = this.scrollMapper.computeSpacerSize(this.engine.getRowsTotalSize() + headerH)
-    this.host.setScrollSize(w, h)
   }
 
   /** 同步 scrollbar 主题到 host。 */
@@ -2740,8 +2617,8 @@ export class GridRuntime {
     }
     if (moveAfter) {
       this.engine.navigateSelection('ArrowDown', false)
-      const focus = this.getSelectionScrollTarget()
-      if (focus) this.ensureCellVisible(focus)
+      const focus = this.viewport.getSelectionScrollTarget()
+      if (focus) this.viewport.ensureCellVisible(focus)
     }
     this.refresh()
   }
@@ -2812,12 +2689,6 @@ export class GridRuntime {
     return merge.anchor ?? { rowIndex: merge.range.startRow, colIndex: merge.range.startCol }
   }
 
-  /** 返回导航后需要滚动到可见区域的选区目标。 */
-  private getSelectionScrollTarget(): CellAddress | null {
-    const selection = this.engine.getSelection()
-    return selection.extentCell ?? selection.activeCell
-  }
-
   /** 读取 resize handle 对应的当前行高或列宽。 */
   private readResizeSize(handle: ResizeHandleRect): number | null {
     if (handle.kind === 'column' && handle.fieldId) {
@@ -2831,33 +2702,6 @@ export class GridRuntime {
       return this.engine.getRowsAxis().getSize(rowIndex)
     }
     return null
-  }
-
-  /** 确保指定单元格完整可见，必要时滚动 host。 */
-  private ensureCellVisible(cell: CellAddress): void {
-    const frame = this.engine.getFrame()
-    const { width, height } = this.host.getContainerSize()
-    const { scrollTop, scrollLeft } = this.host.getScrollPosition()
-    const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
-
-    const reveal = computeScrollReveal({
-      rowIndex: cell.rowIndex,
-      colIndex: cell.colIndex,
-      rowsAxis: frame.rowsAxis,
-      colsAxis: frame.colsAxis,
-      scrollX: logicalX,
-      scrollY: logicalY,
-      viewportWidth: width,
-      viewportHeight: height,
-      headerHeight: frame.theme.metrics.headerHeight,
-      rowHeaderWidth: frame.viewport.rowHeaderWidth,
-    })
-    if (!reveal) return
-
-    const nextTop = this.logicalToScrollY(reveal.logicalY)
-    const nextLeft = this.logicalToScrollX(reveal.logicalX)
-    this.host.scrollTo(nextTop, nextLeft)
-    this.handleHostScroll(nextTop, nextLeft)
   }
 }
 
