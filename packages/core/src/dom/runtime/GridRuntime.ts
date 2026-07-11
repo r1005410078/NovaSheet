@@ -21,6 +21,7 @@ import type { AutofitRowsResult } from '../../features/row/AutofitRowHeights'
 import type { DataSource } from '../../kernel/data/DataSource'
 import { ExcelWorkspaceBinding } from './controllers/ExcelWorkspaceBinding'
 import { ViewportController } from './controllers/ViewportController'
+import { RenderFlushPipeline } from './RenderFlushPipeline'
 import type { RuntimeRenderFrame, RuntimeCellEdit } from './runtime-frame'
 import type { ExcelWorkspacePolicy } from '../../features/excel-workspace'
 import type { CellValue, Field, Row } from '../../kernel/data/Schema'
@@ -256,6 +257,8 @@ export class GridRuntime {
   private scheduler: FrameScheduler
   /** viewport scroll/resize/spacer 域 controller（GridRuntime 拆分 Task 2）。 */
   private viewport: ViewportController
+  /** render flush 域 pipeline（GridRuntime 拆分 Task 3）：`invalidate`/`paintSync`/`getRenderFrame`。 */
+  private flush: RenderFlushPipeline
   /** 绘制表面 resize 回调，通常用于同步 canvas bitmap 与 DPR。 */
   private onSurfaceResize?: GridRuntimeOptions['onSurfaceResize']
   /** 文本量度器，用于 wrap 字段自动行高。 */
@@ -352,8 +355,6 @@ export class GridRuntime {
   private onFill?: (event: FillEvent) => void
   /** 选区变化通知回调。 */
   private onSelectionChange?: (selection: GridSelection) => void
-  /** 上次已通知的选区签名，避免重复触发。 */
-  private lastSelectionChangeSignature = ''
   /**
    * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
    * 非 multiline 编辑置 null。
@@ -419,6 +420,27 @@ export class GridRuntime {
         this.validationTooltip?.hide()
         this.excelWorkspace?.runFrame()
       },
+    })
+    this.flush = new RenderFlushPipeline({
+      scheduler: this.scheduler,
+      isDestroyed: () => this.destroyed,
+      getFrame: () => this.engine.getFrame(),
+      getRenderer: () => this.renderer,
+      getViewPipeline: () => this.viewPipeline,
+      augmentFrame: (frame) =>
+        this.activeCustomEditorCellEdit && !frame.cellEdit
+          ? { ...frame, cellEdit: this.activeCustomEditorCellEdit }
+          : frame,
+      syncSelectionOverlay: (frame) => this.syncSelectionOverlay(frame),
+      syncDomLayers: (frame) => {
+        this.syncResizeHandles(frame)
+        this.syncFillHandle(frame)
+        this.syncHideToggleHandles(frame)
+        this.syncHideColToggleHandles(frame)
+        this.syncCellEditorPosition(frame)
+      },
+      getOnSelectionChange: () => this.onSelectionChange,
+      getSelection: () => this.engine.getSelection(),
     })
     if (opts.excelWorkspace) {
       this.excelWorkspace = new ExcelWorkspaceBinding({
@@ -1472,7 +1494,7 @@ export class GridRuntime {
   /** 更换渲染器实现（Canvas2D / 未来 WebGL）；销毁旧实例并取消 pending flush。 */
   replaceRenderer(factory: () => RenderBackend): RenderBackend {
     if (!this.destroyed) {
-      this.scheduler.cancel('renderer:flush')
+      this.flush.cancelPending()
       this.renderer.destroy()
     }
     this.renderer = factory()
@@ -1719,7 +1741,7 @@ export class GridRuntime {
     this.columnReorderOverlay?.hide()
     this.rowReorderOverlay?.hide()
     for (const editor of Object.values(this.cellEditors)) editor.destroy?.()
-    this.scheduler.cancel('renderer:flush')
+    this.flush.destroy()
     this.viewport.destroy()
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
     this.renderer.destroy()
@@ -2133,45 +2155,14 @@ export class GridRuntime {
     this.viewport.onContainerResize()
   }
 
-  /** 调度下一帧 render flush，并同步 overlay 与编辑器位置。 */
+  /** 调度下一帧 render flush，并同步 overlay 与编辑器位置；委托给 `RenderFlushPipeline`（Task 3）。 */
   private invalidate(): void {
-    if (this.destroyed) return
-    this.scheduler.schedule('renderer:flush', () => {
-      if (this.destroyed) return
-      const frame = this.getRenderFrame()
-      this.renderer.render(frame)
-      this.syncSelectionOverlay(frame)
-      this.notifySelectionChange(frame)
-      this.syncResizeHandles(frame)
-      this.syncFillHandle(frame)
-      this.syncHideToggleHandles(frame)
-      this.syncHideColToggleHandles(frame)
-      this.syncCellEditorPosition(frame)
-    })
+    this.flush.invalidate()
   }
 
-  /** 立即同步绘制一帧；用于 attach/resize 等不能等待异步 flush 的路径。 */
+  /** 立即同步绘制一帧；用于 attach/resize 等不能等待异步 flush 的路径；委托给 `RenderFlushPipeline`（Task 3）。 */
   private paintSync(): void {
-    const frame = this.getRenderFrame()
-    this.renderer.render(frame)
-    this.syncSelectionOverlay(frame)
-    this.notifySelectionChange(frame)
-    this.syncResizeHandles(frame)
-    this.syncFillHandle(frame)
-    this.syncHideToggleHandles(frame)
-    this.syncHideColToggleHandles(frame)
-    this.syncCellEditorPosition(frame)
-  }
-
-  /** 获取当前 render frame，并在 view pipeline 存在时注入视图映射。 */
-  private getRenderFrame(): ReturnType<GridEngine['getFrame']> {
-    const frame = this.engine.getFrame()
-    let next = frame
-    if (this.activeCustomEditorCellEdit && !next.cellEdit) {
-      next = { ...next, cellEdit: this.activeCustomEditorCellEdit }
-    }
-    if (!this.viewPipeline) return next
-    return { ...next, viewPipeline: this.viewPipeline }
+    this.flush.paintSync()
   }
 
   /** 根据当前 frame 同步 resize handle layer；flush 路径复用已构建的 frame，避免重复 getFrame。 */
@@ -2218,7 +2209,7 @@ export class GridRuntime {
   }
 
   /** 根据 renderer 同一份 frame 同步 DOM body selection overlay。 */
-  private syncSelectionOverlay(frame = this.getRenderFrame()): void {
+  private syncSelectionOverlay(frame = this.flush.getRenderFrame()): void {
     if (!this.selectionOverlay) return
     if (this.engine.isCellEditing()) {
       this.selectionOverlay.sync(null)
@@ -2247,16 +2238,6 @@ export class GridRuntime {
       rangeRects: computeRangeOverlayRects(frame, visualRange),
       activeRect,
     })
-  }
-
-  /** 选区签名变化时通知外部（工具栏状态同步等）。 */
-  private notifySelectionChange(frame: ReturnType<GridEngine['getFrame']>): void {
-    if (!this.onSelectionChange) return
-    const selection = frame.selection ?? this.engine.getSelection()
-    const signature = selectionChangeSignature(selection)
-    if (signature === this.lastSelectionChangeSignature) return
-    this.lastSelectionChangeSignature = signature
-    this.onSelectionChange(selection)
   }
 
   /** 当前驱动边缘自动滚动的拖拽种类；活跃拖拽 / 填充柄优先于普通选区。 */
@@ -2703,13 +2684,6 @@ export class GridRuntime {
     }
     return null
   }
-}
-
-function selectionChangeSignature(selection: GridSelection): string {
-  if (!selection.activeCell || !selection.selectedRange) return 'empty'
-  const active = selection.activeCell
-  const range = selection.selectedRange
-  return `${active.rowIndex}:${active.colIndex}|${range.startRow}-${range.endRow},${range.startCol}-${range.endCol}`
 }
 
 /** 计算 pointer 在 viewport 边缘区域内对应的自动滚动速度。 */
