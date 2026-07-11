@@ -9,10 +9,10 @@ Loaded into every agent session — invariants easy to get wrong without context
 
 ## Current state
 
-- **Active branch:** `refactor-default-grid-engine-decomposition`（**未合并 `main`**，纯重构线）。功能线开发前确认基线分支 + read recent commits for delta。
+- **Active branch:** `main`（GridRuntime 分解已合并；旧 `refactor-default-grid-engine-decomposition` 亦已并入）。功能线开发前 read recent commits for delta。
 - **Next milestone:** Phase 5-D conditional formatting — unless redirected.（5-C value formatting 已 ship，见 Shipped。）
-- **Backlog（未 spec）:** ① **单元格自定义类型扩展 API** 剩 2 轴：显示(canvas painter port，强制 canvas 画星级/进度条/tag/头像/chart)、编辑(DOM/React overlay editor 注册缝，下拉/日期选择器)。现状闭合(CellPainter 仅 text/number、DomCellEditor 仅 input/textarea)；目标 core 开 port、业务层注册、core 此后零改。需 brainstorming 出统一 spec。**formatter 轴已随 5-C ship。** ② **perf**：`formatValue` 内 `Intl.NumberFormat` 每调用 new，列级格式化时热路径反复构造；终审裁为 Minor，后续按 format 签名做 `Map<string, Intl.NumberFormat>` 缓存（`TODO(phase-5-c-perf)`）。
-- **Shipped（细节见 git log + `docs/superpowers/specs/`）:** Phase 4 全完成、Phase 5-A/5-B、fill×merge/format、text-wrap 三态 + Alt+Enter 多行、**5-C value formatting（ValueFormat descriptor number/currency/percent/date + 自定义 formatter 注册表，raw 不变，`Grid.setValueFormat`/`GridOptions.formatters`）**、Engine Composer Phase 2、Web 合并进 core（依赖反转）。
+- **Backlog（未 spec）:** ① **公开 API 缺口 P0——SlickGrid BMS 面板替换驱动（下一个 spec 候选）**：驱动用例 `~/www/scada-console-web/src/pages/monitor/index/panels/SlickBmsTablePanel.vue`（BMS 堆/簇实时监视表：5s 轮询增量更新 2 万+ 格、两级列头 堆→簇、点格开点号抽屉、整行/列组选中高亮、纯只读）。缺口按阻塞度：(a) **两级列头 column groups**——唯一硬阻塞，分组表头 + 组级选中/定位/点击全无概念；(b) **cell 点击事件** `on('cellClick')` 带 view/raw 坐标 + 原生 event（开抽屉入口；现仅 `onSelectionChange`，无点击语义）；(c) **程序化值读写** `getCellValue`/`setCellValue`/`updateCells` 批量 + `onCellChange`（走 engine 全链路 undo/validation/事件；增量重绘架构已天然支持——`updateCell`→订阅→FrameScheduler 单帧合并，缺的是公开契约与批量糖）；(d) **全局只读开关**（现只能靠不注册 cellTypes 兜底，内建 text/number/date 仍可编辑）；(e) 整行/整列选择糖 `selectRows`/`selectCols`（`setSelection` 可凑，core README 已有等价写法）。已具备勿重复造：headerHeight（Theme）、自定义 pill 绘制（`cellRenderers`）、冻结左列、深色主题。② **公开 API 缺口 P1（通用）**：编辑生命周期（`isEditing`/`getEditingCell`/`commitEdit`/`cancelEdit`）、视口（`getScrollPosition`/`setScroll`/`getVisibleRange`）、几何映射（`getCellRect`/`getCellAtPoint`）、布局对称读（`getColumnWidth`/`getRowHeight`/`getFrozen`）+ `onColumnResize`/`onRowResize` 事件；P2：`batch()` 事务（多 mutation 合一 undo step + 一次重绘）、`sortBy` 糖、view 空间 `getRowCount`。③ **perf**：`formatValue` 内 `Intl.NumberFormat` 每调用 new，列级格式化时热路径反复构造；终审裁为 Minor，后续按 format 签名做 `Map<string, Intl.NumberFormat>` 缓存（`TODO(phase-5-c-perf)`）。
+- **Shipped（细节见 git log + `docs/superpowers/specs/`）:** Phase 4 全完成、Phase 5-A/5-B、fill×merge/format、text-wrap 三态 + Alt+Enter 多行、**5-C value formatting（ValueFormat descriptor number/currency/percent/date + 自定义 formatter 注册表，raw 不变，`Grid.setValueFormat`/`GridOptions.formatters`）**、单元格扩展 API 四轴（`cellTypes`/`cellEditors`/`cellAttachments` + backend 侧 `cellRenderers`，参考实现 `@novasheet/cell-kit` rich-text）、per-cell type override（`setCellType`）、数据校验（sync/async ValidatorDefinition）、`WindowedDataSource`、React 适配 `@novasheet/react`（NovaExcel 壳）、Engine Composer Phase 2、Web 合并进 core（依赖反转）、GridRuntime 分解（薄组合根 + 8 域 controller + RenderFlushPipeline，mutation 改道 GridControllerImpl 直调 engine）。
 - **易错不变量（仅 format/merge 域）:** `RangeStyleStore`/`MergeStore` 用 **raw** 行列键控；`getFrame()` raw→view，painter 只吃 VIEW 坐标；mutation 经 `viewRangeToRawRange` 转连续 raw 区间，sort/filter 打散时保守 no-op（返 `false`）。
 - **Locked decisions（别轻易翻案，见 spec ADR §A）:** 单 Canvas full visible-region redraw、native scroll + 非线性 `scrollTop`（拒绝自绘滚动条）、`CHUNK_SIZE=1024`、`<handle-layer>` sibling 做 resize hit-zone（M4）。
 
@@ -79,7 +79,7 @@ Loaded into every agent session — invariants easy to get wrong without context
 
 ## NOT shipped yet (don't add prematurely — confirm first)
 
-Frozen quadrant painting（M3 stub `canvas2d/src/painters/FrozenPainter.ts`）、WebGL/WebGPU 后端、server-paginated DataSource、`apps/playground/`（M5 perf）。`apps/storybook/` 已在 scope（`@storybook/html-vite`，每个 Grid 配置加 story）。
+两级列头 column groups、`on('cellClick')`、程序化值读写（`getCellValue`/`setCellValue`）、全局只读开关（均见 Backlog ①）、WebGL/WebGPU 后端、server-paginated DataSource（`WindowedDataSource` 已 ship，真分页/游标式仍无）、`apps/playground/`（M5 perf）。`apps/storybook/` 已在 scope（`@storybook/html-vite`，每个 Grid 配置加 story）。
 
 ## Browser / 约束
 
