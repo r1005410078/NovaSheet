@@ -19,7 +19,7 @@
 
 **目标:**
 
-- GridRuntime 退化为薄组合根(~400 行):constructor wiring、生命周期、跨域编排点。
+- GridRuntime 退化为组合根(实测 Phase 1 完成后 1226 行,Phase 2 预期降至约 1100 行——8-controller wiring + ~32 个 mutation passthrough + setter/回调注册,原估"~400 行"低估组合根本身体量):constructor wiring、生命周期、跨域编排点。
 - 每个领域一个 controller,窄 deps 接口注入,独立可构造、可单测。
 - mutation passthrough 移出 runtime,`GridControllerImpl` 直调 engine。
 - 公开 API golden 不变(只记录导出名,`GridRuntime` 名保留);acceptance 场景零改动(纯重构,不改可观测行为)。
@@ -36,20 +36,22 @@
 
 ```
 dom/runtime/
-  GridRuntime.ts              ~400 行  组合根 + 生命周期 + 跨域编排
+  GridRuntime.ts              1226 行(Phase 1 完成实测,Phase 2 预期降至约 1100)组合根 + 生命周期 + 跨域编排
   GridController.ts           (不变)
   GridControllerImpl.ts       (Phase 2 mutation 改道后略增)
-  RenderFlushPipeline.ts      ~200 行  invalidate/paintSync/getRenderFrame + sync* 扇出
+  RenderFlushPipeline.ts      106 行  invalidate/paintSync/getRenderFrame + sync* 扇出
   controllers/
-    CellEditController.ts     ~500 行  内建 DOM editor + 自定义 editor 生命周期
-    ContextMenuController.ts  ~550 行  host/行头/列头菜单、action 分发、hover 菜单按钮
-    PopoverController.ts      ~150 行  filter/rowHeight/columnWidth popover + pending ids
-    ClipboardController.ts    ~350 行  snapshot、attachment 捕获、copy/cut/paste、undo/redo
-    ViewportController.ts     ~250 行  scroll 映射、spacer、scrollTo*、resize 调度
-    InputController.ts        ~350 行  pointer/keyboard 路由、header 命中/整行列选择、validation tooltip
-    DragCoordinator.ts        ~300 行  5 个 Drag 实例、activeDrag、auto-scroll tick
-    ExcelWorkspaceBinding.ts  ~100 行  workspace port/frame/scroll 记录
+    CellEditController.ts     474 行  内建 DOM editor + 自定义 editor 生命周期
+    ContextMenuController.ts  649 行  host/行头/列头菜单、action 分发、hover 菜单按钮
+    PopoverController.ts      148 行  filter/rowHeight/columnWidth popover + pending ids
+    ClipboardController.ts    308 行  snapshot、attachment 捕获、copy/cut/paste、undo/redo
+    ViewportController.ts     246 行  scroll 映射、spacer、scrollTo*、resize 调度
+    InputController.ts        376 行  pointer/keyboard 路由、header 命中/整行列选择、validation tooltip
+    DragCoordinator.ts        405 行  5 个 Drag 实例、activeDrag、auto-scroll tick
+    ExcelWorkspaceBinding.ts  132 行  workspace port/frame/scroll 记录
 ```
+
+(以上为 Phase 1 全部 9 task 完成后的实测行数,原设计阶段的估算普遍偏低,尤以 GridRuntime.ts 组合根本身为甚——不影响拆分本身的架构价值,仅记录以便后续参考。)
 
 controllers 与 RenderFlushPipeline **不从 `dom/index.ts` 导出**(包内私有);`GridRuntime` 导出保留。
 

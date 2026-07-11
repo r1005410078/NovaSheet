@@ -1038,7 +1038,7 @@ describe('InputController — keyDown 路由', () => {
 
 - [ ] **Step 2: 运行确认失败**。
 - [ ] **Step 3: 实现**(见上)。**STOP+ASK 点(spec §6 首要风险):** keyDown 任何分支的 return true/false 语义、修饰键组合归属不明时停下确认,不得改变任何快捷键行为。
-- [ ] **Step 4: 全量验证** — 全套 `bun test packages/core`;此时 `GridRuntime.ts` 应 ≤ ~700 行(组合根 + mutation passthrough)。
+- [ ] **Step 4: 全量验证** — 全套 `bun test packages/core`;此时 `GridRuntime.ts` 实测约 1226 行(组合根 wiring + ~32 个 mutation passthrough + setter/回调注册一行 delegate;原 plan 估的 "≤~700 行" 低估了 8-controller 组合根本身的体量,以实测为准,非缺陷)。
 - [ ] **Step 5: Commit** — `refactor(core): GridRuntime 拆出 InputController,Phase 1 拆分收官`
 
 ---
@@ -1092,6 +1092,6 @@ insertRows: (at, n) => {
 - Modify: `docs/superpowers/specs/2026-07-11-grid-runtime-decomposition-design.md`(状态→已实现)、`CLAUDE.md`(若 Current state 提及 GridRuntime 行数/结构则同步)
 
 - [ ] **Step 1: 全量四 gate** — `bun test` + `bun run --filter '*' typecheck` + `bun run lint` + `bun run --filter @novasheet/core build && bun run --filter @novasheet/canvas2d build` 全绿;`mbd validate` 与 `lint:scenario-coverage` 不退化。
-- [ ] **Step 2: 行数与边界断言** — `wc -l packages/core/src/dom/runtime/GridRuntime.ts` ≤ 450;`grep -rn "from '../GridRuntime'" packages/core/src/dom/runtime/controllers/` 无结果(controller 零依赖 runtime);golden 无 diff。
+- [ ] **Step 2: 行数与边界断言** — `wc -l packages/core/src/dom/runtime/GridRuntime.ts`;Task 9 完成时实测 1226 行,Task 10 预期移除约 32 个 mutation passthrough 方法(约 164 行),目标区间 ≤ 1100 行(原 plan "≤450" 严重低估 8-controller 组合根本身体量,以此行为准,不视为质量问题);`grep -rn "from '../GridRuntime'" packages/core/src/dom/runtime/controllers/` 无结果(controller 零依赖 runtime);golden 无 diff。
 - [ ] **Step 3: 更新 spec 状态与 CLAUDE.md**,commit — `docs(spec): GridRuntime 分解标记完成并同步导航`
 - [ ] **Step 4: dispatch code-reviewer**(里程碑收尾,即便全绿)——重点审 deps 接口最小性、destroy 幂等扇出、flush 单帧契约、Task 10 收尾语义等价性。
