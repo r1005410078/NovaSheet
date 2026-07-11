@@ -21,6 +21,7 @@ import type { AutofitRowsResult } from '../../features/row/AutofitRowHeights'
 import type { DataSource } from '../../kernel/data/DataSource'
 import { ClipboardController } from './controllers/ClipboardController'
 import { ExcelWorkspaceBinding } from './controllers/ExcelWorkspaceBinding'
+import { PopoverController } from './controllers/PopoverController'
 import { ViewportController } from './controllers/ViewportController'
 import { RenderFlushPipeline } from './RenderFlushPipeline'
 import type { RuntimeRenderFrame, RuntimeCellEdit } from './runtime-frame'
@@ -298,16 +299,8 @@ export class GridRuntime {
   private contextMenuLayer?: DomContextMenuLayer
   /** DOM override renderer：替换内置 DomContextMenuLayer，由 consumer 完全接管菜单渲染。 */
   private contextMenuRenderer?: ContextMenuRenderer
-  /** DOM filter popover。 */
-  private filterPopover?: FilterPopover
-  /** Phase 4.5 行高调整弹层。 */
-  private rowHeightPopover?: RowHeightPopover
-  /** Phase 4.6 列宽调整弹层。 */
-  private columnWidthPopover?: ColumnWidthPopover
-  /** resize-row-height 操作暂存的行 id 列表，供 onSubmit 回调读取。 */
-  private pendingRowHeightIds: number[] = []
-  /** resize-column-width 操作暂存的 fieldId 列表，供 onSubmit 回调读取。 */
-  private pendingColumnWidthFieldIds: string[] = []
+  /** filter/rowHeight/columnWidth popover 域 controller（GridRuntime 拆分 Task 5）。 */
+  private popovers: PopoverController
   /** 外部接管 context menu action 的回调。 */
   private onContextMenuAction?: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void
   /** 上下文菜单配置式扩展；applyContextMenuConfig 在各菜单打开时应用。 */
@@ -316,8 +309,6 @@ export class GridRuntime {
   private lastContextMenuContext: ContextMenuContext | null = null
   /** 最近一次打开菜单时的屏幕坐标，用于 filter popover 锚点。 */
   private lastContextMenuPoint: { clientX: number; clientY: number } | null = null
-  /** 当前打开 filter popover 绑定的 field id。 */
-  private filterPopoverFieldId: string | null = null
   /** 剪贴板 copy/cut/paste + undo/redo 域 controller（GridRuntime 拆分 Task 4）。 */
   private clipboard: ClipboardController
   /** fill handle 提交成功后的通知回调。 */
@@ -416,6 +407,14 @@ export class GridRuntime {
       isDestroyed: () => this.destroyed,
       afterEngineMutation: () => this.afterEngineMutation(),
     })
+    this.popovers = new PopoverController({
+      engine: this.engine,
+      getFilterLayer: () => this.filterLayer,
+      onContextMenuAction: (action, ctx) => this.onContextMenuAction?.(action, ctx),
+      closeContextMenu: () => this.closeContextMenu(),
+      hideFillPreview: () => this.fillLayer?.hidePreview(),
+      hideColumnReorderOverlay: () => this.columnReorderOverlay?.hide(),
+    })
     if (opts.excelWorkspace) {
       this.excelWorkspace = new ExcelWorkspaceBinding({
         policy: typeof opts.excelWorkspace === 'object' ? opts.excelWorkspace.policy : undefined,
@@ -505,18 +504,18 @@ export class GridRuntime {
 
   /** 注入 filter popover 并同步当前主题。 */
   setFilterPopover(popover: FilterPopover): void {
-    this.filterPopover = popover
-    this.syncFilterPopoverTheme()
+    this.popovers.setFilterPopover(popover)
+    this.popovers.applyTheme(this.engine.getTheme())
   }
 
   /** 注入 row-height popover（Phase 4.5）。 */
   setRowHeightPopover(popover: RowHeightPopover): void {
-    this.rowHeightPopover = popover
+    this.popovers.setRowHeightPopover(popover)
   }
 
   /** 注入 column-width popover（Phase 4.6）。 */
   setColumnWidthPopover(popover: ColumnWidthPopover): void {
-    this.columnWidthPopover = popover
+    this.popovers.setColumnWidthPopover(popover)
   }
 
   /** 注入 hide-col toggle handle（Phase 4.6）。 */
@@ -526,12 +525,12 @@ export class GridRuntime {
 
   /** 返回当前 resize-row-height 操作暂存的行 id 列表，供 onSubmit 回调读取。 */
   getPendingRowHeightIds(): number[] {
-    return this.pendingRowHeightIds
+    return this.popovers.getPendingRowHeightIds()
   }
 
   /** 返回当前 resize-column-width 操作暂存的 fieldId 列表，供 onSubmit 回调读取。 */
   getPendingColumnWidthFieldIds(): readonly string[] {
-    return this.pendingColumnWidthFieldIds
+    return this.popovers.getPendingColumnWidthFieldIds()
   }
 
   /** 替换当前 view pipeline 与 sort/filter 状态层。 */
@@ -923,14 +922,7 @@ export class GridRuntime {
       const toUnhide = sortedIds.filter((id) => hiddenSet.has(id))
       this.unhideRows(toUnhide)
     } else if (id === 'resize-row-height') {
-      if (!this.rowHeightPopover || sortedIds.length === 0) return
-      this.pendingRowHeightIds = sortedIds
-      const currentHeight = this.engine.getRowHeight(sortedIds[0]!)
-      const pt = this.lastContextMenuPoint
-      const triggerRect = pt
-        ? { x: pt.clientX, y: pt.clientY, width: 0, height: 0 }
-        : { x: 100, y: 100, width: 0, height: 0 }
-      this.rowHeightPopover.open(triggerRect, currentHeight)
+      this.popovers.openRowHeightPopover(sortedIds, this.lastContextMenuPoint)
     }
   }
 
@@ -980,15 +972,7 @@ export class GridRuntime {
     } else if (id === 'unhide-cols') {
       this.unhideCols(this.collectHiddenInViewColRange(startCol, endCol))
     } else if (id === 'resize-column-width') {
-      if (!this.columnWidthPopover || fieldIds.length === 0) return
-      this.pendingColumnWidthFieldIds = fieldIds
-      const fields = this.engine.getData().getSchema().fields
-      const currentWidth = fields.find((field) => field.id === fieldIds[0])?.width ?? 100
-      const point = this.lastContextMenuPoint
-      const triggerRect = point
-        ? { x: point.clientX, y: point.clientY, width: 0, height: 0 }
-        : { x: 100, y: 100, width: 0, height: 0 }
-      this.columnWidthPopover.open(triggerRect, currentWidth)
+      this.popovers.openColumnWidthPopover(fieldIds, this.lastContextMenuPoint)
     }
   }
 
@@ -1208,7 +1192,7 @@ export class GridRuntime {
         return
       }
       if (id === 'filter-open') {
-        this.openFilterPopover(ctx)
+        this.popovers.openFilterPopover(ctx, this.lastContextMenuPoint)
         return
       }
       if (
@@ -1244,31 +1228,7 @@ export class GridRuntime {
 
   /** 应用 filter popover 返回的条件；null 表示清除当前列筛选。 */
   handleFilterPopoverApply(op: FilterOp | null): void {
-    const fieldId = this.filterPopoverFieldId
-    if (!fieldId) return
-    if (op) this.filterLayer?.setSpec({ fieldId, op })
-    else this.filterLayer?.clear(fieldId)
-    this.filterPopoverFieldId = null
-  }
-
-  /** 打开列头 filter popover；未注入 popover 时回退到外部 action 回调。 */
-  private openFilterPopover(
-    ctx: Extract<ContextMenuContext, { targetKind: 'columnHeader' }>,
-  ): void {
-    if (!this.filterPopover) {
-      this.onContextMenuAction?.('filter-open', ctx)
-      return
-    }
-    const point = this.lastContextMenuPoint ?? { clientX: 0, clientY: 0 }
-    const currentSpec = this.filterLayer?.getSpec()
-    this.filterPopoverFieldId = ctx.field.id
-    this.closeContextMenu()
-    this.fillLayer?.hidePreview()
-    this.columnReorderOverlay?.hide()
-    this.filterPopover.open(point, {
-      field: ctx.field,
-      op: currentSpec?.fieldId === ctx.field.id ? currentSpec.op : null,
-    })
+    this.popovers.handleFilterPopoverApply(op)
   }
 
   /** 按单元格坐标程序化打开右键菜单，锚点位于单元格右下角。 */
@@ -1348,7 +1308,7 @@ export class GridRuntime {
     this.syncResizeHandleTheme()
     this.syncCellEditorTheme()
     this.syncContextMenuTheme()
-    this.syncFilterPopoverTheme()
+    this.popovers.applyTheme(theme)
     this.selectionOverlay?.applyTheme(theme)
     this.afterEngineMutation()
   }
@@ -1782,7 +1742,7 @@ export class GridRuntime {
       this.activeDrag = null
       return true
     }
-    if (this.filterPopover?.isOpen()) return false
+    if (this.popovers.isFilterPopoverOpen()) return false
     if (this.engine.isCellEditing()) return false
 
     // Phase 4.1 — Ctrl+X / C / V（Mac 上 Cmd）剪贴板快捷键；Shift / Alt 组合不抢
@@ -2155,11 +2115,6 @@ export class GridRuntime {
   /** 同步 context menu layer 主题。 */
   private syncContextMenuTheme(): void {
     this.contextMenuLayer?.applyTheme(this.engine.getTheme())
-  }
-
-  /** 同步 filter popover 主题。 */
-  private syncFilterPopoverTheme(): void {
-    this.filterPopover?.applyTheme(this.engine.getTheme())
   }
 
   /** 所有进入编辑态的 DOM/API 入口先尝试 custom editor，再回退到内置 DOM editor。 */
