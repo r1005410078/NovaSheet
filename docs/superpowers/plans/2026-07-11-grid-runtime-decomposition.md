@@ -468,10 +468,8 @@ describe('ClipboardController — undo/redo 事件顺序', () => {
 ```ts
 export interface PopoverControllerDeps {
   readonly engine: GridEngine
-  isDestroyed(): boolean
   getFilterLayer(): FilterLayer | undefined
   onContextMenuAction(action: ContextMenuAction | string, ctx: ContextMenuContext): void // filter-open 回退
-  hasContextMenuActionOverride(): boolean   // runtime.onContextMenuAction 是否已注册
   closeContextMenu(): void
   hideFillPreview(): void
   hideColumnReorderOverlay(): void
@@ -496,7 +494,7 @@ export class PopoverController {
 
 **迁移成员:** `filterPopover/rowHeightPopover/columnWidthPopover` 字段、`pendingRowHeightIds/pendingColumnWidthFieldIds`、`filterPopoverFieldId`、`openFilterPopover`(签名加 `anchor` 参数,体内 `this.lastContextMenuPoint` → `anchor`)、`handleFilterPopoverApply`、`getPendingRowHeightIds/getPendingColumnWidthFieldIds`、`syncFilterPopoverTheme` 体。`invokeRowHeaderContextMenuAction` 的 `resize-row-height` 分支与 `invokeColumnHeaderContextMenuAction` 的 `resize-column-width` 分支抽为 `openRowHeightPopover/openColumnWidthPopover`(读当前行高/列宽的 engine 逻辑随迁),原分支改调 `this.popovers.openRowHeightPopover(sortedIds, this.lastContextMenuPoint)`。
 
-**GridRuntime wiring:** deps 全闭包指回 runtime(`getFilterLayer: () => this.filterLayer` 等;`hasContextMenuActionOverride: () => !!this.onContextMenuAction`);runtime 同名 public 方法改 delegate;`setTheme` 内 `syncFilterPopoverTheme()` → `this.popovers.applyTheme(theme)`;keyDown 的 `this.filterPopover?.isOpen()` → `this.popovers.isFilterPopoverOpen()`。
+**GridRuntime wiring:** deps 全闭包指回 runtime(`getFilterLayer: () => this.filterLayer` 等);runtime 同名 public 方法改 delegate;`setTheme` 内 `syncFilterPopoverTheme()` → `this.popovers.applyTheme(theme)`;keyDown 的 `this.filterPopover?.isOpen()` → `this.popovers.isFilterPopoverOpen()`。
 
 - [ ] **Step 1: 写失败测试**
 
@@ -508,10 +506,8 @@ import type { GridEngine } from '../../../../src/engine/GridEngine'
 function makeCtl(over: Partial<ConstructorParameters<typeof PopoverController>[0]> = {}) {
   return new PopoverController({
     engine: {} as unknown as GridEngine,
-    isDestroyed: () => false,
     getFilterLayer: () => undefined,
     onContextMenuAction: mock(() => {}),
-    hasContextMenuActionOverride: () => false,
     closeContextMenu: mock(() => {}),
     hideFillPreview: () => {},
     hideColumnReorderOverlay: () => {},
