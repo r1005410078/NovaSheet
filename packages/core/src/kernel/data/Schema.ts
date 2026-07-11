@@ -47,9 +47,24 @@ export interface Field {
   defaultValue?: CellValue
 }
 
+/** 列组树的一个子节点：嵌套子组，或指向 `fields` 中一个字段的叶引用 */
+export type ColumnGroupChild = ColumnGroup | { readonly fieldId: string }
+
+/** 多行表头的列组节点（纯注解，不影响列顺序）。校验见 `validateColumnGroups`。 */
+export interface ColumnGroup {
+  /** 组 ID，全树唯一 */
+  readonly id: string
+  /** 组头显示文本 */
+  readonly label: string
+  /** 子节点（嵌套组或叶字段引用），非空 */
+  readonly children: readonly ColumnGroupChild[]
+}
+
 /** 表格 Schema：有序字段列表 */
 export interface Schema {
   readonly fields: readonly Field[]
+  /** 可选列组树。缺省 = 无组头，行为与现状完全一致。校验见 validateColumnGroups。 */
+  readonly columnGroups?: readonly ColumnGroupChild[]
 }
 
 /**
