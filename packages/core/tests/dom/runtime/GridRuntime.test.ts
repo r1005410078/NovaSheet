@@ -2640,8 +2640,11 @@ describe('GridRuntime menu default dispatch — Phase 4.1', () => {
     const { runtime, adapter } = setup()
     const consumer = mock((_a: string, _c: never) => {})
     runtime.setOnContextMenuAction(consumer as never)
-    // 模拟 menu 走过一次 open，存了 lastContextMenuContext
-    ;(runtime as unknown as { lastContextMenuContext: unknown }).lastContextMenuContext = {
+    // 模拟 menu 走过一次 open，存了 lastContextMenuContext（GridRuntime 拆分 Task 6 后
+    // 该字段迁到 ContextMenuController 私有状态，白盒测试改经 runtime.contextMenu 触达）。
+    ;(
+      runtime as unknown as { contextMenu: { lastContextMenuContext: unknown } }
+    ).contextMenu.lastContextMenuContext = {
       targetKind: 'cell',
       cell: { rowIndex: 0, colIndex: 0 },
       selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 0 },

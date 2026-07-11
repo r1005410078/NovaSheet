@@ -20,6 +20,7 @@
 import type { AutofitRowsResult } from '../../features/row/AutofitRowHeights'
 import type { DataSource } from '../../kernel/data/DataSource'
 import { ClipboardController } from './controllers/ClipboardController'
+import { ContextMenuController } from './controllers/ContextMenuController'
 import { ExcelWorkspaceBinding } from './controllers/ExcelWorkspaceBinding'
 import { PopoverController } from './controllers/PopoverController'
 import { ViewportController } from './controllers/ViewportController'
@@ -27,7 +28,6 @@ import { RenderFlushPipeline } from './RenderFlushPipeline'
 import type { RuntimeRenderFrame, RuntimeCellEdit } from './runtime-frame'
 import type { ExcelWorkspacePolicy } from '../../features/excel-workspace'
 import type { CellValue, Field } from '../../kernel/data/Schema'
-import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import { FilterLayer } from '../../features/view/FilterLayer'
 import type { FilterOp } from '../../features/view/FilterLayer'
 import { SortLayer } from '../../features/view/SortLayer'
@@ -50,12 +50,6 @@ import {
 } from '../../kernel/interaction/HandleLayout'
 import type { ResizeHandleRect } from '../../kernel/interaction/HandleLayout'
 import { FrameScheduler } from '../../kernel/util/raf'
-import {
-  applyContextMenuConfig,
-  getCellContextMenuItems,
-  getColumnHeaderContextMenuItems,
-  getRowHeaderContextMenuItems,
-} from '../../features/context-menu/ContextMenuModel'
 import type {
   ContextMenuAction,
   ContextMenuContext,
@@ -190,23 +184,9 @@ export interface FillEvent {
   readonly direction: FillDirection
 }
 
-/** 列头悬停菜单按钮尺寸（直径），与 HeaderPainter.HEADER_MENU_BUTTON_SIZE 保持一致。 */
-const COLUMN_HEADER_MENU_BUTTON_SIZE = 24
-/** 列宽小于此值时不显示（也不命中）菜单按钮，与 HeaderPainter.MIN_HEADER_MENU_BUTTON_COL_WIDTH 保持一致。 */
-const COLUMN_HEADER_MENU_BUTTON_MIN_COL_WIDTH = 32
-
 const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
 const DRAG_AUTO_SCROLL_EDGE_PX = 32
 const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
-
-/** 内置 context menu action id 集合；用于区分 builtin 与 custom item。 */
-const BUILTIN_CONTEXT_MENU_ACTIONS = new Set<string>([
-  'cut', 'copy', 'paste',
-  'sort-asc', 'sort-desc', 'sort-none',
-  'filter-open', 'filter-clear',
-  'insert-col-left', 'insert-col-right', 'delete-cols', 'hide-cols', 'unhide-cols', 'resize-column-width',
-  'insert-above', 'insert-below', 'delete-rows', 'hide-rows', 'unhide-rows', 'resize-row-height',
-])
 
 /** 可驱动边缘自动滚动的拖拽种类。 */
 type AutoScrollDragKind = 'active-drag'
@@ -295,20 +275,10 @@ export class GridRuntime {
   /** 当前 custom editor 会话 token；reopen/close 后旧 ctx 回调必须失效。 */
   private activeCustomEditorToken: number | null = null
   private nextCustomEditorToken = 1
-  /** DOM 右键菜单 layer。 */
-  private contextMenuLayer?: DomContextMenuLayer
-  /** DOM override renderer：替换内置 DomContextMenuLayer，由 consumer 完全接管菜单渲染。 */
-  private contextMenuRenderer?: ContextMenuRenderer
   /** filter/rowHeight/columnWidth popover 域 controller（GridRuntime 拆分 Task 5）。 */
   private popovers: PopoverController
-  /** 外部接管 context menu action 的回调。 */
-  private onContextMenuAction?: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void
-  /** 上下文菜单配置式扩展；applyContextMenuConfig 在各菜单打开时应用。 */
-  private contextMenus?: ContextMenuExtensionConfig
-  /** 最近一次打开菜单时的上下文，用于菜单项点击分发。 */
-  private lastContextMenuContext: ContextMenuContext | null = null
-  /** 最近一次打开菜单时的屏幕坐标，用于 filter popover 锚点。 */
-  private lastContextMenuPoint: { clientX: number; clientY: number } | null = null
+  /** host/行头/列头右键菜单路由、action 分发、hover 菜单按钮 controller（GridRuntime 拆分 Task 6）。 */
+  private contextMenu: ContextMenuController
   /** 剪贴板 copy/cut/paste + undo/redo 域 controller（GridRuntime 拆分 Task 4）。 */
   private clipboard: ClipboardController
   /** fill handle 提交成功后的通知回调。 */
@@ -334,8 +304,6 @@ export class GridRuntime {
   private selectionDrag!: SelectionDrag
   /** pointerdown 按序尝试起拖的 Drag 列表；加新拖拽 = 实现 Drag + 入此数组。 */
   private drags: readonly Drag[] = []
-  /** 当前列头 hover 状态；null 表示未悬停。 */
-  private lastHoveredColumnMenu: { colIndex: number; buttonHovered: boolean } | null = null
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: GridRuntimeOptions) {
@@ -359,8 +327,6 @@ export class GridRuntime {
     this.rowReorderOverlay = opts.rowReorderOverlay
     this.selectionOverlay = opts.selectionOverlay
     this.validationTooltip = opts.validationTooltip
-    this.contextMenus = opts.contextMenus
-    this.contextMenuRenderer = opts.contextMenuRenderer
     this.engine.setValidationRedrawCallback(() => this.invalidate())
     this.engine.setDataChangeRedrawCallback(() => this.invalidate())
     this.viewport = new ViewportController({
@@ -376,7 +342,7 @@ export class GridRuntime {
       afterApplyScroll: () => {
         this.closeActiveCustomEditor()
         this.syncCellEditorPosition()
-        this.closeContextMenu()
+        this.contextMenu.close()
         this.validationTooltip?.hide()
         this.excelWorkspace?.runFrame()
       },
@@ -410,11 +376,43 @@ export class GridRuntime {
     this.popovers = new PopoverController({
       engine: this.engine,
       getFilterLayer: () => this.filterLayer,
-      onContextMenuAction: (action, ctx) => this.onContextMenuAction?.(action, ctx),
-      closeContextMenu: () => this.closeContextMenu(),
+      onContextMenuAction: (action, ctx) => this.contextMenu.invokeActionOverride(action, ctx),
+      closeContextMenu: () => this.contextMenu.close(),
       hideFillPreview: () => this.fillLayer?.hidePreview(),
       hideColumnReorderOverlay: () => this.columnReorderOverlay?.hide(),
     })
+    this.contextMenu = new ContextMenuController({
+      engine: this.engine,
+      host: this.host,
+      isDestroyed: () => this.destroyed,
+      invalidate: () => this.invalidate(),
+      afterEngineMutation: () => this.afterEngineMutation(),
+      getViewPipeline: () => this.viewPipeline,
+      getSortLayer: () => this.sortLayer,
+      getFilterLayer: () => this.filterLayer,
+      getContextMenus: () => opts.contextMenus,
+      isDragActive: () => this.resizeDrag.active || !!this.activeDrag?.active,
+      isCellEditing: () => this.engine.isCellEditing(),
+      commitCellEdit: (moveAfter) => this.commitCellEdit(moveAfter),
+      hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
+      clipboardCopy: () => this.handleClipboardCopy(),
+      clipboardCut: () => this.handleClipboardCut(),
+      clipboardPaste: () => this.handleClipboardPaste(),
+      openFilterPopover: (ctx, anchor) => this.popovers.openFilterPopover(ctx, anchor),
+      openRowHeightPopover: (rowIds, anchor) => this.popovers.openRowHeightPopover(rowIds, anchor),
+      openColumnWidthPopover: (fieldIds, anchor) => this.popovers.openColumnWidthPopover(fieldIds, anchor),
+      insertRows: (beforeUnderlyingRow, count) => this.insertRows(beforeUnderlyingRow, count),
+      deleteRows: (underlyingRowIds) => this.deleteRows(underlyingRowIds),
+      hideRows: (underlyingRowIds) => this.hideRows(underlyingRowIds),
+      unhideRows: (underlyingRowIds) => this.unhideRows(underlyingRowIds),
+      insertCols: (beforeFieldIndex, count) => this.insertCols(beforeFieldIndex, count),
+      deleteCols: (fieldIds) => this.deleteCols(fieldIds),
+      hideCols: (fieldIds) => this.hideCols(fieldIds),
+      unhideCols: (fieldIds) => this.unhideCols(fieldIds),
+    })
+    if (opts.contextMenuRenderer) {
+      this.contextMenu.setRenderer(opts.contextMenuRenderer)
+    }
     if (opts.excelWorkspace) {
       this.excelWorkspace = new ExcelWorkspaceBinding({
         policy: typeof opts.excelWorkspace === 'object' ? opts.excelWorkspace.policy : undefined,
@@ -432,7 +430,7 @@ export class GridRuntime {
       overlay: this.columnReorderOverlay,
       refresh: () => this.refresh(),
       afterEngineMutation: () => this.afterEngineMutation(),
-      closeContextMenu: () => this.closeContextMenu(),
+      closeContextMenu: () => this.contextMenu.close(),
       requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
       stopAutoScroll: () => this.stopDragAutoScroll(),
       isBlocked: () => this.isDragBlocked(),
@@ -448,7 +446,7 @@ export class GridRuntime {
       overlay: this.rowReorderOverlay,
       refresh: () => this.refresh(),
       afterEngineMutation: () => this.afterEngineMutation(),
-      closeContextMenu: () => this.closeContextMenu(),
+      closeContextMenu: () => this.contextMenu.close(),
       requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
       stopAutoScroll: () => this.stopDragAutoScroll(),
       isBlocked: () => this.isDragBlocked(),
@@ -463,7 +461,7 @@ export class GridRuntime {
       afterEngineMutation: () => this.afterEngineMutation(),
       autofitRows: (options) => this.autofitRows(options),
       onFill: (event) => this.onFill?.(event),
-      closeContextMenu: () => this.closeContextMenu(),
+      closeContextMenu: () => this.contextMenu.close(),
       commitCellEdit: (moveSelection) => this.commitCellEdit(moveSelection),
       requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
       stopAutoScroll: () => this.stopDragAutoScroll(),
@@ -498,8 +496,8 @@ export class GridRuntime {
 
   /** Phase 4.0 — 注入右键菜单层。 */
   setContextMenuLayer(layer: DomContextMenuLayer): void {
-    this.contextMenuLayer = layer
-    this.syncContextMenuTheme()
+    this.contextMenu.setLayer(layer)
+    this.contextMenu.applyTheme(this.engine.getTheme())
   }
 
   /** 注入 filter popover 并同步当前主题。 */
@@ -546,62 +544,12 @@ export class GridRuntime {
 
   /** 注册右键菜单 action 回调；设置后 consumer 可接管默认菜单行为。 */
   setOnContextMenuAction(cb: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void): void {
-    this.onContextMenuAction = cb
+    this.contextMenu.setOnAction(cb)
   }
 
   /** 关闭右键菜单并清理最近菜单上下文。 */
   closeContextMenu(): void {
-    this.contextMenuLayer?.close()
-    this.contextMenuRenderer?.close()
-    this.lastContextMenuContext = null
-  }
-
-  /** 判断 id 是否为内置 action（非 custom id）。 */
-  private isBuiltInContextMenuAction(id: string): boolean {
-    return BUILTIN_CONTEXT_MENU_ACTIONS.has(id)
-  }
-
-  /** 将无 onContextMenuAction 处理器的自定义 item 标记为 disabled。 */
-  private markUnhandledCustomItemsDisabled(items: readonly ContextMenuItem[]): readonly ContextMenuItem[] {
-    return items.map((item) => {
-      const submenu = item.submenu
-        ? this.markUnhandledCustomItemsDisabled(item.submenu)
-        : undefined
-      const custom = !this.isBuiltInContextMenuAction(item.id)
-      const shouldDisable = custom && !this.onContextMenuAction
-      if (!shouldDisable && submenu === item.submenu) return item
-      return {
-        ...item,
-        disabled: shouldDisable ? true : item.disabled,
-        ...(submenu !== item.submenu ? { submenu } : {}),
-      }
-    })
-  }
-
-  /** 统一菜单打开入口：设置上下文/坐标，路由到 renderer 或 contextMenuLayer。 */
-  private openResolvedContextMenu(args: {
-    readonly ctx: ContextMenuContext
-    readonly clientX: number
-    readonly clientY: number
-    readonly items: readonly ContextMenuItem[]
-  }): void {
-    const items = this.markUnhandledCustomItemsDisabled(args.items)
-    this.lastContextMenuContext = args.ctx
-    this.lastContextMenuPoint = { clientX: args.clientX, clientY: args.clientY }
-    if (this.contextMenuRenderer) {
-      this.contextMenuLayer?.close()
-      this.contextMenuRenderer.open({
-        targetKind: args.ctx.targetKind,
-        context: args.ctx,
-        items,
-        anchor: { clientX: args.clientX, clientY: args.clientY },
-        select: (id) => this.handleContextMenuSelected(id),
-        close: () => this.closeContextMenu(),
-      })
-      return
-    }
-    if (!this.contextMenuLayer) return
-    this.contextMenuLayer.open({ clientX: args.clientX, clientY: args.clientY, items })
+    this.contextMenu.close()
   }
 
   /** Phase 4.1 — 注入 clipboard adapter；未注入时 copy/cut/paste 全 silent no-op。 */
@@ -869,141 +817,22 @@ export class GridRuntime {
 
   /** Phase 4.5 — 生成行头右键菜单项列表（含条件 unhide 项）。 */
   getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
-    const sel = this.engine.getSelection().selectedRange
-    const startRow = sel?.startRow ?? ctx.targetRowIndex
-    const endRow = sel?.endRow ?? ctx.targetRowIndex
-    const n = endRow - startRow + 1
-    const hidden = this.engine.getHiddenRows()
-    // 检查选区 span 的底层行区间内是否存在隐藏行（包括被 hide 而不在视图中的行）
-    let hasHidden = false
-    if (hidden.length > 0) {
-      const data = this.engine.getData()
-      const underlyingStart = data.resolveUnderlyingRow?.(startRow) ?? startRow
-      const underlyingEnd = data.resolveUnderlyingRow?.(endRow) ?? endRow
-      const minU = Math.min(underlyingStart, underlyingEnd)
-      const maxU = Math.max(underlyingStart, underlyingEnd)
-      for (const hiddenId of hidden) {
-        if (hiddenId >= minU && hiddenId <= maxU) {
-          hasHidden = true
-          break
-        }
-      }
-    }
-    const menuCtx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: ctx.targetRowIndex, selectedRowCount: n }
-    return applyContextMenuConfig(
-      getRowHeaderContextMenuItems(n, hasHidden),
-      menuCtx,
-      this.contextMenus?.rowHeader,
-    )
+    return this.contextMenu.getRowHeaderContextMenuItems(ctx)
   }
 
   /** Phase 4.5 — 执行行头右键菜单动作。 */
   invokeRowHeaderContextMenuAction(id: string, ctx: { targetRowIndex: number }): void {
-    const sel = this.engine.getSelection().selectedRange
-    const startRow = sel?.startRow ?? ctx.targetRowIndex
-    const endRow = sel?.endRow ?? ctx.targetRowIndex
-    const underlying: number[] = []
-    for (let r = startRow; r <= endRow; r++) {
-      underlying.push(this.engine.getData().resolveUnderlyingRow?.(r) ?? r)
-    }
-    const sortedIds = [...new Set(underlying)].sort((a, b) => a - b)
-    if (id === 'insert-above') {
-      const at = this.engine.getData().resolveUnderlyingRow?.(startRow) ?? startRow
-      this.insertRows(at, endRow - startRow + 1)
-    } else if (id === 'insert-below') {
-      const at = (this.engine.getData().resolveUnderlyingRow?.(endRow) ?? endRow) + 1
-      this.insertRows(at, endRow - startRow + 1)
-    } else if (id === 'delete-rows') {
-      this.deleteRows(sortedIds)
-    } else if (id === 'hide-rows') {
-      this.hideRows(sortedIds)
-    } else if (id === 'unhide-rows') {
-      const hiddenSet = new Set(this.engine.getHiddenRows())
-      const toUnhide = sortedIds.filter((id) => hiddenSet.has(id))
-      this.unhideRows(toUnhide)
-    } else if (id === 'resize-row-height') {
-      this.popovers.openRowHeightPopover(sortedIds, this.lastContextMenuPoint)
-    }
+    this.contextMenu.invokeRowHeaderContextMenuAction(id, ctx)
   }
 
   /** Phase 4.6 — 生成列头右键菜单项列表（含结构项与条件 unhide 项）。 */
   getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[] {
-    const frame = this.engine.getFrame()
-    const fields = frame.data.getSchema().fields
-    const field = fields[ctx.targetColIndex]
-    if (!field || !this.viewPipeline) return []
-    const sel = this.engine.getSelection().selectedRange
-    const startCol = sel?.startCol ?? ctx.targetColIndex
-    const endCol = sel?.endCol ?? ctx.targetColIndex
-    const menuCtx = {
-      targetKind: 'columnHeader' as const,
-      field,
-      colIndex: ctx.targetColIndex,
-      multiSelect: field.type === 'multiSelect',
-      selectedColCount: endCol - startCol + 1,
-      hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
-    }
-    return applyContextMenuConfig(
-      getColumnHeaderContextMenuItems(menuCtx, this.viewPipeline),
-      menuCtx,
-      this.contextMenus?.columnHeader,
-    )
+    return this.contextMenu.getColumnHeaderContextMenuItems(ctx)
   }
 
   /** Phase 4.6 — 执行列头右键菜单动作。 */
   invokeColumnHeaderContextMenuAction(id: string, ctx: { targetColIndex: number }): void {
-    const sel = this.engine.getSelection().selectedRange
-    const startCol = sel?.startCol ?? ctx.targetColIndex
-    const endCol = sel?.endCol ?? ctx.targetColIndex
-    const fieldIds: string[] = []
-    for (let viewCol = startCol; viewCol <= endCol; viewCol += 1) {
-      const fieldId = this.viewColToFieldId(viewCol)
-      if (fieldId) fieldIds.push(fieldId)
-    }
-    const count = endCol - startCol + 1
-    if (id === 'insert-col-left') {
-      this.insertCols(this.rawSchemaIndexBeforeViewCol(startCol), count)
-    } else if (id === 'insert-col-right') {
-      this.insertCols(this.rawSchemaIndexAfterViewCol(endCol), count)
-    } else if (id === 'delete-cols') {
-      this.deleteCols(fieldIds)
-    } else if (id === 'hide-cols') {
-      this.hideCols(fieldIds)
-    } else if (id === 'unhide-cols') {
-      this.unhideCols(this.collectHiddenInViewColRange(startCol, endCol))
-    } else if (id === 'resize-column-width') {
-      this.popovers.openColumnWidthPopover(fieldIds, this.lastContextMenuPoint)
-    }
-  }
-
-  private viewColToFieldId(viewCol: number): string | null {
-    return this.engine.getData().getSchema().fields[viewCol]?.id ?? null
-  }
-
-  private rawSchemaIndexBeforeViewCol(viewCol: number): number {
-    const hiddenBefore = this.engine
-      .getFrame()
-      .collapsedColGaps.filter((gap) => gap.atViewCol < viewCol)
-      .reduce((sum, gap) => sum + gap.hiddenCount, 0)
-    return viewCol + hiddenBefore
-  }
-
-  private rawSchemaIndexAfterViewCol(viewCol: number): number {
-    const hiddenThrough = this.engine
-      .getFrame()
-      .collapsedColGaps.filter((gap) => gap.atViewCol <= viewCol)
-      .reduce((sum, gap) => sum + gap.hiddenCount, 0)
-    return viewCol + 1 + hiddenThrough
-  }
-
-  private collectHiddenInViewColRange(startCol: number, endCol: number): readonly string[] {
-    const out: string[] = []
-    for (const gap of this.engine.getFrame().collapsedColGaps) {
-      if (gap.atViewCol >= startCol - 1 && gap.atViewCol < endCol) {
-        out.push(...gap.hiddenFieldIds)
-      }
-    }
-    return out
+    this.contextMenu.invokeColumnHeaderContextMenuAction(id, ctx)
   }
 
   /** 执行一次 undo，并在成功后刷新视图与通知 consumer。 */
@@ -1033,197 +862,12 @@ export class GridRuntime {
 
   /** 处理 host contextmenu 事件，并根据列头/单元格命中打开对应菜单。 */
   handleHostContextMenu(event: WebPointerEvent): void {
-    if (this.destroyed) return
-    if (this.resizeDrag.active || this.activeDrag?.active) return
-
-    if (this.engine.isCellEditing()) {
-      this.commitCellEdit(false)
-    }
-
-    const frame = this.engine.getFrame()
-    const headerHeight = frame.theme.metrics.headerHeight
-    if (event.y < headerHeight) {
-      if (!this.viewPipeline) return
-      const fields = frame.data.getSchema().fields
-      const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-      if (event.x < rowHeaderWidth) return
-      const scrollX = frame.viewport.scrollX ?? 0
-      const logicalX = event.x - rowHeaderWidth + scrollX
-      if (logicalX < 0 || logicalX >= frame.colsAxis.getTotalSize()) return
-      const colIndex = frame.colsAxis.positionToIndex(logicalX)
-      if (colIndex < 0 || colIndex >= fields.length) return
-      const field = fields[colIndex]
-      if (!field) return
-      const sel = this.engine.getSelection().selectedRange
-      const startCol = sel?.startCol ?? colIndex
-      const endCol = sel?.endCol ?? colIndex
-      const ctx: ContextMenuContext = {
-        targetKind: 'columnHeader',
-        field,
-        colIndex,
-        multiSelect: field.type === 'multiSelect',
-        selectedColCount: endCol - startCol + 1,
-        hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
-      }
-      const items = applyContextMenuConfig(
-        getColumnHeaderContextMenuItems(ctx, this.viewPipeline),
-        ctx,
-        this.contextMenus?.columnHeader,
-      )
-      this.openResolvedContextMenu({
-        ctx,
-        clientX: event.clientX ?? event.x,
-        clientY: event.clientY ?? event.y,
-        items,
-      })
-      return
-    }
-
-    // Phase 4.5 — 行头区域（x < rowHeaderWidth，y >= headerHeight）右键：选中整行并打开行头菜单
-    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    if (rowHeaderWidth > 0 && event.x < rowHeaderWidth) {
-      const scrollY = frame.viewport.scrollY ?? 0
-      const logicalY = event.y - headerHeight + scrollY
-      if (logicalY >= 0) {
-        const rowIndex = frame.rowsAxis.positionToIndex(logicalY)
-        const colCount = frame.data.getSchema().fields.length
-        if (rowIndex >= 0 && rowIndex < frame.rowsAxis.getCount() && colCount > 0) {
-          // 选中整行
-          this.engine.setSelection({
-            activeCell: { rowIndex, colIndex: 0 },
-            anchorCell: { rowIndex, colIndex: 0 },
-            extentCell: { rowIndex, colIndex: colCount - 1 },
-            selectedRange: {
-              startRow: rowIndex,
-              endRow: rowIndex,
-              startCol: 0,
-              endCol: colCount - 1,
-            },
-          })
-          this.afterEngineMutation()
-          const hiddenSet = new Set(this.engine.getHiddenRows())
-          const sel = this.engine.getSelection().selectedRange!
-          let hasHidden = false
-          for (let r = sel.startRow; r <= sel.endRow && !hasHidden; r++) {
-            const underlying = this.engine.getData().resolveUnderlyingRow?.(r) ?? r
-            if (hiddenSet.has(underlying)) hasHidden = true
-          }
-          const n = sel.endRow - sel.startRow + 1
-          const ctx: ContextMenuContext = { targetKind: 'rowHeader', targetRowIndex: rowIndex, selectedRowCount: n }
-          const items = applyContextMenuConfig(
-            getRowHeaderContextMenuItems(n, hasHidden),
-            ctx,
-            this.contextMenus?.rowHeader,
-          )
-          this.openResolvedContextMenu({
-            ctx,
-            clientX: event.clientX ?? event.x,
-            clientY: event.clientY ?? event.y,
-            items,
-          })
-        }
-      }
-      return
-    }
-
-    const hit = hitTestCell(frame, event)
-    if (!hit) return
-    if (hit.colIndex < 0 || hit.rowIndex < 0) return
-
-    const selection = this.engine.getSelection()
-    const range = selection.selectedRange
-    const inRange =
-      range !== null &&
-      hit.rowIndex >= range.startRow &&
-      hit.rowIndex <= range.endRow &&
-      hit.colIndex >= range.startCol &&
-      hit.colIndex <= range.endCol
-    if (!inRange) {
-      this.engine.selectCell(hit)
-      this.afterEngineMutation()
-    }
-
-    const newSelection = this.engine.getSelection()
-    // Phase 4.1：Paste 项 enabled 与否取决于 DataSource 是否可写。
-    // 外部剪贴板有没有内容需要异步 readText 才能确定，菜单同步阶段不读取。
-    const dataMutable = isMutableDataSource(this.engine.getData())
-    const ctx: ContextMenuContext = {
-      targetKind: 'cell',
-      cell: hit,
-      selectedRange: newSelection.selectedRange,
-      hasSelection: newSelection.activeCell !== null,
-      clipboardReady: dataMutable,
-    }
-    const items = applyContextMenuConfig(
-      getCellContextMenuItems(ctx),
-      ctx,
-      this.contextMenus?.cell,
-    )
-    this.openResolvedContextMenu({
-      ctx,
-      clientX: event.clientX ?? event.x,
-      clientY: event.clientY ?? event.y,
-      items,
-    })
+    this.contextMenu.handleHostContextMenu(event)
   }
 
   /** 处理右键菜单项选择，优先执行内置 sort/filter/clipboard 行为。 */
   handleContextMenuSelected(id: ContextMenuAction | string): void {
-    const ctx = this.lastContextMenuContext
-    if (ctx?.targetKind === 'rowHeader') {
-      this.invokeRowHeaderContextMenuAction(id, { targetRowIndex: ctx.targetRowIndex })
-      return
-    }
-    if (ctx?.targetKind === 'columnHeader') {
-      if (id === 'sort-asc') {
-        this.sortLayer?.setSpec({ fieldId: ctx.field.id, direction: 'asc' })
-        return
-      }
-      if (id === 'sort-desc') {
-        this.sortLayer?.setSpec({ fieldId: ctx.field.id, direction: 'desc' })
-        return
-      }
-      if (id === 'sort-none') {
-        if (this.sortLayer?.getSpec()?.fieldId === ctx.field.id) this.sortLayer.setSpec(null)
-        return
-      }
-      if (id === 'filter-clear') {
-        this.filterLayer?.clear(ctx.field.id)
-        return
-      }
-      if (id === 'filter-open') {
-        this.popovers.openFilterPopover(ctx, this.lastContextMenuPoint)
-        return
-      }
-      if (
-        id === 'insert-col-left' ||
-        id === 'insert-col-right' ||
-        id === 'delete-cols' ||
-        id === 'hide-cols' ||
-        id === 'unhide-cols' ||
-        id === 'resize-column-width'
-      ) {
-        this.invokeColumnHeaderContextMenuAction(id, { targetColIndex: ctx.colIndex })
-        return
-      }
-    }
-
-    // Phase 4.1：consumer 传了 callback 完全接管；没传走默认引擎
-    if (this.onContextMenuAction) {
-      if (ctx) this.onContextMenuAction(id, ctx)
-      return
-    }
-    if (id === 'copy') {
-      void this.handleClipboardCopy()
-      return
-    }
-    if (id === 'cut') {
-      void this.handleClipboardCut()
-      return
-    }
-    if (id === 'paste') {
-      void this.handleClipboardPaste()
-    }
+    this.contextMenu.handleContextMenuSelected(id)
   }
 
   /** 应用 filter popover 返回的条件；null 表示清除当前列筛选。 */
@@ -1233,21 +877,7 @@ export class GridRuntime {
 
   /** 按单元格坐标程序化打开右键菜单，锚点位于单元格右下角。 */
   openContextMenuAt(rowIndex: number, fieldId: string): void {
-    if (this.destroyed || (!this.contextMenuLayer && !this.contextMenuRenderer)) return
-    const colIndex = this.engine.getColumnIndex(fieldId)
-    if (colIndex < 0) return
-    const frame = this.engine.getFrame()
-    const rect = computeCellRect(frame, { rowIndex, colIndex })
-    if (!rect) return
-    const hostRect = this.host.getContainerBoundingRect()
-    // anchor at cell bottom-right corner; client coords add the host's viewport offset
-    this.handleHostContextMenu({
-      x: rect.x + rect.width,
-      y: rect.y + rect.height,
-      clientX: hostRect.left + rect.x + rect.width,
-      clientY: hostRect.top + rect.y + rect.height,
-      shiftKey: false,
-    })
+    this.contextMenu.openContextMenuAt(rowIndex, fieldId)
   }
 
   /** 注入或替换 TextMeasurer；backend 切换 measurer（如主题字体变更）时调用。 */
@@ -1307,7 +937,7 @@ export class GridRuntime {
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
     this.syncCellEditorTheme()
-    this.syncContextMenuTheme()
+    this.contextMenu.applyTheme(theme)
     this.popovers.applyTheme(theme)
     this.selectionOverlay?.applyTheme(theme)
     this.afterEngineMutation()
@@ -1402,7 +1032,7 @@ export class GridRuntime {
     this.viewport.resizeSpacer()
     this.viewport.remapScroll()
     this.refresh()
-    this.closeContextMenu()
+    this.contextMenu.close()
     this.closeActiveCustomEditor()
     this.fillLayer?.hidePreview()
     this.activeDrag = null
@@ -1525,7 +1155,7 @@ export class GridRuntime {
     this.renderer.destroy()
     this.host.destroy()
     this.validationTooltip?.destroy()
-    this.contextMenuRenderer?.destroy()
+    this.contextMenu.destroy()
   }
 
   /** 处理 host 滚动事件，映射为逻辑滚动并触发重绘。 */
@@ -1558,9 +1188,9 @@ export class GridRuntime {
       return
     }
     // 列头菜单按钮命中：左键单击时优先打开列头菜单，不进入 drag-select
-    const menuButtonHit = this.hitTestColumnHeaderMenuButton(event)
+    const menuButtonHit = this.contextMenu.hitTestColumnHeaderMenuButton(event)
     if (menuButtonHit) {
-      this.openColumnHeaderContextMenu(menuButtonHit.colIndex, event)
+      this.contextMenu.openColumnHeaderContextMenu(menuButtonHit.colIndex, event)
       return
     }
     for (const drag of this.drags) {
@@ -1577,7 +1207,7 @@ export class GridRuntime {
     if (this.destroyed) return
     this.updateHeaderCursor(event)
     this.updateValidationTooltip(event)
-    this.updateHoveredColumnHeaderMenu(event)
+    this.contextMenu.updateHoveredColumnHeaderMenu(event)
   }
 
   private updateValidationTooltip(event: WebPointerEvent): void {
@@ -1597,95 +1227,6 @@ export class GridRuntime {
     const { width: containerWidth } = this.host.getContainerSize()
     const containerRect = { left: hostRect.left, top: hostRect.top, width: containerWidth }
     this.validationTooltip.show(result.message, cellRect, containerRect)
-  }
-
-  /**
-   * 列头悬停：仅在列头区域内更新 engine 侧的 hoveredColumnHeaderMenu 状态。
-   * 使用去重优化：状态未变时不调用 engine 也不 invalidate。
-   */
-  private updateHoveredColumnHeaderMenu(event: WebPointerEvent): void {
-    const hit = this.hitTestColumnHeader(event)
-    if (!hit) {
-      if (this.lastHoveredColumnMenu !== null) {
-        this.lastHoveredColumnMenu = null
-        this.engine.setHoveredColumnHeaderMenu(null)
-        this.invalidate()
-      }
-      return
-    }
-    const colIndex = hit.colIndex
-    const buttonHovered = this.hitTestColumnHeaderMenuButton(event) !== null
-    const prev = this.lastHoveredColumnMenu
-    if (prev?.colIndex === colIndex && prev?.buttonHovered === buttonHovered) return
-    this.lastHoveredColumnMenu = { colIndex, buttonHovered }
-    this.engine.setHoveredColumnHeaderMenu({ colIndex, buttonHovered })
-    this.invalidate()
-  }
-
-  /**
-   * 点击命中检测：判断指针是否落在列头菜单按钮（圆形 hover 按钮）上。
-   * 按钮位置与 HeaderPainter.paintHeaderMenuButton 一致：
-   *   centerX = colLeft + colWidth - padX - buttonSize/2
-   *   button 横跨 [colLeft + colWidth - padX - buttonSize, colLeft + colWidth - padX]
-   */
-  private hitTestColumnHeaderMenuButton(
-    event: WebPointerEvent,
-  ): { colIndex: number } | null {
-    const headerHit = this.hitTestColumnHeader(event)
-    if (!headerHit) return null
-    const frame = this.engine.getFrame()
-    const colIndex = headerHit.colIndex
-    const colWidth = frame.colsAxis.getSize(colIndex)
-    if (colWidth < COLUMN_HEADER_MENU_BUTTON_MIN_COL_WIDTH) return null
-    const padX = frame.theme.metrics.cellPaddingX ?? 8
-    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    const scrollX = frame.viewport.scrollX ?? 0
-    const colLeft = rowHeaderWidth + frame.colsAxis.indexToPosition(colIndex) - scrollX
-    const buttonLeft = colLeft + colWidth - padX - COLUMN_HEADER_MENU_BUTTON_SIZE
-    const buttonRight = colLeft + colWidth - padX
-    if (event.x < buttonLeft || event.x > buttonRight) return null
-    return { colIndex }
-  }
-
-  /** 打开指定列索引对应的列头上下文菜单（复用 openResolvedContextMenu）。 */
-  private openColumnHeaderContextMenu(colIndex: number, _event: WebPointerEvent): void {
-    if (!this.viewPipeline) return
-    const frame = this.engine.getFrame()
-    const fields = frame.data.getSchema().fields
-    const field = fields[colIndex]
-    if (!field) return
-    const sel = this.engine.getSelection().selectedRange
-    const startCol = sel?.startCol ?? colIndex
-    const endCol = sel?.endCol ?? colIndex
-    const ctx: ContextMenuContext = {
-      targetKind: 'columnHeader',
-      field,
-      colIndex,
-      multiSelect: field.type === 'multiSelect',
-      selectedColCount: endCol - startCol + 1,
-      hasHiddenInSelection: this.collectHiddenInViewColRange(startCol, endCol).length > 0,
-    }
-    const items = applyContextMenuConfig(
-      getColumnHeaderContextMenuItems(ctx, this.viewPipeline),
-      ctx,
-      this.contextMenus?.columnHeader,
-    )
-    // 锚点：按钮左边缘 × header 底部（viewport 坐标）。
-    // DomContextMenuLayer.clampToViewport 负责右边缘溢出时向左推。
-    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    const scrollX = frame.viewport.scrollX ?? 0
-    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
-    const colLeft = rowHeaderWidth + frame.colsAxis.indexToPosition(colIndex) - scrollX
-    const colWidth = frame.colsAxis.getSize(colIndex)
-    const padX = frame.theme.metrics.cellPaddingX ?? 8
-    const buttonLeft = colLeft + colWidth - padX - COLUMN_HEADER_MENU_BUTTON_SIZE
-    const hostRect = this.host.getContainerBoundingRect()
-    this.openResolvedContextMenu({
-      ctx,
-      clientX: hostRect.left + buttonLeft,
-      clientY: hostRect.top + headerHeight,
-      items,
-    })
   }
 
   private computeValidationCellRect(
@@ -2110,11 +1651,6 @@ export class GridRuntime {
   /** 同步 cell editor 主题。 */
   private syncCellEditorTheme(): void {
     this.cellEditor?.applyTheme(this.engine.getTheme())
-  }
-
-  /** 同步 context menu layer 主题。 */
-  private syncContextMenuTheme(): void {
-    this.contextMenuLayer?.applyTheme(this.engine.getTheme())
   }
 
   /** 所有进入编辑态的 DOM/API 入口先尝试 custom editor，再回退到内置 DOM editor。 */
