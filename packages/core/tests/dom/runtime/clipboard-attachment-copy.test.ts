@@ -239,7 +239,9 @@ const demoCodec: CellAttachmentCodec<DemoAttachment> = {
 }
 
 // ---------------------------------------------------------------------------
-// helpers: access private clipboardCache
+// helpers: access private clipboard cache (storage lives in ClipboardController
+// since GridRuntime 拆分 Task 4; reach it via the same private-field cast pattern,
+// retargeted at `runtime.clipboard`'s test-support accessor)
 // ---------------------------------------------------------------------------
 type ClipboardCacheShape = {
   range: { startRow: number; endRow: number; startCol: number; endCol: number }
@@ -248,7 +250,11 @@ type ClipboardCacheShape = {
   attachments?: ReadonlyArray<ReadonlyArray<Record<string, string>>>
 }
 function getCache(runtime: GridRuntime): ClipboardCacheShape | null {
-  return (runtime as unknown as { clipboardCache: ClipboardCacheShape | null }).clipboardCache
+  return (
+    runtime as unknown as {
+      clipboard: { peekCacheForLegacyTest(): ClipboardCacheShape | null }
+    }
+  ).clipboard.peekCacheForLegacyTest()
 }
 
 // ---------------------------------------------------------------------------
