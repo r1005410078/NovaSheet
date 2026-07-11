@@ -24,6 +24,7 @@ import { ClipboardController } from './controllers/ClipboardController'
 import { ContextMenuController } from './controllers/ContextMenuController'
 import { DragCoordinator } from './controllers/DragCoordinator'
 import { ExcelWorkspaceBinding } from './controllers/ExcelWorkspaceBinding'
+import { InputController } from './controllers/InputController'
 import { PopoverController } from './controllers/PopoverController'
 import { ViewportController } from './controllers/ViewportController'
 import { RenderFlushPipeline } from './RenderFlushPipeline'
@@ -53,8 +54,6 @@ import type {
   ContextMenuItem,
   ContextMenuRenderer,
 } from '../../features/context-menu/ContextMenuModel'
-import { hitTestCell } from '../../kernel/interaction/HitTest'
-import { isTypableEditKey } from '../../features/edit/CellEdit'
 import type { PasteSkippedCell } from '../../features/clipboard/types'
 import type { BorderPreset, BorderStyle, TextWrapMode, ValueFormat } from '../../kernel/protocol/FormatTypes'
 import type { CellAddress, CellRange } from '../../kernel/coords/SelectionTypes'
@@ -248,6 +247,8 @@ export class GridRuntime {
   private clipboard: ClipboardController
   /** 5 类 Drag 手势编排 + 拖拽期间边缘自动滚动 tick controller（GridRuntime 拆分 Task 8）。 */
   private drag: DragCoordinator
+  /** pointer/keyboard 事件路由 + 表头命中测试 + 整行/整列选择 controller（GridRuntime 拆分 Task 9）。 */
+  private input: InputController
   /** fill handle 提交成功后的通知回调。 */
   private onFill?: (event: FillEvent) => void
   /** 选区变化通知回调。 */
@@ -337,7 +338,7 @@ export class GridRuntime {
       isDragActive: () => this.drag.isAnyDragActive(),
       isCellEditing: () => this.engine.isCellEditing(),
       commitCellEdit: (moveAfter) => this.cellEdit.commitCellEdit(moveAfter),
-      hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
+      hitTestColumnHeader: (event) => this.input.hitTestColumnHeader(event),
       clipboardCopy: () => this.handleClipboardCopy(),
       clipboardCut: () => this.handleClipboardCut(),
       clipboardPaste: () => this.handleClipboardPaste(),
@@ -394,17 +395,50 @@ export class GridRuntime {
       handleHostScroll: (scrollTop, scrollLeft) => this.viewport.handleHostScroll(scrollTop, scrollLeft),
       getScrollLimits: () => this.viewport.getScrollLimits(),
       getColsTotalSize: () => this.viewport.getColsTotalSizeForFrame(this.engine.getFrame()),
-      hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
-      hitTestRowHeader: (event) => this.hitTestRowHeader(event),
-      isWholeColumnSelection: (range) => this.isWholeColumnSelection(range),
-      isWholeRowSelection: (range) => this.isWholeRowSelection(range),
-      selectWholeColumn: (col) => this.selectWholeColumn(col),
-      selectWholeColumnRange: (anchor, extent) => this.selectWholeColumnRange(anchor, extent),
-      selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
+      hitTestColumnHeader: (event) => this.input.hitTestColumnHeader(event),
+      hitTestRowHeader: (event) => this.input.hitTestRowHeader(event),
+      isWholeColumnSelection: (range) => this.input.isWholeColumnSelection(range),
+      isWholeRowSelection: (range) => this.input.isWholeRowSelection(range),
+      selectWholeColumn: (col) => this.input.selectWholeColumn(col),
+      selectWholeColumnRange: (anchor, extent) => this.input.selectWholeColumnRange(anchor, extent),
+      selectWholeRowRange: (anchor, extent) => this.input.selectWholeRowRange(anchor, extent),
       handleLayer: this.handleLayer,
       fillLayer: this.fillLayer,
       columnReorderOverlay: this.columnReorderOverlay,
       rowReorderOverlay: this.rowReorderOverlay,
+    })
+    this.input = new InputController({
+      engine: this.engine,
+      host: this.host,
+      isDestroyed: () => this.destroyed,
+      refresh: () => this.refresh(),
+      getRenderer: () => this.renderer,
+      validationTooltip: this.validationTooltip,
+      tryStartDrag: (event) => this.drag.tryStartDrag(event),
+      moveActiveDrag: (event) => this.drag.moveActiveDrag(event),
+      commitActiveDrag: () => this.drag.commitActiveDrag(),
+      cancelActiveDrag: () => this.drag.cancelActiveDrag(),
+      isAnyDragActive: () => this.drag.isAnyDragActive(),
+      closeActiveCustomEditor: () => this.cellEdit.closeActiveCustomEditor(),
+      commitCellEdit: (moveAfter) => this.cellEdit.commitCellEdit(moveAfter),
+      openCellEditorForTrigger: (args) => this.cellEdit.openCellEditorForTrigger(args),
+      hasCustomCellEditor: (cell) => this.cellEdit.hasCustomCellEditor(cell),
+      invokeCellAction: (action) => this.cellEdit.invokeCellAction(action),
+      clipboardCopy: () => this.handleClipboardCopy(),
+      clipboardCut: () => this.handleClipboardCut(),
+      clipboardPaste: () => this.handleClipboardPaste(),
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+      hitTestColumnHeaderMenuButton: (event) =>
+        this.contextMenu.hitTestColumnHeaderMenuButton(event),
+      openColumnHeaderContextMenu: (colIndex, event) =>
+        this.contextMenu.openColumnHeaderContextMenu(colIndex, event),
+      updateHoveredColumnHeaderMenu: (event) =>
+        this.contextMenu.updateHoveredColumnHeaderMenu(event),
+      isFilterPopoverOpen: () => this.popovers.isFilterPopoverOpen(),
+      ensureCellVisible: (cell) => this.viewport.ensureCellVisible(cell),
+      getSelectionScrollTarget: () => this.viewport.getSelectionScrollTarget(),
+      getColsTotalSizeForFrame: (frame) => this.viewport.getColsTotalSizeForFrame(frame),
     })
   }
 
@@ -1059,283 +1093,29 @@ export class GridRuntime {
     this.viewport.handleHostDprChange(dpr)
   }
 
-  /** 处理 host pointerdown，开始单元格选择或扩展选择。 */
+  /** 处理 host pointerdown，开始单元格选择或扩展选择；委托给 `InputController`（Task 9）。 */
   handleHostPointerDown(event: WebPointerEvent): void {
-    if (this.destroyed) return
-    // 仅左键进入 drag-select；右键 / 中键留给 contextmenu / 其它路径
-    if ((event.button ?? 0) !== 0) return
-    this.cellEdit.closeActiveCustomEditor()
-    if (this.engine.isCellEditing()) {
-      this.cellEdit.commitCellEdit(false)
-    }
-    const action = this.renderer.getCellActionAt?.(event.x, event.y)
-    if (action) {
-      this.cellEdit.invokeCellAction(action)
-      return
-    }
-    // 列头菜单按钮命中：左键单击时优先打开列头菜单，不进入 drag-select
-    const menuButtonHit = this.contextMenu.hitTestColumnHeaderMenuButton(event)
-    if (menuButtonHit) {
-      this.contextMenu.openColumnHeaderContextMenu(menuButtonHit.colIndex, event)
-      return
-    }
-    this.drag.tryStartDrag(event)
+    this.input.handleHostPointerDown(event)
   }
 
-  /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
+  /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动；委托给 `InputController`（Task 9）。 */
   handleHostPointerMove(event: WebPointerEvent): void {
-    if (this.drag.moveActiveDrag(event)) return
-    if (this.destroyed) return
-    this.updateHeaderCursor(event)
-    this.updateValidationTooltip(event)
-    this.contextMenu.updateHoveredColumnHeaderMenu(event)
+    this.input.handleHostPointerMove(event)
   }
 
-  private updateValidationTooltip(event: WebPointerEvent): void {
-    if (!this.validationTooltip) return
-    const frame = this.engine.getFrame()
-    const hit = hitTestCell(frame, event)
-    if (!hit) { this.validationTooltip.hide(); return }
-    const state = frame.getValidationState?.(hit.rowIndex, hit.colIndex)
-    if (state !== 'invalid') { this.validationTooltip.hide(); return }
-    const rawRow = this.engine.viewRowToRaw(hit.rowIndex)
-    const rawCol = this.engine.viewColToRaw(hit.colIndex)
-    const result = this.engine.getValidationState(rawRow, rawCol)
-    if (!result || result.status !== 'invalid') { this.validationTooltip.hide(); return }
-    const cellRect = this.computeValidationCellRect(hit.rowIndex, hit.colIndex, frame)
-    if (!cellRect) { this.validationTooltip.hide(); return }
-    const hostRect = this.host.getContainerBoundingRect()
-    const { width: containerWidth } = this.host.getContainerSize()
-    const containerRect = { left: hostRect.left, top: hostRect.top, width: containerWidth }
-    this.validationTooltip.show(result.message, cellRect, containerRect)
-  }
-
-  private computeValidationCellRect(
-    viewRow: number,
-    viewCol: number,
-    frame: ReturnType<GridEngine['getFrame']>,
-  ): { left: number; right: number; top: number; width: number; height: number } | null {
-    const { rowsAxis, colsAxis, viewport } = frame
-    const region = viewport.regions.find(
-      (r) =>
-        viewRow >= r.rowRange[0] &&
-        viewRow <= r.rowRange[1] &&
-        viewCol >= r.colRange[0] &&
-        viewCol <= r.colRange[1],
-    )
-    if (!region) return null
-    const x = colsAxis.indexToPosition(viewCol) - region.scrollOffsetX + region.rect.x
-    const y = rowsAxis.indexToPosition(viewRow) - region.scrollOffsetY + region.rect.y
-    const cellWidth = colsAxis.getSize(viewCol)
-    const cellHeight = rowsAxis.getSize(viewRow)
-    const hostRect = this.host.getContainerBoundingRect()
-    return {
-      left: hostRect.left + x,
-      right: hostRect.left + x + cellWidth,
-      top: hostRect.top + y,
-      width: cellWidth,
-      height: cellHeight,
-    }
-  }
-
-  /** 处理 host pointerup，结束选区拖拽并恢复 fill handle。 */
+  /** 处理 host pointerup，结束选区拖拽并恢复 fill handle；委托给 `InputController`（Task 9）。 */
   handleHostPointerUp(): void {
-    this.drag.commitActiveDrag()
+    this.input.handleHostPointerUp()
   }
 
-  /** 处理双击单元格，进入编辑模式。 */
+  /** 处理双击单元格，进入编辑模式；委托给 `InputController`（Task 9）。 */
   handleHostDoubleClick(event: WebPointerEvent): void {
-    if (this.destroyed || this.drag.isAnyDragActive()) return
-    const hit = hitTestCell(this.engine.getFrame(), event)
-    if (!hit) return
-    this.engine.selectCell(hit)
-    this.cellEdit.openCellEditorForTrigger({ cell: hit, trigger: 'double-click', selectAll: false })
+    this.input.handleHostDoubleClick(event)
   }
 
-  /** Phase 3.3 / 3.5 — 导航；选中后直接键入进入编辑（Sheets 式）。 */
+  /** Phase 3.3 / 3.5 — 导航；选中后直接键入进入编辑（Sheets 式）；委托给 `InputController`（Task 9）。 */
   handleHostKeyDown(event: WebKeyboardEvent): boolean {
-    if (this.destroyed) return false
-    if (event.key === 'Escape' && this.drag.cancelActiveDrag()) {
-      return true
-    }
-    if (this.popovers.isFilterPopoverOpen()) return false
-    if (this.engine.isCellEditing()) return false
-
-    // Phase 4.1 — Ctrl+X / C / V（Mac 上 Cmd）剪贴板快捷键；Shift / Alt 组合不抢
-    const mod = event.ctrlKey || event.metaKey
-    if (mod && !event.shiftKey && !event.altKey) {
-      const k = event.key.toLowerCase()
-      if (k === 'c') {
-        void this.handleClipboardCopy()
-        return true
-      }
-      if (k === 'x') {
-        void this.handleClipboardCut()
-        return true
-      }
-      if (k === 'v') {
-        void this.handleClipboardPaste()
-        return true
-      }
-      if (k === 'z') {
-        if (!this.engine.canUndo()) return false
-        this.undo()
-        return true
-      }
-      if (k === 'y' && event.ctrlKey && !event.metaKey) {
-        if (!this.engine.canRedo()) return false
-        this.redo()
-        return true
-      }
-    }
-
-    // Cmd/Ctrl+Shift+Z — redo
-    if (mod && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z') {
-      if (!this.engine.canRedo()) return false
-      this.redo()
-      return true
-    }
-
-    const cell = this.engine.getSelection().activeCell
-
-    if (event.key === 'F2' && cell) {
-      if (this.cellEdit.openCellEditorForTrigger({ cell, trigger: 'f2', selectAll: false })) return true
-    }
-
-    if (event.key === 'Enter' && cell && this.cellEdit.hasCustomCellEditor(cell)) {
-      if (this.cellEdit.openCellEditorForTrigger({ cell, trigger: 'enter', selectAll: false })) return true
-    }
-
-    if (
-      cell &&
-      isTypableEditKey(event.key, {
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        altKey: event.altKey,
-      })
-    ) {
-      if (
-        this.cellEdit.openCellEditorForTrigger({
-          cell,
-          trigger: 'typing',
-          initialInput: event.key,
-          selectAll: false,
-        })
-      ) {
-        return true
-      }
-    }
-
-    if (!this.engine.navigateSelection(event.key, event.shiftKey)) return false
-
-    const focus = this.viewport.getSelectionScrollTarget()
-    if (focus) this.viewport.ensureCellVisible(focus)
-    this.refresh()
-    return true
-  }
-
-  private updateHeaderCursor(event: WebPointerEvent): void {
-    if (this.drag.isAnyDragActive()) {
-      this.host.setCursor(null)
-      return
-    }
-    const hit = this.hitTestColumnHeader(event)
-    const range = this.engine.getSelection().selectedRange
-    const canDrag =
-      hit &&
-      range &&
-      this.isWholeColumnSelection(range) &&
-      hit.colIndex >= range.startCol &&
-      hit.colIndex <= range.endCol
-    if (canDrag) {
-      this.host.setCursor('grab')
-      return
-    }
-
-    const rowHit = this.hitTestRowHeader(event)
-    const rowRange = this.engine.getSelection().selectedRange
-    const canRowDrag =
-      rowHit &&
-      rowRange &&
-      this.isWholeRowSelection(rowRange) &&
-      rowHit.rowIndex >= rowRange.startRow &&
-      rowHit.rowIndex <= rowRange.endRow
-    this.host.setCursor(canRowDrag ? 'grab' : null)
-  }
-
-  private isWholeColumnSelection(range: CellRange): boolean {
-    const rowCount = this.engine.getFrame().data.getRowCount()
-    return rowCount > 0 && range.startRow === 0 && range.endRow === rowCount - 1
-  }
-
-  private isWholeRowSelection(range: CellRange): boolean {
-    const colCount = this.engine.getFrame().data.getSchema().fields.length
-    return colCount > 0 && range.startCol === 0 && range.endCol === colCount - 1
-  }
-
-  private hitTestColumnHeader(
-    event: WebPointerEvent,
-  ): { colIndex: number; fieldId: string } | null {
-    const frame = this.engine.getFrame()
-    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
-    if (event.y < 0 || event.y >= headerHeight) return null
-    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    if (event.x < rowHeaderWidth) return null
-    const scrollX = frame.viewport.scrollX ?? 0
-    const logicalX = event.x - rowHeaderWidth + scrollX
-    const totalSize = this.viewport.getColsTotalSizeForFrame(frame)
-    if (logicalX < 0 || logicalX >= totalSize) return null
-    const colIndex = frame.colsAxis.positionToIndex(logicalX)
-    if (typeof frame.data.getSchema !== 'function') return null
-    const field = frame.data.getSchema().fields[colIndex]
-    if (!field) return null
-    return { colIndex, fieldId: field.id }
-  }
-
-  private hitTestRowHeader(event: WebPointerEvent): { rowIndex: number } | null {
-    const frame = this.engine.getFrame()
-    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    if (rowHeaderWidth <= 0 || event.x < 0 || event.x >= rowHeaderWidth) return null
-    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
-    if (event.y < headerHeight) return null
-    const scrollY = frame.viewport.scrollY ?? 0
-    const logicalY = event.y - headerHeight + scrollY
-    if (logicalY < 0) return null
-    const rowIndex = frame.rowsAxis.positionToIndex(logicalY)
-    if (rowIndex < 0 || rowIndex >= frame.rowsAxis.getCount()) return null
-    return { rowIndex }
-  }
-
-  private selectWholeColumn(colIndex: number): void {
-    this.selectWholeColumnRange(colIndex, colIndex)
-  }
-
-  private selectWholeColumnRange(anchorCol: number, extentCol: number): void {
-    const frame = this.engine.getFrame()
-    const rowCount = frame.data.getRowCount()
-    if (rowCount <= 0) return
-    const startCol = Math.min(anchorCol, extentCol)
-    const endCol = Math.max(anchorCol, extentCol)
-    this.engine.setSelection({
-      activeCell: { rowIndex: 0, colIndex: extentCol },
-      anchorCell: { rowIndex: 0, colIndex: anchorCol },
-      extentCell: { rowIndex: rowCount - 1, colIndex: extentCol },
-      selectedRange: { startRow: 0, endRow: rowCount - 1, startCol, endCol },
-    })
-  }
-
-  private selectWholeRowRange(anchorRow: number, extentRow: number): void {
-    const frame = this.engine.getFrame()
-    const colCount = frame.data.getSchema().fields.length
-    if (colCount <= 0) return
-    const startRow = Math.min(anchorRow, extentRow)
-    const endRow = Math.max(anchorRow, extentRow)
-    this.engine.setSelection({
-      activeCell: { rowIndex: extentRow, colIndex: 0 },
-      anchorCell: { rowIndex: anchorRow, colIndex: 0 },
-      extentCell: { rowIndex: extentRow, colIndex: colCount - 1 },
-      selectedRange: { startRow, endRow, startCol: 0, endCol: colCount - 1 },
-    })
+    return this.input.handleHostKeyDown(event)
   }
 
   /** @internal 供集成测试模拟 ResizeObserver 回调 */
