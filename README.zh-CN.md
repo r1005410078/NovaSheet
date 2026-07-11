@@ -18,15 +18,15 @@ NovaSheet is open source under the [MIT License](LICENSE). Contributions, bug re
 
 ## 当前状态
 
-最近交付：**Phase 5-A 合并 + 基础 Range 格式化**。下一里程碑：**Phase 5-B 高级边框**。
+最近交付：**Phase 5-C 值格式化 · 单元格扩展 API（+ `@novasheet/cell-kit` 富文本）· 数据校验 · `WindowedDataSource` 远程数据 · React 适配**。下一里程碑：**Phase 5-D 条件格式**。
 
-| 维度                     | 数值                                                                                                                 |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| 包                       | `@novasheet/core` · `@novasheet/web` · `@novasheet/canvas2d`                                                     |
-| 测试                     | 693 passing（bun:test，跨三包）                                                                                      |
-| Lint / Typecheck / Build | 全部 clean                                                                                                           |
-| 公共 API                 | `import { Grid } from '@novasheet/web'`（默认 `renderer: 'canvas2d'`）；数据 / 主题 / 冻结类型来自 `@novasheet/core` |
-| License                  | MIT                                                                                                                  |
+| 维度                     | 数值                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| 包                       | `@novasheet/core` · `@novasheet/canvas2d` · `@novasheet/react` · `@novasheet/cell-kit` · `@novasheet/mbd`         |
+| 测试                     | 1,797 passing（bun:test，跨 workspace，公开 API 有 BDD 验收场景背书）                                             |
+| Lint / Typecheck / Build | 全部 clean                                                                                                        |
+| 公共 API                 | `import { Grid } from '@novasheet/core'` + `backend: canvas2dBackend()` 注入渲染后端；React 用 `@novasheet/react` |
+| License                  | MIT                                                                                                               |
 
 ---
 
@@ -54,11 +54,17 @@ NovaSheet is open source under the [MIT License](LICENSE). Contributions, bug re
 | Phase 4.6 列结构 + 列头菜单扩展    | 列 insert / delete / hide · 列头菜单新增结构项 · 列头 unhide 入口                                                                                                                 | ✅     | [spec](docs/superpowers/specs/2026-05-24-novasheet-phase-4-6-column-structural.md)                                                                                                 |
 | Phase 4.7 列拖拽重排               | Google Sheets 式先选列再拖动 · DOM 目标列带 + 落点线 · 多列重排 · undo/redo                                                                                                       | ✅     | [spec](docs/superpowers/specs/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md) · [plan](docs/superpowers/plans/2026-05-25-novasheet-phase-4-7-column-drag-reorder.md)        |
 | Phase 5-A 合并 + 基础 Range 格式化 | 单元格合并 / 取消合并 · 填充色 · 基础边框（all/outer/inner/clear · 颜色 · thin/medium/thick · solid）· 结构变更坐标同步 · undo/redo · 内部复制粘贴合并保护 · 公开 API · Storybook | ✅     | [spec](docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md) · [plan](docs/superpowers/plans/2026-05-28-novasheet-phase-5-a-merge-basic-range-styling.md) |
-| Phase 5-B/C/D 进阶格式化           | 5-B 高级边框（单边 · dashed/dotted/double）；5-C 数字 · 日期 · 百分比 · 货币格式化；5-D 条件格式                                                                                  | 计划中 | [spec](docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md)                                                                                              |
-| Phase 6 字段类型 + Schema          | 字段编辑器 · Schema 校验 · 单元格校验 · lookup / rollup · 分组 / 聚合                                                                                                             | 计划中 | —                                                                                                                                                                                  |
+| Phase 5-B 高级边框                 | 单边边框 · dashed/dotted/double 线型                                                                                                                                              | ✅     | [spec](docs/superpowers/specs/2026-05-31-novasheet-phase-5-b-advanced-borders.md)                                                                                                  |
+| Phase 5-C 值格式化                 | number / currency / percent / date `ValueFormat` · 自定义 formatter 注册表 · raw 值不变 · text-wrap 三态 + Alt+Enter 多行                                                         | ✅     | [spec](docs/superpowers/specs/2026-06-10-novasheet-phase-5-c-value-formatting-design.md)                                                                                           |
+| 单元格扩展 API                     | `cellTypes` / `cellEditors` / `cellAttachments`（core）+ `cellRenderers`（backend）四轴注册 · per-cell `setCellType` override · `@novasheet/cell-kit` 富文本参考实现              | ✅     | [spec](docs/superpowers/specs/2026-06-12-novasheet-cell-extension-api-design.md) · [override](docs/superpowers/specs/2026-06-14-novasheet-cell-level-type-override-design.md)      |
+| 数据校验                           | sync/async `ValidatorDefinition` · 编辑/粘贴/填充/undo 全写入路径自动接线 · 批量 + 并发限流                                                                                       | ✅     | [spec](docs/superpowers/specs/2026-06-15-novasheet-cell-data-validation-design.md)                                                                                                 |
+| WindowedDataSource 远程数据        | 滑动窗口 fetch/subscribe · LRU 块缓存 · stale-while-revalidate · 经 sort/filter/hide 装饰链透传                                                                                   | ✅     | [spec](docs/superpowers/specs/2026-07-05-novasheet-windowed-data-source-design.md)                                                                                                 |
+| React 适配                         | `@novasheet/react`：`<NovaExcel />` Excel 壳 · `<NovaSheetGrid />` · hooks · toolbar                                                                                              | ✅     | [README](packages/react/README.md)                                                                                                                                                 |
+| Phase 5-D 条件格式                 | 条件格式规则                                                                                                                                                                      | 下一步 | [spec](docs/superpowers/specs/2026-05-28-novasheet-phase-5-merge-range-formatting.md)                                                                                              |
+| Phase 6 字段类型 + Schema          | 字段编辑器 · lookup / rollup · 分组 / 聚合                                                                                                                                        | 计划中 | —                                                                                                                                                                                  |
 | Phase 7 公式 / 导入导出            | 公式引擎 · 跨 sheet · 命名区域 · 透视表 · 图表 · xlsx / csv                                                                                                                       | 计划中 | —                                                                                                                                                                                  |
 | Phase 8 服务端 / 多视图            | 服务端分页 DataSource · OPFS · 协同 · Grid / Kanban / Calendar / Gallery                                                                                                          | 计划中 | —                                                                                                                                                                                  |
-| Phase 9 框架适配                   | React Wrapper · Vue Wrapper · 框架适配层                                                                                                                                          | 计划中 | —                                                                                                                                                                                  |
+| Phase 9 框架适配                   | Vue Wrapper                                                                                                                                                                       | 计划中 | —                                                                                                                                                                                  |
 | Phase 10 AI Native                 | 自然语言查询 · 洞察 · 智能补全                                                                                                                                                    | 计划中 | —                                                                                                                                                                                  |
 | 验证项（低优先级）                 | `apps/playground`（1M mock）· Playwright 跨浏览器 · iOS Safari 真机                                                                                                               | 待启动 | —                                                                                                                                                                                  |
 
@@ -72,12 +78,11 @@ NovaSheet is open source under the [MIT License](LICENSE). Contributions, bug re
 bun install
 bun run --filter @novasheet/core build
 bun run --filter @novasheet/canvas2d build
-bun run --filter @novasheet/web build
 ```
 
 ```ts
-import { Grid } from '@novasheet/web'
-import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { Grid, InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { canvas2dBackend } from '@novasheet/canvas2d'
 
 const data = new InMemoryDataSource({
   schema: {
@@ -107,6 +112,7 @@ const data = new InMemoryDataSource({
 const container = document.getElementById('app')!
 const grid = new Grid(container, {
   data,
+  backend: canvas2dBackend(), // 必填：渲染后端注入
   theme: denseGridTheme,
   frozen: { topRows: 1, leftCols: 1, rightCols: 1 }, // 顶行 + 左/右列冻结，中间列可横滚
 })
@@ -154,28 +160,23 @@ grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 ## 架构概览
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│   @novasheet/web                                           │
-│   Grid (public facade) · Canvas2DBackend · WebGridRuntime  │
-│   DomGridHost · ScrollMapper · NativeScroller              │
-└────────────────────────────┬───────────────────────────────┘
-                             │ depends on
-                             ▼
-┌────────────────────────────────────────────────────────────┐
-│   @novasheet/canvas2d                                  │
-│   Canvas2DRenderer · Cell / Header / GridLines painters    │
-│   HighDPI                                                  │
-└────────────────────────────┬───────────────────────────────┘
-                             │ depends on
-                             ▼
-┌────────────────────────────────────────────────────────────┐
-│   @novasheet/core (no DOM, no canvas)                      │
-│   DefaultGridEngine · DataSource · Theme · ChunkedAxis     │
-│   FrozenRegions · Viewport · RenderFrame · ViewPipeline    │
-└────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│   组合根：apps/storybook · @novasheet/react                 │
+│   new Grid(container, { data, backend: canvas2dBackend() }) │
+└──────────────┬──────────────────────────┬───────────────────┘
+               │ 使用                     │ 注入
+               ▼                          ▼
+┌──────────────────────────┐   ┌─────────────────────────────┐
+│   @novasheet/core        │   │   @novasheet/canvas2d       │
+│   Grid（公开 facade）    │   │   canvas2dBackend()         │
+│   DefaultGridEngine      │◄──│   Canvas2DRenderer          │
+│   kernel/features/engine │   │   painters · HighDPI        │
+│   DOM 壳（dom/）         │   │   实现 RenderBackend 端口   │
+│   ports/RenderBackend    │   │   （反向依赖 core）         │
+└──────────────────────────┘   └─────────────────────────────┘
 ```
 
-**依赖方向（无环）**：`core` ← `canvas2d` ← `web` ← 应用 / Storybook。
+**依赖方向（无环）**：`core` ← `canvas2d` ← `cell-kit`；`react` 依赖 core + canvas2d；core 永不 import 渲染器——canvas2d 实现 core 的 `RenderBackend` 端口反向依赖（依赖反转）。
 
 ---
 
@@ -184,11 +185,13 @@ grid.setFrozen({ topRows: 2, leftCols: 1, rightCols: 1 })
 ```
 novasheet/
 ├── packages/
-│   ├── core/                @novasheet/core — 平台无关引擎
-│   ├── web/                 @novasheet/web — 对外 Grid + 浏览器编排
-│   └── canvas2d/        @novasheet/canvas2d — Canvas2D 渲染器
+│   ├── core/                @novasheet/core — 引擎 + DOM 壳 + 公开 Grid facade
+│   ├── canvas2d/            @novasheet/canvas2d — Canvas2D 渲染后端（RenderBackend 实现）
+│   ├── react/               @novasheet/react — React 适配（NovaExcel 壳 + hooks）
+│   ├── cell-kit/            @novasheet/cell-kit — opt-in 单元格组件（富文本）
+│   └── mbd/                 @novasheet/mbd — MD 场景 BDD 工具链（dev-only）
 ├── apps/
-│   └── storybook/           组件变体玩具间（vanilla HTML，无 React 依赖）
+│   └── storybook/           组件变体玩具间
 ├── docs/
 │   ├── architecture.md      当前架构图（Mermaid + 单帧序列）
 │   └── superpowers/
@@ -208,7 +211,6 @@ bun install                # 安装依赖
 bun test                   # 跑全部包测试
 bun run --filter @novasheet/core build
 bun run --filter @novasheet/canvas2d build
-bun run --filter @novasheet/web build
 bun run lint               # oxlint
 bun run format             # Prettier 全量格式化（带 --cache）
 bun run storybook          # 启动组件变体玩具间（localhost:6006）

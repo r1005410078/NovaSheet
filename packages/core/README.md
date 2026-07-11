@@ -48,20 +48,20 @@ grid.setColumnWidth('revenue', 140)
 
 ## Components
 
-| Component | What it is |
-| --- | --- |
-| `Grid` ([`Grid.ts`](src/Grid.ts)) | Public facade. One instance per mounted container; every method below hangs off it. |
-| `DataSource` (`InMemoryDataSource`, `SparseExcelDataSource`, `WindowedDataSource`) | Row storage. `InMemoryDataSource` holds a plain array (~300k rows × 50 cols); `SparseExcelDataSource` is a sparse, auto-growing Excel-like workspace; `WindowedDataSource` fetches/subscribes a sliding visible-region window against a transport-agnostic `WindowedDataProvider` port (HTTP + WebSocket). All implement the same sync `DataSource` interface — bring your own paginated implementation if you need one. |
-| `RenderBackend` / `RenderBackendFactory` ([`ports/RenderBackend.ts`](src/ports/RenderBackend.ts)) | The seam `core` renders through. `@novasheet/canvas2d` is the shipped implementation; anything implementing the port (WebGL, WebGPU, a test stub) can be passed as `GridOptions.backend`. |
-| `Theme` (`denseGridTheme`) | The single source of truth for every color/font/spacing token painters use. Swap with `grid.setTheme(theme)`. |
-| `CellTypeRegistry` | Per-`Field.type` business semantics: how a value is edited, parsed, sorted, filtered, and clipboard-serialized. Built-ins cover `text`/`number`/`date`; register your own (e.g. `rating`) for everything else. Column-scoped. |
-| `CellTypeStore` (`setCellType`/`clearCellType`/`getCellType`) | Per-*cell* override of the resolved scalar type (`text`/`number`/`date`/`checkbox`), independent of the column's `Field.type` — "one column, multiple types". Raw-coordinate indexed, undoable, survives structural remap. |
-| `ValidatorDefinition` | Per-rule validation logic (sync or async), wired to every write path automatically. |
-| `CellAttachmentCodec` | Opaque, namespaced per-cell payloads (e.g. rich-text runs, comments) that ride along with copy/paste, fill, and undo. |
-| `CellEditorRegistry` | DOM/overlay editors keyed by `Field.type`, for input that a single text box can't express (date pickers, dropdowns). |
-| Canvas painter registry (`cellRenderers`) | **Not part of `core`** — `core` renders nothing, so per-type display painters are registered on the render backend factory instead (e.g. `canvas2dBackend({ cellRenderers })` in `@novasheet/canvas2d`). `core` only guarantees the resolved field/value/attachment data a painter needs reaches it through the frame. |
-| `ViewPipeline` (`SortLayer`, `FilterLayer`, `HideRowsLayer`) | Composable view-coordinate transforms over the raw `DataSource`; `Grid` exposes the composed result, mutations always resolve back to raw coordinates. |
-| `RangeStyleStore` / `MergeStore` | Range-keyed format and merge state, raw-coordinate indexed, survive structural mutation + undo. |
+| Component                                                                                         | What it is                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Grid` ([`Grid.ts`](src/Grid.ts))                                                                 | Public facade. One instance per mounted container; every method below hangs off it.                                                                                                                                                                                                                                                                                                                                      |
+| `DataSource` (`InMemoryDataSource`, `SparseExcelDataSource`, `WindowedDataSource`)                | Row storage. `InMemoryDataSource` holds a plain array (~300k rows × 50 cols); `SparseExcelDataSource` is a sparse, auto-growing Excel-like workspace; `WindowedDataSource` fetches/subscribes a sliding visible-region window against a transport-agnostic `WindowedDataProvider` port (HTTP + WebSocket). All implement the same sync `DataSource` interface — bring your own paginated implementation if you need one. |
+| `RenderBackend` / `RenderBackendFactory` ([`ports/RenderBackend.ts`](src/ports/RenderBackend.ts)) | The seam `core` renders through. `@novasheet/canvas2d` is the shipped implementation; anything implementing the port (WebGL, WebGPU, a test stub) can be passed as `GridOptions.backend`.                                                                                                                                                                                                                                |
+| `Theme` (`denseGridTheme`)                                                                        | The single source of truth for every color/font/spacing token painters use. Swap with `grid.setTheme(theme)`.                                                                                                                                                                                                                                                                                                            |
+| `CellTypeRegistry`                                                                                | Per-`Field.type` business semantics: how a value is edited, parsed, sorted, filtered, and clipboard-serialized. Built-ins cover `text`/`number`/`date`; register your own (e.g. `rating`) for everything else. Column-scoped.                                                                                                                                                                                            |
+| `CellTypeStore` (`setCellType`/`clearCellType`/`getCellType`)                                     | Per-_cell_ override of the resolved scalar type (`text`/`number`/`date`/`checkbox`), independent of the column's `Field.type` — "one column, multiple types". Raw-coordinate indexed, undoable, survives structural remap.                                                                                                                                                                                               |
+| `ValidatorDefinition`                                                                             | Per-rule validation logic (sync or async), wired to every write path automatically.                                                                                                                                                                                                                                                                                                                                      |
+| `CellAttachmentCodec`                                                                             | Opaque, namespaced per-cell payloads (e.g. rich-text runs, comments) that ride along with copy/paste, fill, and undo.                                                                                                                                                                                                                                                                                                    |
+| `CellEditorRegistry`                                                                              | DOM/overlay editors keyed by `Field.type`, for input that a single text box can't express (date pickers, dropdowns).                                                                                                                                                                                                                                                                                                     |
+| Canvas painter registry (`cellRenderers`)                                                         | **Not part of `core`** — `core` renders nothing, so per-type display painters are registered on the render backend factory instead (e.g. `canvas2dBackend({ cellRenderers })` in `@novasheet/canvas2d`). `core` only guarantees the resolved field/value/attachment data a painter needs reaches it through the frame.                                                                                                   |
+| `ViewPipeline` (`SortLayer`, `FilterLayer`, `HideRowsLayer`)                                      | Composable view-coordinate transforms over the raw `DataSource`; `Grid` exposes the composed result, mutations always resolve back to raw coordinates.                                                                                                                                                                                                                                                                   |
+| `RangeStyleStore` / `MergeStore`                                                                  | Range-keyed format and merge state, raw-coordinate indexed, survive structural mutation + undo.                                                                                                                                                                                                                                                                                                                          |
 
 ## Usage examples
 
@@ -72,6 +72,7 @@ const cell = { rowIndex: 2, colIndex: 1 }
 grid.setSelection({ activeCell: cell, anchorCell: cell, extentCell: cell, selectedRange: null })
 const { activeCell, selectedRange } = grid.getSelection()
 ```
+
 Insert/delete remap the selection automatically — inserting above shifts it down; deleting never leaves it dangling on a removed row.
 
 ### Custom cell types (column-level `CellTypeRegistry`)
@@ -99,7 +100,8 @@ const ratingType: CellTypeDefinition = {
     {
       id: 'rating-gte',
       label: 'Rating >=',
-      matches: (value, operand) => typeof value === 'number' && typeof operand === 'number' && value >= operand,
+      matches: (value, operand) =>
+        typeof value === 'number' && typeof operand === 'number' && value >= operand,
     },
   ],
   onAction: (ctx) => {
@@ -109,6 +111,7 @@ const ratingType: CellTypeDefinition = {
 
 new Grid(container, { backend: canvas2dBackend(), data, cellTypes: { rating: ratingType } })
 ```
+
 Every hook is optional — wire only what the type needs. `parseEditInput` / `parseClipboard` return the `SKIP_CELL_VALUE` sentinel to reject input without writing anything. A `Field.type` with **no** matching registry entry (and no built-in) falls back to read-only plain-text display: it never throws, the raw value is untouched, and double-click / Enter / F2 / typing never open an editor for it.
 
 Lookup is by the cell's **resolved** type (column default, or per-cell `setCellType` override) first. If a cell has an explicit override and no entry exists for that resolved type, lookup does **not** fall back to the column's own `Field.type` entry — it's treated as unregistered for that one cell, rather than silently reusing a definition built for a different type.
@@ -118,9 +121,10 @@ Lookup is by the cell's **resolved** type (column default, or per-cell `setCellT
 ```ts
 const range = { startRow: 0, endRow: 0, startCol: 2, endCol: 2 }
 grid.setCellType(range, 'date') // this cell now reads/edits/sorts as date, regardless of its column's Field.type
-grid.getCellType(0, 2)          // 'date'
-grid.clearCellType(range)       // back to the column's default type
+grid.getCellType(0, 2) // 'date'
+grid.clearCellType(range) // back to the column's default type
 ```
+
 This is the "one column, multiple types" escape hatch — distinct from `CellTypeRegistry` above, and scoped to only the four scalar resolved types: `text` / `number` / `date` / `checkbox`. Locked, BDD-covered semantics:
 
 - **Trigger is explicit only** — `setCellType` or drag-fill propagation. Typed input is never type-inferred, and paste always coerces to the **target's** resolved type rather than importing the source's override.
@@ -142,6 +146,7 @@ grid.setFillColor(range, null) // clear
 grid.setBorders(range, 'outer', { color: '#000', width: 'thin', lineStyle: 'solid' })
 grid.setTextWrap(range, 'wrap') // 'overflow' | 'wrap' | 'clip'
 ```
+
 Formats are keyed by raw coordinate internally, so `getViewCellFormat` keeps resolving to the right cell after a sort. The raw cell value is never mutated by a format — `ValueFormat` only changes display text.
 
 ### Merge cells
@@ -150,6 +155,7 @@ Formats are keyed by raw coordinate internally, so `getViewCellFormat` keeps res
 grid.mergeCells(range) // interior cells now resolve to the same region via getViewMergeRegion
 grid.unmergeCells(range) // getViewMergeRegion(...) → null again
 ```
+
 A merge survives sort (the region remaps to the new view positions) and survives structural undo/redo together with whatever format sat on top of it.
 
 ### Fill handle
@@ -157,6 +163,7 @@ A merge survives sort (the region remaps to the new view positions) and survives
 ```ts
 grid.onFill((event) => console.log(event.fill, event.result))
 ```
+
 Dragging the fill handle projects arithmetic/date sequences or clones a single sample, and propagates every format axis (`fillColor`, `borders`, `textWrap`, `valueFormat`) plus the source's resolved cell type onto the target — if the source lacks an axis, the target's stale value on that axis is cleared (Sheets-style overwrite), and the whole operation undoes as one unit.
 
 ### Clipboard
@@ -170,16 +177,20 @@ new Grid(container, {
 await grid.copy() // or grid.cut()
 await grid.paste()
 ```
+
 Paste coerces incoming values to the **target's** resolved type (it does not import the source's type the way fill does); cells that can't be coerced, or land on a read-only type, are skipped and reported via `onPasteSkipped` without touching the target. `serializeRowsToTsv` / `parseTsvToCells` are exported directly for round-tripping outside a mounted `Grid`.
 
 ### Sort, filter, hide (view pipeline)
 
 ```ts
 grid.getSortLayer().setSpec({ fieldId: 'revenue', direction: 'desc' })
-grid.getFilterLayer().setSpec({ fieldId: 'name', op: { kind: 'text-contains', value: 'a', caseSensitive: false } })
+grid
+  .getFilterLayer()
+  .setSpec({ fieldId: 'name', op: { kind: 'text-contains', value: 'a', caseSensitive: false } })
 grid.hideCols(['joined'])
 grid.getHiddenCols() // ['joined']
 ```
+
 All three layers compose into one final frame; mutation APIs (`setCellType`, `setValueFormat`, ...) keep taking **view** coordinates and resolve back to raw internally.
 
 ### Remote / windowed data (`WindowedDataSource`)
@@ -188,7 +199,8 @@ All three layers compose into one final frame; mutation APIs (`setCellType`, `se
 import { WindowedDataSource, type WindowedDataProvider } from '@novasheet/core'
 
 const provider: WindowedDataProvider = {
-  loadRange: (window, signal) => fetch(`/api/rows?${toQuery(window)}`, { signal }).then((r) => r.json()),
+  loadRange: (window, signal) =>
+    fetch(`/api/rows?${toQuery(window)}`, { signal }).then((r) => r.json()),
   subscribe: (onEvent) => {
     const ws = new WebSocket('/api/rows/stream')
     ws.onmessage = (e) => onEvent(JSON.parse(e.data))
@@ -202,6 +214,7 @@ const provider: WindowedDataProvider = {
 const data = new WindowedDataSource({ schema, rowCount: 100_000, provider, preloadScreens: 2 })
 const grid = new Grid(container, { backend: canvas2dBackend(), data })
 ```
+
 `Grid` calls `hintWindow(visibleWindow)` on every frame (a no-op once the window stops changing); `WindowedDataSource` expands it by `preloadScreens` screens, dedupes against an LRU block cache, and only fetches what's missing — scrolling within the preloaded margin issues zero requests. `loadRange` responses and `subscribe` push events (`cells` / `rowCount` / `resync`) reconcile through a stale-while-revalidate epoch, so scrolling back to an already-visited region repaints instantly from cache while a background refetch (if stale) replaces it. `hintWindow` forwards through `SortLayer` / `FilterLayer` / `HideRowsLayer` / `VisibleColumnsDataSource`, so sort/filter/hide compose on top transparently. See [`apps/storybook/src/stories/WindowedDataSource.stories.ts`](../../apps/storybook/src/stories/WindowedDataSource.stories.ts) for a runnable example with a simulated network fetch and tick-by-tick push feed.
 
 ### Validation
@@ -210,14 +223,20 @@ const grid = new Grid(container, { backend: canvas2dBackend(), data })
 import type { ValidatorDefinition } from '@novasheet/core'
 
 const positiveNumber: ValidatorDefinition = {
-  validate: (value) => (typeof value === 'number' && value >= 0 ? null : 'Must be a non-negative number'),
+  validate: (value) =>
+    typeof value === 'number' && value >= 0 ? null : 'Must be a non-negative number',
 }
 
-new Grid(container, { backend: canvas2dBackend(), data, validators: { 'positive-number': positiveNumber } })
+new Grid(container, {
+  backend: canvas2dBackend(),
+  data,
+  validators: { 'positive-number': positiveNumber },
+})
 grid.setValidation(range, { type: 'positive-number' })
 grid.validateAll()
 grid.getValidationState(rowIndex, colIndex) // null | { status: 'invalid', message } | { status: 'pending' }
 ```
+
 Validators can be sync or return a `Promise`; async runs are scheduled with a bounded batch size and concurrency (`validationBatchSize`, `validationMaxConcurrent` on `GridOptions`) and every write path (edit, paste, fill, undo, redo) re-queues automatically.
 
 ### Cell attachments
@@ -235,6 +254,7 @@ new Grid(container, { backend: canvas2dBackend(), data, cellAttachments: [richTe
 grid.setCellAttachment('rich-text', rawRow, rawCol, { runs: [...] })
 grid.getCellAttachment('rich-text', rawRow, rawCol)
 ```
+
 Attachments are keyed by **raw** coordinate, remap on structural insert/delete the same way cell-type overrides do, ride along with copy/paste and fill, and undo together with the cell's value.
 
 ### Undo / redo
@@ -247,7 +267,8 @@ grid.redo()
 grid.canUndo()
 grid.canRedo()
 ```
-Every mutating facade method (`insertRows`, `setCellType`, `mergeCells`, `setValueFormat`, paste, fill, ...) pushes one of 21 `UndoCommand` kinds; each kind is plain-data and JSON round-trips exactly, so a host application can persist/replay history outside the `Grid` instance.
+
+Every mutating facade method (`insertRows`, `setCellType`, `mergeCells`, `setValueFormat`, paste, fill, ...) pushes one of 22 `UndoCommand` kinds; each kind is plain-data and JSON round-trips exactly, so a host application can persist/replay history outside the `Grid` instance.
 
 ### Context menu extension
 
@@ -265,6 +286,7 @@ new Grid(container, {
   },
 })
 ```
+
 Built-in row/column-header menus (insert/delete/hide/unhide, ...) ship with golden-locked item lists; `append`/`prepend`/`replace` extend them without core needing to know your custom action ids.
 
 ### Custom DOM cell editor
@@ -285,6 +307,7 @@ const dateEditor: CellEditor = {
 
 new Grid(container, { backend: canvas2dBackend(), data, cellEditors: { date: dateEditor } })
 ```
+
 `ctx.trigger` tells you why the editor opened (`'double-click' | 'enter' | 'f2' | 'typing' | 'api' | 'cell-action'`); `ctx.initialInput` carries the first typed character when triggered by typing. Like `cellTypes`, lookup is by **resolved** type with no fallback to the column type once a cell has an explicit override (same rule as above).
 
 ### Custom cell display (canvas painter)
@@ -310,18 +333,19 @@ new Grid(container, {
   backend: canvas2dBackend({ cellRenderers: { rating: ratingRenderer } }),
 })
 ```
+
 The renderer is keyed by `Field.type` too, but the `field` it receives in `paint(ctx, params)` has already been swapped to the cell's **resolved** type by the renderer — a `setCellType` override picks the matching painter automatically, with the same "no fallback to the column painter" rule as `cellEditors`/`cellTypes`. `params` also carries `getAttachment(namespace, viewRow, viewCol)` (read whatever `cellAttachments` codec wrote for this cell) and `formatCell(...)` (resolved `ValueFormat` display text), so a custom renderer can draw from both data sources without re-deriving them. `Canvas2DCellRenderer` is exported by `@novasheet/canvas2d`, not `core` — the type lives wherever the rendering does.
 
 ### Putting a custom type together end to end
 
 A fully custom cell type composes four registration points, three of them on `core` and one on the backend:
 
-| Axis | API | Package |
-| --- | --- | --- |
-| Business semantics (edit/sort/filter/clipboard) | `GridOptions.cellTypes` | `core` |
-| Extra per-cell payload | `GridOptions.cellAttachments` | `core` |
-| DOM/overlay editor | `GridOptions.cellEditors` | `core` |
-| Canvas painter | `canvas2dBackend({ cellRenderers })` | `canvas2d` |
+| Axis                                            | API                                  | Package    |
+| ----------------------------------------------- | ------------------------------------ | ---------- |
+| Business semantics (edit/sort/filter/clipboard) | `GridOptions.cellTypes`              | `core`     |
+| Extra per-cell payload                          | `GridOptions.cellAttachments`        | `core`     |
+| DOM/overlay editor                              | `GridOptions.cellEditors`            | `core`     |
+| Canvas painter                                  | `canvas2dBackend({ cellRenderers })` | `canvas2d` |
 
 ```ts
 new Grid(container, {
@@ -332,6 +356,7 @@ new Grid(container, {
   backend: canvas2dBackend({ cellRenderers: { rating: ratingRenderer } }),
 })
 ```
+
 The shipped reference implementation of this pattern is the rich-text cell type in `@novasheet/cell-kit` (codec + canvas renderer + inline contenteditable editor + an external React toolbar), wired up end to end in [`apps/storybook/src/stories/RichText.stories.ts`](../../apps/storybook/src/stories/RichText.stories.ts) — read that file for a complete, working example beyond what fits in this README.
 
 ### Lifecycle, layout, frozen regions

@@ -48,20 +48,20 @@ grid.setColumnWidth('revenue', 140)
 
 ## 组件
 
-| 组件 | 是什么 |
-| --- | --- |
-| `Grid`（[`Grid.ts`](src/Grid.ts)） | 公开门面。每个挂载容器对应一个实例；下面所有方法都挂在它上面。 |
-| `DataSource`（`InMemoryDataSource`、`SparseExcelDataSource`、`WindowedDataSource`） | 行存储层。`InMemoryDataSource` 持有纯数组（约 30 万行 × 50 列）；`SparseExcelDataSource` 是稀疏、自增长的 Excel 风格工作区；`WindowedDataSource` 针对可视区域滑动窗口做拉取/订阅，背后是一个传输无关的 `WindowedDataProvider` 端口（HTTP + WebSocket）。三者都实现同一个同步 `DataSource` 接口——需要分页实现可自行接入。 |
-| `RenderBackend` / `RenderBackendFactory`（[`ports/RenderBackend.ts`](src/ports/RenderBackend.ts)） | `core` 渲染所经过的端口。`@novasheet/canvas2d` 是已交付实现；任何实现该端口的后端（WebGL、WebGPU、测试 stub）都可作为 `GridOptions.backend` 传入。 |
-| `Theme`（`denseGridTheme`） | painter 使用的所有颜色/字体/间距 token 的唯一来源。用 `grid.setTheme(theme)` 替换。 |
-| `CellTypeRegistry` | 按 `Field.type` 定义的**业务**语义：值如何被编辑、解析、排序、过滤与剪贴板序列化。内置覆盖 `text`/`number`/`date`；其余类型（如 `rating`）自行注册。作用域是整列。 |
-| `CellTypeStore`（`setCellType`/`clearCellType`/`getCellType`） | 对单个**单元格**覆盖其 resolved 标量类型（`text`/`number`/`date`/`checkbox`），独立于该列的 `Field.type`——即"一列多类型"。以 raw 坐标索引，可 undo，结构变更后能正确重映射。 |
-| `ValidatorDefinition` | 每条规则的校验逻辑（同步或异步），自动接入所有写入路径。 |
-| `CellAttachmentCodec` | 不透明、按 namespace 隔离的单元格附加数据（如富文本 runs、评论），随复制/粘贴、填充与 undo 一起流转。 |
-| `CellEditorRegistry` | 按 `Field.type` 注册的 DOM/overlay 编辑器，用于单个输入框表达不了的交互（日期选择器、下拉框）。 |
-| Canvas painter 注册表（`cellRenderers`） | **不属于 `core`**——`core` 不渲染任何东西，按类型分发的显示 painter 注册在渲染后端工厂上（如 `@novasheet/canvas2d` 的 `canvas2dBackend({ cellRenderers })`）。`core` 只保证 painter 需要的 resolved field/value/附件数据能经 frame 送达。 |
-| `ViewPipeline`（`SortLayer`、`FilterLayer`、`HideRowsLayer`） | 叠加在 raw `DataSource` 上的可组合 view 坐标变换；`Grid` 暴露组合后的结果，所有 mutation 最终都解析回 raw 坐标。 |
-| `RangeStyleStore` / `MergeStore` | 按区域键控的格式与合并状态，以 raw 坐标索引，在结构变更与 undo 后仍能存活。 |
+| 组件                                                                                               | 是什么                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Grid`（[`Grid.ts`](src/Grid.ts)）                                                                 | 公开门面。每个挂载容器对应一个实例；下面所有方法都挂在它上面。                                                                                                                                                                                                                                                           |
+| `DataSource`（`InMemoryDataSource`、`SparseExcelDataSource`、`WindowedDataSource`）                | 行存储层。`InMemoryDataSource` 持有纯数组（约 30 万行 × 50 列）；`SparseExcelDataSource` 是稀疏、自增长的 Excel 风格工作区；`WindowedDataSource` 针对可视区域滑动窗口做拉取/订阅，背后是一个传输无关的 `WindowedDataProvider` 端口（HTTP + WebSocket）。三者都实现同一个同步 `DataSource` 接口——需要分页实现可自行接入。 |
+| `RenderBackend` / `RenderBackendFactory`（[`ports/RenderBackend.ts`](src/ports/RenderBackend.ts)） | `core` 渲染所经过的端口。`@novasheet/canvas2d` 是已交付实现；任何实现该端口的后端（WebGL、WebGPU、测试 stub）都可作为 `GridOptions.backend` 传入。                                                                                                                                                                       |
+| `Theme`（`denseGridTheme`）                                                                        | painter 使用的所有颜色/字体/间距 token 的唯一来源。用 `grid.setTheme(theme)` 替换。                                                                                                                                                                                                                                      |
+| `CellTypeRegistry`                                                                                 | 按 `Field.type` 定义的**业务**语义：值如何被编辑、解析、排序、过滤与剪贴板序列化。内置覆盖 `text`/`number`/`date`；其余类型（如 `rating`）自行注册。作用域是整列。                                                                                                                                                       |
+| `CellTypeStore`（`setCellType`/`clearCellType`/`getCellType`）                                     | 对单个**单元格**覆盖其 resolved 标量类型（`text`/`number`/`date`/`checkbox`），独立于该列的 `Field.type`——即"一列多类型"。以 raw 坐标索引，可 undo，结构变更后能正确重映射。                                                                                                                                             |
+| `ValidatorDefinition`                                                                              | 每条规则的校验逻辑（同步或异步），自动接入所有写入路径。                                                                                                                                                                                                                                                                 |
+| `CellAttachmentCodec`                                                                              | 不透明、按 namespace 隔离的单元格附加数据（如富文本 runs、评论），随复制/粘贴、填充与 undo 一起流转。                                                                                                                                                                                                                    |
+| `CellEditorRegistry`                                                                               | 按 `Field.type` 注册的 DOM/overlay 编辑器，用于单个输入框表达不了的交互（日期选择器、下拉框）。                                                                                                                                                                                                                          |
+| Canvas painter 注册表（`cellRenderers`）                                                           | **不属于 `core`**——`core` 不渲染任何东西，按类型分发的显示 painter 注册在渲染后端工厂上（如 `@novasheet/canvas2d` 的 `canvas2dBackend({ cellRenderers })`）。`core` 只保证 painter 需要的 resolved field/value/附件数据能经 frame 送达。                                                                                 |
+| `ViewPipeline`（`SortLayer`、`FilterLayer`、`HideRowsLayer`）                                      | 叠加在 raw `DataSource` 上的可组合 view 坐标变换；`Grid` 暴露组合后的结果，所有 mutation 最终都解析回 raw 坐标。                                                                                                                                                                                                         |
+| `RangeStyleStore` / `MergeStore`                                                                   | 按区域键控的格式与合并状态，以 raw 坐标索引，在结构变更与 undo 后仍能存活。                                                                                                                                                                                                                                              |
 
 ## 使用示例
 
@@ -72,6 +72,7 @@ const cell = { rowIndex: 2, colIndex: 1 }
 grid.setSelection({ activeCell: cell, anchorCell: cell, extentCell: cell, selectedRange: null })
 const { activeCell, selectedRange } = grid.getSelection()
 ```
+
 插入/删除会自动重映射选区——在上方插入会让选区下移；删除永不会让选区悬空在已删除的行上。
 
 ### 自定义单元格类型（列级 `CellTypeRegistry`）
@@ -99,7 +100,8 @@ const ratingType: CellTypeDefinition = {
     {
       id: 'rating-gte',
       label: 'Rating >=',
-      matches: (value, operand) => typeof value === 'number' && typeof operand === 'number' && value >= operand,
+      matches: (value, operand) =>
+        typeof value === 'number' && typeof operand === 'number' && value >= operand,
     },
   ],
   onAction: (ctx) => {
@@ -109,6 +111,7 @@ const ratingType: CellTypeDefinition = {
 
 new Grid(container, { backend: canvas2dBackend(), data, cellTypes: { rating: ratingType } })
 ```
+
 每个 hook 都是可选的——按需接入即可。`parseEditInput` / `parseClipboard` 返回 `SKIP_CELL_VALUE` 哨兵值可以拒绝输入且不写入任何内容。一个**没有**匹配 registry 条目（也没有内置定义）的 `Field.type` 会回退到只读纯文本展示：绝不抛错，raw 值保持不变，双击/Enter/F2/直接键入都不会为它打开编辑器。
 
 查表优先按单元格的**resolved type**（列默认，或经 `setCellType` 覆盖后的类型）。如果某格有显式覆盖，且该 resolved type 没有对应条目，查表**不会**回退去用该列原本 `Field.type` 的条目——这一格被当作"未注册"处理，而不是悄悄套用一个为另一种类型写的定义。
@@ -118,9 +121,10 @@ new Grid(container, { backend: canvas2dBackend(), data, cellTypes: { rating: rat
 ```ts
 const range = { startRow: 0, endRow: 0, startCol: 2, endCol: 2 }
 grid.setCellType(range, 'date') // 这个单元格此后按 date 读取/编辑/排序，与其所在列的 Field.type 无关
-grid.getCellType(0, 2)          // 'date'
-grid.clearCellType(range)       // 恢复为该列的默认类型
+grid.getCellType(0, 2) // 'date'
+grid.clearCellType(range) // 恢复为该列的默认类型
 ```
+
 这是"一列多类型"的退路机制——与上面的 `CellTypeRegistry` 是两套不同机制，且只覆盖四种标量 resolved type：`text` / `number` / `date` / `checkbox`。已锁定、且全部有 BDD 覆盖的语义：
 
 - **触发方式仅限显式操作**——`setCellType` 或拖拽填充传播。键入内容永不做类型推断；粘贴永远把值强转为**目标格**的 resolved type，而不会导入源格的覆盖。
@@ -142,6 +146,7 @@ grid.setFillColor(range, null) // 清除
 grid.setBorders(range, 'outer', { color: '#000', width: 'thin', lineStyle: 'solid' })
 grid.setTextWrap(range, 'wrap') // 'overflow' | 'wrap' | 'clip'
 ```
+
 格式在内部按 raw 坐标键控，所以排序之后 `getViewCellFormat` 仍能解析到正确的单元格。raw 值永不会被格式本身修改——`ValueFormat` 只改变显示文本。
 
 ### 合并单元格
@@ -150,6 +155,7 @@ grid.setTextWrap(range, 'wrap') // 'overflow' | 'wrap' | 'clip'
 grid.mergeCells(range) // 内部各格此后通过 getViewMergeRegion 解析到同一区域
 grid.unmergeCells(range) // getViewMergeRegion(...) 再次返回 null
 ```
+
 合并能在排序后存活（区域会重映射到新的 view 位置），也能与其上的格式一起经历结构性 undo/redo。
 
 ### 填充柄
@@ -157,6 +163,7 @@ grid.unmergeCells(range) // getViewMergeRegion(...) 再次返回 null
 ```ts
 grid.onFill((event) => console.log(event.fill, event.result))
 ```
+
 拖动填充柄会投影等差/日期序列，或克隆单个样本，并把所有格式轴（`fillColor`、`borders`、`textWrap`、`valueFormat`）以及源格 resolved cell type 一并传播到目标——若源格在某个轴上没有值，目标该轴上的旧值会被清除（Sheets 风格的整体覆盖），整个操作作为一个单元一起 undo。
 
 ### 剪贴板
@@ -170,16 +177,20 @@ new Grid(container, {
 await grid.copy() // 或 grid.cut()
 await grid.paste()
 ```
+
 粘贴会把传入值强转为**目标格**的 resolved type（不像填充那样导入源格的类型）；无法强转、或落在 read-only 类型上的单元格会被跳过，并通过 `onPasteSkipped` 上报，目标内容保持不变。`serializeRowsToTsv` / `parseTsvToCells` 也作为独立函数导出，可在未挂载 `Grid` 的场景下做 TSV 往返。
 
 ### 排序、过滤、隐藏（view pipeline）
 
 ```ts
 grid.getSortLayer().setSpec({ fieldId: 'revenue', direction: 'desc' })
-grid.getFilterLayer().setSpec({ fieldId: 'name', op: { kind: 'text-contains', value: 'a', caseSensitive: false } })
+grid
+  .getFilterLayer()
+  .setSpec({ fieldId: 'name', op: { kind: 'text-contains', value: 'a', caseSensitive: false } })
 grid.hideCols(['joined'])
 grid.getHiddenCols() // ['joined']
 ```
+
 三层会组合成同一个最终帧；所有 mutation API（`setCellType`、`setValueFormat` 等）始终使用**view** 坐标，内部再解析回 raw。
 
 ### 远程 / 滑动窗口数据（`WindowedDataSource`）
@@ -188,7 +199,8 @@ grid.getHiddenCols() // ['joined']
 import { WindowedDataSource, type WindowedDataProvider } from '@novasheet/core'
 
 const provider: WindowedDataProvider = {
-  loadRange: (window, signal) => fetch(`/api/rows?${toQuery(window)}`, { signal }).then((r) => r.json()),
+  loadRange: (window, signal) =>
+    fetch(`/api/rows?${toQuery(window)}`, { signal }).then((r) => r.json()),
   subscribe: (onEvent) => {
     const ws = new WebSocket('/api/rows/stream')
     ws.onmessage = (e) => onEvent(JSON.parse(e.data))
@@ -202,6 +214,7 @@ const provider: WindowedDataProvider = {
 const data = new WindowedDataSource({ schema, rowCount: 100_000, provider, preloadScreens: 2 })
 const grid = new Grid(container, { backend: canvas2dBackend(), data })
 ```
+
 `Grid` 在每一帧都会调用 `hintWindow(visibleWindow)`（窗口不变时是空操作）；`WindowedDataSource` 按 `preloadScreens` 屏数外扩这个窗口，与 LRU 块缓存去重后只拉取缺失的部分——在预取边界内滚动零请求。`loadRange` 响应与 `subscribe` 推送事件（`cells` / `rowCount` / `resync`）通过一套 stale-while-revalidate 的 epoch 机制对账：滚回已经访问过的区域时先用缓存旧值立即重绘，同时若判定为陈旧则在后台发起重新拉取并在落地后替换。`hintWindow` 会经 `SortLayer` / `FilterLayer` / `HideRowsLayer` / `VisibleColumnsDataSource` 转发，所以排序/筛选/隐藏可以透明地叠加在它之上。完整可运行示例（含模拟网络拉取与逐笔推送）见 [`apps/storybook/src/stories/WindowedDataSource.stories.ts`](../../apps/storybook/src/stories/WindowedDataSource.stories.ts)。
 
 ### 校验
@@ -210,14 +223,20 @@ const grid = new Grid(container, { backend: canvas2dBackend(), data })
 import type { ValidatorDefinition } from '@novasheet/core'
 
 const positiveNumber: ValidatorDefinition = {
-  validate: (value) => (typeof value === 'number' && value >= 0 ? null : 'Must be a non-negative number'),
+  validate: (value) =>
+    typeof value === 'number' && value >= 0 ? null : 'Must be a non-negative number',
 }
 
-new Grid(container, { backend: canvas2dBackend(), data, validators: { 'positive-number': positiveNumber } })
+new Grid(container, {
+  backend: canvas2dBackend(),
+  data,
+  validators: { 'positive-number': positiveNumber },
+})
 grid.setValidation(range, { type: 'positive-number' })
 grid.validateAll()
 grid.getValidationState(rowIndex, colIndex) // null | { status: 'invalid', message } | { status: 'pending' }
 ```
+
 validator 可以是同步函数，也可以返回 `Promise`；异步校验会按受限的批大小与并发数调度（`GridOptions` 上的 `validationBatchSize`、`validationMaxConcurrent`），且每条写入路径（编辑、粘贴、填充、undo、redo）都会自动重新排队校验。
 
 ### 单元格附件
@@ -235,6 +254,7 @@ new Grid(container, { backend: canvas2dBackend(), data, cellAttachments: [richTe
 grid.setCellAttachment('rich-text', rawRow, rawCol, { runs: [...] })
 grid.getCellAttachment('rich-text', rawRow, rawCol)
 ```
+
 附件按**raw** 坐标键控，结构性插入/删除时的重映射规则与单元格类型覆盖一致，会随复制/粘贴与填充一起流转，并与单元格值一起 undo。
 
 ### Undo / redo
@@ -247,7 +267,8 @@ grid.redo()
 grid.canUndo()
 grid.canRedo()
 ```
-每个会产生写入的门面方法（`insertRows`、`setCellType`、`mergeCells`、`setValueFormat`、粘贴、填充……）都会推入 21 种 `UndoCommand` 之一；每种都是纯数据，能精确 JSON 往返，宿主应用可以在 `Grid` 实例之外持久化/回放历史。
+
+每个会产生写入的门面方法（`insertRows`、`setCellType`、`mergeCells`、`setValueFormat`、粘贴、填充……）都会推入 22 种 `UndoCommand` 之一；每种都是纯数据，能精确 JSON 往返，宿主应用可以在 `Grid` 实例之外持久化/回放历史。
 
 ### 右键菜单扩展
 
@@ -265,6 +286,7 @@ new Grid(container, {
   },
 })
 ```
+
 内置的行/列头菜单（插入/删除/隐藏/取消隐藏等）有 golden-locked 的菜单项列表；`append`/`prepend`/`replace` 可以扩展它们，core 完全不需要识别你的自定义 action id。
 
 ### 自定义 DOM 单元格编辑器
@@ -285,6 +307,7 @@ const dateEditor: CellEditor = {
 
 new Grid(container, { backend: canvas2dBackend(), data, cellEditors: { date: dateEditor } })
 ```
+
 `ctx.trigger` 说明编辑器被打开的原因（`'double-click' | 'enter' | 'f2' | 'typing' | 'api' | 'cell-action'`）；由输入触发时，`ctx.initialInput` 携带第一个已输入的字符。与 `cellTypes` 一样，查表按**resolved type**，且一旦该格有显式覆盖就不回退到列类型条目（规则同上）。
 
 ### 自定义单元格显示（canvas painter）
@@ -310,18 +333,19 @@ new Grid(container, {
   backend: canvas2dBackend({ cellRenderers: { rating: ratingRenderer } }),
 })
 ```
+
 这个 renderer 同样按 `Field.type` 键控，但渲染器在调用 `paint(ctx, params)` 前，传入的 `field` 已经被换成该单元格的**resolved type**——`setCellType` 覆盖会自动选中匹配的 painter，"不回退到列 painter" 的规则与 `cellEditors`/`cellTypes` 一致。`params` 上还有 `getAttachment(namespace, viewRow, viewCol)`（读取 `cellAttachments` codec 为这一格写入的内容）和 `formatCell(...)`（resolved `ValueFormat` 的显示文本），自定义 renderer 不需要重新推导这两类数据。`Canvas2DCellRenderer` 由 `@novasheet/canvas2d` 导出，不属于 `core`——这个类型活在渲染发生的地方。
 
 ### 把一个自定义类型完整拼起来
 
 一个完整的自定义单元格类型由四个注册点组成，其中三个在 `core`，一个在渲染后端：
 
-| 轴 | API | 所属包 |
-| --- | --- | --- |
-| 业务语义（编辑/排序/筛选/剪贴板） | `GridOptions.cellTypes` | `core` |
-| 单元格附加数据 | `GridOptions.cellAttachments` | `core` |
-| DOM/overlay 编辑器 | `GridOptions.cellEditors` | `core` |
-| Canvas painter | `canvas2dBackend({ cellRenderers })` | `canvas2d` |
+| 轴                                | API                                  | 所属包     |
+| --------------------------------- | ------------------------------------ | ---------- |
+| 业务语义（编辑/排序/筛选/剪贴板） | `GridOptions.cellTypes`              | `core`     |
+| 单元格附加数据                    | `GridOptions.cellAttachments`        | `core`     |
+| DOM/overlay 编辑器                | `GridOptions.cellEditors`            | `core`     |
+| Canvas painter                    | `canvas2dBackend({ cellRenderers })` | `canvas2d` |
 
 ```ts
 new Grid(container, {
@@ -332,6 +356,7 @@ new Grid(container, {
   backend: canvas2dBackend({ cellRenderers: { rating: ratingRenderer } }),
 })
 ```
+
 这套模式已交付的参考实现是 `@novasheet/cell-kit` 里的 rich-text 单元格类型（codec + canvas renderer + inline contenteditable 编辑器 + 外部 React toolbar），完整接线见 [`apps/storybook/src/stories/RichText.stories.ts`](../../apps/storybook/src/stories/RichText.stories.ts)——超出本 README 篇幅的完整可运行示例都在那份文件里。
 
 ### 生命周期、布局、冻结区域

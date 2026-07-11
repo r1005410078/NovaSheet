@@ -15,29 +15,31 @@ The long-term goal is to provide infrastructure for AI-native data workbenches: 
 ## Why NovaSheet
 
 - **Canvas-first performance**: a single visible-region redraw path for large datasets.
-- **Portable core**: `@novasheet/core` has no DOM or Canvas dependency.
-- **Browser-ready facade**: `@novasheet/web` exposes the public `Grid` API.
-- **Dedicated renderer package**: `@novasheet/canvas2d` owns Canvas2D painting.
-- **Spreadsheet interactions**: selection, keyboard navigation, editing, clipboard, undo/redo, fill handle, sorting, filtering, row/column operations, merge cells, and range formatting.
-- **Live Storybook demos**: interactive examples for scroll, frozen regions, autofit, Excel-style headers, editing, clipboard, selection, formatting, and more.
-- **Tested monorepo**: 842 passing `bun:test` tests across the workspace.
+- **Portable engine**: `@novasheet/core`'s engine layers (kernel/features/engine) are DOM-free; rendering is injected through a `RenderBackend` port, so core never depends on Canvas.
+- **Public facade in core**: `import { Grid } from '@novasheet/core'`, with the renderer passed in as `backend: canvas2dBackend()`.
+- **Dedicated renderer package**: `@novasheet/canvas2d` owns Canvas2D painting and the custom cell-renderer registry.
+- **React adapter**: `@novasheet/react` ships `<NovaExcel />` (a ready-made Excel-style shell) and `<NovaSheetGrid />`.
+- **Extensible cells**: register custom cell types, editors, attachments, and canvas painters — `@novasheet/cell-kit`'s rich-text cell is the first-party reference implementation.
+- **Spreadsheet interactions**: selection, keyboard navigation, editing, clipboard, undo/redo, fill handle, sorting, filtering, row/column operations, merge cells, value formatting, and validation.
+- **Live Storybook demos**: interactive examples for scroll, frozen regions, autofit, Excel-style headers, editing, clipboard, selection, formatting, windowed data, and more.
+- **Tested monorepo**: 1,797 passing `bun:test` tests across the workspace, with BDD acceptance scenarios backing the public API.
 
 ## Current Status
 
 NovaSheet is pre-1.0 and actively developed.
 
-| Area       | Status                                                         |
-| ---------- | -------------------------------------------------------------- |
-| Packages   | `@novasheet/core`, `@novasheet/web`, `@novasheet/canvas2d` |
-| Tests      | 842 passing tests with `bun:test`                              |
-| CI gates   | lint, typecheck, test, build                                   |
-| Public API | `import { Grid } from '@novasheet/web'`                        |
-| Demo       | Storybook on GitHub Pages                                      |
-| License    | MIT                                                            |
+| Area       | Status                                                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| Packages   | `@novasheet/core`, `@novasheet/canvas2d`, `@novasheet/react`, `@novasheet/cell-kit`, `@novasheet/mbd` |
+| Tests      | 1,797 passing tests with `bun:test`                                                                   |
+| CI gates   | lint, typecheck, test, build                                                                          |
+| Public API | `import { Grid } from '@novasheet/core'` + `backend: canvas2dBackend()`                               |
+| Demo       | Storybook on GitHub Pages                                                                             |
+| License    | MIT                                                                                                   |
 
-Recently delivered: **Phase 5-A merge cells + basic range formatting**.
+Recently delivered: **Phase 5-C value formatting, custom cell-type extension API (+ `@novasheet/cell-kit` rich text), cell validation, `WindowedDataSource` remote data, and the React adapter**.
 
-Next milestone: **Phase 5-B advanced borders**.
+Next milestone: **Phase 5-D conditional formatting**.
 
 ## Demo And Release Readiness
 
@@ -56,12 +58,11 @@ NovaSheet uses Bun workspaces.
 bun install
 bun run --filter @novasheet/core build
 bun run --filter @novasheet/canvas2d build
-bun run --filter @novasheet/web build
 ```
 
 ```ts
-import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
-import { Grid } from '@novasheet/web'
+import { Grid, InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { canvas2dBackend } from '@novasheet/canvas2d'
 
 const data = new InMemoryDataSource({
   schema: {
@@ -91,6 +92,7 @@ const data = new InMemoryDataSource({
 const container = document.getElementById('app')!
 const grid = new Grid(container, {
   data,
+  backend: canvas2dBackend(),
   theme: denseGridTheme,
   frozen: { topRows: 1, leftCols: 1, rightCols: 1 },
 })
@@ -115,9 +117,11 @@ Open Storybook and choose the `Table /` stories to explore interactive variants.
 ```text
 novasheet/
 ├── packages/
-│   ├── core/                @novasheet/core
-│   ├── web/                 @novasheet/web
-│   └── canvas2d/        @novasheet/canvas2d
+│   ├── core/                @novasheet/core — engine + DOM shell + public Grid facade
+│   ├── canvas2d/            @novasheet/canvas2d — Canvas2D render backend
+│   ├── react/               @novasheet/react — React adapter (NovaExcel shell, hooks)
+│   ├── cell-kit/            @novasheet/cell-kit — opt-in cell components (rich text)
+│   └── mbd/                 @novasheet/mbd — markdown BDD scenario tooling (dev-only)
 ├── apps/
 │   └── storybook/           interactive demo app
 ├── docs/
@@ -133,51 +137,53 @@ novasheet/
 ## Architecture
 
 ```text
-┌────────────────────────────────────────────────────────────┐
-│   @novasheet/web                                           │
-│   Grid (public facade) · Canvas2DBackend · WebGridRuntime  │
-│   DomGridHost · ScrollMapper · NativeScroller              │
-└────────────────────────────┬───────────────────────────────┘
-                             │ depends on
-                             ▼
-┌────────────────────────────────────────────────────────────┐
-│   @novasheet/canvas2d                                  │
-│   Canvas2DRenderer · Cell / Header / GridLines painters    │
-│   HighDPI                                                  │
-└────────────────────────────┬───────────────────────────────┘
-                             │ depends on
-                             ▼
-┌────────────────────────────────────────────────────────────┐
-│   @novasheet/core (no DOM, no canvas)                      │
-│   DefaultGridEngine · DataSource · Theme · ChunkedAxis     │
-│   FrozenRegions · Viewport · RenderFrame · ViewPipeline    │
-└────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│   Composition roots: apps/storybook · @novasheet/react      │
+│   new Grid(container, { data, backend: canvas2dBackend() }) │
+└──────────────┬──────────────────────────┬───────────────────┘
+               │ uses                     │ injects
+               ▼                          ▼
+┌──────────────────────────┐   ┌─────────────────────────────┐
+│   @novasheet/core        │   │   @novasheet/canvas2d       │
+│   Grid (public facade)   │   │   canvas2dBackend()         │
+│   DefaultGridEngine      │◄──│   Canvas2DRenderer          │
+│   kernel/features/engine │   │   painters · HighDPI        │
+│   DOM shell (dom/)       │   │   implements the            │
+│   ports/RenderBackend    │   │   RenderBackend port        │
+└──────────────────────────┘   └─────────────────────────────┘
 ```
 
-Dependency direction is intentionally one-way:
+Dependency direction is intentionally one-way — `core` never imports a renderer; `@novasheet/canvas2d` implements core's `RenderBackend` port and depends back on core:
 
 ```text
-core <- canvas2d <- web <- apps
+core <- canvas2d <- cell-kit
+core + canvas2d <- react <- apps
 ```
 
 See [docs/architecture.md](docs/architecture.md) for the detailed architecture notes.
 
 ## Roadmap
 
-| Milestone                          | Scope                                                                                              | Status  |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------- | ------- |
-| M1 Foundation                      | Canvas rendering, theme tokens, data source, axes, painters, frame scheduler, Grid facade          | Done    |
-| M2 Virtual scrolling               | Native scroll host, nonlinear scroll mapping, `scrollToRow`, `scrollToCell`, 1M+ rows              | Done    |
-| M3 Frozen regions / autofit        | top / left / right frozen regions, dynamic row height, multiline autofit                           | Done    |
-| Phase 3 Interactions               | selection, keyboard navigation, resize, basic editing                                              | Done    |
-| Phase 4 Spreadsheet workflows      | context menu, clipboard, undo/redo, fill handle, sort/filter, row/column structure, column reorder | Done    |
-| Phase 5-A Merge + basic formatting | merge/unmerge, fill color, basic borders, undo/redo, Storybook coverage                            | Done    |
-| Phase 5-B/C/D Advanced formatting  | advanced borders, number/date/percent/currency formats, conditional formatting                     | Planned |
-| Phase 6 Schema + field types       | field editor, validation, lookup, rollup, grouping, aggregation                                    | Planned |
-| Phase 7 Formulas + import/export   | formula engine, multi-sheet support, named ranges, pivot tables, charts, xlsx/csv                  | Planned |
-| Phase 8 Server + multi-view        | server-paginated data sources, OPFS, collaboration, Grid/Kanban/Calendar/Gallery views             | Planned |
-| Phase 9 Framework adapters         | React and Vue adapters                                                                             | Planned |
-| Phase 10 AI-native workflows       | natural-language queries, insights, autocomplete, data-cleaning assistance                         | Planned |
+| Milestone                          | Scope                                                                                                                 | Status  |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------- |
+| M1 Foundation                      | Canvas rendering, theme tokens, data source, axes, painters, frame scheduler, Grid facade                             | Done    |
+| M2 Virtual scrolling               | Native scroll host, nonlinear scroll mapping, `scrollToRow`, `scrollToCell`, 1M+ rows                                 | Done    |
+| M3 Frozen regions / autofit        | top / left / right frozen regions, dynamic row height, multiline autofit                                              | Done    |
+| Phase 3 Interactions               | selection, keyboard navigation, resize, basic editing                                                                 | Done    |
+| Phase 4 Spreadsheet workflows      | context menu, clipboard, undo/redo, fill handle, sort/filter, row/column structure, column reorder                    | Done    |
+| Phase 5-A Merge + basic formatting | merge/unmerge, fill color, basic borders, undo/redo, Storybook coverage                                               | Done    |
+| Phase 5-B Advanced borders         | per-edge borders, dashed/dotted/double line styles                                                                    | Done    |
+| Phase 5-C Value formatting         | number/currency/percent/date formats, custom formatter registry, three-state text wrap                                | Done    |
+| Cell extension API                 | custom cell types/editors/attachments, canvas cell renderers, per-cell type override, `@novasheet/cell-kit` rich text | Done    |
+| Cell validation                    | sync/async `ValidatorDefinition`, auto-wired to every write path (edit/paste/fill/undo)                               | Done    |
+| Windowed remote data               | `WindowedDataSource` sliding-window fetch/subscribe with LRU block cache                                              | Done    |
+| React adapter                      | `@novasheet/react`: `<NovaExcel />` shell, `<NovaSheetGrid />`, hooks, toolbar                                        | Done    |
+| Phase 5-D Conditional formatting   | conditional formatting rules                                                                                          | Next    |
+| Phase 6 Schema + field types       | field editor, lookup, rollup, grouping, aggregation                                                                   | Planned |
+| Phase 7 Formulas + import/export   | formula engine, multi-sheet support, named ranges, pivot tables, charts, xlsx/csv                                     | Planned |
+| Phase 8 Server + multi-view        | server-paginated data sources, OPFS, collaboration, Grid/Kanban/Calendar/Gallery views                                | Planned |
+| Phase 9 Framework adapters         | Vue adapter                                                                                                           | Planned |
+| Phase 10 AI-native workflows       | natural-language queries, insights, autocomplete, data-cleaning assistance                                            | Planned |
 
 Detailed design specs and implementation plans live in [docs/superpowers](docs/superpowers).
 
