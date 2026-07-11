@@ -18,12 +18,9 @@
  */
 
 import type { AutofitRowsResult } from '../../features/row/AutofitRowHeights'
-import {
-  ExcelWorkspaceController,
-  type ExcelWorkspacePolicy,
-  type ExcelWorkspacePort,
-} from '../../features/excel-workspace'
 import type { DataSource } from '../../kernel/data/DataSource'
+import { ExcelWorkspaceBinding } from './controllers/ExcelWorkspaceBinding'
+import type { ExcelWorkspacePolicy } from '../../features/excel-workspace'
 import type { CellValue, Field, Row } from '../../kernel/data/Schema'
 import { isMutableDataSource } from '../../kernel/data/MutableDataSource'
 import { FilterLayer } from '../../features/view/FilterLayer'
@@ -244,23 +241,6 @@ function mergeVisualRange(
   return merge ? unionRange(range, merge) : range
 }
 
-interface ExcelWorkspaceReadableDataSource extends DataSource {
-  getContentBounds(): CellRange | null
-  hasMaterializedRows(start: number, end: number): boolean
-  hasMaterializedCols(start: number, end: number): boolean
-}
-
-function isExcelWorkspaceReadableDataSource(
-  data: DataSource,
-): data is ExcelWorkspaceReadableDataSource {
-  const candidate = data as ExcelWorkspaceReadableDataSource
-  return (
-    typeof candidate.getContentBounds === 'function' &&
-    typeof candidate.hasMaterializedRows === 'function' &&
-    typeof candidate.hasMaterializedCols === 'function'
-  )
-}
-
 /**
  * Web 端表格编排器（spec §6 `GridRuntime`）。
  *
@@ -311,10 +291,8 @@ export class GridRuntime {
   private selectionOverlay?: SelectionOverlay
   /** Validation tooltip overlay。 */
   private readonly validationTooltip?: import('../overlay/ValidationTooltip').ValidationTooltip
-  /** Excel 模式 workspace auto-grow 控制器；未启用时为空。 */
-  private excelWorkspaceController?: ExcelWorkspaceController
-  /** 当前 Excel workspace frame 是否触发了 engine mutation。 */
-  private excelWorkspaceMutated = false
+  /** Excel 模式 workspace auto-grow 绑定；未启用时为空。 */
+  private excelWorkspace?: ExcelWorkspaceBinding
   /** DOM 单元格编辑器。 */
   private cellEditor?: DomCellEditor
   /** Custom editor overlay 的 DOM 宿主。 */
@@ -431,9 +409,9 @@ export class GridRuntime {
     this.engine.setDataChangeRedrawCallback(() => this.invalidate())
     this.scrollMapper = new ScrollMapper()
     if (opts.excelWorkspace) {
-      this.excelWorkspaceController = new ExcelWorkspaceController({
+      this.excelWorkspace = new ExcelWorkspaceBinding({
         policy: typeof opts.excelWorkspace === 'object' ? opts.excelWorkspace.policy : undefined,
-        port: this.createExcelWorkspacePort(),
+        deps: { engine: this.engine, afterEngineMutation: () => this.afterEngineMutation() },
       })
     }
     this.resizeDrag = new ResizeDrag({
@@ -1618,79 +1596,6 @@ export class GridRuntime {
     this.activeDrag = null
   }
 
-  private recordExcelWorkspaceScroll(source: NativeScrollSource | undefined): void {
-    if (!this.excelWorkspaceController) return
-    const atMs = source?.atMs ?? Date.now()
-    if (!source || source.kind === 'scrollbar') {
-      this.excelWorkspaceController.recordScrollbarScroll(atMs)
-      return
-    }
-    if (source.kind === 'programmatic') {
-      this.excelWorkspaceController.recordProgrammaticScroll(atMs)
-      return
-    }
-    this.excelWorkspaceController.recordWheel(source)
-  }
-
-  private runExcelWorkspaceFrame(): void {
-    if (!this.excelWorkspaceController) return
-    this.excelWorkspaceMutated = false
-    this.excelWorkspaceController.afterScrollFrame(Date.now())
-    if (this.excelWorkspaceMutated) this.afterEngineMutation()
-  }
-
-  private createExcelWorkspacePort(): ExcelWorkspacePort {
-    return {
-      getSize: () => {
-        const data = this.engine.getData()
-        return {
-          rowCount: data.getRowCount(),
-          colCount: data.getSchema().fields.length,
-        }
-      },
-      getVisibleRange: () => {
-        const main = this.engine.getFrame().viewport.regions.find((region) => region.id === 'main')
-        return {
-          rows: main?.rowRange ?? [0, -1],
-          cols: main?.colRange ?? [0, -1],
-        }
-      },
-      getContentBounds: () => {
-        const data = this.engine.getData()
-        return isExcelWorkspaceReadableDataSource(data) ? data.getContentBounds() : null
-      },
-      hasMaterializedRows: (start, end) => {
-        const data = this.engine.getData()
-        return isExcelWorkspaceReadableDataSource(data) && data.hasMaterializedRows(start, end)
-      },
-      hasMaterializedCols: (start, end) => {
-        const data = this.engine.getData()
-        return isExcelWorkspaceReadableDataSource(data) && data.hasMaterializedCols(start, end)
-      },
-      appendRows: (count) => {
-        if (count <= 0) return
-        const data = this.engine.getData()
-        const next = {
-          rowCount: data.getRowCount() + count,
-          colCount: data.getSchema().fields.length,
-        }
-        if (this.engine.resizeExcelWorkspace(next)) this.excelWorkspaceMutated = true
-      },
-      appendCols: (count) => {
-        if (count <= 0) return
-        const data = this.engine.getData()
-        const next = {
-          rowCount: data.getRowCount(),
-          colCount: data.getSchema().fields.length + count,
-        }
-        if (this.engine.resizeExcelWorkspace(next)) this.excelWorkspaceMutated = true
-      },
-      resizeWorkspace: (size) => {
-        if (this.engine.resizeExcelWorkspace(size)) this.excelWorkspaceMutated = true
-      },
-    }
-  }
-
   /** 滚动到指定行，并按给定对齐方式放入 viewport。 */
   scrollToRow(rowIndex: number, align: 'start' | 'center' | 'end' = 'start'): void {
     const rowsAxis = this.engine.getRowsAxis()
@@ -1837,13 +1742,13 @@ export class GridRuntime {
   /** 处理 host 滚动事件，映射为逻辑滚动并触发重绘。 */
   handleHostScroll(scrollTop: number, scrollLeft: number, source?: NativeScrollSource): void {
     const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
-    this.recordExcelWorkspaceScroll(source)
+    this.excelWorkspace?.recordScroll(source)
     this.engine.setScroll(logicalX, logicalY)
     this.closeActiveCustomEditor()
     this.syncCellEditorPosition()
     this.closeContextMenu()
     this.validationTooltip?.hide()
-    this.runExcelWorkspaceFrame()
+    this.excelWorkspace?.runFrame()
     this.invalidate()
   }
 
