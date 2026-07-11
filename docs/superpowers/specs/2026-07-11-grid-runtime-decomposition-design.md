@@ -1,7 +1,7 @@
 # GridRuntime 分解设计(dom/runtime 架构优化)
 
 - **日期:** 2026-07-11
-- **状态:** 设计定稿,待 plan
+- **状态:** 已实现(Phase 1+2 全部 11 task 完成、review 通过;`GridRuntime.ts` 2981→1043 行,拆出 8 controller + `RenderFlushPipeline`)
 - **基线:** `main` @ 370ddd5(`refactor-default-grid-engine-decomposition` 分支不触碰 `dom/`,无冲突风险)
 
 ## 1. 问题
