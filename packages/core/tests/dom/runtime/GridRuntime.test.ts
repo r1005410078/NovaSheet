@@ -2658,42 +2658,6 @@ describe('GridRuntime menu default dispatch — Phase 4.1', () => {
   })
 })
 
-describe('GridRuntime.getCellText — F3 facade', () => {
-  it('returns string value at raw coords', () => {
-    const data = new InMemoryDataSource({
-      rows: [{ name: 'abc', score: 42 }],
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 100 }, { id: 'score', name: 'Score', type: 'number', width: 100 }] },
-    })
-    const engine = makeEngine()
-    engine.getData = mock(() => data as never)
-    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-    expect(runtime.getCellText(0, 0)).toBe('abc')
-    expect(runtime.getCellText(0, 1)).toBe('42')
-  })
-
-  it('returns empty string for null/undefined cell (out-of-bounds row)', () => {
-    const data = new InMemoryDataSource({
-      rows: [{ name: 'abc' }],
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 100 }] },
-    })
-    const engine = makeEngine()
-    engine.getData = mock(() => data as never)
-    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-    expect(runtime.getCellText(999, 0)).toBe('')
-  })
-
-  it('returns empty string for out-of-bounds column', () => {
-    const data = new InMemoryDataSource({
-      rows: [{ name: 'abc' }],
-      schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 100 }] },
-    })
-    const engine = makeEngine()
-    engine.getData = mock(() => data as never)
-    const runtime = new GridRuntime({ engine, host: makeHost(), renderer: makeRenderer() })
-    expect(runtime.getCellText(0, 99)).toBe('')
-  })
-})
-
 describe('GridRuntime header hover menu button', () => {
   it('pointer move over column header sets hoveredColumnHeaderMenu', () => {
     const { engine, runtime } = makeHeaderRuntime({ columnWidth: 100 })

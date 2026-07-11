@@ -4,7 +4,9 @@
  * 职责：
  *   - 把 `GridEngine`（状态）、`WebHost`（DOM 生命周期）、`RenderBackend`（绘制）、
  *     `ScrollMapper`（逻辑↔DOM 滚动映射）四件套连起来，对外暴露
- *     `setData / setTheme / setRowHeight / setColumnWidth / setFrozen / scrollTo* / refresh / destroy`。
+ *     `setData / setTheme / scrollTo* / refresh / destroy`；结构/格式类 mutation
+ *     passthrough（`insertRows`/`setFillColor` 等，Task 10）已收拢到 `GridControllerImpl`
+ *     直调 `engine` + `afterEngineMutation()`，不再经 runtime 转发。
  *   - 拥有**单个** `FrameScheduler`，让 scroll/resize/render 在同一帧里合并（CLAUDE.md 不变量 #5）。
  *   - 隔离 DOM——本类不持有 canvas，也不读 window 全局；所有平台操作走 `WebHost` 回调。
  *
@@ -29,7 +31,6 @@ import { PopoverController } from './controllers/PopoverController'
 import { ViewportController } from './controllers/ViewportController'
 import { RenderFlushPipeline } from './RenderFlushPipeline'
 import type { ExcelWorkspacePolicy } from '../../features/excel-workspace'
-import type { Field } from '../../kernel/data/Schema'
 import { FilterLayer } from '../../features/view/FilterLayer'
 import type { FilterOp } from '../../features/view/FilterLayer'
 import { SortLayer } from '../../features/view/SortLayer'
@@ -38,7 +39,6 @@ import type { TextMeasurer } from '../../kernel/measure/TextMeasurer'
 import type { Theme } from '../../kernel/theme/Theme'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { GridEngine, SetViewDataOptions } from '../../engine/GridEngine'
-import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
 import { autofitRowHeights } from '../../features/row/AutofitRowHeights'
 import {
   cellInRange,
@@ -55,7 +55,7 @@ import type {
   ContextMenuRenderer,
 } from '../../features/context-menu/ContextMenuModel'
 import type { PasteSkippedCell } from '../../features/clipboard/types'
-import type { BorderPreset, BorderStyle, TextWrapMode, ValueFormat } from '../../kernel/protocol/FormatTypes'
+import type { TextWrapMode } from '../../kernel/protocol/FormatTypes'
 import type { CellAddress, CellRange } from '../../kernel/coords/SelectionTypes'
 import type { MergeRegion } from '../../kernel/coords/MergeRegion'
 import type { FillDirection } from '../../features/fill/FillTarget'
@@ -78,7 +78,7 @@ import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/Host'
 import type { RenderBackend } from '../../ports/RenderBackend'
 import type { NativeScrollSource } from '../scroll/NativeScroller'
 import type { CellEditorRegistry } from '../interaction/CellEditorContract'
-import type { CellTypeOverride, CellTypeRegistry } from '../../features/cell-types'
+import type { CellTypeRegistry } from '../../features/cell-types'
 
 /** GridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
 export interface AutofitRowsRuntimeOptions {
@@ -345,14 +345,48 @@ export class GridRuntime {
       openFilterPopover: (ctx, anchor) => this.popovers.openFilterPopover(ctx, anchor),
       openRowHeightPopover: (rowIds, anchor) => this.popovers.openRowHeightPopover(rowIds, anchor),
       openColumnWidthPopover: (fieldIds, anchor) => this.popovers.openColumnWidthPopover(fieldIds, anchor),
-      insertRows: (beforeUnderlyingRow, count) => this.insertRows(beforeUnderlyingRow, count),
-      deleteRows: (underlyingRowIds) => this.deleteRows(underlyingRowIds),
-      hideRows: (underlyingRowIds) => this.hideRows(underlyingRowIds),
-      unhideRows: (underlyingRowIds) => this.unhideRows(underlyingRowIds),
-      insertCols: (beforeFieldIndex, count) => this.insertCols(beforeFieldIndex, count),
-      deleteCols: (fieldIds) => this.deleteCols(fieldIds),
-      hideCols: (fieldIds) => this.hideCols(fieldIds),
-      unhideCols: (fieldIds) => this.unhideCols(fieldIds),
+      insertRows: (beforeUnderlyingRow, count) => {
+        if (this.destroyed) return []
+        const ids = this.engine.insertRows(beforeUnderlyingRow, count)
+        this.afterEngineMutation()
+        return ids
+      },
+      deleteRows: (underlyingRowIds) => {
+        if (this.destroyed) return
+        this.engine.deleteRows(underlyingRowIds)
+        this.afterEngineMutation()
+      },
+      hideRows: (underlyingRowIds) => {
+        if (this.destroyed) return
+        this.engine.hideRows(underlyingRowIds)
+        this.afterEngineMutation()
+      },
+      unhideRows: (underlyingRowIds) => {
+        if (this.destroyed) return
+        this.engine.unhideRows(underlyingRowIds)
+        this.afterEngineMutation()
+      },
+      insertCols: (beforeFieldIndex, count) => {
+        if (this.destroyed) return []
+        const fields = this.engine.insertCols(beforeFieldIndex, count)
+        this.afterEngineMutation()
+        return fields
+      },
+      deleteCols: (fieldIds) => {
+        if (this.destroyed) return
+        this.engine.deleteCols(fieldIds)
+        this.afterEngineMutation()
+      },
+      hideCols: (fieldIds) => {
+        if (this.destroyed) return
+        this.engine.hideCols(fieldIds)
+        this.afterEngineMutation()
+      },
+      unhideCols: (fieldIds) => {
+        if (this.destroyed) return
+        this.engine.unhideCols(fieldIds)
+        this.afterEngineMutation()
+      },
     })
     if (opts.contextMenuRenderer) {
       this.contextMenu.setRenderer(opts.contextMenuRenderer)
@@ -560,214 +594,6 @@ export class GridRuntime {
     return this.clipboard.canRedo()
   }
 
-  /** Phase 4.5 — 取消隐藏指定底层行，刷新视图。 */
-  unhideRows(underlyingRowIds: readonly number[]): void {
-    if (this.destroyed) return
-    this.engine.unhideRows(underlyingRowIds)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 4.5 — 返回当前隐藏行 id 升序数组。 */
-  getHiddenRows(): readonly number[] {
-    return this.engine.getHiddenRows()
-  }
-
-  /** Phase 4.5 — 在 beforeUnderlyingRow 位置前插入 count 行，刷新视图并返回新行 id。 */
-  insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
-    if (this.destroyed) return []
-    const ids = this.engine.insertRows(beforeUnderlyingRow, count)
-    this.afterEngineMutation()
-    return ids
-  }
-
-  /** Phase 4.5 — 删除给定 underlying row id 集合（升序、去重），刷新视图。 */
-  deleteRows(underlyingRowIds: readonly number[]): void {
-    if (this.destroyed) return
-    this.engine.deleteRows(underlyingRowIds)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 4.5 — 隐藏给定 underlying row id 集合，刷新视图。 */
-  hideRows(underlyingRowIds: readonly number[]): void {
-    if (this.destroyed) return
-    this.engine.hideRows(underlyingRowIds)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 4.5 — 批量将多行高度设置为同一值 h，刷新视图。 */
-  setRowHeights(rowIds: readonly number[], h: number): void {
-    if (this.destroyed) return
-    this.engine.setRowHeights(rowIds, h)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 4.5 — 程序化设置选区（不入 undo 栈），刷新视图。 */
-  setSelection(selection: GridSelection): void {
-    if (this.destroyed) return
-    this.engine.setSelection(selection)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 5-A — 返回当前选区，供外部工具栏按任意选区操作。 */
-  getSelection(): GridSelection {
-    return this.engine.getSelection()
-  }
-
-  /** Phase 4.6 — 在 schema field index 前插入 count 个列字段，刷新视图并返回新字段。 */
-  insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
-    if (this.destroyed) return []
-    const fields = this.engine.insertCols(beforeFieldIndex, count)
-    this.afterEngineMutation()
-    return fields
-  }
-
-  /** Phase 4.6 — 按 fieldId 删除列字段，刷新视图。 */
-  deleteCols(fieldIds: readonly string[]): void {
-    if (this.destroyed) return
-    this.engine.deleteCols(fieldIds)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 4.6 — 隐藏给定 fieldId 集合，刷新视图。 */
-  hideCols(fieldIds: readonly string[]): void {
-    if (this.destroyed) return
-    this.engine.hideCols(fieldIds)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 4.6 — 取消隐藏给定 fieldId 集合，刷新视图。 */
-  unhideCols(fieldIds: readonly string[]): void {
-    if (this.destroyed) return
-    this.engine.unhideCols(fieldIds)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 4.6 — 批量将多列宽度设置为同一值，刷新视图。 */
-  setColumnWidths(fieldIds: readonly string[], widthPx: number): void {
-    if (this.destroyed) return
-    this.engine.setColumnWidths(fieldIds, widthPx)
-    this.afterEngineMutation()
-  }
-
-  /** Phase 4.6 — 返回当前隐藏列 fieldId。 */
-  getHiddenCols(): readonly string[] {
-    return this.engine.getHiddenCols()
-  }
-
-  /** Phase 4.7 — 按 fieldId 移动连续列组。 */
-  moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.moveCols(fieldIds, beforeFieldId)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** Phase 5-A — 为 view `range` 设置填充色；变化时刷新视图。 */
-  setFillColor(range: CellRange, color: string | null): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.setFillColor(range, color)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** Phase 5-A — 为 view `range` 设置基础边框；变化时刷新视图。 */
-  setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.setBorders(range, preset, border)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** 设置 view `range` 值格式（Phase 5-C）；变化时刷新视图。 */
-  setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.setValueFormat(range, valueFormat)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** 为 view `range` 设置单元格类型覆盖；变化时刷新视图。 */
-  setCellType(range: CellRange, type: CellTypeOverride): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.setCellType(range, type)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** 清除 view `range` 的单元格类型覆盖；变化时刷新视图。 */
-  clearCellType(range: CellRange): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.clearCellType(range)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** 为 view range 设置验证规则。 */
-  setValidation(range: CellRange, rule: import('../../kernel/protocol/ValidationTypes').ValidationRule): void {
-    if (this.destroyed) return
-    const rawRange = this.engine.viewRangeToRaw(range)
-    if (rawRange) {
-      this.engine.setValidationRule(rawRange, rule)
-    }
-  }
-
-  /** 清除 view range 的区间验证规则。 */
-  clearValidation(range: CellRange): void {
-    if (this.destroyed) return
-    const rawRange = this.engine.viewRangeToRaw(range)
-    if (rawRange) {
-      this.engine.clearValidationRule(rawRange)
-    }
-  }
-
-  /** 给 raw cell 写扩展附件；变化时刷新视图并返回 true。 */
-  setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.setCellAttachment(namespace, rawRow, rawCol, data)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** 读 raw cell 的扩展附件；无则 undefined。 */
-  getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown {
-    if (this.destroyed) return undefined
-    return this.engine.getCellAttachment(namespace, rawRow, rawCol)
-  }
-
-  /** 读 raw 坐标单元格文本（String(value)，空为 ''）。cell-kit selection-bold adapter 用。 */
-  getCellText(rawRow: number, rawCol: number): string {
-    if (this.destroyed) return ''
-    const data = this.engine.getData()
-    const field = data.getSchema().fields[rawCol]
-    if (!field) return ''
-    const value = data.getCell(rawRow, field.id)
-    return value == null ? '' : String(value)
-  }
-
-  /** 为 view `range` 设置文本显示模式（overflow/wrap/clip）；变化时刷新视图。 */
-  setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.setTextWrap(range, mode)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** Phase 5-A — 合并 view `range`；成功时刷新视图。 */
-  mergeCells(range: CellRange): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.mergeCells(range)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
-  /** Phase 5-A — 取消 view `range` 触及的合并区域；移除任意区域则刷新视图。 */
-  unmergeCells(range: CellRange): boolean {
-    if (this.destroyed) return false
-    const changed = this.engine.unmergeCells(range)
-    if (changed) this.afterEngineMutation()
-    return changed
-  }
-
   /** Phase 4.5 — 生成行头右键菜单项列表（含条件 unhide 项）。 */
   getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
     return this.contextMenu.getRowHeaderContextMenuItems(ctx)
@@ -893,25 +719,6 @@ export class GridRuntime {
     this.contextMenu.applyTheme(theme)
     this.popovers.applyTheme(theme)
     this.selectionOverlay?.applyTheme(theme)
-    this.afterEngineMutation()
-  }
-
-  /** 设置单行高度并同步滚动空间与渲染。 */
-  setRowHeight(rowIndex: number, height: number): void {
-    this.engine.setRowHeight(rowIndex, height)
-    this.afterEngineMutation()
-  }
-
-  /** 设置单列宽度并同步滚动空间与渲染。 */
-  setColumnWidth(fieldId: string, width: number): void {
-    this.engine.setColumnWidth(fieldId, width)
-    this.afterEngineMutation()
-  }
-
-  setFrozen(config: Partial<FrozenConfig>): void
-  /** 设置冻结行列配置并刷新视图。 */
-  setFrozen(config: Partial<FrozenConfig>): void {
-    this.engine.setFrozen(config)
     this.afterEngineMutation()
   }
 
@@ -1058,6 +865,16 @@ export class GridRuntime {
   handleResizeKeyboard(handle: ResizeHandleRect, delta: number): void {
     if (this.destroyed) return
     this.drag.handleResizeKeyboard(handle, delta)
+  }
+
+  /**
+   * runtime 是否已销毁。GridControllerImpl 的 mutation 方法（Task 10 迁出后不再经 runtime
+   * 转发）用此在调用 `engine` 前复现原 `if (this.destroyed) return` 早退语义——
+   * async 续体（防抖 resize、in-flight paste/undo promise、过期事件闭包）可能在
+   * `destroy()` 之后才触发，这类调用不应再驱动 engine mutation 或触碰已销毁的 host/renderer。
+   */
+  isDestroyed(): boolean {
+    return this.destroyed
   }
 
   /** 销毁 runtime、renderer、host，并取消所有 pending scheduler task。 */

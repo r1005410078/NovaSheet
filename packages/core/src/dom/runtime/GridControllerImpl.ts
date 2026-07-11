@@ -198,10 +198,18 @@ export class GridControllerImpl implements GridController {
     this.fillHandleLayer.attach()
 
     this.hideToggleHandle = new HideToggleHandle(this.container, {
-      onUnhide: (ids) => this.runtime.unhideRows(ids),
+      onUnhide: (ids) => {
+        if (this.runtime.isDestroyed()) return
+        this.engine.unhideRows(ids)
+        this.runtime.afterEngineMutation()
+      },
     })
     this.hideColToggleHandle = new HideColToggleHandle(this.container, {
-      onUnhide: (ids) => this.runtime.unhideCols(ids),
+      onUnhide: (ids) => {
+        if (this.runtime.isDestroyed()) return
+        this.engine.unhideCols(ids)
+        this.runtime.afterEngineMutation()
+      },
     })
     this.selectionOverlay = new SelectionOverlay(this.container)
     this.selectionOverlay.applyTheme(this.engine.getTheme())
@@ -272,15 +280,23 @@ export class GridControllerImpl implements GridController {
     this.runtime.setFilterPopover(this.filterPopover)
     this.rowHeightPopover = new RowHeightPopover({
       onSubmit: (px) => {
+        if (this.runtime.isDestroyed()) return
         const ids = this.runtime.getPendingRowHeightIds()
-        if (ids.length > 0) this.runtime.setRowHeights(ids, px)
+        if (ids.length > 0) {
+          this.engine.setRowHeights(ids, px)
+          this.runtime.afterEngineMutation()
+        }
       },
     })
     this.runtime.setRowHeightPopover(this.rowHeightPopover)
     this.columnWidthPopover = new ColumnWidthPopover({
       onSubmit: (px) => {
+        if (this.runtime.isDestroyed()) return
         const ids = this.runtime.getPendingColumnWidthFieldIds()
-        if (ids.length > 0) this.runtime.setColumnWidths(ids, px)
+        if (ids.length > 0) {
+          this.engine.setColumnWidths(ids, px)
+          this.runtime.afterEngineMutation()
+        }
       },
     })
     this.runtime.setColumnWidthPopover(this.columnWidthPopover)
@@ -330,15 +346,18 @@ export class GridControllerImpl implements GridController {
   }
 
   setRowHeight(rowIndex: number, height: number): void {
-    this.runtime.setRowHeight(rowIndex, height)
+    this.engine.setRowHeight(rowIndex, height)
+    this.runtime.afterEngineMutation()
   }
 
   setColumnWidth(fieldId: string, width: number): void {
-    this.runtime.setColumnWidth(fieldId, width)
+    this.engine.setColumnWidth(fieldId, width)
+    this.runtime.afterEngineMutation()
   }
 
   setFrozen(config: Partial<FrozenConfig>): void {
-    this.runtime.setFrozen(config)
+    this.engine.setFrozen(config)
+    this.runtime.afterEngineMutation()
   }
 
   refresh(): void {
@@ -434,31 +453,44 @@ export class GridControllerImpl implements GridController {
   }
 
   unhideRows(underlyingRowIds: readonly number[]): void {
-    this.runtime.unhideRows(underlyingRowIds)
+    if (this.runtime.isDestroyed()) return
+    this.engine.unhideRows(underlyingRowIds)
+    this.runtime.afterEngineMutation()
   }
 
   getHiddenRows(): readonly number[] {
-    return this.runtime.getHiddenRows()
+    return this.engine.getHiddenRows()
   }
 
   insertRows(beforeUnderlyingRow: number, count: number): readonly number[] {
-    return this.runtime.insertRows(beforeUnderlyingRow, count)
+    if (this.runtime.isDestroyed()) return []
+    const ids = this.engine.insertRows(beforeUnderlyingRow, count)
+    this.runtime.afterEngineMutation()
+    return ids
   }
 
   deleteRows(underlyingRowIds: readonly number[]): void {
-    this.runtime.deleteRows(underlyingRowIds)
+    if (this.runtime.isDestroyed()) return
+    this.engine.deleteRows(underlyingRowIds)
+    this.runtime.afterEngineMutation()
   }
 
   hideRows(underlyingRowIds: readonly number[]): void {
-    this.runtime.hideRows(underlyingRowIds)
+    if (this.runtime.isDestroyed()) return
+    this.engine.hideRows(underlyingRowIds)
+    this.runtime.afterEngineMutation()
   }
 
   setRowHeights(rowIds: readonly number[], h: number): void {
-    this.runtime.setRowHeights(rowIds, h)
+    if (this.runtime.isDestroyed()) return
+    this.engine.setRowHeights(rowIds, h)
+    this.runtime.afterEngineMutation()
   }
 
   setSelection(selection: GridSelection): void {
-    this.runtime.setSelection(selection)
+    if (this.runtime.isDestroyed()) return
+    this.engine.setSelection(selection)
+    this.runtime.afterEngineMutation()
   }
 
   getRowHeaderContextMenuItems(ctx: { targetRowIndex: number }): readonly ContextMenuItem[] {
@@ -470,35 +502,49 @@ export class GridControllerImpl implements GridController {
   }
 
   insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
-    return this.runtime.insertCols(beforeFieldIndex, count)
+    if (this.runtime.isDestroyed()) return []
+    const fields = this.engine.insertCols(beforeFieldIndex, count)
+    this.runtime.afterEngineMutation()
+    return fields
   }
 
   deleteCols(fieldIds: readonly string[]): void {
-    this.runtime.deleteCols(fieldIds)
+    if (this.runtime.isDestroyed()) return
+    this.engine.deleteCols(fieldIds)
+    this.runtime.afterEngineMutation()
   }
 
   hideCols(fieldIds: readonly string[]): void {
-    this.runtime.hideCols(fieldIds)
+    if (this.runtime.isDestroyed()) return
+    this.engine.hideCols(fieldIds)
+    this.runtime.afterEngineMutation()
   }
 
   unhideCols(fieldIds: readonly string[]): void {
-    this.runtime.unhideCols(fieldIds)
+    if (this.runtime.isDestroyed()) return
+    this.engine.unhideCols(fieldIds)
+    this.runtime.afterEngineMutation()
   }
 
   setColumnWidths(fieldIds: readonly string[], widthPx: number): void {
-    this.runtime.setColumnWidths(fieldIds, widthPx)
+    if (this.runtime.isDestroyed()) return
+    this.engine.setColumnWidths(fieldIds, widthPx)
+    this.runtime.afterEngineMutation()
   }
 
   getSelection(): GridSelection {
-    return this.runtime.getSelection()
+    return this.engine.getSelection()
   }
 
   getHiddenCols(): readonly string[] {
-    return this.runtime.getHiddenCols()
+    return this.engine.getHiddenCols()
   }
 
   moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
-    return this.runtime.moveCols(fieldIds, beforeFieldId)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.moveCols(fieldIds, beforeFieldId)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[] {
@@ -510,23 +556,38 @@ export class GridControllerImpl implements GridController {
   }
 
   setFillColor(range: CellRange, color: string | null): boolean {
-    return this.runtime.setFillColor(range, color)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.setFillColor(range, color)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   setBorders(range: CellRange, preset: BorderPreset, border: BorderStyle | null): boolean {
-    return this.runtime.setBorders(range, preset, border)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.setBorders(range, preset, border)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   setValueFormat(range: CellRange, valueFormat: ValueFormat): boolean {
-    return this.runtime.setValueFormat(range, valueFormat)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.setValueFormat(range, valueFormat)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   setCellType(range: CellRange, type: CellTypeOverride): boolean {
-    return this.runtime.setCellType(range, type)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.setCellType(range, type)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   clearCellType(range: CellRange): boolean {
-    return this.runtime.clearCellType(range)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.clearCellType(range)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   getCellType(viewRow: number, viewCol: number): CellTypeOverride {
@@ -534,11 +595,19 @@ export class GridControllerImpl implements GridController {
   }
 
   setValidation(range: CellRange, rule: import('../../kernel/protocol/ValidationTypes').ValidationRule): void {
-    this.runtime.setValidation(range, rule)
+    if (this.runtime.isDestroyed()) return
+    const rawRange = this.engine.viewRangeToRaw(range)
+    if (rawRange) {
+      this.engine.setValidationRule(rawRange, rule)
+    }
   }
 
   clearValidation(range: CellRange): void {
-    this.runtime.clearValidation(range)
+    if (this.runtime.isDestroyed()) return
+    const rawRange = this.engine.viewRangeToRaw(range)
+    if (rawRange) {
+      this.engine.clearValidationRule(rawRange)
+    }
   }
 
   validateAll(): void {
@@ -564,27 +633,45 @@ export class GridControllerImpl implements GridController {
   }
 
   setCellAttachment(namespace: string, rawRow: number, rawCol: number, data: unknown): boolean {
-    return this.runtime.setCellAttachment(namespace, rawRow, rawCol, data)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.setCellAttachment(namespace, rawRow, rawCol, data)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   getCellAttachment(namespace: string, rawRow: number, rawCol: number): unknown {
-    return this.runtime.getCellAttachment(namespace, rawRow, rawCol)
+    if (this.runtime.isDestroyed()) return undefined
+    return this.engine.getCellAttachment(namespace, rawRow, rawCol)
   }
 
   getCellText(rawRow: number, rawCol: number): string {
-    return this.runtime.getCellText(rawRow, rawCol)
+    if (this.runtime.isDestroyed()) return ''
+    const data = this.engine.getData()
+    const field = data.getSchema().fields[rawCol]
+    if (!field) return ''
+    const value = data.getCell(rawRow, field.id)
+    return value == null ? '' : String(value)
   }
 
   setTextWrap(range: CellRange, mode: TextWrapMode): boolean {
-    return this.runtime.setTextWrap(range, mode)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.setTextWrap(range, mode)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   mergeCells(range: CellRange): boolean {
-    return this.runtime.mergeCells(range)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.mergeCells(range)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   unmergeCells(range: CellRange): boolean {
-    return this.runtime.unmergeCells(range)
+    if (this.runtime.isDestroyed()) return false
+    const changed = this.engine.unmergeCells(range)
+    if (changed) this.runtime.afterEngineMutation()
+    return changed
   }
 
   getViewCellFormat(viewRow: number, viewCol: number) {
