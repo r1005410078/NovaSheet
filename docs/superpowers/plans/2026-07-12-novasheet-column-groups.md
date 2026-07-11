@@ -286,7 +286,7 @@ describe('ColumnGroupStore', () => {
 ```
 
 - [ ] **Step 2: 运行确认失败**。
-- [ ] **Step 3: 实现** — 内部持可变树副本；`applyInsertFields` 归组判定：`atFieldIndex` 的前一列与后一列（按 `fieldsBefore`）叶路径最深公共组即归属组（两侧不同组/任一无组 → 不归组）；嵌套时插入最深公共组。`isMoveWithinSameGroup`：移动列集合与 `beforeFieldId`（null = 末尾，取末列）的直接父组全部相同才 true。
+- [ ] **Step 3: 实现** — 内部持可变树副本；`applyInsertFields` 归组判定：`atFieldIndex` 的前一列与后一列（按 `fieldsBefore`）叶路径最深公共组即归属组（两侧不同组/任一无组 → 不归组）；嵌套时插入最深公共组。`isMoveWithinSameGroup`：`beforeFieldId` 非 null 时目标组 = 该 fieldId 的直接父组（或顶层/无组）；`beforeFieldId === null`（移到整表末尾，越过最后一列）视为**顶层/无组**边界（与 `applyInsertFields` 末尾插入不归组的边界规则镜像一致，**不是**取物理末列自身的父组）——移动列集合与目标组全部相同才 true。（Plan-bug 修正：原文"null = 末尾，取末列"与本 task 自身 Step 1 测试矛盾，见台账 Task 2 记录。）
 - [ ] **Step 4: 全量验证**。
 - [ ] **Step 5: Commit** — `feat(core): 新增 ColumnGroupStore——组树运行时状态与结构变更一致性`
 
