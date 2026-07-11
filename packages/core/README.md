@@ -75,6 +75,21 @@ const { activeCell, selectedRange } = grid.getSelection()
 
 Insert/delete remap the selection automatically — inserting above shifts it down; deleting never leaves it dangling on a removed row.
 
+There is no dedicated whole-row/whole-column selection method — clicking a row/column header does it interactively, and the programmatic equivalent is a `setSelection` call spanning the full axis:
+
+```ts
+// Select the whole column at colIndex (what a column-header click does)
+const rowCount = data.getRowCount()
+grid.setSelection({
+  activeCell: { rowIndex: 0, colIndex },
+  anchorCell: { rowIndex: 0, colIndex },
+  extentCell: { rowIndex: rowCount - 1, colIndex },
+  selectedRange: { startRow: 0, endRow: rowCount - 1, startCol: colIndex, endCol: colIndex },
+})
+```
+
+Set all four fields — `anchorCell`/`extentCell` drive where Shift+arrow extension grows from. A whole-row selection is the transpose (span `0..fields.length - 1` on the column axis). The range is a static snapshot: it does not auto-grow when rows are appended later.
+
 ### Custom cell types (column-level `CellTypeRegistry`)
 
 Register a `CellTypeDefinition` keyed by `Field.type` to plug a whole new business type into edit, clipboard, sort, filter, and cell-action handling at once — it applies to every cell in that column (unless overridden per-cell, see below).

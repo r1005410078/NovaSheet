@@ -75,6 +75,21 @@ const { activeCell, selectedRange } = grid.getSelection()
 
 插入/删除会自动重映射选区——在上方插入会让选区下移；删除永不会让选区悬空在已删除的行上。
 
+没有专门的整行/整列选择方法——点击行头/列头是交互入口，程序化等价写法是一次覆盖整轴的 `setSelection`：
+
+```ts
+// 选中 colIndex 整列（等价于点击列头）
+const rowCount = data.getRowCount()
+grid.setSelection({
+  activeCell: { rowIndex: 0, colIndex },
+  anchorCell: { rowIndex: 0, colIndex },
+  extentCell: { rowIndex: rowCount - 1, colIndex },
+  selectedRange: { startRow: 0, endRow: rowCount - 1, startCol: colIndex, endCol: colIndex },
+})
+```
+
+四个字段都要设——`anchorCell`/`extentCell` 决定后续 Shift+方向键从哪里扩展。整行选择是它的转置（列轴覆盖 `0..fields.length - 1`）。该范围是静态快照：之后追加行不会自动跟随扩大。
+
 ### 自定义单元格类型（列级 `CellTypeRegistry`）
 
 按 `Field.type` 注册一个 `CellTypeDefinition`，一次性把编辑、剪贴板、排序、过滤与单元格 action 接到同一套业务类型语义上——作用于该列的每一格（除非被下文的单格覆盖打断）。
