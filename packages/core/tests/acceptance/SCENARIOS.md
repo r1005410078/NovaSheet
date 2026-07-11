@@ -11,6 +11,7 @@
 | core.L0.clipboard-paste-target-merge-conflict | L0 | implemented | 粘贴目标与合并区冲突检测 |
 | core.L0.clipboard-tsv-parse-matrix | L0 | implemented | parseTsvToCells 类型强制矩阵与黄金文件一致 |
 | core.L0.clipboard-tsv-roundtrip | L0 | implemented | TSV 序列化与解析往返公开契约 |
+| core.L0.column-groups-schema-validation | L0 | draft | Schema.columnGroups 三条校验违例 throw，合法混排（组 + 无组列）通过 |
 | core.L0.context-menu-items | L0 | implemented | 单元格/行头/列头上下文菜单完整清单与黄金文件一致 |
 | core.L0.coords-resolve-underlying-row | L0 | implemented | view/raw 行坐标互转与 identity 回退 |
 | core.L0.datasource-in-memory-get-rows-inclusive | L0 | implemented | InMemoryDataSource getRows 使用闭区间并钳制越界范围 |
@@ -65,6 +66,12 @@
 | core.L2.grid-cols-hide-unhide-visible-count | L2 | implemented | Grid hideCols 与 unhideCols 更新隐藏集合和 render frame schema |
 | core.L2.grid-cols-insert-delete-undo-redo | L2 | implemented | Grid 列插入、删除与 undo/redo 通过 facade 保持 schema 一致 |
 | core.L2.grid-cols-move-callback | L2 | implemented | Grid moveCols 移动列组、触发 onColumnsMoved，并支持 undo/redo |
+| core.L2.grid-column-groups-bms-smoke | L2 | draft | BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup） |
+| core.L2.grid-column-groups-frame-layout | L2 | draft | 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高 |
+| core.L2.grid-column-groups-hide-shrink | L2 | draft | hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复 |
+| core.L2.grid-column-groups-scroll-to-group | L2 | draft | scrollToGroup 将组首个可见叶列滚入视口并按 align 对齐；不存在的 groupId no-op |
+| core.L2.grid-column-groups-select-group | L2 | draft | selectGroup 产生整列 range 选区；组头 selected 按 ⊇ 派生（含父组与相邻多组） |
+| core.L2.grid-column-groups-structural-mutations | L2 | draft | insert/delete/moveCols 与组树的一致性：归组规则、级联移除 + undo 恢复、跨组保守 no-op |
 | core.L2.grid-custom-editor-open-triggers | L2 | draft | 自定义 editor 由所有编辑入口统一触发 |
 | core.L2.grid-data-theme-refresh | L2 | implemented | Grid setData、setTheme 与 refresh 通过 backend frame 可观测 |
 | core.L2.grid-events-on-off | L2 | implemented | Grid event facade 支持 on、onUndo、onRedo 与 onFill 的取消订阅 |
@@ -281,6 +288,31 @@
 
 - serialize 输出与 `__goldens__/core.L0.clipboard-tsv-roundtrip.golden.txt` 逐字节一致（TSV 是对外文本格式契约）
 - 解析结果与原始 cell 值一致
+
+## core.L0.column-groups-schema-validation
+
+- **layer**: L0
+- **summary**: Schema.columnGroups 三条校验违例 throw，合法混排（组 + 无组列）通过
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，我希望非法的列组配置在构造/`setData` 时立即 throw（开发期 fail loud），而不是渲染出错误的组头；合法的组与无组列混排应正常通过。
+
+### Given
+
+- `fields`: `[m, s1c1, s1c2, s2c1, s2c2]`（5 列）
+- 合法 `columnGroups`: `[{ fieldId: 'm' }, { id: 's1', label: '堆1', children: [s1c1, s1c2] }, { id: 's2', label: '堆2', children: [s2c1, s2c2] }]`
+
+### When
+
+- 分别用以下配置构造 DataSource 并挂载 Grid：
+
+### Then
+
+- 配置 1 构造成功，`getColumnGroups()` 返回等价组树
+- 配置 2–7 各自在构造/`setData` 时 throw，错误信息指明违反的规则
+- 省略 `columnGroups` 时行为与现状完全一致（`getFrame().columnGroupHeader` 为 undefined，表头总高 = `headerHeight`）
 
 ## core.L0.context-menu-items
 
@@ -1680,6 +1712,161 @@
 - 移动后 schema 顺序为 `b,c,d,a`
 - 回调收到 `{ fieldIds: ['a'], beforeFieldId: null }`
 - undo / redo 还原并重放 schema 顺序
+
+## core.L2.grid-column-groups-bms-smoke
+
+- **layer**: L2
+- **summary**: BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup）
+- **status**: draft
+
+### User Story
+
+作为 SlickBmsTablePanel 的替换方，我需要：冻结的无组指标列 + 滚动区内两层组头（堆→簇），并用 `scrollToGroup + selectGroup` 复刻 `locateStack`（定位到堆并高亮整堆）。
+
+### Given
+
+- `fields`: `metric` + 8 个堆 × 各 4 簇列（共 33 列）
+- `columnGroups`: `[{ fieldId: 'metric' }, { id: 'stack-1', label: '堆1', children: [4 簇] }, ..., { id: 'stack-8', ... }]`（单层组，depth = 1）
+- `frozen: { leftCols: 1 }`（指标列冻结）；视口宽度容纳约 2 个堆
+
+### When
+
+- `scrollToGroup('stack-6', 'start')` 然后 `selectGroup('stack-6')`
+
+### Then
+
+- `getFrame()` 可见列包含 `stack-6` 首簇列且对齐视口滚动区左缘；冻结指标列始终可见
+- `getSelection().selectedRange` 为覆盖 `stack-6` 全部 4 簇列的整列 range
+- frame 中 `stack-6.selected === true`，其余组 `false`
+- `leafTopRowByViewCol`：指标列为 `0`（叶头伸满全表头高），簇列为 `1`
+- `viewport.headerHeight === groupHeaderRowHeight + leafHeaderHeight`
+
+## core.L2.grid-column-groups-frame-layout
+
+- **layer**: L2
+- **summary**: 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高
+- **status**: draft
+
+### User Story
+
+作为渲染后端，我希望从 `getFrame()` 拿到解析好的组头布局（绘制级数据、view 坐标），不需要理解组树结构；表头总高与叶头行高在 viewport 中可读。
+
+### Given
+
+- `fields`: `[m, aXc1, aXc2, aYc1, bZc1]`（5 列）
+- `columnGroups`（嵌套两层组）:
+- `{ fieldId: 'm' }`（无组列）
+- `{ id: 'a', label: 'A相', children: [{ id: 'aX', label: '堆X', children: [aXc1, aXc2] }, { id: 'aY', label: '堆Y', children: [aYc1] }] }`
+- `{ id: 'b', label: 'B相', children: [{ id: 'bZ', label: '堆Z', children: [bZc1] }] }`
+- Theme 提供 `metrics.groupHeaderRowHeight` 与 `metrics.headerHeight`
+
+### When
+
+- 挂载 Grid 并读取 `getFrame()`
+
+### Then
+
+- `columnGroupHeader.depth === 2`（组层数 = 树最大组深度）
+- `rows[0]`（顶层）: `a` 覆盖 view 列 `[1, 3]`，`b` 覆盖 `[4, 4]`；无组列 `m`（view 列 0）不产生任何组头 cell
+- `rows[1]`: `aX` 覆盖 `[1, 2]`，`aY` 覆盖 `[3, 3]`，`bZ` 覆盖 `[4, 4]`
+- `leafTopRowByViewCol === [0, 2, 2, 2, 2]`（无组列叶头从第 0 行向上伸满；组内列叶头在 2 行组头之下）
+- `viewport.headerHeight === 2 × groupHeaderRowHeight + theme.metrics.headerHeight`（语义升级为总高）
+- `viewport.leafHeaderHeight === theme.metrics.headerHeight`
+
+## core.L2.grid-column-groups-hide-shrink
+
+- **layer**: L2
+- **summary**: hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，我隐藏组内部分列时希望组头宽度跟随收缩；组内列全部隐藏时组头消失但组配置保留，取消隐藏后完整恢复——隐藏是 view 层概念，不应改写组树。
+
+### Given
+
+- `fields`: `[m, s1c1, s1c2, s1c3, s2c1]`
+- `columnGroups`: `[{ fieldId: 'm' }, { id: 's1', label: '堆1', children: [s1c1, s1c2, s1c3] }, { id: 's2', label: '堆2', children: [s2c1] }]`
+
+### When
+
+_（无）_
+
+### Then
+
+- 步骤 1 后：`columnGroupHeader.rows` 中 `s1` 的 view 列区间收缩为 2 列宽（按可见叶列计）；`getColumnGroups()` 返回的组树不变（仍含 3 个叶引用）
+- 步骤 2 后：`rows` 中不存在 `s1` 的 cell；`s2` 区间左移补位；`getColumnGroups()` 组树仍不变
+- 步骤 3 后：frame 组头布局与初始状态完全一致
+- 全程 `selectGroup('s1')` 在全隐期间返回 `false` 且不动选区
+
+## core.L2.grid-column-groups-scroll-to-group
+
+- **layer**: L2
+- **summary**: scrollToGroup 将组首个可见叶列滚入视口并按 align 对齐；不存在的 groupId no-op
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，我调用 `scrollToGroup(groupId)` 时希望该组滚入视口（BMS `locateStack` 的定位半边），列宽和视口宽度变化时不需要自己算滚动坐标。
+
+### Given
+
+- 40 列：`m` + 组 `g1..g13` 每组 3 列（组头远超视口宽度）
+- 视口宽度只容纳约 6 列；初始 `scrollX = 0`
+
+### When
+
+_（无）_
+
+### Then
+
+_（无）_
+
+## core.L2.grid-column-groups-select-group
+
+- **layer**: L2
+- **summary**: selectGroup 产生整列 range 选区；组头 selected 按 ⊇ 派生（含父组与相邻多组）
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，我调用 `selectGroup(groupId)` 时希望得到覆盖该组全部可见叶列的整列选区（`GridSelection` 结构不变），并在 frame 组头上看到派生高亮；框选恰好覆盖组的等价范围时高亮行为一致。
+
+### Given
+
+- `fields`: `[m, aXc1, aXc2, aYc1]`，行数 10
+- `columnGroups`: `[{ fieldId: 'm' }, { id: 'a', label: 'A相', children: [{ id: 'aX', label: '堆X', children: [aXc1, aXc2] }, { id: 'aY', label: '堆Y', children: [aYc1] }] }]`
+
+### When
+
+_（无）_
+
+### Then
+
+_（无）_
+
+## core.L2.grid-column-groups-structural-mutations
+
+- **layer**: L2
+- **summary**: insert/delete/moveCols 与组树的一致性：归组规则、级联移除 + undo 恢复、跨组保守 no-op
+- **status**: draft
+
+### User Story
+
+作为 Core 集成方，我做列结构变更时希望组树自动保持一致（引用永远指向存在且连续的列），删除的组能随 undo 恢复，而会破坏组连续性的列移动被保守拒绝。
+
+### Given
+
+- `fields`: `[m, s1c1, s1c2, s2c1, s2c2]`
+- `columnGroups`: `[{ fieldId: 'm' }, { id: 's1', label: '堆1', children: [s1c1, s1c2] }, { id: 's2', label: '堆2', children: [s2c1, s2c2] }]`
+
+### When
+
+_（无）_
+
+### Then
+
+_（无）_
 
 ## core.L2.grid-custom-editor-open-triggers
 
