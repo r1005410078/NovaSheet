@@ -22,6 +22,7 @@ import type { DataSource } from '../../kernel/data/DataSource'
 import { CellEditController } from './controllers/CellEditController'
 import { ClipboardController } from './controllers/ClipboardController'
 import { ContextMenuController } from './controllers/ContextMenuController'
+import { DragCoordinator } from './controllers/DragCoordinator'
 import { ExcelWorkspaceBinding } from './controllers/ExcelWorkspaceBinding'
 import { PopoverController } from './controllers/PopoverController'
 import { ViewportController } from './controllers/ViewportController'
@@ -40,13 +41,9 @@ import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
 import { autofitRowHeights } from '../../features/row/AutofitRowHeights'
 import {
   cellInRange,
-  clamp,
   unionRange,
 } from '../../kernel/geometry/range'
-import {
-  computeResizeHandles,
-  MIN_RESIZE_SIZE,
-} from '../../kernel/interaction/HandleLayout'
+import { computeResizeHandles } from '../../kernel/interaction/HandleLayout'
 import type { ResizeHandleRect } from '../../kernel/interaction/HandleLayout'
 import { FrameScheduler } from '../../kernel/util/raf'
 import type {
@@ -76,14 +73,8 @@ import type { ColumnWidthPopover } from '../overlay/ColumnWidthPopover'
 import type { ColumnReorderOverlay } from '../overlay/ColumnReorderOverlay'
 import type { RowReorderOverlay } from '../overlay/RowReorderOverlay'
 import type { SelectionOverlay } from '../overlay/SelectionOverlay'
-import type { Drag } from '../interaction/drag/Drag'
 import type { DomClipboardAdapter } from '../clipboard/DomClipboardAdapter'
 import { computeFillHandleRect, computeRangeOverlayRects } from '../overlay/RangeOverlayRects'
-import { ColumnHeaderDrag } from '../interaction/drag/ColumnHeaderDrag'
-import { FillHandleDrag } from '../interaction/drag/FillHandleDrag'
-import { ResizeDrag } from '../interaction/drag/ResizeDrag'
-import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
-import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/Host'
 import type { RenderBackend } from '../../ports/RenderBackend'
 import type { NativeScrollSource } from '../scroll/NativeScroller'
@@ -178,13 +169,6 @@ export interface FillEvent {
   readonly direction: FillDirection
 }
 
-const DRAG_AUTO_SCROLL_KEY = 'drag:auto-scroll'
-const DRAG_AUTO_SCROLL_EDGE_PX = 32
-const DRAG_AUTO_SCROLL_MAX_STEP_PX = 24
-
-/** 可驱动边缘自动滚动的拖拽种类。 */
-type AutoScrollDragKind = 'active-drag'
-
 /**
  * 把选区**并入** active cell 所在的合并区（VIEW 坐标），供选区边框与填充柄共用锚定。
  * 取并集而非直接替换：单格选中合并时并集=整个合并区（展开）；从合并源填充后 selectedRange
@@ -228,8 +212,6 @@ export class GridRuntime {
   private measurer?: TextMeasurer
   /** runtime 是否已经销毁；销毁后所有入口都应短路。 */
   private destroyed = false
-  /** 最近一次 selection drag 的 pointer，用于边缘自动滚动续帧。 */
-  private lastDragPointer: WebPointerEvent | null = null
   /** DOM resize handle layer。 */
   private handleLayer?: DomHandleLayer
   /** DOM fill handle 与填充预览 layer。 */
@@ -264,24 +246,12 @@ export class GridRuntime {
   private contextMenu: ContextMenuController
   /** 剪贴板 copy/cut/paste + undo/redo 域 controller（GridRuntime 拆分 Task 4）。 */
   private clipboard: ClipboardController
+  /** 5 类 Drag 手势编排 + 拖拽期间边缘自动滚动 tick controller（GridRuntime 拆分 Task 8）。 */
+  private drag: DragCoordinator
   /** fill handle 提交成功后的通知回调。 */
   private onFill?: (event: FillEvent) => void
   /** 选区变化通知回调。 */
   private onSelectionChange?: (selection: GridSelection) => void
-  /** 当前活跃的 Drag（R1 DragController）；pointerdown 起拖时设置。 */
-  private activeDrag: Drag | null = null
-  /** 行高/列宽 resize 拖拽。 */
-  private resizeDrag!: ResizeDrag
-  /** 列表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
-  private columnHeaderDrag!: ColumnHeaderDrag
-  /** 行表头拖拽（reorder + 表头拖选）；构造函数注入 deps。 */
-  private rowHeaderDrag!: RowHeaderDrag
-  /** 填充柄拖拽。 */
-  private fillHandleDrag!: FillHandleDrag
-  /** 普通单元格拖选。 */
-  private selectionDrag!: SelectionDrag
-  /** pointerdown 按序尝试起拖的 Drag 列表；加新拖拽 = 实现 Drag + 入此数组。 */
-  private drags: readonly Drag[] = []
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: GridRuntimeOptions) {
@@ -364,7 +334,7 @@ export class GridRuntime {
       getSortLayer: () => this.sortLayer,
       getFilterLayer: () => this.filterLayer,
       getContextMenus: () => opts.contextMenus,
-      isDragActive: () => this.resizeDrag.active || !!this.activeDrag?.active,
+      isDragActive: () => this.drag.isAnyDragActive(),
       isCellEditing: () => this.engine.isCellEditing(),
       commitCellEdit: (moveAfter) => this.cellEdit.commitCellEdit(moveAfter),
       hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
@@ -399,7 +369,7 @@ export class GridRuntime {
         ensureCellVisible: (cell) => this.viewport.ensureCellVisible(cell),
         getSelectionScrollTarget: () => this.viewport.getSelectionScrollTarget(),
         autofitRows: (options) => this.autofitRows(options),
-        isResizeDragActive: () => this.resizeDrag.active,
+        isResizeDragActive: () => this.drag.isResizeDragActive(),
       },
     })
     if (opts.excelWorkspace) {
@@ -408,73 +378,34 @@ export class GridRuntime {
         deps: { engine: this.engine, afterEngineMutation: () => this.afterEngineMutation() },
       })
     }
-    this.resizeDrag = new ResizeDrag({
-      engine: this.engine,
-      handleLayer: this.handleLayer,
-      afterEngineMutation: () => this.afterEngineMutation(),
-    })
-    this.columnHeaderDrag = new ColumnHeaderDrag({
+    this.drag = new DragCoordinator({
       engine: this.engine,
       host: this.host,
-      overlay: this.columnReorderOverlay,
+      scheduler: this.scheduler,
+      isDestroyed: () => this.destroyed,
       refresh: () => this.refresh(),
       afterEngineMutation: () => this.afterEngineMutation(),
       closeContextMenu: () => this.contextMenu.close(),
-      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
-      stopAutoScroll: () => this.stopDragAutoScroll(),
-      isBlocked: () => this.isDragBlocked(),
-      hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
-      isWholeColumnSelection: (range) => this.isWholeColumnSelection(range),
-      selectWholeColumn: (col) => this.selectWholeColumn(col),
-      selectWholeColumnRange: (anchor, extent) => this.selectWholeColumnRange(anchor, extent),
-      getColsTotalSize: () => this.viewport.getColsTotalSizeForFrame(this.engine.getFrame()),
-    })
-    this.rowHeaderDrag = new RowHeaderDrag({
-      engine: this.engine,
-      host: this.host,
-      overlay: this.rowReorderOverlay,
-      refresh: () => this.refresh(),
-      afterEngineMutation: () => this.afterEngineMutation(),
-      closeContextMenu: () => this.contextMenu.close(),
-      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
-      stopAutoScroll: () => this.stopDragAutoScroll(),
-      isBlocked: () => this.isDragBlocked(),
-      hitTestRowHeader: (event) => this.hitTestRowHeader(event),
-      isWholeRowSelection: (range) => this.isWholeRowSelection(range),
-      selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
-    })
-    this.fillHandleDrag = new FillHandleDrag({
-      engine: this.engine,
-      host: this.host,
-      fillLayer: this.fillLayer,
-      afterEngineMutation: () => this.afterEngineMutation(),
+      commitCellEdit: (moveAfter) => this.cellEdit.commitCellEdit(moveAfter),
       autofitRows: (options) => this.autofitRows(options),
       onFill: (event) => this.onFill?.(event),
-      closeContextMenu: () => this.contextMenu.close(),
-      commitCellEdit: (moveSelection) => this.cellEdit.commitCellEdit(moveSelection),
-      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
-      stopAutoScroll: () => this.stopDragAutoScroll(),
-      isBlocked: () => this.isDragBlocked(),
-    })
-    this.selectionDrag = new SelectionDrag({
-      engine: this.engine,
-      refresh: () => this.refresh(),
-      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
-      stopAutoScroll: () => this.stopDragAutoScroll(),
       syncFillHandle: () => this.syncFillHandle(),
-      isBlocked: () => this.isDragBlocked(),
+      syncResizeHandles: () => this.syncResizeHandles(),
+      handleHostScroll: (scrollTop, scrollLeft) => this.viewport.handleHostScroll(scrollTop, scrollLeft),
+      getScrollLimits: () => this.viewport.getScrollLimits(),
+      getColsTotalSize: () => this.viewport.getColsTotalSizeForFrame(this.engine.getFrame()),
+      hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
+      hitTestRowHeader: (event) => this.hitTestRowHeader(event),
+      isWholeColumnSelection: (range) => this.isWholeColumnSelection(range),
+      isWholeRowSelection: (range) => this.isWholeRowSelection(range),
+      selectWholeColumn: (col) => this.selectWholeColumn(col),
+      selectWholeColumnRange: (anchor, extent) => this.selectWholeColumnRange(anchor, extent),
+      selectWholeRowRange: (anchor, extent) => this.selectWholeRowRange(anchor, extent),
+      handleLayer: this.handleLayer,
+      fillLayer: this.fillLayer,
+      columnReorderOverlay: this.columnReorderOverlay,
+      rowReorderOverlay: this.rowReorderOverlay,
     })
-    this.drags = [this.columnHeaderDrag, this.rowHeaderDrag, this.selectionDrag]
-  }
-
-  private isDragBlocked(): boolean {
-    return this.resizeDrag.active || !!this.activeDrag
-  }
-
-  /** 起拖期间记录 pointer 并按边缘热区驱动自动滚动（供 Drag 经 deps 调用）。 */
-  private requestDragAutoScroll(pointer: WebPointerEvent): void {
-    this.lastDragPointer = pointer
-    this.updateDragAutoScroll(pointer)
   }
 
   /** Phase 3.5 — backend 在 runtime 创建后注入编辑器。 */
@@ -1017,7 +948,7 @@ export class GridRuntime {
     this.contextMenu.close()
     this.cellEdit.closeActiveCustomEditor()
     this.fillLayer?.hidePreview()
-    this.activeDrag = null
+    this.drag.clearActiveDrag()
   }
 
   /** 滚动到指定行，并按给定对齐方式放入 viewport。 */
@@ -1038,43 +969,35 @@ export class GridRuntime {
     clientY: number,
   ): void {
     if (this.destroyed) return
-    if (this.resizeDrag.start(handle, pointerId, clientX, clientY)) {
-      this.activeDrag = this.resizeDrag
-    }
+    this.drag.handleResizePointerDown(handle, pointerId, clientX, clientY)
   }
 
   /** 更新 resize 拖拽预览尺寸。 */
   handleResizePointerMove(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed) return
-    this.resizeDrag.movePointer(pointerId, clientX, clientY)
+    this.drag.handleResizePointerMove(pointerId, clientX, clientY)
   }
 
   /** 结束 resize 拖拽并一次性提交行高/列宽变更。 */
   handleResizePointerUp(pointerId: number): void {
-    if (!this.resizeDrag.commitPointer(pointerId)) return
-    this.activeDrag = null
+    this.drag.handleResizePointerUp(pointerId)
   }
 
   /** 开始 fill handle 拖拽。 */
   handleFillPointerDown(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed) return
-    if (this.fillHandleDrag.tryStartFromClient(pointerId, clientX, clientY)) {
-      this.activeDrag = this.fillHandleDrag
-    }
+    this.drag.handleFillPointerDown(pointerId, clientX, clientY)
   }
 
   /** 更新 fill handle 拖拽目标与预览 overlay。 */
   handleFillPointerMove(pointerId: number, clientX: number, clientY: number): void {
     if (this.destroyed) return
-    this.fillHandleDrag.moveFromClient(pointerId, clientX, clientY)
+    this.drag.handleFillPointerMove(pointerId, clientX, clientY)
   }
 
   /** 结束 fill handle 拖拽并提交填充结果。 */
   handleFillPointerUp(pointerId: number): void {
-    if (!this.fillHandleDrag.commitPointer(pointerId)) return
-    this.activeDrag = null
-    this.columnReorderOverlay?.hide()
-    this.rowReorderOverlay?.hide()
+    this.drag.handleFillPointerUp(pointerId)
   }
 
   /** 同步编辑器 draft 到 engine 的 cell edit session。 */
@@ -1100,19 +1023,7 @@ export class GridRuntime {
   /** 处理键盘 resize，按 delta 调整行高或列宽。 */
   handleResizeKeyboard(handle: ResizeHandleRect, delta: number): void {
     if (this.destroyed) return
-    const current = this.readResizeSize(handle)
-    if (current === null) return
-    const next = Math.max(MIN_RESIZE_SIZE, current + delta)
-    if (next === current) return
-    if (handle.kind === 'row' && handle.rowIndex !== undefined) {
-      this.engine.commitRowResize(handle.rowIndex, current, next)
-    } else if (handle.kind === 'column' && handle.fieldId) {
-      const colIndex = this.engine.getColumnIndex(handle.fieldId)
-      if (colIndex < 0) return
-      this.engine.commitColumnResize(colIndex, current, next)
-    }
-    this.syncResizeHandles()
-    this.refresh()
+    this.drag.handleResizeKeyboard(handle, delta)
   }
 
   /** 销毁 runtime、renderer、host，并取消所有 pending scheduler task。 */
@@ -1121,14 +1032,12 @@ export class GridRuntime {
     this.destroyed = true
     this.engine.dispose()
     this.cellEdit.destroy()
-    this.activeDrag?.cancel()
-    this.activeDrag = null
+    this.drag.destroy()
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.rowReorderOverlay?.hide()
     this.flush.destroy()
     this.viewport.destroy()
-    this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
     this.renderer.destroy()
     this.host.destroy()
     this.validationTooltip?.destroy()
@@ -1170,17 +1079,12 @@ export class GridRuntime {
       this.contextMenu.openColumnHeaderContextMenu(menuButtonHit.colIndex, event)
       return
     }
-    for (const drag of this.drags) {
-      if (drag.tryStart(event)) {
-        this.activeDrag = drag
-        return
-      }
-    }
+    this.drag.tryStartDrag(event)
   }
 
   /** 处理 host pointermove，更新拖拽选区并启动边缘自动滚动。 */
   handleHostPointerMove(event: WebPointerEvent): void {
-    if (this.activeDrag?.move(event)) return
+    if (this.drag.moveActiveDrag(event)) return
     if (this.destroyed) return
     this.updateHeaderCursor(event)
     this.updateValidationTooltip(event)
@@ -1236,16 +1140,12 @@ export class GridRuntime {
 
   /** 处理 host pointerup，结束选区拖拽并恢复 fill handle。 */
   handleHostPointerUp(): void {
-    if (this.activeDrag) {
-      this.activeDrag.commit()
-      this.activeDrag = null
-      return
-    }
+    this.drag.commitActiveDrag()
   }
 
   /** 处理双击单元格，进入编辑模式。 */
   handleHostDoubleClick(event: WebPointerEvent): void {
-    if (this.destroyed || this.resizeDrag.active || this.activeDrag?.active) return
+    if (this.destroyed || this.drag.isAnyDragActive()) return
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return
     this.engine.selectCell(hit)
@@ -1255,9 +1155,7 @@ export class GridRuntime {
   /** Phase 3.3 / 3.5 — 导航；选中后直接键入进入编辑（Sheets 式）。 */
   handleHostKeyDown(event: WebKeyboardEvent): boolean {
     if (this.destroyed) return false
-    if (event.key === 'Escape' && this.activeDrag) {
-      this.activeDrag.cancel()
-      this.activeDrag = null
+    if (event.key === 'Escape' && this.drag.cancelActiveDrag()) {
       return true
     }
     if (this.popovers.isFilterPopoverOpen()) return false
@@ -1336,14 +1234,8 @@ export class GridRuntime {
     return true
   }
 
-  /** 取消正在排队的拖拽自动滚动并清掉 pointer 记录。 */
-  private stopDragAutoScroll(): void {
-    this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
-    this.lastDragPointer = null
-  }
-
   private updateHeaderCursor(event: WebPointerEvent): void {
-    if (this.resizeDrag.active || this.activeDrag?.active) {
+    if (this.drag.isAnyDragActive()) {
       this.host.setCursor(null)
       return
     }
@@ -1463,7 +1355,7 @@ export class GridRuntime {
 
   /** 根据当前 frame 同步 resize handle layer；flush 路径复用已构建的 frame，避免重复 getFrame。 */
   private syncResizeHandles(frame?: ReturnType<GridEngine['getFrame']>): void {
-    if (!this.handleLayer || this.resizeDrag.active) return
+    if (!this.handleLayer || this.drag.isResizeDragActive()) return
     const f = frame ?? this.engine.getFrame()
     this.handleLayer.sync(computeResizeHandles(f))
   }
@@ -1489,7 +1381,7 @@ export class GridRuntime {
   /** 根据当前选区同步 fill handle；编辑/拖拽时隐藏。flush 路径复用已构建的 frame，避免重复 getFrame。 */
   private syncFillHandle(frame?: ReturnType<GridEngine['getFrame']>): void {
     if (!this.fillLayer) return
-    if (this.resizeDrag.active || this.activeDrag?.active || this.engine.isCellEditing()) {
+    if (this.drag.isAnyDragActive() || this.engine.isCellEditing()) {
       this.fillLayer.sync(null)
       return
     }
@@ -1536,80 +1428,6 @@ export class GridRuntime {
     })
   }
 
-  /** 当前驱动边缘自动滚动的拖拽种类；活跃拖拽 / 填充柄优先于普通选区。 */
-  private activeAutoScrollDrag(): AutoScrollDragKind | null {
-    if (this.activeDrag?.active) return 'active-drag'
-    return null
-  }
-
-  /** 根据 pointer 位置启动或取消当前拖拽的边缘自动滚动。 */
-  private updateDragAutoScroll(pointer: WebPointerEvent): void {
-    const kind = this.activeAutoScrollDrag()
-    if (!kind) {
-      this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
-      return
-    }
-    const step = this.computeDragAutoScrollStep(pointer, kind)
-    if (step.x === 0 && step.y === 0) {
-      this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
-      return
-    }
-    this.scheduler.schedule(DRAG_AUTO_SCROLL_KEY, () => this.tickDragAutoScroll())
-  }
-
-  /** 执行一帧拖拽自动滚动，按拖拽种类重算落点，并继续调度下一帧。 */
-  private tickDragAutoScroll(): void {
-    if (this.destroyed || !this.lastDragPointer) return
-    const kind = this.activeAutoScrollDrag()
-    if (!kind) return
-    const step = this.computeDragAutoScrollStep(this.lastDragPointer, kind)
-    if (step.x === 0 && step.y === 0) return
-
-    const { scrollTop, scrollLeft } = this.host.getScrollPosition()
-    const limits = this.viewport.getScrollLimits()
-    const nextTop = clamp(scrollTop + step.y, 0, limits.maxTop)
-    const nextLeft = clamp(scrollLeft + step.x, 0, limits.maxLeft)
-    if (nextTop === scrollTop && nextLeft === scrollLeft) return
-
-    this.host.scrollTo(nextTop, nextLeft)
-    this.handleHostScroll(nextTop, nextLeft)
-    this.reevaluateDragAfterAutoScroll(kind, this.lastDragPointer)
-  }
-
-  /** 滚动一帧后按拖拽种类重算落点；各 update handler 会自行续调度自动滚动。 */
-  private reevaluateDragAfterAutoScroll(kind: AutoScrollDragKind, pointer: WebPointerEvent): void {
-    switch (kind) {
-      case 'active-drag':
-        this.activeDrag?.reevaluate(pointer)
-        return
-    }
-  }
-
-  /**
-   * 计算 pointer 靠近 viewport 边缘时每帧应滚动的距离。
-   * active-drag 按其 `autoScrollAxis`；选区与填充柄双向。
-   */
-  private computeDragAutoScrollStep(
-    pointer: WebPointerEvent,
-    kind: AutoScrollDragKind,
-  ): { x: number; y: number } {
-    const { width, height } = this.host.getContainerSize()
-    let horizontal: boolean
-    let vertical: boolean
-    if (kind === 'active-drag') {
-      const axis = this.activeDrag?.autoScrollAxis ?? null
-      horizontal = axis === 'both' || axis === 'horizontal'
-      vertical = axis === 'both' || axis === 'vertical'
-    } else {
-      horizontal = true
-      vertical = true
-    }
-    return {
-      x: horizontal ? edgeVelocity(pointer.x, width) : 0,
-      y: vertical ? edgeVelocity(pointer.y, height) : 0,
-    }
-  }
-
   /** 同步 scrollbar 主题到 host。 */
   private syncScrollbarTheme(): void {
     this.host.applyScrollbarTheme(this.engine.getTheme().scrollbar)
@@ -1625,35 +1443,4 @@ export class GridRuntime {
     })
   }
 
-  /** 读取 resize handle 对应的当前行高或列宽。 */
-  private readResizeSize(handle: ResizeHandleRect): number | null {
-    if (handle.kind === 'column' && handle.fieldId) {
-      const colIndex = this.engine.getColumnIndex(handle.fieldId)
-      if (colIndex < 0) return null
-      return this.engine.getColsAxis().getSize(colIndex)
-    }
-    if (handle.kind === 'row' && handle.rowIndex !== undefined) {
-      const { rowIndex } = handle
-      if (rowIndex < 0 || rowIndex >= this.engine.getRowsAxis().getCount()) return null
-      return this.engine.getRowsAxis().getSize(rowIndex)
-    }
-    return null
-  }
-}
-
-/** 计算 pointer 在 viewport 边缘区域内对应的自动滚动速度。 */
-function edgeVelocity(position: number, size: number): number {
-  if (size <= 0) return 0
-  if (position < DRAG_AUTO_SCROLL_EDGE_PX) {
-    return -scaleEdgeDistance(DRAG_AUTO_SCROLL_EDGE_PX - position)
-  }
-  const farEdgeDistance = position - (size - DRAG_AUTO_SCROLL_EDGE_PX)
-  if (farEdgeDistance > 0) return scaleEdgeDistance(farEdgeDistance)
-  return 0
-}
-
-/** 将距离边缘的像素距离缩放为每帧滚动步长。 */
-function scaleEdgeDistance(distance: number): number {
-  const ratio = Math.min(1, Math.max(0, distance / DRAG_AUTO_SCROLL_EDGE_PX))
-  return Math.max(1, Math.ceil(ratio * DRAG_AUTO_SCROLL_MAX_STEP_PX))
 }

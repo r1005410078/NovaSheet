@@ -41,9 +41,10 @@ export interface CellEditControllerDeps {
   getSelectionScrollTarget(): CellAddress | null
   autofitRows(options: AutofitRowsRuntimeOptions): AutofitRowsResult
   /**
-   * `resizeDrag.active`——resize 拖拽期间不允许进入编辑态。resizeDrag 仍属 GridRuntime
-   * （Task 8 DragCoordinator 拆分前），故经 deps 回读；brief 深依赖清单未列出此项，
-   * 但 `openCellEditorForTrigger` 原体读取它，按"缺 deps 则补一条闭包"规则补上。
+   * resize 拖拽期间不允许进入编辑态；现由 GridRuntime 转发
+   * `DragCoordinator.isResizeDragActive()`（Task 8）。CellEditController 与
+   * DragCoordinator 互不 import，故经 deps 回读——brief 深依赖清单未列出此项，
+   * 但 `openCellEditorForTrigger` 原体读取它，按"缺 deps 则补一条闭包"规则补上（Task 7）。
    */
   isResizeDragActive(): boolean
 }
