@@ -19,15 +19,15 @@
 
 import type { AutofitRowsResult } from '../../features/row/AutofitRowHeights'
 import type { DataSource } from '../../kernel/data/DataSource'
+import { CellEditController } from './controllers/CellEditController'
 import { ClipboardController } from './controllers/ClipboardController'
 import { ContextMenuController } from './controllers/ContextMenuController'
 import { ExcelWorkspaceBinding } from './controllers/ExcelWorkspaceBinding'
 import { PopoverController } from './controllers/PopoverController'
 import { ViewportController } from './controllers/ViewportController'
 import { RenderFlushPipeline } from './RenderFlushPipeline'
-import type { RuntimeRenderFrame, RuntimeCellEdit } from './runtime-frame'
 import type { ExcelWorkspacePolicy } from '../../features/excel-workspace'
-import type { CellValue, Field } from '../../kernel/data/Schema'
+import type { Field } from '../../kernel/data/Schema'
 import { FilterLayer } from '../../features/view/FilterLayer'
 import type { FilterOp } from '../../features/view/FilterLayer'
 import { SortLayer } from '../../features/view/SortLayer'
@@ -43,7 +43,6 @@ import {
   clamp,
   unionRange,
 } from '../../kernel/geometry/range'
-import { computeCellRect } from '../../kernel/interaction/CellLayout'
 import {
   computeResizeHandles,
   MIN_RESIZE_SIZE,
@@ -87,14 +86,9 @@ import { RowHeaderDrag } from '../interaction/drag/RowHeaderDrag'
 import { SelectionDrag } from '../interaction/drag/SelectionDrag'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../host/Host'
 import type { RenderBackend } from '../../ports/RenderBackend'
-import type { CellActionHit } from '../../ports/RenderBackend'
 import type { NativeScrollSource } from '../scroll/NativeScroller'
-import type {
-  CellEditor,
-  CellEditorRegistry,
-  CellEditorTrigger,
-} from '../interaction/CellEditorContract'
-import type { CellTypeDefinition, CellTypeOverride, CellTypeRegistry } from '../../features/cell-types'
+import type { CellEditorRegistry } from '../interaction/CellEditorContract'
+import type { CellTypeOverride, CellTypeRegistry } from '../../features/cell-types'
 
 /** GridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
 export interface AutofitRowsRuntimeOptions {
@@ -260,21 +254,10 @@ export class GridRuntime {
   private readonly validationTooltip?: import('../overlay/ValidationTooltip').ValidationTooltip
   /** Excel 模式 workspace auto-grow 绑定；未启用时为空。 */
   private excelWorkspace?: ExcelWorkspaceBinding
-  /** DOM 单元格编辑器。 */
-  private cellEditor?: DomCellEditor
   /** Custom editor overlay 的 DOM 宿主。 */
   private editorContainer: HTMLElement
-  /** 自定义单元格编辑器注册表；key 为 `Field.type`。 */
-  private cellEditors: CellEditorRegistry = {}
-  /** 自定义单元格类型语义注册表；key 为 `Field.type`。 */
-  private cellTypes: CellTypeRegistry = {}
-  /** 当前由 custom editor registry 打开的 overlay。 */
-  private activeCustomEditor: CellEditor | null = null
-  /** Custom editor 不一定能进入 engine edit model；runtime 用该帧标记让 canvas 跳过原 cell 文本。 */
-  private activeCustomEditorCellEdit: RuntimeCellEdit | null = null
-  /** 当前 custom editor 会话 token；reopen/close 后旧 ctx 回调必须失效。 */
-  private activeCustomEditorToken: number | null = null
-  private nextCustomEditorToken = 1
+  /** 内建 DOM 编辑器 + 自定义编辑器注册表生命周期 controller（GridRuntime 拆分 Task 7）。 */
+  private cellEdit: CellEditController
   /** filter/rowHeight/columnWidth popover 域 controller（GridRuntime 拆分 Task 5）。 */
   private popovers: PopoverController
   /** host/行头/列头右键菜单路由、action 分发、hover 菜单按钮 controller（GridRuntime 拆分 Task 6）。 */
@@ -285,11 +268,6 @@ export class GridRuntime {
   private onFill?: (event: FillEvent) => void
   /** 选区变化通知回调。 */
   private onSelectionChange?: (selection: GridSelection) => void
-  /**
-   * 多行 wrap 字段编辑中的原始行高快照——取消时恢复，提交时丢弃。
-   * 非 multiline 编辑置 null。
-   */
-  private editingMultilineOriginalRowHeight: number | null = null
   /** 当前活跃的 Drag（R1 DragController）；pointerdown 起拖时设置。 */
   private activeDrag: Drag | null = null
   /** 行高/列宽 resize 拖拽。 */
@@ -311,8 +289,6 @@ export class GridRuntime {
     this.host = opts.host
     this.renderer = opts.renderer
     this.editorContainer = opts.container ?? document.createElement('div')
-    this.cellEditors = opts.cellEditors ?? {}
-    this.cellTypes = opts.cellTypes ?? {}
     this.scheduler = opts.scheduler ?? new FrameScheduler()
     this.onSurfaceResize = opts.onSurfaceResize
     this.measurer = opts.measurer
@@ -340,8 +316,8 @@ export class GridRuntime {
       onSurfaceResize: this.onSurfaceResize,
       beforeApplyScroll: (source) => this.excelWorkspace?.recordScroll(source),
       afterApplyScroll: () => {
-        this.closeActiveCustomEditor()
-        this.syncCellEditorPosition()
+        this.cellEdit.closeActiveCustomEditor()
+        this.cellEdit.syncCellEditorPosition()
         this.contextMenu.close()
         this.validationTooltip?.hide()
         this.excelWorkspace?.runFrame()
@@ -353,17 +329,14 @@ export class GridRuntime {
       getFrame: () => this.engine.getFrame(),
       getRenderer: () => this.renderer,
       getViewPipeline: () => this.viewPipeline,
-      augmentFrame: (frame) =>
-        this.activeCustomEditorCellEdit && !frame.cellEdit
-          ? { ...frame, cellEdit: this.activeCustomEditorCellEdit }
-          : frame,
+      augmentFrame: (frame) => this.cellEdit.augmentFrame(frame),
       syncSelectionOverlay: (frame) => this.syncSelectionOverlay(frame),
       syncDomLayers: (frame) => {
         this.syncResizeHandles(frame)
         this.syncFillHandle(frame)
         this.syncHideToggleHandles(frame)
         this.syncHideColToggleHandles(frame)
-        this.syncCellEditorPosition(frame)
+        this.cellEdit.syncCellEditorPosition(frame)
       },
       getOnSelectionChange: () => this.onSelectionChange,
       getSelection: () => this.engine.getSelection(),
@@ -393,7 +366,7 @@ export class GridRuntime {
       getContextMenus: () => opts.contextMenus,
       isDragActive: () => this.resizeDrag.active || !!this.activeDrag?.active,
       isCellEditing: () => this.engine.isCellEditing(),
-      commitCellEdit: (moveAfter) => this.commitCellEdit(moveAfter),
+      commitCellEdit: (moveAfter) => this.cellEdit.commitCellEdit(moveAfter),
       hitTestColumnHeader: (event) => this.hitTestColumnHeader(event),
       clipboardCopy: () => this.handleClipboardCopy(),
       clipboardCut: () => this.handleClipboardCut(),
@@ -413,6 +386,22 @@ export class GridRuntime {
     if (opts.contextMenuRenderer) {
       this.contextMenu.setRenderer(opts.contextMenuRenderer)
     }
+    this.cellEdit = new CellEditController({
+      cellEditors: opts.cellEditors ?? {},
+      cellTypes: opts.cellTypes ?? {},
+      deps: {
+        engine: this.engine,
+        editorContainer: this.editorContainer,
+        isDestroyed: () => this.destroyed,
+        refresh: () => this.refresh(),
+        paintSync: () => this.paintSync(),
+        afterEngineMutation: () => this.afterEngineMutation(),
+        ensureCellVisible: (cell) => this.viewport.ensureCellVisible(cell),
+        getSelectionScrollTarget: () => this.viewport.getSelectionScrollTarget(),
+        autofitRows: (options) => this.autofitRows(options),
+        isResizeDragActive: () => this.resizeDrag.active,
+      },
+    })
     if (opts.excelWorkspace) {
       this.excelWorkspace = new ExcelWorkspaceBinding({
         policy: typeof opts.excelWorkspace === 'object' ? opts.excelWorkspace.policy : undefined,
@@ -462,7 +451,7 @@ export class GridRuntime {
       autofitRows: (options) => this.autofitRows(options),
       onFill: (event) => this.onFill?.(event),
       closeContextMenu: () => this.contextMenu.close(),
-      commitCellEdit: (moveSelection) => this.commitCellEdit(moveSelection),
+      commitCellEdit: (moveSelection) => this.cellEdit.commitCellEdit(moveSelection),
       requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
       stopAutoScroll: () => this.stopDragAutoScroll(),
       isBlocked: () => this.isDragBlocked(),
@@ -490,8 +479,7 @@ export class GridRuntime {
 
   /** Phase 3.5 — backend 在 runtime 创建后注入编辑器。 */
   setCellEditor(editor: DomCellEditor): void {
-    this.cellEditor = editor
-    this.syncCellEditorTheme()
+    this.cellEdit.setCellEditor(editor)
   }
 
   /** Phase 4.0 — 注入右键菜单层。 */
@@ -895,7 +883,7 @@ export class GridRuntime {
     this.viewport.resizeSpacer()
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
-    this.syncCellEditorTheme()
+    this.cellEdit.applyTheme(this.engine.getTheme())
     this.paintSync()
   }
 
@@ -936,7 +924,7 @@ export class GridRuntime {
     patchRenderer?.(this.renderer)
     this.syncScrollbarTheme()
     this.syncResizeHandleTheme()
-    this.syncCellEditorTheme()
+    this.cellEdit.applyTheme(theme)
     this.contextMenu.applyTheme(theme)
     this.popovers.applyTheme(theme)
     this.selectionOverlay?.applyTheme(theme)
@@ -970,13 +958,7 @@ export class GridRuntime {
   /** 程序化打开单元格编辑器；custom editor 的 trigger 为 `api`。 */
   openCellEditor(rowIndex: number, fieldId: string): boolean {
     if (this.destroyed) return false
-    const colIndex = this.engine.getColumnIndex(fieldId)
-    if (colIndex < 0) return false
-    return this.openCellEditorForTrigger({
-      cell: { rowIndex, colIndex },
-      trigger: 'api',
-      selectAll: false,
-    })
+    return this.cellEdit.openCellEditor(rowIndex, fieldId)
   }
 
   /**
@@ -1033,7 +1015,7 @@ export class GridRuntime {
     this.viewport.remapScroll()
     this.refresh()
     this.contextMenu.close()
-    this.closeActiveCustomEditor()
+    this.cellEdit.closeActiveCustomEditor()
     this.fillLayer?.hidePreview()
     this.activeDrag = null
   }
@@ -1097,25 +1079,22 @@ export class GridRuntime {
 
   /** 同步编辑器 draft 到 engine 的 cell edit session。 */
   handleCellEditDraft(draft: string): void {
-    if (this.destroyed) return
-    this.engine.updateCellEditDraft(draft)
+    this.cellEdit.handleCellEditDraft(draft)
   }
 
   /** 处理 Enter 提交编辑，并在成功后移动到下一行。 */
   handleCellEditCommitEnter(): void {
-    this.commitCellEdit(true)
+    this.cellEdit.handleCellEditCommitEnter()
   }
 
   /** 处理 blur 提交编辑，保持当前选区不移动。 */
   handleCellEditCommitBlur(): void {
-    this.commitCellEdit(false)
+    this.cellEdit.handleCellEditCommitBlur()
   }
 
   /** 取消当前编辑并刷新编辑器/选区显示。 */
   handleCellEditCancel(): void {
-    if (this.destroyed) return
-    this.cancelCellEdit()
-    this.refresh()
+    this.cellEdit.handleCellEditCancel()
   }
 
   /** 处理键盘 resize，按 delta 调整行高或列宽。 */
@@ -1141,14 +1120,12 @@ export class GridRuntime {
     if (this.destroyed) return
     this.destroyed = true
     this.engine.dispose()
-    this.closeActiveCustomEditor()
-    this.cancelCellEdit()
+    this.cellEdit.destroy()
     this.activeDrag?.cancel()
     this.activeDrag = null
     this.fillLayer?.hidePreview()
     this.columnReorderOverlay?.hide()
     this.rowReorderOverlay?.hide()
-    for (const editor of Object.values(this.cellEditors)) editor.destroy?.()
     this.flush.destroy()
     this.viewport.destroy()
     this.scheduler.cancel(DRAG_AUTO_SCROLL_KEY)
@@ -1178,13 +1155,13 @@ export class GridRuntime {
     if (this.destroyed) return
     // 仅左键进入 drag-select；右键 / 中键留给 contextmenu / 其它路径
     if ((event.button ?? 0) !== 0) return
-    this.closeActiveCustomEditor()
+    this.cellEdit.closeActiveCustomEditor()
     if (this.engine.isCellEditing()) {
-      this.commitCellEdit(false)
+      this.cellEdit.commitCellEdit(false)
     }
     const action = this.renderer.getCellActionAt?.(event.x, event.y)
     if (action) {
-      this.invokeCellAction(action)
+      this.cellEdit.invokeCellAction(action)
       return
     }
     // 列头菜单按钮命中：左键单击时优先打开列头菜单，不进入 drag-select
@@ -1272,7 +1249,7 @@ export class GridRuntime {
     const hit = hitTestCell(this.engine.getFrame(), event)
     if (!hit) return
     this.engine.selectCell(hit)
-    this.openCellEditorForTrigger({ cell: hit, trigger: 'double-click', selectAll: false })
+    this.cellEdit.openCellEditorForTrigger({ cell: hit, trigger: 'double-click', selectAll: false })
   }
 
   /** Phase 3.3 / 3.5 — 导航；选中后直接键入进入编辑（Sheets 式）。 */
@@ -1324,11 +1301,11 @@ export class GridRuntime {
     const cell = this.engine.getSelection().activeCell
 
     if (event.key === 'F2' && cell) {
-      if (this.openCellEditorForTrigger({ cell, trigger: 'f2', selectAll: false })) return true
+      if (this.cellEdit.openCellEditorForTrigger({ cell, trigger: 'f2', selectAll: false })) return true
     }
 
-    if (event.key === 'Enter' && cell && this.hasCustomCellEditor(cell)) {
-      if (this.openCellEditorForTrigger({ cell, trigger: 'enter', selectAll: false })) return true
+    if (event.key === 'Enter' && cell && this.cellEdit.hasCustomCellEditor(cell)) {
+      if (this.cellEdit.openCellEditorForTrigger({ cell, trigger: 'enter', selectAll: false })) return true
     }
 
     if (
@@ -1340,7 +1317,7 @@ export class GridRuntime {
       })
     ) {
       if (
-        this.openCellEditorForTrigger({
+        this.cellEdit.openCellEditorForTrigger({
           cell,
           trigger: 'typing',
           initialInput: event.key,
@@ -1646,337 +1623,6 @@ export class GridRuntime {
       headerHeight: theme.metrics.headerHeight,
       rowHeaderWidth: frame.viewport.rowHeaderWidth ?? theme.metrics.rowHeaderWidth,
     })
-  }
-
-  /** 同步 cell editor 主题。 */
-  private syncCellEditorTheme(): void {
-    this.cellEditor?.applyTheme(this.engine.getTheme())
-  }
-
-  /** 所有进入编辑态的 DOM/API 入口先尝试 custom editor，再回退到内置 DOM editor。 */
-  private openCellEditorForTrigger(args: {
-    readonly cell: CellAddress
-    readonly trigger: CellEditorTrigger
-    readonly initialInput?: string
-    readonly actionId?: string
-    readonly selectAll?: boolean
-  }): boolean {
-    if (this.resizeDrag.active) return false
-    if (this.openCustomCellEditor(args)) return true
-    this.closeActiveCustomEditor()
-    return this.openBuiltInDomEditor(args)
-  }
-
-  private resolveRuntimeField(
-    frame: RuntimeRenderFrame,
-    cell: CellAddress,
-  ): {
-    readonly cell: CellAddress
-    readonly field: Field
-    readonly resolvedField: Field
-    readonly hasExplicitCellTypeOverride: boolean
-  } | null {
-    const data = frame.data as Partial<Pick<DataSource, 'getSchema'>>
-    const editCell = this.resolveEditCell(frame, cell)
-    const field = data.getSchema?.().fields[editCell.colIndex]
-    if (!field) return null
-    const resolvedType = frame.resolveCellType?.(editCell.rowIndex, editCell.colIndex, field) ?? field.type
-    const hasExplicitCellTypeOverride = frame.hasCellTypeOverride?.(editCell.rowIndex, editCell.colIndex) === true
-    const resolvedField = resolvedType === field.type ? field : { ...field, type: resolvedType }
-    return { cell: editCell, field, resolvedField, hasExplicitCellTypeOverride }
-  }
-
-  private resolveCellEditorEntry(
-    resolved: NonNullable<ReturnType<GridRuntime['resolveRuntimeField']>>,
-  ): { readonly editor: CellEditor; readonly editorField: Field } | null {
-    const resolvedEditor = this.cellEditors[resolved.resolvedField.type]
-    if (resolvedEditor) {
-      return { editor: resolvedEditor, editorField: resolved.resolvedField }
-    }
-    if (resolved.hasExplicitCellTypeOverride) return null
-    const fieldEditor = this.cellEditors[resolved.field.type]
-    if (fieldEditor) {
-      return { editor: fieldEditor, editorField: resolved.field }
-    }
-    return null
-  }
-
-  private resolveCellTypeDefinitionEntry(
-    resolved: NonNullable<ReturnType<GridRuntime['resolveRuntimeField']>>,
-  ): { readonly definition: CellTypeDefinition; readonly definitionField: Field } | null {
-    const resolvedDefinition = this.cellTypes[resolved.resolvedField.type]
-    if (resolvedDefinition) {
-      return { definition: resolvedDefinition, definitionField: resolved.resolvedField }
-    }
-    if (resolved.hasExplicitCellTypeOverride) return null
-    const fieldDefinition = this.cellTypes[resolved.field.type]
-    if (fieldDefinition) {
-      return { definition: fieldDefinition, definitionField: resolved.field }
-    }
-    return null
-  }
-
-  private hasCustomCellEditor(cell: CellAddress): boolean {
-    const frame = this.engine.getFrame()
-    const resolved = this.resolveRuntimeField(frame, cell)
-    return resolved !== null && this.resolveCellEditorEntry(resolved) !== null
-  }
-
-  private invokeCellAction(action: CellActionHit): void {
-    const frame = this.engine.getFrame()
-    const data = frame.data as Partial<Pick<DataSource, 'getCell' | 'getSchema'>>
-    const resolved = this.resolveRuntimeField(frame, {
-      rowIndex: action.rowIndex,
-      colIndex: action.colIndex,
-    })
-    if (!resolved) return
-    const { cell, field } = resolved
-
-    let openEditorPrevented = false
-    const value = data.getCell?.(cell.rowIndex, field.id)
-    const actionEntry = this.resolveCellTypeDefinitionEntry(resolved)
-    actionEntry?.definition.onAction?.({
-      field: actionEntry.definitionField,
-      locale: 'en-US',
-      cell,
-      value,
-      trigger: 'cell-action',
-      rowIndex: cell.rowIndex,
-      colIndex: cell.colIndex,
-      actionId: action.actionId,
-      preventOpenEditor: () => {
-        openEditorPrevented = true
-      },
-      commit: (nextValue) => {
-        if (this.engine.commitCellValue(cell, field.id, nextValue)) {
-          this.afterEngineMutation()
-        }
-      },
-    })
-
-    if (openEditorPrevented) return
-    const opened = this.openCellEditorForTrigger({
-      cell,
-      trigger: 'cell-action',
-      actionId: action.actionId,
-      selectAll: false,
-    })
-    if (!opened) {
-      this.engine.selectCell(cell)
-      this.afterEngineMutation()
-    }
-  }
-
-  private openCustomCellEditor(args: {
-    readonly cell: CellAddress
-    readonly trigger: CellEditorTrigger
-    readonly initialInput?: string
-    readonly actionId?: string
-  }): boolean {
-    const frame = this.engine.getFrame()
-    const data = frame.data as Partial<Pick<DataSource, 'getCell' | 'getSchema'>>
-    const resolved = this.resolveRuntimeField(frame, args.cell)
-    if (!resolved) return false
-    const { cell, field } = resolved
-
-    const editorEntry = this.resolveCellEditorEntry(resolved)
-    if (!editorEntry) return false
-    const { editor, editorField } = editorEntry
-
-    const rect = this.computeCellEditorRect(frame, cell)
-    if (!rect) return false
-
-    this.closeActiveCustomEditor()
-    const value = data.getCell?.(cell.rowIndex, field.id)
-    const token = this.nextCustomEditorToken
-    this.nextCustomEditorToken += 1
-    this.activeCustomEditor = editor
-    this.activeCustomEditorCellEdit = {
-      cell,
-      fieldId: field.id,
-      fieldType: editorField.type,
-      draft: value == null ? '' : String(value),
-    }
-    this.activeCustomEditorToken = token
-    this.paintSync()
-    editor.open({
-      cell,
-      field: editorField,
-      value,
-      container: this.editorContainer,
-      rect,
-      trigger: args.trigger,
-      initialInput: args.initialInput,
-      actionId: args.actionId,
-      commit: (value) => this.commitCustomEditorValue(cell, field, value, editor, token),
-      setAttachment: (namespace, data) =>
-        this.engine.setCellAttachment(
-          namespace,
-          this.engine.viewRowToRaw(cell.rowIndex),
-          this.engine.viewColToRaw(cell.colIndex),
-          data,
-        ),
-      getAttachment: (namespace) =>
-        this.engine.getCellAttachment(namespace, this.engine.viewRowToRaw(cell.rowIndex), this.engine.viewColToRaw(cell.colIndex)),
-      cancel: () => this.closeCustomEditor(editor, token),
-    })
-    return true
-  }
-
-  private commitCustomEditorValue(
-    cell: CellAddress,
-    field: Field,
-    value: CellValue | null,
-    editor: NonNullable<CellEditorRegistry[string]>,
-    token: number,
-  ): void {
-    if (this.activeCustomEditor !== editor || this.activeCustomEditorToken !== token) return
-    if (!this.engine.commitCellValue(cell, field.id, value)) return
-    this.closeCustomEditor(editor, token)
-    this.afterEngineMutation()
-  }
-
-  private closeCustomEditor(editor: CellEditor, token?: number): void {
-    if (this.activeCustomEditor !== editor) return
-    if (token !== undefined && this.activeCustomEditorToken !== token) return
-    this.activeCustomEditor = null
-    this.activeCustomEditorCellEdit = null
-    this.activeCustomEditorToken = null
-    editor.close?.()
-    if (!this.destroyed) this.paintSync()
-  }
-
-  private closeActiveCustomEditor(): void {
-    const editor = this.activeCustomEditor
-    if (!editor) return
-    this.activeCustomEditor = null
-    this.activeCustomEditorCellEdit = null
-    this.activeCustomEditorToken = null
-    editor.close?.()
-    if (!this.destroyed) this.paintSync()
-  }
-
-  /** 打开内置 DOM 单元格编辑器，并按需写入初始 draft。 */
-  private openBuiltInDomEditor(args: {
-    readonly cell: CellAddress
-    readonly initialInput?: string
-    readonly selectAll?: boolean
-  }): boolean {
-    if (!this.cellEditor) return false
-    if (!this.engine.beginCellEdit(args.cell)) return false
-    if (args.initialInput !== undefined) this.engine.updateCellEditDraft(args.initialInput)
-    return this.showCellEditor({ selectAll: args.selectAll ?? false })
-  }
-
-  /** 根据当前 engine edit session 定位并展示 DOM cell editor。 */
-  private showCellEditor(options: { selectAll?: boolean }): boolean {
-    const frame = this.engine.getFrame()
-    const session = frame.cellEdit
-    const rect = session ? this.computeCellEditorRect(frame, session.cell) : null
-    if (!session || !rect || !this.cellEditor) {
-      this.engine.cancelCellEdit()
-      return false
-    }
-
-    // 任意非 number 格都用多行编辑器：支持 Alt+Enter 硬换行（与 Google 表格一致），
-    // 提交时按内容 autofit 行高。number 仍单行。
-    const multiline = session.fieldType !== 'number'
-
-    this.editingMultilineOriginalRowHeight = multiline
-      ? this.engine.getRowsAxis().getSize(session.cell.rowIndex)
-      : null
-
-    this.paintSync()
-    this.cellEditor.open(rect, session.draft, { ...options, multiline })
-    return true
-  }
-
-  /** 提交当前编辑；可选在提交后移动到下一行。 */
-  private commitCellEdit(moveAfter: boolean): void {
-    if (!this.engine.isCellEditing()) return
-    const session = this.engine.getFrame().cellEdit
-    const wasMultiline = this.editingMultilineOriginalRowHeight !== null
-    const editedRow = session?.cell.rowIndex
-    if (!this.engine.commitCellEdit()) return
-
-    this.editingMultilineOriginalRowHeight = null
-    this.cellEditor?.close()
-    // 失去焦点（Enter 或 blur 提交）才重算行高——交互成本从 N 键 × autofit 降到 1 次
-    if (wasMultiline && editedRow !== undefined) {
-      this.autofitRows({ rows: [editedRow] })
-    }
-    if (moveAfter) {
-      this.engine.navigateSelection('ArrowDown', false)
-      const focus = this.viewport.getSelectionScrollTarget()
-      if (focus) this.viewport.ensureCellVisible(focus)
-    }
-    this.refresh()
-  }
-
-  /** 取消当前编辑，并在 multiline 编辑时恢复原始行高。 */
-  private cancelCellEdit(): void {
-    if (!this.engine.isCellEditing()) {
-      this.cellEditor?.close()
-      this.editingMultilineOriginalRowHeight = null
-      return
-    }
-    const session = this.engine.getFrame().cellEdit
-    const restoreHeight = this.editingMultilineOriginalRowHeight
-    const restoreRow = session?.cell.rowIndex
-    this.engine.cancelCellEdit()
-    this.cellEditor?.close()
-    if (restoreHeight !== null && restoreRow !== undefined) {
-      const currentHeight = this.engine.getRowsAxis().getSize(restoreRow)
-      if (currentHeight !== restoreHeight) {
-        this.engine.setRowHeight(restoreRow, restoreHeight)
-        this.afterEngineMutation()
-      }
-    }
-    this.editingMultilineOriginalRowHeight = null
-  }
-
-  /** 根据当前单元格 rect 同步编辑器位置；不可见时取消编辑。flush 路径复用已构建的 frame，避免重复 getFrame。 */
-  private syncCellEditorPosition(frame?: ReturnType<GridEngine['getFrame']>): void {
-    if (!this.cellEditor?.isOpen()) return
-    const f = frame ?? this.engine.getFrame()
-    const session = f.cellEdit
-    if (!session) {
-      this.cellEditor.close()
-      return
-    }
-    const rect = this.computeCellEditorRect(f, session.cell)
-    if (!rect) {
-      this.cancelCellEdit()
-      return
-    }
-    this.cellEditor.syncRect(rect)
-  }
-
-  private computeCellEditorRect(frame: ReturnType<GridEngine['getFrame']>, cell: CellAddress) {
-    const mergeRange = (frame.mergeRegions ?? []).find(
-      (merge) =>
-        cell.rowIndex >= merge.range.startRow &&
-        cell.rowIndex <= merge.range.endRow &&
-        cell.colIndex >= merge.range.startCol &&
-        cell.colIndex <= merge.range.endCol,
-    )?.range
-    if (mergeRange) return computeRangeOverlayRects(frame, mergeRange).at(-1) ?? null
-    return computeCellRect(frame, cell)
-  }
-
-  private resolveEditCell(
-    frame: ReturnType<GridEngine['getFrame']>,
-    cell: CellAddress,
-  ): CellAddress {
-    const merge = (frame.mergeRegions ?? []).find(
-      (region) =>
-        cell.rowIndex >= region.range.startRow &&
-        cell.rowIndex <= region.range.endRow &&
-        cell.colIndex >= region.range.startCol &&
-        cell.colIndex <= region.range.endCol,
-    )
-    if (!merge) return cell
-    return merge.anchor ?? { rowIndex: merge.range.startRow, colIndex: merge.range.startCol }
   }
 
   /** 读取 resize handle 对应的当前行高或列宽。 */

@@ -26,7 +26,7 @@ export interface RenderFlushPipelineDeps {
   getFrame(): RuntimeRenderFrame
   getRenderer(): RenderBackend
   getViewPipeline(): ViewPipeline | undefined
-  /** edit 域 frame 增强（`activeCustomEditorCellEdit` 合并）；Task 7 前指向 runtime 私有状态。 */
+  /** edit 域 frame 增强（`activeCustomEditorCellEdit` 合并）；指向 `CellEditController.augmentFrame`（Task 7）。 */
   augmentFrame(frame: RuntimeRenderFrame): RuntimeRenderFrame
   syncSelectionOverlay(frame: RuntimeRenderFrame): void
   /** resize/fill/hideRow/hideCol handle + cellEditor 位置；runtime 组合闭包保持现顺序。 */
