@@ -76,8 +76,25 @@ describe('DefaultGridEngine column groups', () => {
     expect(engine.selectColumnGroup('s1')).toBe(true)
     const selection = engine.getSelection()
     // s1 = [s1c1, s1c2] → view cols [1, 2]；anchor 左边界、active/extent 右边界。
-    expect(selection.anchorCell.colIndex).toBe(1)
-    expect(selection.activeCell.colIndex).toBe(2)
-    expect(selection.extentCell.colIndex).toBe(2)
+    expect(selection.anchorCell!.colIndex).toBe(1)
+    expect(selection.activeCell!.colIndex).toBe(2)
+    expect(selection.extentCell!.colIndex).toBe(2)
+  })
+
+  it('hideCols 后 columnGroupHeader 收缩，undo 后恢复原 span（列组布局缓存不因 undo 陈旧）', () => {
+    const engine = makeEngine()
+    engine.hideCols(['s1c2'])
+    const shrunk = engine.getFrame().columnGroupHeader!
+    expect(shrunk.rows[0]).toEqual([
+      { groupId: 's1', label: '堆1', startViewCol: 1, endViewCol: 1, selected: false },
+      { groupId: 's2', label: '堆2', startViewCol: 2, endViewCol: 2, selected: false },
+    ])
+
+    engine.undo()
+    const restored = engine.getFrame().columnGroupHeader!
+    expect(restored.rows[0]).toEqual([
+      { groupId: 's1', label: '堆1', startViewCol: 1, endViewCol: 2, selected: false },
+      { groupId: 's2', label: '堆2', startViewCol: 3, endViewCol: 3, selected: false },
+    ])
   })
 })

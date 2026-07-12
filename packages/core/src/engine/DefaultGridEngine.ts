@@ -118,10 +118,11 @@ export class DefaultGridEngine implements GridEngine {
   /** 列组树运行时状态；随 rawData schema 重建（构造/setData 抛错即 fail loud，见 ColumnGroupStore）。 */
   private columnGroups: ColumnGroupStore
   /**
-   * `resolveColumnGroupLayout` 结果缓存：脏标记模式，`columnGroupLayoutVersion` 在
-   * `rebuildData`（schema 换）与列结构 rebuild（insert/delete/hide/unhide/move cols，见
-   * `structural` 的 `rebuildCols` 闭包）时递增，二者是仅有的两处会改变
-   * `resolveColumnGroupLayout` 输入（tree/visibleFields）的路径；列宽调整不触发。
+   * `resolveColumnGroupLayout` 结果缓存：脏标记模式，`columnGroupLayoutVersion` 在会改变
+   * 其输入（tree/visibleFields）的路径递增——`rebuildData`（schema 换）、`structural` 的
+   * `rebuildCols` 闭包（insert/delete/hide/unhide/move cols 正向执行）、以及三处 undo/redo
+   * 重放（`registerColumnUndo`/`registerColumnStructureUndo`/`applyMoveColsCommand`，
+   * 它们绕过 `structural` 闭包直接调 `layout.rebuildCols`，须各自补一次 bump）；列宽调整不触发。
    */
   private columnGroupLayoutVersion = 0
   private columnGroupLayoutCache: { version: number; layout: ColumnGroupLayout | null } | null = null
@@ -284,8 +285,9 @@ export class DefaultGridEngine implements GridEngine {
     getSelection: () => this.selection.getSelection(),
     pushUndo: (command) => this.undoStack.push(command),
     rebuildRows: () => this.layout.rebuildRows(this.rowStructure.getViewRowsAxis()),
-    // insertCols/deleteCols/hideCols/unhideCols/moveCols 都经此闭包重建列轴——是唯一会改变
-    // visibleFields（列组布局输入之一）而不经过 rebuildData 的路径，故列组布局缓存在此一并失效。
+    // insertCols/deleteCols/hideCols/unhideCols/moveCols 正向执行都经此闭包重建列轴，会改变
+    // visibleFields（列组布局输入之一），故列组布局缓存在此一并失效；对应的 undo/redo 重放
+    // 绕过此闭包，各自在调用 layout.rebuildCols 处补了同样的 bump（见三处 registerColumn*Undo）。
     rebuildCols: () => {
       this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
       this.columnGroupLayoutVersion += 1
@@ -397,7 +399,11 @@ export class DefaultGridEngine implements GridEngine {
       setColWidthById: (fieldId, width) => this.columnStructure.setColWidthById(fieldId, width),
       addHiddenCols: (ids) => this.columnStructure.addHidden(ids),
       removeHiddenCols: (ids) => this.columnStructure.removeHidden(ids),
-      rebuildCols: () => this.layout.rebuildCols(this.columnStructure.getViewColsAxis()),
+      // undo/redo 重放绕过 structural.rebuildCols 闭包，需在此单独 bump 列组布局缓存版本。
+      rebuildCols: () => {
+        this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
+        this.columnGroupLayoutVersion += 1
+      },
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
       getDefaultColWidth: () => this.columnStructure.getDefaultColWidth(),
     })
@@ -431,7 +437,11 @@ export class DefaultGridEngine implements GridEngine {
       replayMoveCols: (fieldIds, beforeFieldId, selection) =>
         this.applyMoveColsCommand(fieldIds, beforeFieldId, selection),
       restoreFrozen: (config) => this.layout.setFrozenConfig(config),
-      rebuildCols: () => this.layout.rebuildCols(this.columnStructure.getViewColsAxis()),
+      // undo/redo 重放绕过 structural.rebuildCols 闭包，需在此单独 bump 列组布局缓存版本。
+      rebuildCols: () => {
+        this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
+        this.columnGroupLayoutVersion += 1
+      },
       restoreFormat: (layers) => this.formatState.restoreFormat(layers),
       restoreMerge: (regions) => this.formatState.restoreMerge(regions),
       restoreCellTypes: (snapshot) => this.restoreCellTypes(snapshot),
@@ -1475,6 +1485,8 @@ export class DefaultGridEngine implements GridEngine {
     const event = this.moveColsCommand.execute({ kind: 'moveCols', fieldIds, beforeFieldId })
     if (!event) return
     this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
+    // undo/redo 重放绕过 structural.rebuildCols 闭包，需在此单独 bump 列组布局缓存版本。
+    this.columnGroupLayoutVersion += 1
     this.selectionController.setSelection(selection)
   }
 
