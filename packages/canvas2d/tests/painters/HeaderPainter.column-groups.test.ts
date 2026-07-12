@@ -305,4 +305,54 @@ describe('HeaderPainter — 列组表头行', () => {
     const groupText = ops.find((o) => o.op === 'fillText' && o.args[0] === 'G组')
     expect(groupText).toBeUndefined()
   })
+
+  it('无组到分组边界：竖线从该无组列自身 leafTop（y=0）画起，不用全局最深值漏画分隔线', () => {
+    const { ctx, ops } = createRecordingContext()
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA,
+      colsAxis: makeAxis(),
+      colRange: [0, 3],
+      width: 400,
+      columnGroupHeader: twoGroupHeader(),
+      leafHeaderHeight: LEAF_HEIGHT,
+    })
+
+    // m(0, 无组, leafTop=0) 与 s1c1(1, leafTop=GROUP_ROW_HEIGHT) 的边界线：
+    // 取 min(0, GROUP_ROW_HEIGHT) = 0——必须从表头顶画起，覆盖 m 列自己伸满的内容区；
+    // 若用全局最深值（GROUP_ROW_HEIGHT）当起点，m 与 s1 之间在组行带内会完全没有分隔线。
+    const totalHeaderHeight = GROUP_ROW_HEIGHT + LEAF_HEIGHT
+    expect(ops).toContainEqual({ op: 'moveTo', args: [100.5, 0] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [100.5, totalHeaderHeight] })
+  })
+
+  it('两个相邻无组列（不在列 0，且表头里其它地方有组）的边界线同样从 y=0 画起', () => {
+    const schema: Schema = {
+      fields: [
+        { id: 'g1', name: 'g1', type: 'text', width: 100 },
+        { id: 'g2', name: 'g2', type: 'text', width: 100 },
+        { id: 'm1', name: 'm1', type: 'text', width: 100 },
+        { id: 'm2', name: 'm2', type: 'text', width: 100 },
+      ],
+    }
+    const groupOnLeft: RenderFrameColumnGroupHeader = {
+      depth: 1,
+      rows: [[{ groupId: 'g', label: 'G组', startViewCol: 0, endViewCol: 1, selected: false }]],
+      leafTopRowByViewCol: [1, 1, 0, 0],
+    }
+    const { ctx, ops } = createRecordingContext()
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema,
+      colsAxis: new ChunkedAxis({ count: 4, defaultSize: 100 }),
+      colRange: [0, 3],
+      width: 400,
+      columnGroupHeader: groupOnLeft,
+      leafHeaderHeight: LEAF_HEIGHT,
+    })
+
+    // m1(2)/m2(3) 都无组、leafTop=0；边界既不在列 0，也不是末列越界 fallback 的位置，
+    // 证明修复对任意边界位置都成立，不只是巧合命中列 0。
+    const totalHeaderHeight = GROUP_ROW_HEIGHT + LEAF_HEIGHT
+    expect(ops).toContainEqual({ op: 'moveTo', args: [300.5, 0] })
+    expect(ops).toContainEqual({ op: 'lineTo', args: [300.5, totalHeaderHeight] })
+  })
 })

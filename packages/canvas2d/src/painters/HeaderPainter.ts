@@ -97,8 +97,6 @@ export class HeaderPainter {
     const headerHeight = columnGroupHeader
       ? columnGroupHeader.depth * groupRowHeight + (params.leafHeaderHeight ?? this.theme.metrics.headerHeight)
       : this.theme.metrics.headerHeight
-    // 叶行区顶边：无列组为 0；有列组时叶行在组行之下。
-    const leafRowTop = columnGroupHeader ? columnGroupHeader.depth * groupRowHeight : 0
 
     ctx.save()
     ctx.beginPath()
@@ -139,9 +137,7 @@ export class HeaderPainter {
       const selected = this.isSelectedColumn(c, params.selectedColumnRange)
       // 叶头伸满：无组/浅组列（leafTopRowByViewCol[c] < depth）从自身 topRow 一路画到表头底，
       // 而非局限于窄的叶行带——否则该列上方（组行区）会露出未绘制的空隙。
-      const leafTop = columnGroupHeader
-        ? (columnGroupHeader.leafTopRowByViewCol[c] ?? columnGroupHeader.depth) * groupRowHeight
-        : 0
+      const leafTop = this.leafTopForColumn(columnGroupHeader, groupRowHeight, c)
       if (selected) {
         ctx.fillStyle = this.theme.colors.selectionBorder
         ctx.fillRect(colLeft, leafTop, colWidth, headerHeight - leafTop)
@@ -187,7 +183,8 @@ export class HeaderPainter {
       width,
       scrollOffsetX,
       headerHeight,
-      leafRowTop,
+      columnGroupHeader,
+      groupRowHeight,
     })
     this.paintCollapsedColGaps(ctx, params)
 
@@ -212,6 +209,9 @@ export class HeaderPainter {
     const rightPath = new Path2D(
       `M0 0 L${TRIANGLE_WIDTH} ${TRIANGLE_HEIGHT / 2} L0 ${TRIANGLE_HEIGHT} Z`,
     )
+    // 已知未处理的交互：这里恒用叶行高 theme.metrics.headerHeight 定位 Y，没有加上
+    // columnGroupHeader 的 depth×groupRowHeight 偏移——有列组时三角形会落进组行带，
+    // 不是叶行带。列组场景下的隐藏列指示器定位是未来 follow-up，未在本次改动范围内。
     const y = headerHeight - hideColTrianglePadY - TRIANGLE_HEIGHT
 
     ctx.fillStyle = this.theme.colors.hideIndicator
@@ -396,11 +396,12 @@ export class HeaderPainter {
       width: number
       scrollOffsetX: number
       headerHeight: number
-      /** 叶行区顶边（无列组为 0）；叶列竖线只画在叶行带内，不穿入组行区。 */
-      leafRowTop: number
+      columnGroupHeader: RenderFrameColumnGroupHeader | undefined
+      groupRowHeight: number
     },
   ): void {
-    const { colsAxis, colRange, x, width, scrollOffsetX, headerHeight, leafRowTop } = params
+    const { colsAxis, colRange, x, width, scrollOffsetX, headerHeight, columnGroupHeader, groupRowHeight } =
+      params
     ctx.strokeStyle = this.theme.colors.gridLine
     ctx.lineWidth = this.theme.metrics.borderWidth
     ctx.beginPath()
@@ -410,7 +411,16 @@ export class HeaderPainter {
       const xRaw = x + xBase - scrollOffsetX
       const lineX = snapLineInside(xRaw, x, x + width)
       if (lineX === undefined) continue
-      ctx.moveTo(lineX, leafRowTop)
+      // 边界线是 c 与 c+1 两列共享的分隔——取两列各自 leafTop 的较小值：谁的内容先到这个
+      // Y，谁就需要这条线跟邻列（可能仍在组行区，或组行背景不同）分开。用单一全局值（如
+      // depth×groupRowHeight）会让浅列一侧的分隔线漏画（见 review：无组列紧邻分组列时
+      // 组行带内完全没有竖线）。c+1 越界时 leafTopForColumn 退化为 depth×groupRowHeight，
+      // 即 c 自身 leafTop 的上界，min 自然收敛到 leafTopForColumn(c)，无需特判末列边界。
+      const lineTop = Math.min(
+        this.leafTopForColumn(columnGroupHeader, groupRowHeight, c),
+        this.leafTopForColumn(columnGroupHeader, groupRowHeight, c + 1),
+      )
+      ctx.moveTo(lineX, lineTop)
       ctx.lineTo(lineX, headerHeight)
     }
 
@@ -421,5 +431,21 @@ export class HeaderPainter {
     }
 
     ctx.stroke()
+  }
+
+  /**
+   * 某列自身叶头内容区的顶边 Y。无列组时恒为 0；`viewCol` 越界（如 gridline 边界的
+   * `c+1` 落在整个 schema 最后一列之外）时退化为 `depth × groupRowHeight`——该列叶头带的
+   * 最深可能值，恒 ≥ 任何真实列的 leafTop。与 paint() 主叶头循环共用同一份公式，避免
+   * `?? columnGroupHeader.depth` 兜底逻辑重复两处。
+   */
+  private leafTopForColumn(
+    columnGroupHeader: RenderFrameColumnGroupHeader | undefined,
+    groupRowHeight: number,
+    viewCol: number,
+  ): number {
+    return columnGroupHeader
+      ? (columnGroupHeader.leafTopRowByViewCol[viewCol] ?? columnGroupHeader.depth) * groupRowHeight
+      : 0
   }
 }
