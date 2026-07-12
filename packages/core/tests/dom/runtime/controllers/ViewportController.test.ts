@@ -40,6 +40,7 @@ function makeEngine(overrides: Partial<Record<string, unknown>> = {}) {
     getViewport: () => ({ getRowHeaderWidth: () => 0, getHeaderHeight: () => 30 }),
     getRowsAxis: () => rowsAxis,
     getColsAxis: () => colsAxis,
+    getFrozenConfig: () => ({ topRows: 0, leftCols: 0, rightCols: 0 }),
     getColumnIndex: (fieldId: string) => (fieldId === 'b' ? 1 : -1),
     getFrame: () => frame,
     getSelection: () => ({ activeCell: { rowIndex: 1, colIndex: 1 }, extentCell: null }),
@@ -234,6 +235,49 @@ describe('ViewportController — 程序化滚动', () => {
     vp.scrollToCell(2, 'missing')
     expect(host.scrollTo).not.toHaveBeenCalled()
   })
+
+  // 读取 host.scrollTo 最近一次调用的 [top, left]（logicalToScroll 含 FP 除法，用 closeTo 断言）。
+  function lastScrollTo(host: WebHost): [number, number] {
+    const calls = (host.scrollTo as unknown as { mock: { calls: [number, number][] } }).mock.calls
+    return calls.at(-1)!
+  }
+
+  // 冻结左列偏移：横轴 vp.scrollX 是「中心区相对」坐标，scrollToCell 须减去左冻结列宽。
+  it('scrollToCell 在 frozen.leftCols>0 时减去左冻结列宽（目标对齐中心区左缘，非藏在冻结列后）', () => {
+    // colsAxis=[200,200,200]，冻结 col0（宽 200）。目标 col 'b'(idx1) 绝对 left=200。
+    const engine = makeEngine({ getFrozenConfig: () => ({ topRows: 0, leftCols: 1, rightCols: 0 }) })
+    const host = makeHost()
+    const vp = new ViewportController(makeDeps({ engine, host }))
+    vp.scrollToCell(2, 'b')
+    // scrollLeft = logicalToScrollX(200 − 200) = 0（col1 落到中心区左缘）；纵轴不受冻结影响仍 200。
+    const [top, left] = lastScrollTo(host)
+    expect(top).toBeCloseTo(200, 6)
+    expect(left).toBeCloseTo(0, 6)
+  })
+
+  // 冻结顶行偏移：纵轴 align=end 须按「中间行带高」= 视口高 − 表头 − 顶冻结行高对齐。
+  it('scrollToRow align=end 在 frozen.topRows>0 时按中间行带高对齐（不被顶冻结行盖住）', () => {
+    // rowsAxis=10×100，冻结 row0（高 100）。视口高 200、表头 30 → 中间行带高 70。
+    const engine = makeEngine({ getFrozenConfig: () => ({ topRows: 1, leftCols: 0, rightCols: 0 }) })
+    const host = makeHost()
+    const vp = new ViewportController(makeDeps({ engine, host }))
+    vp.scrollToRow(5, 'end')
+    // top=500,size=100 → middleScrollY = 500+100−70 = 530（row5 底缘贴中间行带底）。纵轴无减法。
+    const [top, left] = lastScrollTo(host)
+    expect(top).toBeCloseTo(530, 6)
+    expect(left).toBeCloseTo(0, 6)
+  })
+
+  // 纵轴 align=start 在 frozen.topRows>0 下**不**做 topHeight 减法（否则打偏一整个冻结行高）。
+  it('scrollToRow align=start 在 frozen.topRows>0 下 vp.scrollY 直接取行绝对 top', () => {
+    const engine = makeEngine({ getFrozenConfig: () => ({ topRows: 1, leftCols: 0, rightCols: 0 }) })
+    const host = makeHost()
+    const vp = new ViewportController(makeDeps({ engine, host }))
+    vp.scrollToRow(5, 'start')
+    const [top, left] = lastScrollTo(host)
+    expect(top).toBeCloseTo(500, 6) // = indexToPosition(5)，无 −topHeight
+    expect(left).toBeCloseTo(0, 6)
+  })
 })
 
 describe('ViewportController — 选区滚入可见区域', () => {
@@ -260,6 +304,16 @@ describe('ViewportController — 选区滚入可见区域', () => {
 
   it('单元格已可见时 ensureCellVisible 不触发滚动', () => {
     const engine = makeEngine()
+    const host = makeHost()
+    const vp = new ViewportController(makeDeps({ engine, host }))
+    vp.ensureCellVisible({ rowIndex: 0, colIndex: 0 })
+    expect(host.scrollTo).not.toHaveBeenCalled()
+  })
+
+  // 冻结区内的格恒可见：computeScrollReveal 因绝对坐标落在中心区左缘外会返回非 null，
+  // 但两轴都落回当前值时须早退，避免伪 scrollTo（否则会误触 afterApplyScroll 关编辑器）。
+  it('frozen 列内的格已可见时 ensureCellVisible 不触发滚动（早退守卫）', () => {
+    const engine = makeEngine({ getFrozenConfig: () => ({ topRows: 0, leftCols: 1, rightCols: 0 }) })
     const host = makeHost()
     const vp = new ViewportController(makeDeps({ engine, host }))
     vp.ensureCellVisible({ rowIndex: 0, colIndex: 0 })

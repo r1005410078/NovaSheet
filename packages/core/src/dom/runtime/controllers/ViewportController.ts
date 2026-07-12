@@ -147,13 +147,16 @@ export class ViewportController {
     const top = rowsAxis.indexToPosition(rowIndex)
     const size = rowsAxis.getSize(rowIndex)
     const { height: clientH } = this.deps.host.getContainerSize()
-    const vpContentH = clientH - this.deps.engine.getViewport().getHeaderHeight()
-    let logicalY: number
-    if (align === 'start') logicalY = top
-    else if (align === 'end') logicalY = top + size - vpContentH
-    else logicalY = top + size / 2 - vpContentH / 2
+    const headerH = this.deps.engine.getViewport().getHeaderHeight()
+    // 可滚区（中间行带）高 = 视口高 − 表头 − 顶冻结行高；`end/center` 必须按这个高度对齐，
+    // 否则目标被顶冻结行盖住 topHeight px。垂直冻结约定见 logicalToScrollY 注释。
+    const middleH = Math.max(0, clientH - headerH - this.frozenTopHeight())
+    let middleScrollY: number
+    if (align === 'start') middleScrollY = top
+    else if (align === 'end') middleScrollY = top + size - middleH
+    else middleScrollY = top + size / 2 - middleH / 2
 
-    const scrollTop = this.logicalToScrollY(logicalY)
+    const scrollTop = this.logicalToScrollY(middleScrollY)
     const { scrollLeft } = this.deps.host.getScrollPosition()
     this.deps.host.scrollTo(scrollTop, scrollLeft)
   }
@@ -169,7 +172,9 @@ export class ViewportController {
     const top = rowsAxis.indexToPosition(rowIndex)
     const left = colsAxis.indexToPosition(colIndex)
     const scrollTop = this.logicalToScrollY(top)
-    const scrollLeft = this.logicalToScrollX(left)
+    // 横轴目标是绝对列坐标；左冻结列宽是中心可滚区的内容基准，须减去后再换算成 scrollLeft
+    // （见 logicalToScrollX 注释）。纵轴无需类似修正（两轴冻结约定不同）。
+    const scrollLeft = this.logicalToScrollX(left - this.frozenLeftWidth())
     this.deps.host.scrollTo(scrollTop, scrollLeft)
   }
 
@@ -187,13 +192,17 @@ export class ViewportController {
     const left = colsAxis.indexToPosition(colIndex)
     const size = colsAxis.getSize(colIndex)
     const { width: clientW } = this.deps.host.getContainerSize()
-    const vpContentW = clientW - this.deps.engine.getViewport().getRowHeaderWidth()
-    let logicalX: number
-    if (align === 'start') logicalX = left
-    else if (align === 'end') logicalX = left + size - vpContentW
-    else logicalX = left + size / 2 - vpContentW / 2
+    const gutter = this.deps.engine.getViewport().getRowHeaderWidth()
+    const leftWidth = this.frozenLeftWidth()
+    // 中心可滚区宽 = 视口宽 − gutter − 左右冻结列宽；`end/center` 按此宽对齐目标。
+    const centerW = Math.max(0, clientW - gutter - leftWidth - this.frozenRightWidth())
+    // centerScrollX 是目标在列内容坐标系中的绝对位置（中心区左缘应显示到的内容 x）。
+    let centerScrollX: number
+    if (align === 'start') centerScrollX = left
+    else if (align === 'end') centerScrollX = left + size - centerW
+    else centerScrollX = left + size / 2 - centerW / 2
 
-    const scrollLeft = this.logicalToScrollX(logicalX)
+    const scrollLeft = this.logicalToScrollX(centerScrollX - leftWidth)
     const { scrollTop } = this.deps.host.getScrollPosition()
     this.deps.host.scrollTo(scrollTop, scrollLeft)
   }
@@ -225,22 +234,37 @@ export class ViewportController {
     const { scrollTop, scrollLeft } = this.deps.host.getScrollPosition()
     const { logicalX, logicalY } = this.mapScrollToLogical(scrollTop, scrollLeft)
 
+    const { leftCols, topRows } = this.deps.engine.getFrozenConfig()
+    const leftWidth = this.frozenLeftWidth()
+    const rightWidth = this.frozenRightWidth()
+    const topHeight = this.frozenTopHeight()
+
+    // computeScrollReveal 用 colsAxis/rowsAxis 的**绝对**格坐标做比较，故必须喂它绝对可视窗：
+    //   - X：中心区绝对左缘 centerScrollX = leftWidth + vp.scrollX（镜像 FrozenRegions）；
+    //        把 gutter 记为 gutter+leftWidth+rightWidth，reveal 的可视宽即中心区宽。
+    //   - Y：中间行带绝对顶 middleScrollY = max(vp.scrollY, topHeight)；表头记为 header+topHeight。
     const reveal = computeScrollReveal({
       rowIndex: cell.rowIndex,
       colIndex: cell.colIndex,
       rowsAxis: frame.rowsAxis,
       colsAxis: frame.colsAxis,
-      scrollX: logicalX,
-      scrollY: logicalY,
+      scrollX: leftWidth + logicalX,
+      scrollY: Math.max(logicalY, topHeight),
       viewportWidth: width,
       viewportHeight: height,
-      headerHeight: frame.viewport.headerHeight,
-      rowHeaderWidth: frame.viewport.rowHeaderWidth,
+      headerHeight: frame.viewport.headerHeight + topHeight,
+      rowHeaderWidth: frame.viewport.rowHeaderWidth + leftWidth + rightWidth,
     })
     if (!reveal) return
 
-    const nextTop = this.logicalToScrollY(reveal.logicalY)
-    const nextLeft = this.logicalToScrollX(reveal.logicalX)
+    // 冻结区内的格恒可见——不为它滚动那一轴（否则会误滚到 0）。reveal.logicalX 为绝对
+    // centerScrollX 目标，减 leftWidth 还原为 vp.scrollX；reveal.logicalY 直接就是 vp.scrollY。
+    const nextVpX = cell.colIndex < leftCols ? logicalX : reveal.logicalX - leftWidth
+    const nextVpY = cell.rowIndex < topRows ? logicalY : reveal.logicalY
+    // 两轴都落回当前值——reveal 只因冻结区命中而非真需滚动，早退避免伪 scrollTo/afterApplyScroll。
+    if (nextVpX === logicalX && nextVpY === logicalY) return
+    const nextTop = this.logicalToScrollY(nextVpY)
+    const nextLeft = this.logicalToScrollX(nextVpX)
     this.deps.host.scrollTo(nextTop, nextLeft)
     this.handleHostScroll(nextTop, nextLeft)
   }
@@ -262,7 +286,13 @@ export class ViewportController {
     }
   }
 
-  /** 将逻辑 Y 滚动坐标映射回 DOM scrollTop。 */
+  /**
+   * 将逻辑 Y 滚动坐标（vp.scrollY，即 engine.setScroll 存的值）映射回 DOM scrollTop。
+   * 是 mapScrollToLogical 纵轴的纯逆运算，不做冻结偏移修正——纵轴冻结约定是
+   * `middleScrollY = max(vp.scrollY, topHeight)`（FrozenRegions），即 vp.scrollY 本就是**绝对**
+   * 内容 Y，滚动定位目标（top）直接等于 vp.scrollY，无需减 topHeight。切勿为「对称」给它加减
+   * topHeight——那会把 scrollToRow('start') 打偏 topHeight px（已实测）。横轴不同，见 logicalToScrollX。
+   */
   private logicalToScrollY(logicalY: number): number {
     const headerH = this.deps.engine.getViewport().getHeaderHeight()
     const contentH = this.deps.engine.getRowsTotalSize()
@@ -271,12 +301,49 @@ export class ViewportController {
     return this.scrollMapper.logicalToScroll(logicalY, spacerH, contentH + headerH, clientH)
   }
 
-  /** 将逻辑 X 滚动坐标映射回 DOM scrollLeft。 */
+  /**
+   * 将逻辑 X 滚动坐标（vp.scrollX）映射回 DOM scrollLeft。是 mapScrollToLogical 横轴的纯逆运算。
+   * 注意：横轴冻结约定是 `centerScrollX = leftWidth + vp.scrollX`（FrozenRegions），故 vp.scrollX 是
+   * **中心区相对**坐标，而非绝对列坐标。调用方（scrollToCell/scrollToGroup/ensureCellVisible）持有的
+   * 是绝对列坐标，必须先 `− leftWidth` 转成 vp.scrollX 再传入。此处不内嵌该减法，保持本函数为
+   * 纯逆运算，与纵轴 logicalToScrollY 对称。
+   */
   private logicalToScrollX(logicalX: number): number {
     const contentW = this.getColsContentWidth()
     const spacerW = this.scrollMapper.computeSpacerSize(contentW)
     const { width: clientW } = this.deps.host.getContainerSize()
     return this.scrollMapper.logicalToScroll(logicalX, spacerW, contentW, clientW)
+  }
+
+  /**
+   * 左冻结列累计像素宽——中心可滚区在列内容坐标系中的基准偏移，等同 FrozenRegions 里
+   * `centerScrollX = leftWidth + vp.scrollX` 的 leftWidth。无左冻结列返回 0。
+   */
+  private frozenLeftWidth(): number {
+    const { leftCols } = this.deps.engine.getFrozenConfig()
+    if (leftCols <= 0) return 0
+    const colsAxis = this.deps.engine.getColsAxis()
+    if (leftCols >= colsAxis.getCount()) return this.deps.engine.getColsTotalSize()
+    return colsAxis.indexToPosition(leftCols)
+  }
+
+  /** 右冻结列累计像素宽；无右冻结列返回 0。 */
+  private frozenRightWidth(): number {
+    const { rightCols } = this.deps.engine.getFrozenConfig()
+    if (rightCols <= 0) return 0
+    const colsAxis = this.deps.engine.getColsAxis()
+    const count = colsAxis.getCount()
+    if (rightCols >= count) return this.deps.engine.getColsTotalSize()
+    return this.deps.engine.getColsTotalSize() - colsAxis.indexToPosition(count - rightCols)
+  }
+
+  /** 顶冻结行累计像素高；无顶冻结行返回 0。 */
+  private frozenTopHeight(): number {
+    const { topRows } = this.deps.engine.getFrozenConfig()
+    if (topRows <= 0) return 0
+    const rowsAxis = this.deps.engine.getRowsAxis()
+    if (topRows >= rowsAxis.getCount()) return this.deps.engine.getRowsTotalSize()
+    return rowsAxis.indexToPosition(topRows)
   }
 
   /** 取消 pending 的 host resize 合帧任务。 */
