@@ -3,7 +3,7 @@ import type { MergeRegion } from '../../kernel/coords/MergeRegion'
 import type { CellRange, GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { ContextMenuItem } from '../../features/context-menu/ContextMenuModel'
 import type { DataSource } from '../../kernel/data/DataSource'
-import type { Field } from '../../kernel/data/Schema'
+import type { ColumnGroupChild, Field } from '../../kernel/data/Schema'
 import type { CellTypeOverride } from '../../features/cell-types'
 import type { FilterLayer, FilterSpec } from '../../features/view/FilterLayer'
 import type { SortLayer, SortSpec } from '../../features/view/SortLayer'
@@ -64,6 +64,8 @@ export interface GridController {
   refresh(): void
   scrollToRow(rowIndex: number, align?: 'start' | 'center' | 'end'): void
   scrollToCell(rowIndex: number, fieldId: string): void
+  /** 滚动到指定组的首个可见叶列，按 align 对齐横向视口（无条件对齐，与 scrollToRow/scrollToCell 同族）；组不存在或全隐藏则 no-op。 */
+  scrollToGroup(groupId: string, align?: 'start' | 'center' | 'end'): void
   openCellEditor(rowIndex: number, fieldId: string): boolean
   /**
    * 按当前列宽和文本内容批量重算 `field.wrap === true` 字段的行高（M3 autofit）。
@@ -120,6 +122,10 @@ export interface GridController {
   getHiddenCols(): readonly string[]
   /** Phase 4.7 — 按 fieldId 移动连续列组；`beforeFieldId=null` 表示移动到末尾。 */
   moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean
+  /** 返回当前列组树（文档序，深拷贝，独立于内部 store）。无组返回空数组。 */
+  getColumnGroups(): readonly ColumnGroupChild[]
+  /** 组可见叶列整列选中；组不存在或组内叶列全隐藏 → 返回 false，不改动选区。 */
+  selectGroup(groupId: string): boolean
   /** Phase 4.6 — 返回列头右键菜单项列表（含结构项）。 */
   getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[]
   /** Phase 4.6 — 执行列头右键菜单动作。 */

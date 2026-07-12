@@ -9,6 +9,7 @@ import type {
   ContextMenuContext,
   ContextMenuExtensionConfig,
   ContextMenuRenderer,
+  ColumnGroupChild,
   DataSource,
   Field,
   FrozenConfig,
@@ -169,6 +170,11 @@ export class Grid {
 
   scrollToCell(rowIndex: number, fieldId: string): void {
     this.delegate.scrollToCell(rowIndex, fieldId)
+  }
+
+  /** 滚动到指定组的首个可见叶列，按 align 对齐横向视口（无条件对齐，与 scrollToRow/scrollToCell 同族）；组不存在或全隐藏则 no-op。 */
+  scrollToGroup(groupId: string, align?: 'start' | 'center' | 'end'): void {
+    this.delegate.scrollToGroup(groupId, align)
   }
 
   /** 程序化打开单元格编辑器；custom editor 的 trigger 为 `api`。 */
@@ -341,6 +347,16 @@ export class Grid {
     const changed = this.delegate.moveCols(fieldIds, beforeFieldId)
     if (changed) this.options.onColumnsMoved?.({ fieldIds, beforeFieldId })
     return changed
+  }
+
+  /** 返回当前列组树（文档序，深拷贝，独立于内部 store）。无组返回空数组。 */
+  getColumnGroups(): readonly ColumnGroupChild[] {
+    return this.delegate.getColumnGroups()
+  }
+
+  /** 组可见叶列整列选中；组不存在或组内叶列全隐藏时返回 false，不改动选区。 */
+  selectGroup(groupId: string): boolean {
+    return this.delegate.selectGroup(groupId)
   }
 
   /** Phase 4.6 — 返回列头右键菜单项列表（含结构项）。 */

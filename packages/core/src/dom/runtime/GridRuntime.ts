@@ -802,6 +802,11 @@ export class GridRuntime {
     this.viewport.scrollToCell(rowIndex, fieldId)
   }
 
+  /** 滚动到指定组的首个可见叶列，按 align 对齐横向视口。 */
+  scrollToGroup(groupId: string, align?: 'start' | 'center' | 'end'): void {
+    this.viewport.scrollToGroup(groupId, align)
+  }
+
   /** 开始鼠标/触控 resize 拖拽并显示尺寸指示线。 */
   handleResizePointerDown(
     handle: ResizeHandleRect,

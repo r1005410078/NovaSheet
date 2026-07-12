@@ -30,7 +30,7 @@ import type {
   ContextMenuRenderer,
 } from '../../features/context-menu/ContextMenuModel'
 import type { DataSource } from '../../kernel/data/DataSource'
-import type { Field } from '../../kernel/data/Schema'
+import type { ColumnGroupChild, Field } from '../../kernel/data/Schema'
 import type { FilterSpec } from '../../features/view/FilterLayer'
 import type { FrozenConfig } from '../../kernel/geometry/FrozenRegions'
 import type { GridEngineOptions } from '../../engine/GridEngine'
@@ -372,6 +372,10 @@ export class GridControllerImpl implements GridController {
     this.runtime.scrollToCell(rowIndex, fieldId)
   }
 
+  scrollToGroup(groupId: string, align?: 'start' | 'center' | 'end'): void {
+    this.runtime.scrollToGroup(groupId, align)
+  }
+
   openCellEditor(rowIndex: number, fieldId: string): boolean {
     return this.runtime.openCellEditor(rowIndex, fieldId)
   }
@@ -545,6 +549,17 @@ export class GridControllerImpl implements GridController {
     const changed = this.engine.moveCols(fieldIds, beforeFieldId)
     if (changed) this.runtime.afterEngineMutation()
     return changed
+  }
+
+  getColumnGroups(): readonly ColumnGroupChild[] {
+    return this.engine.getColumnGroups()
+  }
+
+  selectGroup(groupId: string): boolean {
+    if (this.runtime.isDestroyed()) return false
+    const result = this.engine.selectColumnGroup(groupId)
+    if (result) this.runtime.afterEngineMutation()
+    return result
   }
 
   getColumnHeaderContextMenuItems(ctx: { targetColIndex: number }): readonly ContextMenuItem[] {

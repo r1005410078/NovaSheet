@@ -15,6 +15,7 @@ import type { NativeScrollSource } from '../../scroll/NativeScroller'
 import type { CellAddress } from '../../../kernel/coords/SelectionTypes'
 import { computeScrollReveal } from '../../../kernel/interaction/scrollCellIntoView'
 import type { RuntimeRenderFrame } from '../runtime-frame'
+import type { ColumnGroupChild } from '../../../kernel/data/Schema'
 
 /** ResizeObserver 高频回调合并 key（与 `renderer:flush` 分离，同帧内先 resize 再 scroll:read） */
 const HOST_RESIZE_KEY = 'host:resize'
@@ -172,6 +173,45 @@ export class ViewportController {
     this.deps.host.scrollTo(scrollTop, scrollLeft)
   }
 
+  /**
+   * 滚动到指定组的首个可见叶列，按 align 对齐横向视口（横轴镜像 `scrollToRow`：无条件滚动到
+   * align 位置，不做"已可见则不动"判断——那是 `ensureCellVisible` 的语义，本方法不复用）。
+   * 组不存在或组内叶列全隐藏则 no-op。
+   */
+  scrollToGroup(groupId: string, align: 'start' | 'center' | 'end' = 'start'): void {
+    const fieldId = this.findFirstVisibleGroupLeafFieldId(groupId)
+    if (fieldId === null) return
+
+    const colsAxis = this.deps.engine.getColsAxis()
+    const colIndex = this.deps.engine.getColumnIndex(fieldId)
+    const left = colsAxis.indexToPosition(colIndex)
+    const size = colsAxis.getSize(colIndex)
+    const { width: clientW } = this.deps.host.getContainerSize()
+    const vpContentW = clientW - this.deps.engine.getViewport().getRowHeaderWidth()
+    let logicalX: number
+    if (align === 'start') logicalX = left
+    else if (align === 'end') logicalX = left + size - vpContentW
+    else logicalX = left + size / 2 - vpContentW / 2
+
+    const scrollLeft = this.logicalToScrollX(logicalX)
+    const { scrollTop } = this.deps.host.getScrollPosition()
+    this.deps.host.scrollTo(scrollTop, scrollLeft)
+  }
+
+  /**
+   * 组 id（含嵌套子组）在组树中的首个可见叶列 fieldId；组不存在或叶列全隐藏返回 null。
+   * `getColumnIndex` 对隐藏 / 未知 fieldId 返回 -1（与 `DefaultGridEngine.selectColumnGroup`
+   * 判定可见叶列同一约定），故直接复用该阈值而不新增 engine API。
+   */
+  private findFirstVisibleGroupLeafFieldId(groupId: string): string | null {
+    const node = findGroupNode(this.deps.engine.getColumnGroups(), groupId)
+    if (node === null) return null
+    for (const fieldId of collectLeafFieldIds(node.children)) {
+      if (this.deps.engine.getColumnIndex(fieldId) >= 0) return fieldId
+    }
+    return null
+  }
+
   /** 返回导航后需要滚动到可见区域的选区目标。 */
   getSelectionScrollTarget(): CellAddress | null {
     const selection = this.deps.engine.getSelection()
@@ -243,4 +283,32 @@ export class ViewportController {
   destroy(): void {
     this.deps.scheduler.cancel(HOST_RESIZE_KEY)
   }
+}
+
+/**
+ * 深度优先查找 id 为 groupId 的组节点（含嵌套子组）。镜像
+ * `features/column-groups/ColumnGroupStore.ts` 内部同名私有算法——两处均为组树只读遍历，
+ * 该 store 未对外暴露此查找，DOM 层按 fieldId 可见性自解析更简单，故不新增 engine API。
+ */
+function findGroupNode(
+  nodes: readonly ColumnGroupChild[],
+  groupId: string,
+): Extract<ColumnGroupChild, { id: string }> | null {
+  for (const node of nodes) {
+    if ('fieldId' in node) continue
+    if (node.id === groupId) return node
+    const found = findGroupNode(node.children, groupId)
+    if (found) return found
+  }
+  return null
+}
+
+/** 收集子树内全部叶字段 id（文档序）。 */
+function collectLeafFieldIds(nodes: readonly ColumnGroupChild[]): string[] {
+  const result: string[] = []
+  for (const node of nodes) {
+    if ('fieldId' in node) result.push(node.fieldId)
+    else result.push(...collectLeafFieldIds(node.children))
+  }
+  return result
 }
