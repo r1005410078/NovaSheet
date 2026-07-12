@@ -66,7 +66,7 @@
 | core.L2.grid-cols-hide-unhide-visible-count | L2 | implemented | Grid hideCols 与 unhideCols 更新隐藏集合和 render frame schema |
 | core.L2.grid-cols-insert-delete-undo-redo | L2 | implemented | Grid 列插入、删除与 undo/redo 通过 facade 保持 schema 一致 |
 | core.L2.grid-cols-move-callback | L2 | implemented | Grid moveCols 移动列组、触发 onColumnsMoved，并支持 undo/redo |
-| core.L2.grid-column-groups-bms-smoke | L2 | draft | BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup） |
+| core.L2.grid-column-groups-bms-smoke | L2 | implemented | BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup） |
 | core.L2.grid-column-groups-frame-layout | L2 | implemented | 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高 |
 | core.L2.grid-column-groups-hide-shrink | L2 | implemented | hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复 |
 | core.L2.grid-column-groups-scroll-to-group | L2 | implemented | scrollToGroup 无条件按 align 把组首个可见叶列滚到位（与 scrollToRow/scrollToCell 语义一致）；不存在的 groupId no-op |
@@ -1717,7 +1717,7 @@
 
 - **layer**: L2
 - **summary**: BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup）
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 

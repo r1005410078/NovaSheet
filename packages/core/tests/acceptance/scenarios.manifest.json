@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-12T13:44:01.532Z",
+  "generatedAt": "2026-07-12T14:09:11.555Z",
   "source": "tests/acceptance/**/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -1601,7 +1601,7 @@
         "smoke",
         "frozen"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/column-groups/scenarios/L2-grid-column-groups-bms-smoke.md",
       "given": [
         "`fields`: `metric` + 8 个堆 × 各 4 簇列（共 33 列）",

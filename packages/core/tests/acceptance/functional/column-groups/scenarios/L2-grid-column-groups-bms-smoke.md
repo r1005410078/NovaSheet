@@ -3,7 +3,7 @@ id: core.L2.grid-column-groups-bms-smoke
 layer: L2
 summary: BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup）
 tags: [column-groups, smoke, frozen]
-status: draft
+status: implemented
 ---
 
 ## User Story

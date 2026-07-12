@@ -493,24 +493,12 @@ describe('Core acceptance column groups', () => {
   // ---------------------------------------------------------------------
   // core.L2.grid-column-groups-bms-smoke
   //
-  // BLOCKED — kept as it.skip, scenario status left at `draft` (not flipped).
-  //
-  // Diagnosed a pre-existing implementation bug in `ViewportController.scrollToCell` /
-  // `scrollToGroup`'s horizontal math: `logicalX = colsAxis.indexToPosition(colIndex)` is used
-  // directly as the scrollLeft target, but the "main" (scrollable) region's actual paint offset
-  // is `scrollLeft + frozenLeftColsWidth` (verified with a minimal `frozen:{leftCols:1}` +
-  // `scrollToCell` repro with zero column-groups involvement — not specific to this feature).
-  // So whenever `frozen.leftCols > 0`, scrollToCell/scrollToGroup land the target column exactly
-  // `frozenLeftColsWidth` short of the scrollable region's left edge — in this fixture the target
-  // isn't even in the visible colRange afterward. This breaks the scenario's literal Then clause
-  // ("对齐视口滚动区左缘") and, more importantly, the exact motivating BMS locateStack use case
-  // (frozen metric column + scrollToGroup). Not fixed here — out of Task 10's scope
-  // (`ViewportController.ts` is production runtime code, not a test file) and per project
-  // convention a genuine test-vs-implementation contradiction is escalated, not silently
-  // resolved. Assertions below encode the scenario's TRUE intended contract (correct if/when the
-  // frozen-offset subtraction is added to ViewportController); remove `.skip` once fixed.
+  // Task 11 — 冻结横向滚动定位修复后转绿。根因：`ViewportController.scrollToGroup/scrollToCell`
+  // 把绝对列坐标 `colsAxis.indexToPosition(colIndex)` 直接当作 vp.scrollX 目标，但横轴冻结约定
+  // 是 `centerScrollX = leftWidth + vp.scrollX`（FrozenRegions），故须先减去左冻结列宽再换算。
+  // 修复后 frozen.leftCols>0 时 scrollToGroup('start') 把目标堆首簇列对齐到中心可滚区左缘。
   // ---------------------------------------------------------------------
-  it.skip('core.L2.grid-column-groups-bms-smoke replicates BMS locateStack via scrollToGroup + selectGroup with a frozen metric column', () =>
+  it('core.L2.grid-column-groups-bms-smoke replicates BMS locateStack via scrollToGroup + selectGroup with a frozen metric column', () =>
     withManualRaf((flushRaf) => {
       // happy-dom container.clientWidth 恒为 0，DomGridHost 落到硬编码 fallback 视口 400×300
       // （见 scroll-to-group 场景同一注释）；列宽按此固定视口反推，非按 container.style.width。
