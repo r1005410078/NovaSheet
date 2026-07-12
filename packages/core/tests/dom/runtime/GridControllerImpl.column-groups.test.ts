@@ -79,4 +79,25 @@ describe('Grid column-group facade — getColumnGroups/selectGroup/scrollToGroup
 
     grid.destroy()
   })
+
+  it('scrollToGroup 无条件滚动——目标已完全可见时再次调用仍按新 align 改动 scrollLeft（非 ensureCellVisible 语义）', () => {
+    const container = document.createElement('div')
+    Object.assign(container.style, { width: '400px', height: '300px' })
+    document.body.appendChild(container)
+    const grid = new Grid(container, { data: makeGroupedData(), backend: createNoopBackend })
+    const scrollHost = getScrollHost(container)
+
+    // s1 首个可见叶列 s1c1 落在 [300, 600)；start 对齐后 scrollLeft=300，
+    // 视口 [300, 700) 已完整覆盖 s1c1——此时 s1 对该次对齐而言已"可见"。
+    grid.scrollToGroup('s1', 'start')
+    const scrollLeftAfterStart = scrollHost.scrollLeft
+    expect(scrollLeftAfterStart).toBeGreaterThan(0)
+
+    // 同一组换 align 再次调用：ensure-visible 语义会因目标已可见而 no-op，
+    // 但 scrollToGroup 应无条件重算并再次改动 scrollLeft。
+    grid.scrollToGroup('s1', 'end')
+    expect(scrollHost.scrollLeft).not.toBe(scrollLeftAfterStart)
+
+    grid.destroy()
+  })
 })
