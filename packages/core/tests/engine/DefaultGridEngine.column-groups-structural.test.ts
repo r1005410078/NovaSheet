@@ -26,6 +26,32 @@ function makeEngine() {
   return engine
 }
 
+// 5 字段 fixture：s2 补至两叶 [s2c1,s2c2]。区别于 makeEngine 的 s1c2→s2c1（该目标即便无 guard，
+// normalizeMoveCols 也因「移到紧邻后继之前」判定原地不动而返回 null，不具判别性）——s1c2→s2c2
+// 在无 guard 时会真实触发 fields 重排，仅 guard 拦截，用于验证 guard 存在性的判别性用例。
+function makeEngineWithTwoLeafGroups() {
+  const data = new InMemoryDataSource({
+    schema: {
+      fields: [
+        { id: 'm', name: 'm', type: 'text', width: 100 },
+        { id: 's1c1', name: 's1c1', type: 'text', width: 100 },
+        { id: 's1c2', name: 's1c2', type: 'text', width: 100 },
+        { id: 's2c1', name: 's2c1', type: 'text', width: 100 },
+        { id: 's2c2', name: 's2c2', type: 'text', width: 100 },
+      ],
+      columnGroups: [
+        { fieldId: 'm' },
+        { id: 's1', label: '堆1', children: [{ fieldId: 's1c1' }, { fieldId: 's1c2' }] },
+        { id: 's2', label: '堆2', children: [{ fieldId: 's2c1' }, { fieldId: 's2c2' }] },
+      ],
+    },
+    rows: Array.from({ length: 5 }, () => ({ m: 'x', s1c1: 1, s1c2: 2, s2c1: 3, s2c2: 4 })),
+  })
+  const engine = new DefaultGridEngine({ data, theme: denseGridTheme })
+  engine.setViewportSize(800, 600)
+  return engine
+}
+
 describe('column groups × 结构 mutation', () => {
   it('deleteCols 级联移除空组，undo 完整恢复组树', () => {
     const engine = makeEngine()
@@ -52,6 +78,31 @@ describe('column groups × 结构 mutation', () => {
         .getSchema()
         .fields.map((f) => f.id),
     ).toEqual(fieldsBefore)
+  })
+
+  it('moveCols 跨组、目标位置若无 guard 会真实重排时仍返 false 且 fields/组树不动', () => {
+    const engine = makeEngineWithTwoLeafGroups()
+    const fieldsBefore = engine
+      .getData()
+      .getSchema()
+      .fields.map((f) => f.id)
+    expect(engine.moveCols(['s1c2'], 's2c2')).toBe(false)
+    expect(
+      engine
+        .getData()
+        .getSchema()
+        .fields.map((f) => f.id),
+    ).toEqual(fieldsBefore)
+    const s1 = engine.getColumnGroups().find((n) => 'id' in n && n.id === 's1')
+    const s2 = engine.getColumnGroups().find((n) => 'id' in n && n.id === 's2')
+    expect(s1 && 'children' in s1 ? s1.children : []).toEqual([
+      { fieldId: 's1c1' },
+      { fieldId: 's1c2' },
+    ])
+    expect(s2 && 'children' in s2 ? s2.children : []).toEqual([
+      { fieldId: 's2c1' },
+      { fieldId: 's2c2' },
+    ])
   })
 
   it('moveCols 同组内部成功且组叶序同步', () => {
