@@ -1139,8 +1139,10 @@ export class DefaultGridEngine implements GridEngine {
     const startCol = Math.min(...viewCols)
     const endCol = Math.max(...viewCols)
     const rowCount = this.data.getRowCount()
+    // 无天然拖拽方向的程序化整选——按左到右 header-drag 惯例：anchor 左边界、active/extent
+    // 右边界，与 InputController.selectWholeColumnRange(startCol, endCol) 约定一致。
     this.selectionController.setSelection({
-      activeCell: { rowIndex: 0, colIndex: startCol },
+      activeCell: { rowIndex: 0, colIndex: endCol },
       anchorCell: { rowIndex: 0, colIndex: startCol },
       extentCell: { rowIndex: rowCount - 1, colIndex: endCol },
       selectedRange: { startRow: 0, endRow: rowCount - 1, startCol, endCol },

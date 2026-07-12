@@ -70,4 +70,14 @@ describe('DefaultGridEngine column groups', () => {
       ),
     ).toThrow(/column-groups/)
   })
+
+  it('selectColumnGroup 的 activeCell/anchorCell 匹配 selectWholeColumnRange(startCol, endCol) 约定', () => {
+    const engine = makeEngine()
+    expect(engine.selectColumnGroup('s1')).toBe(true)
+    const selection = engine.getSelection()
+    // s1 = [s1c1, s1c2] → view cols [1, 2]；anchor 左边界、active/extent 右边界。
+    expect(selection.anchorCell.colIndex).toBe(1)
+    expect(selection.activeCell.colIndex).toBe(2)
+    expect(selection.extentCell.colIndex).toBe(2)
+  })
 })
