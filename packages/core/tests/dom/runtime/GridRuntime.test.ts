@@ -123,6 +123,8 @@ function makeEngine(): GridEngine {
     hideRows: mock(() => {}),
     setRowHeights: mock(() => {}),
     setSelection: mock(() => {}),
+    getColumnGroups: mock(() => []),
+    selectColumnGroup: mock(() => false),
     insertCols: mock(() => [] as never),
     deleteCols: mock(() => [] as never),
     hideCols: mock(() => {}),

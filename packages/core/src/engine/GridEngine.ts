@@ -5,7 +5,7 @@
  */
 
 import type { DataSource } from '../kernel/data/DataSource'
-import type { CellValue, Field } from '../kernel/data/Schema'
+import type { CellValue, ColumnGroupChild, Field } from '../kernel/data/Schema'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
 import type { CellWrite, UndoCommand } from '../kernel/undo/UndoCommand'
 import type { BorderPreset, BorderStyle, CellFormat, TextWrapMode, ValueFormat } from '../kernel/protocol/FormatTypes'
@@ -472,4 +472,10 @@ export interface GridEngine
     GridFrameReader {
   /** 释放 engine 持有的外部订阅（当前为 DataSource 事件订阅）；调用方（GridRuntime）在自身 destroy() 时调用。 */
   dispose(): void
+
+  /** 返回当前列组树（文档序，深拷贝，独立于内部 store）。无组返回空数组。 */
+  getColumnGroups(): readonly ColumnGroupChild[]
+
+  /** 组可见叶列整列选中；组不存在或组内叶列全隐藏 → 返回 false，不改动选区。 */
+  selectColumnGroup(groupId: string): boolean
 }

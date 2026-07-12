@@ -36,6 +36,22 @@ export interface RenderFrameCollapsedColGap {
   readonly xPx: number
 }
 
+/** 列组表头单元格（view 坐标闭区间列跨度）；`selected` 由 `deriveSelectedGroupIds` 派生。 */
+export interface RenderFrameGroupHeaderCell {
+  readonly groupId: string
+  readonly label: string
+  readonly startViewCol: number
+  readonly endViewCol: number
+  readonly selected: boolean
+}
+
+/** 列组表头整体布局：`rows[0]` 为最顶层组行 … `rows[depth-1]` 为最深层组行。 */
+export interface RenderFrameColumnGroupHeader {
+  readonly depth: number
+  readonly rows: readonly (readonly RenderFrameGroupHeaderCell[])[]
+  readonly leafTopRowByViewCol: readonly number[]
+}
+
 export interface RenderFrame {
   data: DataSource
   theme: Theme
@@ -82,4 +98,6 @@ export interface RenderFrame {
   getValidationState?: (rowIndex: number, colIndex: number) => 'ok' | 'invalid' | 'pending'
   /** 列头悬停菜单状态：指示哪列的列头菜单按钮当前应高亮显示。 */
   hoveredColumnHeaderMenu?: HoveredColumnHeaderMenu
+  /** 列组表头布局；无列组或全组隐藏（无可见组 cell）时为 undefined。 */
+  columnGroupHeader?: RenderFrameColumnGroupHeader
 }

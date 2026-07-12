@@ -1,4 +1,10 @@
-import type { CellValue, Field } from '../kernel/data/Schema'
+import type { CellValue, ColumnGroupChild, Field } from '../kernel/data/Schema'
+import { ColumnGroupStore } from '../features/column-groups/ColumnGroupStore'
+import {
+  deriveSelectedGroupIds,
+  resolveColumnGroupLayout,
+  type ColumnGroupLayout,
+} from '../features/column-groups/resolveColumnGroupLayout'
 import type { DataSource, DataSourceEvent } from '../kernel/data/DataSource'
 import { isMutableDataSource } from '../kernel/data/MutableDataSource'
 import type { RemovedFieldSnapshot } from '../kernel/data/MutableDataSource'
@@ -40,7 +46,11 @@ import type { ChunkedAxis } from '../kernel/geometry/ChunkedAxis'
 import type { FrozenConfig } from '../kernel/geometry/FrozenRegions'
 import type { Viewport } from '../kernel/geometry/Viewport'
 import { DefaultLayoutState } from '../features/layout/LayoutState'
-import type { HoveredColumnHeaderMenu, RenderFrame } from '../kernel/render/RenderFrame'
+import type {
+  HoveredColumnHeaderMenu,
+  RenderFrame,
+  RenderFrameColumnGroupHeader,
+} from '../kernel/render/RenderFrame'
 import { denseGridTheme } from '../kernel/theme/denseGridTheme'
 import type { Theme } from '../kernel/theme/Theme'
 import { UndoStack } from '../kernel/undo/UndoStack'
@@ -105,6 +115,16 @@ export class DefaultGridEngine implements GridEngine {
   private rawData: DataSource
   /** HideRowsLayer + 可见列过滤后的视图数据源；getFrame() / getDataSource() 等读取此字段。 */
   private data: DataSource
+  /** 列组树运行时状态；随 rawData schema 重建（构造/setData 抛错即 fail loud，见 ColumnGroupStore）。 */
+  private columnGroups: ColumnGroupStore
+  /**
+   * `resolveColumnGroupLayout` 结果缓存：脏标记模式，`columnGroupLayoutVersion` 在
+   * `rebuildData`（schema 换）与列结构 rebuild（insert/delete/hide/unhide/move cols，见
+   * `structural` 的 `rebuildCols` 闭包）时递增，二者是仅有的两处会改变
+   * `resolveColumnGroupLayout` 输入（tree/visibleFields）的路径；列宽调整不触发。
+   */
+  private columnGroupLayoutVersion = 0
+  private columnGroupLayoutCache: { version: number; layout: ColumnGroupLayout | null } | null = null
   private theme: Theme
   private readonly excelHeaders: boolean
   private explicitDefaultRowHeight: number | undefined
@@ -264,7 +284,12 @@ export class DefaultGridEngine implements GridEngine {
     getSelection: () => this.selection.getSelection(),
     pushUndo: (command) => this.undoStack.push(command),
     rebuildRows: () => this.layout.rebuildRows(this.rowStructure.getViewRowsAxis()),
-    rebuildCols: () => this.layout.rebuildCols(this.columnStructure.getViewColsAxis()),
+    // insertCols/deleteCols/hideCols/unhideCols/moveCols 都经此闭包重建列轴——是唯一会改变
+    // visibleFields（列组布局输入之一）而不经过 rebuildData 的路径，故列组布局缓存在此一并失效。
+    rebuildCols: () => {
+      this.layout.rebuildCols(this.columnStructure.getViewColsAxis())
+      this.columnGroupLayoutVersion += 1
+    },
     snapshotFormatMerge: () => ({
       formatBefore: this.formatState.formatStore.snapshot(),
       mergeBefore: this.formatState.mergeStore.snapshot(),
@@ -280,6 +305,13 @@ export class DefaultGridEngine implements GridEngine {
 
   constructor(options: GridEngineOptions) {
     this.rawData = options.data
+    // 构造即校验（越过 fields 引用/不连续/重复等三条规则即 throw，fail loud）；须先于
+    // `this.layout` 构造——下方 getGroupHeaderDepth 闭包引用 this.columnGroups，闭包本身
+    // 惰性求值不受声明顺序影响，但此处仍需保证 initView() 首次调用它之前已完成赋值。
+    this.columnGroups = new ColumnGroupStore(
+      this.rawData.getSchema().fields,
+      this.rawData.getSchema().columnGroups,
+    )
     this.theme = options.theme ?? denseGridTheme
     this.excelHeaders = options.excelHeaders === true
     this.explicitDefaultRowHeight = options.defaultRowHeight
@@ -309,8 +341,7 @@ export class DefaultGridEngine implements GridEngine {
       excelHeaders: this.excelHeaders,
       frozenInput: options.frozen,
       getSchema: () => this.rawData.getSchema(),
-      // TODO(column-groups-task-5): 接线真实 ColumnGroupStore 深度；列组特性上线前恒为 0（零成本路径）。
-      getGroupHeaderDepth: () => 0,
+      getGroupHeaderDepth: () => this.columnGroups.getDepth(),
     })
     this.rowStructure = new DefaultRowStructure(this.rawData, () =>
       this.layout.resolveDefaultRowHeight(),
@@ -462,6 +493,13 @@ export class DefaultGridEngine implements GridEngine {
 
   private rebuildData(data: DataSource): void {
     this.rawData = data
+    // 每次换数据源都重新校验+重建组树（构造抛错即 fail loud）；旧树对新 schema 可能已非法
+    // （fieldId 不存在/不连续等），不能延续复用。
+    this.columnGroups = new ColumnGroupStore(
+      this.rawData.getSchema().fields,
+      this.rawData.getSchema().columnGroups,
+    )
+    this.columnGroupLayoutVersion += 1
     this.rowStructure.rebuild(this.rawData, () => this.layout.resolveDefaultRowHeight())
     this.columnStructure.rebuild(this.rawData, () => this.layout.averageColWidth())
     this.data = this.columnStructure.getColViewData(this.rowStructure.getRowViewData())
@@ -678,6 +716,7 @@ export class DefaultGridEngine implements GridEngine {
       },
       hoveredColumnHeaderMenu: this.hoveredColumnHeaderMenu ?? undefined,
     })
+    frame.columnGroupHeader = this.buildColumnGroupHeaderFrame()
     const main = frame.viewport.regions.find((region) => region.id === 'main')
     if (main && main.rowRange[1] >= main.rowRange[0] && main.colRange[1] >= main.colRange[0]) {
       this.data.hintWindow?.({
@@ -688,6 +727,37 @@ export class DefaultGridEngine implements GridEngine {
       })
     }
     return frame
+  }
+
+  /**
+   * `columnGroupHeader` frame 字段：布局（tree/visibleFields 决定的行结构）走缓存，
+   * `selected` 逐帧派生（仅 O(组数)，随 selection 变化，不适合缓存）。
+   * 无组或全组隐藏（`resolveColumnGroupLayout` 返回 null）时返回 undefined。
+   */
+  private buildColumnGroupHeaderFrame(): RenderFrameColumnGroupHeader | undefined {
+    const layout = this.getColumnGroupLayout()
+    if (!layout) return undefined
+    const selectedGroupIds = deriveSelectedGroupIds(
+      layout,
+      this.selection.getSelection().selectedRange,
+      this.data.getRowCount(),
+    )
+    return {
+      depth: layout.depth,
+      rows: layout.rows.map((row) =>
+        row.map((cell) => ({ ...cell, selected: selectedGroupIds.has(cell.groupId) })),
+      ),
+      leafTopRowByViewCol: layout.leafTopRowByViewCol,
+    }
+  }
+
+  private getColumnGroupLayout(): ColumnGroupLayout | null {
+    if (this.columnGroupLayoutCache?.version === this.columnGroupLayoutVersion) {
+      return this.columnGroupLayoutCache.layout
+    }
+    const layout = resolveColumnGroupLayout(this.columnGroups.getTree(), this.data.getSchema().fields)
+    this.columnGroupLayoutCache = { version: this.columnGroupLayoutVersion, layout }
+    return layout
   }
 
   setHoveredColumnHeaderMenu(state: HoveredColumnHeaderMenu | null): void {
@@ -1047,6 +1117,35 @@ export class DefaultGridEngine implements GridEngine {
   /** Phase 4.5 — 程序化设置选区（不入 undo 栈）。 */
   setSelection(selection: GridSelection): void {
     this.selectionController.setSelection(selection)
+  }
+
+  /** 返回当前列组树（文档序，深拷贝，独立于内部 store）。无组返回空数组。 */
+  getColumnGroups(): readonly ColumnGroupChild[] {
+    return this.columnGroups.getTree()
+  }
+
+  /**
+   * 组可见叶列整列选中；组不存在或组内叶列全隐藏时返回 false，不改动选区。
+   * `activeCell`/`anchorCell` 落首可见叶列（row 0），`extentCell` 落末可见叶列（row
+   * rowCount-1）——与 `InputController.selectWholeColumnRange` 的整列选区字段填充惯例一致。
+   */
+  selectColumnGroup(groupId: string): boolean {
+    const leafFieldIds = this.columnGroups.findGroupLeafFieldIds(groupId)
+    if (!leafFieldIds) return false
+    const visibleFieldIds = new Set(this.data.getSchema().fields.map((field) => field.id))
+    const visibleLeafFieldIds = leafFieldIds.filter((id) => visibleFieldIds.has(id))
+    if (visibleLeafFieldIds.length === 0) return false
+    const viewCols = visibleLeafFieldIds.map((id) => this.getColumnIndex(id))
+    const startCol = Math.min(...viewCols)
+    const endCol = Math.max(...viewCols)
+    const rowCount = this.data.getRowCount()
+    this.selectionController.setSelection({
+      activeCell: { rowIndex: 0, colIndex: startCol },
+      anchorCell: { rowIndex: 0, colIndex: startCol },
+      extentCell: { rowIndex: rowCount - 1, colIndex: endCol },
+      selectedRange: { startRow: 0, endRow: rowCount - 1, startCol, endCol },
+    })
+    return true
   }
 
   undo(): UndoCommand | undefined {
