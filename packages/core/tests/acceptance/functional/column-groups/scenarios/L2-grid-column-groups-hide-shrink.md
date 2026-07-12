@@ -3,7 +3,7 @@ id: core.L2.grid-column-groups-hide-shrink
 layer: L2
 summary: hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复
 tags: [column-groups, hide-cols, view]
-status: draft
+status: implemented
 ---
 
 ## User Story

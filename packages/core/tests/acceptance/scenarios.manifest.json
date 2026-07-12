@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-12T08:45:33.270Z",
+  "generatedAt": "2026-07-12T13:44:01.532Z",
   "source": "tests/acceptance/**/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -199,7 +199,7 @@
         "column-groups",
         "schema"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/column-groups/scenarios/L0-column-groups-schema-validation.md",
       "given": [
         "`fields`: `[m, s1c1, s1c2, s2c1, s2c2]`（5 列）",
@@ -1628,7 +1628,7 @@
         "column-groups",
         "render-frame"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/column-groups/scenarios/L2-grid-column-groups-frame-layout.md",
       "given": [
         "`fields`: `[m, aXc1, aXc2, aYc1, bZc1]`（5 列）",
@@ -1660,7 +1660,7 @@
         "hide-cols",
         "view"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/column-groups/scenarios/L2-grid-column-groups-hide-shrink.md",
       "given": [
         "`fields`: `[m, s1c1, s1c2, s1c3, s2c1]`",
@@ -1683,7 +1683,7 @@
         "column-groups",
         "scroll"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/column-groups/scenarios/L2-grid-column-groups-scroll-to-group.md",
       "given": [
         "40 列：`m` + 组 `g1..g13` 每组 3 列（组头远超视口宽度）",
@@ -1701,7 +1701,7 @@
         "column-groups",
         "selection"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/column-groups/scenarios/L2-grid-column-groups-select-group.md",
       "given": [
         "`fields`: `[m, aXc1, aXc2, aYc1]`，行数 10",
@@ -1720,7 +1720,7 @@
         "structural",
         "undo"
       ],
-      "status": "draft",
+      "status": "implemented",
       "sourceFile": "tests/acceptance/functional/column-groups/scenarios/L2-grid-column-groups-structural-mutations.md",
       "given": [
         "`fields`: `[m, s1c1, s1c2, s2c1, s2c2]`",

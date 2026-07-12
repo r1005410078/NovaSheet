@@ -3,7 +3,7 @@ id: core.L0.column-groups-schema-validation
 layer: L0
 summary: Schema.columnGroups 三条校验违例 throw，合法混排（组 + 无组列）通过
 tags: [column-groups, schema]
-status: draft
+status: implemented
 ---
 
 ## User Story

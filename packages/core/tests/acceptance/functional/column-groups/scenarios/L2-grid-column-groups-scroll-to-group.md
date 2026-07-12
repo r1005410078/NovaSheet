@@ -3,7 +3,7 @@ id: core.L2.grid-column-groups-scroll-to-group
 layer: L2
 summary: scrollToGroup 无条件按 align 把组首个可见叶列滚到位（与 scrollToRow/scrollToCell 语义一致）；不存在的 groupId no-op
 tags: [column-groups, scroll]
-status: draft
+status: implemented
 ---
 
 ## User Story

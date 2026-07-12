@@ -3,7 +3,7 @@ id: core.L2.grid-column-groups-select-group
 layer: L2
 summary: selectGroup 产生整列 range 选区；组头 selected 按 ⊇ 派生（含父组与相邻多组）
 tags: [column-groups, selection]
-status: draft
+status: implemented
 ---
 
 ## User Story

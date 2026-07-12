@@ -3,7 +3,7 @@ id: core.L2.grid-column-groups-structural-mutations
 layer: L2
 summary: insert/delete/moveCols 与组树的一致性：归组规则、级联移除 + undo 恢复、跨组保守 no-op
 tags: [column-groups, structural, undo]
-status: draft
+status: implemented
 ---
 
 ## User Story

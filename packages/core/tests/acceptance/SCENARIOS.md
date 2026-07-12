@@ -11,7 +11,7 @@
 | core.L0.clipboard-paste-target-merge-conflict | L0 | implemented | 粘贴目标与合并区冲突检测 |
 | core.L0.clipboard-tsv-parse-matrix | L0 | implemented | parseTsvToCells 类型强制矩阵与黄金文件一致 |
 | core.L0.clipboard-tsv-roundtrip | L0 | implemented | TSV 序列化与解析往返公开契约 |
-| core.L0.column-groups-schema-validation | L0 | draft | Schema.columnGroups 三条校验违例 throw，合法混排（组 + 无组列）通过 |
+| core.L0.column-groups-schema-validation | L0 | implemented | Schema.columnGroups 三条校验违例 throw，合法混排（组 + 无组列）通过 |
 | core.L0.context-menu-items | L0 | implemented | 单元格/行头/列头上下文菜单完整清单与黄金文件一致 |
 | core.L0.coords-resolve-underlying-row | L0 | implemented | view/raw 行坐标互转与 identity 回退 |
 | core.L0.datasource-in-memory-get-rows-inclusive | L0 | implemented | InMemoryDataSource getRows 使用闭区间并钳制越界范围 |
@@ -67,11 +67,11 @@
 | core.L2.grid-cols-insert-delete-undo-redo | L2 | implemented | Grid 列插入、删除与 undo/redo 通过 facade 保持 schema 一致 |
 | core.L2.grid-cols-move-callback | L2 | implemented | Grid moveCols 移动列组、触发 onColumnsMoved，并支持 undo/redo |
 | core.L2.grid-column-groups-bms-smoke | L2 | draft | BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup） |
-| core.L2.grid-column-groups-frame-layout | L2 | draft | 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高 |
-| core.L2.grid-column-groups-hide-shrink | L2 | draft | hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复 |
-| core.L2.grid-column-groups-scroll-to-group | L2 | draft | scrollToGroup 无条件按 align 把组首个可见叶列滚到位（与 scrollToRow/scrollToCell 语义一致）；不存在的 groupId no-op |
-| core.L2.grid-column-groups-select-group | L2 | draft | selectGroup 产生整列 range 选区；组头 selected 按 ⊇ 派生（含父组与相邻多组） |
-| core.L2.grid-column-groups-structural-mutations | L2 | draft | insert/delete/moveCols 与组树的一致性：归组规则、级联移除 + undo 恢复、跨组保守 no-op |
+| core.L2.grid-column-groups-frame-layout | L2 | implemented | 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高 |
+| core.L2.grid-column-groups-hide-shrink | L2 | implemented | hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复 |
+| core.L2.grid-column-groups-scroll-to-group | L2 | implemented | scrollToGroup 无条件按 align 把组首个可见叶列滚到位（与 scrollToRow/scrollToCell 语义一致）；不存在的 groupId no-op |
+| core.L2.grid-column-groups-select-group | L2 | implemented | selectGroup 产生整列 range 选区；组头 selected 按 ⊇ 派生（含父组与相邻多组） |
+| core.L2.grid-column-groups-structural-mutations | L2 | implemented | insert/delete/moveCols 与组树的一致性：归组规则、级联移除 + undo 恢复、跨组保守 no-op |
 | core.L2.grid-custom-editor-open-triggers | L2 | draft | 自定义 editor 由所有编辑入口统一触发 |
 | core.L2.grid-data-theme-refresh | L2 | implemented | Grid setData、setTheme 与 refresh 通过 backend frame 可观测 |
 | core.L2.grid-events-on-off | L2 | implemented | Grid event facade 支持 on、onUndo、onRedo 与 onFill 的取消订阅 |
@@ -293,7 +293,7 @@
 
 - **layer**: L0
 - **summary**: Schema.columnGroups 三条校验违例 throw，合法混排（组 + 无组列）通过
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1745,7 +1745,7 @@
 
 - **layer**: L2
 - **summary**: 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1777,7 +1777,7 @@
 
 - **layer**: L2
 - **summary**: hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1803,7 +1803,7 @@ _（无）_
 
 - **layer**: L2
 - **summary**: scrollToGroup 无条件按 align 把组首个可见叶列滚到位（与 scrollToRow/scrollToCell 语义一致）；不存在的 groupId no-op
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1826,7 +1826,7 @@ _（无）_
 
 - **layer**: L2
 - **summary**: selectGroup 产生整列 range 选区；组头 selected 按 ⊇ 派生（含父组与相邻多组）
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
@@ -1849,7 +1849,7 @@ _（无）_
 
 - **layer**: L2
 - **summary**: insert/delete/moveCols 与组树的一致性：归组规则、级联移除 + undo 恢复、跨组保守 no-op
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 

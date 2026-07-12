@@ -3,7 +3,7 @@ id: core.L2.grid-column-groups-frame-layout
 layer: L2
 summary: 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高
 tags: [column-groups, render-frame]
-status: draft
+status: implemented
 ---
 
 ## User Story
