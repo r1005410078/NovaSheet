@@ -57,6 +57,33 @@ describe('resolveColumnGroupLayout', () => {
     expect(resolveColumnGroupLayout([], allVisible)).toBeNull()
     expect(resolveColumnGroupLayout(tree, [f('m')])).toBeNull() // 所有组叶全隐 → 仅无组列
   })
+
+  it('同树内不同分支嵌套深度不对称：a 单层组、b 双层组，leafTopRowByViewCol 三档非均匀', () => {
+    // fields: [m, aC1, bC1, bC2]
+    const asymmetricTree: ColumnGroupChild[] = [
+      { fieldId: 'm' },
+      { id: 'a', label: 'A组', children: [{ fieldId: 'aC1' }] },
+      {
+        id: 'b',
+        label: 'B组',
+        children: [
+          { id: 'b1', label: 'B1子组', children: [{ fieldId: 'bC1' }, { fieldId: 'bC2' }] },
+        ],
+      },
+    ]
+    const visible = [f('m'), f('aC1'), f('bC1'), f('bC2')]
+
+    const layout = resolveColumnGroupLayout(asymmetricTree, visible)!
+    expect(layout.depth).toBe(2)
+    expect(layout.rows[0]).toEqual([
+      { groupId: 'a', label: 'A组', startViewCol: 1, endViewCol: 1 },
+      { groupId: 'b', label: 'B组', startViewCol: 2, endViewCol: 3 },
+    ])
+    expect(layout.rows[1]).toEqual([
+      { groupId: 'b1', label: 'B1子组', startViewCol: 2, endViewCol: 3 },
+    ])
+    expect(layout.leafTopRowByViewCol).toEqual([0, 1, 2, 2])
+  })
 })
 
 describe('deriveSelectedGroupIds', () => {
