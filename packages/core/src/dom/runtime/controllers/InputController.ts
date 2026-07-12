@@ -97,6 +97,13 @@ export class InputController {
       this.deps.openColumnHeaderContextMenu(menuButtonHit.colIndex, event)
       return
     }
+    // 组头行命中：单击选中整组；不进入 tryStartDrag/DragCoordinator（组头拖拽扩展选区不在本期范围）
+    const groupHit = this.hitTestGroupHeader(event)
+    if (groupHit) {
+      this.deps.engine.selectColumnGroup(groupHit.groupId)
+      this.deps.refresh()
+      return
+    }
     this.deps.tryStartDrag(event)
   }
 
@@ -321,7 +328,38 @@ export class InputController {
     if (typeof frame.data.getSchema !== 'function') return null
     const field = frame.data.getSchema().fields[colIndex]
     if (!field) return null
+    // 列组存在时：y 落在该列自身叶头内容起点之上（组行区，非本列——空隙或别组的格）不算命中；
+    // 无列组时 columnGroupHeader 为 undefined，整段跳过，行为与 M1 零成本一致。
+    const columnGroupHeader = frame.columnGroupHeader
+    if (columnGroupHeader) {
+      const leafTopRow = columnGroupHeader.leafTopRowByViewCol[colIndex] ?? columnGroupHeader.depth
+      const leafTop = leafTopRow * frame.theme.metrics.groupHeaderRowHeight
+      if (event.y < leafTop) return null
+    }
     return { colIndex, fieldId: field.id }
+  }
+
+  /** 供 pointer 路由消费；组头点击选组入口。 */
+  hitTestGroupHeader(event: WebPointerEvent): { groupId: string } | null {
+    const frame = this.deps.engine.getFrame()
+    const columnGroupHeader = frame.columnGroupHeader
+    if (!columnGroupHeader) return null
+    const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
+    if (event.y < 0 || event.y >= headerHeight) return null
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    if (event.x < rowHeaderWidth) return null
+    const scrollX = frame.viewport.scrollX ?? 0
+    const logicalX = event.x - rowHeaderWidth + scrollX
+    const totalSize = this.deps.getColsTotalSizeForFrame(frame)
+    if (logicalX < 0 || logicalX >= totalSize) return null
+    const groupRowHeight = frame.theme.metrics.groupHeaderRowHeight
+    const level = Math.floor(event.y / groupRowHeight)
+    if (level >= columnGroupHeader.depth) return null
+    const colIndex = frame.colsAxis.positionToIndex(logicalX)
+    const row = columnGroupHeader.rows[level] ?? []
+    const cell = row.find((c) => colIndex >= c.startViewCol && colIndex <= c.endViewCol)
+    if (!cell) return null
+    return { groupId: cell.groupId }
   }
 
   /** 供 DragCoordinator deps 反向消费。 */
