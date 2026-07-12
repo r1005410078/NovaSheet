@@ -109,6 +109,8 @@ export type {
   RenderFrame,
   RenderFrameCollapsedColGap,
   RenderFrameCollapsedGap,
+  RenderFrameColumnGroupHeader,
+  RenderFrameGroupHeaderCell,
 } from './kernel/render/RenderFrame'
 export type { ViewportSnapshot } from './kernel/geometry/Viewport'
 

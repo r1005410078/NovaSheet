@@ -415,6 +415,8 @@ export class Canvas2DRenderer implements RenderBackend {
         ctx.frame.collapsedColGaps,
         this.getSelectedColumnHeaderRange(ctx.frame),
         ctx.frame.hoveredColumnHeaderMenu,
+        ctx.frame.columnGroupHeader,
+        snapshot.leafHeaderHeight,
       )
       this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
       return
@@ -470,6 +472,8 @@ export class Canvas2DRenderer implements RenderBackend {
       ctx.frame.collapsedColGaps,
       this.getSelectedColumnHeaderRange(ctx.frame),
       ctx.frame.hoveredColumnHeaderMenu,
+      ctx.frame.columnGroupHeader,
+      snapshot.leafHeaderHeight,
     )
     this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
   }
@@ -604,6 +608,8 @@ export class Canvas2DRenderer implements RenderBackend {
     collapsedColGaps: RenderFrame['collapsedColGaps'],
     selectedColumnRange?: Pick<CellRange, 'startCol' | 'endCol'>,
     hoveredColumnHeaderMenu?: RenderFrame['hoveredColumnHeaderMenu'],
+    columnGroupHeader?: RenderFrame['columnGroupHeader'],
+    leafHeaderHeight?: number,
   ): void {
     for (const region of paintOrder.filter((r) => r.rowBand === 'middle')) {
       if (region.colRange[1] < region.colRange[0]) continue
@@ -619,6 +625,8 @@ export class Canvas2DRenderer implements RenderBackend {
         collapsedColGaps,
         selectedColumnRange,
         hoveredColumnHeaderMenu,
+        columnGroupHeader,
+        leafHeaderHeight,
       })
     }
   }
@@ -652,7 +660,7 @@ export class Canvas2DRenderer implements RenderBackend {
     const gutter = snapshot.rowHeaderWidth
     if (gutter <= 0) return
 
-    this.rowHeaderPainter.paintCorner(this.ctx, gutter)
+    this.rowHeaderPainter.paintCorner(this.ctx, gutter, snapshot.headerHeight)
 
     const topRegion = regions.find((r) => r.id === 'topCenter')
     if (topRegion && topRegion.rowRange[1] >= topRegion.rowRange[0]) {

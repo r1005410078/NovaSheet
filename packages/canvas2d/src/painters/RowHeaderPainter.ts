@@ -20,10 +20,12 @@ export class RowHeaderPainter {
     this.theme = theme
   }
 
-  /** 左上角（列标/行号交汇） */
-  paintCorner(ctx: CanvasRenderingContext2D, width: number): void {
+  /**
+   * 左上角（列标/行号交汇）。`headerHeight` 须传表头**总高**（`viewport.headerHeight`，
+   * 含列组表头行）——否则有列组时角块会比表头矮一截，与其余表头段错位。
+   */
+  paintCorner(ctx: CanvasRenderingContext2D, width: number, headerHeight: number): void {
     if (width <= 0) return
-    const headerHeight = this.theme.metrics.headerHeight
     ctx.fillStyle = this.theme.colors.headerBackground
     ctx.fillRect(0, 0, width, headerHeight)
     const strong = this.theme.colors.gridLineStrong

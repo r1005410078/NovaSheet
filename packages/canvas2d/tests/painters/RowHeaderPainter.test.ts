@@ -33,6 +33,13 @@ describe('RowHeaderPainter', () => {
     expect(ops.filter((o) => o.op === 'stroke').length).toBeGreaterThanOrEqual(2)
   })
 
+  it('paintCorner 按传入的 headerHeight 绘制角块（列组场景下为表头总高，而非 theme.metrics.headerHeight）', () => {
+    const { ctx, ops } = createRecordingContext(200, 200)
+    const totalHeaderHeight = denseGridTheme.metrics.headerHeight + 2 * denseGridTheme.metrics.groupHeaderRowHeight
+    new RowHeaderPainter(denseGridTheme).paintCorner(ctx, 44, totalHeaderHeight)
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 0, 44, totalHeaderHeight] })
+  })
+
   it('整行选中时行头使用强选中背景与选中文字色', () => {
     const { ctx, ops } = createRecordingContext(200, 200)
     const rowsAxis = new ChunkedAxis({ count: 5, defaultSize: 28 })

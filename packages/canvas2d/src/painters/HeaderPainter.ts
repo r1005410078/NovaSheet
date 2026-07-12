@@ -16,6 +16,7 @@ import {
   type HoveredColumnHeaderMenu,
   type IconDef,
   type RenderFrameCollapsedColGap,
+  type RenderFrameColumnGroupHeader,
   type Schema,
   type Theme,
   type ViewPipeline,
@@ -51,6 +52,17 @@ export interface HeaderPaintParams {
   selectedColumnRange?: Pick<CellRange, 'startCol' | 'endCol'>
   /** 当前 hover 的列头菜单按钮状态（来自 RenderFrame）。*/
   hoveredColumnHeaderMenu?: HoveredColumnHeaderMenu
+  /**
+   * 列组表头布局（来自 `RenderFrame.columnGroupHeader`）。缺省 = 零成本路径：
+   * 单行叶头，行为与 M1 完全一致。存在时表头总高 = `depth × groupHeaderRowHeight + leafHeaderHeight`，
+   * 组行画在叶行之上，叶行内容整体下移 `depth × groupHeaderRowHeight`。
+   */
+  columnGroupHeader?: RenderFrameColumnGroupHeader
+  /**
+   * 表头 leaf 行（字段名行）高度（来自 `viewport.leafHeaderHeight`）。只在 `columnGroupHeader`
+   * 存在时生效；省略时回退 `theme.metrics.headerHeight`（与无列组时的叶行高一致）。
+   */
+  leafHeaderHeight?: number
 }
 
 const MIN_HEADER_HEIGHT_FOR_TRIANGLE = 24
@@ -74,19 +86,26 @@ export class HeaderPainter {
     this.theme = theme
   }
 
-  /** 绘制表头：先填充背景色，再逐列绘制字段名称文字 */
+  /** 绘制表头：先填充背景色，再逐列绘制字段名称文字；有列组时先画组行、叶行整体下移。 */
   paint(ctx: CanvasRenderingContext2D, params: HeaderPaintParams): void {
     const { schema, colsAxis, colRange, width } = params
     const x = params.x ?? 0
     const scrollOffsetX = params.scrollOffsetX ?? 0
-    const headerHeight = this.theme.metrics.headerHeight
+    const columnGroupHeader = params.columnGroupHeader
+    const groupRowHeight = this.theme.metrics.groupHeaderRowHeight
+    // 无列组时 headerHeight 就是叶行高（M1 原语义，零成本路径）；有列组时是组行+叶行总高。
+    const headerHeight = columnGroupHeader
+      ? columnGroupHeader.depth * groupRowHeight + (params.leafHeaderHeight ?? this.theme.metrics.headerHeight)
+      : this.theme.metrics.headerHeight
+    // 叶行区顶边：无列组为 0；有列组时叶行在组行之下。
+    const leafRowTop = columnGroupHeader ? columnGroupHeader.depth * groupRowHeight : 0
 
     ctx.save()
     ctx.beginPath()
     ctx.rect(x, 0, width, headerHeight)
     ctx.clip()
 
-    // header 背景：占满当前 header 段；冻结列时 Renderer 会分段绘制。
+    // header 背景：占满当前 header 段（含列组表头行）；冻结列时 Renderer 会分段绘制。
     ctx.fillStyle = this.theme.colors.headerBackground
     ctx.fillRect(x, 0, width, headerHeight)
 
@@ -98,6 +117,19 @@ export class HeaderPainter {
     ctx.textBaseline = 'middle'
     ctx.textAlign = 'left'
 
+    if (columnGroupHeader) {
+      this.paintColumnGroupRows(ctx, {
+        columnGroupHeader,
+        colsAxis,
+        colRange,
+        x,
+        width,
+        scrollOffsetX,
+        groupRowHeight,
+        headerHeight,
+      })
+    }
+
     const columnLetters = params.columnLetters === true
     const padX = this.theme.metrics.cellPaddingX
     for (let c = colRange[0]; c <= colRange[1]; c++) {
@@ -105,13 +137,18 @@ export class HeaderPainter {
       const colLeft = x + colsAxis.indexToPosition(c) - scrollOffsetX
       const colWidth = colsAxis.getSize(c)
       const selected = this.isSelectedColumn(c, params.selectedColumnRange)
+      // 叶头伸满：无组/浅组列（leafTopRowByViewCol[c] < depth）从自身 topRow 一路画到表头底，
+      // 而非局限于窄的叶行带——否则该列上方（组行区）会露出未绘制的空隙。
+      const leafTop = columnGroupHeader
+        ? (columnGroupHeader.leafTopRowByViewCol[c] ?? columnGroupHeader.depth) * groupRowHeight
+        : 0
       if (selected) {
         ctx.fillStyle = this.theme.colors.selectionBorder
-        ctx.fillRect(colLeft, 0, colWidth, headerHeight)
+        ctx.fillRect(colLeft, leafTop, colWidth, headerHeight - leafTop)
       }
       const textColor = selected ? this.theme.colors.selectionText : this.theme.colors.headerText
       ctx.fillStyle = textColor
-      const y = headerHeight / 2
+      const y = (leafTop + headerHeight) / 2
       if (columnLetters) {
         ctx.textAlign = 'center'
         ctx.fillText(columnIndexToLetter(c), colLeft + colWidth / 2, y)
@@ -138,18 +175,20 @@ export class HeaderPainter {
           rightReserve: menuButtonReserve,
         })
         if (showMenuButton) {
-          this.paintHeaderMenuButton(
-            ctx,
-            colLeft,
-            colWidth,
-            headerHeight,
-            hoveredMenu?.buttonHovered ?? false,
-          )
+          this.paintHeaderMenuButton(ctx, colLeft, colWidth, y, hoveredMenu?.buttonHovered ?? false)
         }
       }
     }
 
-    this.paintHeaderGridLines(ctx, { colsAxis, colRange, x, width, scrollOffsetX, headerHeight })
+    this.paintHeaderGridLines(ctx, {
+      colsAxis,
+      colRange,
+      x,
+      width,
+      scrollOffsetX,
+      headerHeight,
+      leafRowTop,
+    })
     this.paintCollapsedColGaps(ctx, params)
 
     ctx.restore()
@@ -199,13 +238,12 @@ export class HeaderPainter {
     ctx: CanvasRenderingContext2D,
     colLeft: number,
     colWidth: number,
-    headerHeight: number,
+    centerY: number,
     showCircle: boolean,
   ): void {
     const padX = this.theme.metrics.cellPaddingX
     const buttonSize = HEADER_MENU_BUTTON_SIZE
     const centerX = colLeft + colWidth - padX - buttonSize / 2
-    const centerY = headerHeight / 2
 
     ctx.save()
     if (showCircle) {
@@ -280,6 +318,75 @@ export class HeaderPainter {
     return range !== undefined && colIndex >= range.startCol && colIndex <= range.endCol
   }
 
+  /**
+   * 列组表头行绘制：每层 `columnGroupHeader.rows[level]` 各画一次背景 + label + 底边/右边分隔线。
+   * 只在存在 `columnGroupHeader` 时调用——零成本路径不触碰此方法。
+   *
+   * 冻结/滚动分段：cell 的像素位置用绝对列坐标算出（不裁剪到本段 colRange），越出本段可见区
+   * 的部分交给 paint() 顶部已建立的 ctx.clip() 兜底；跨段的组 cell 因此在两段各画一次自己的
+   * 可见部分（spec §3.3），这里只需按 colRange 过滤掉与本段完全不相交的 cell。
+   *
+   * 边框只画每个 cell 自己的底边 + 右边（不画左边）——相邻 cell 的右边天然与下一个 cell 的
+   * 左边共线；未在本层分组的列（浅组/无组，叶头向上伸满）没有 cell，也就不会有虚假分隔线
+   * 穿过它们向上伸满的内容区。
+   */
+  private paintColumnGroupRows(
+    ctx: CanvasRenderingContext2D,
+    params: {
+      columnGroupHeader: RenderFrameColumnGroupHeader
+      colsAxis: Axis
+      colRange: [number, number]
+      x: number
+      width: number
+      scrollOffsetX: number
+      groupRowHeight: number
+      headerHeight: number
+    },
+  ): void {
+    const { columnGroupHeader, colsAxis, colRange, x, width, scrollOffsetX, groupRowHeight, headerHeight } =
+      params
+    const padX = this.theme.metrics.cellPaddingX
+
+    ctx.strokeStyle = this.theme.colors.gridLine
+    ctx.lineWidth = this.theme.metrics.borderWidth
+    ctx.beginPath()
+
+    for (let level = 0; level < columnGroupHeader.depth; level++) {
+      const rowTop = level * groupRowHeight
+      const rowBottom = rowTop + groupRowHeight
+      const cells = columnGroupHeader.rows[level] ?? []
+
+      for (const cell of cells) {
+        if (cell.endViewCol < colRange[0] || cell.startViewCol > colRange[1]) continue
+
+        const left = x + colsAxis.indexToPosition(cell.startViewCol) - scrollOffsetX
+        const right =
+          x + colsAxis.indexToPosition(cell.endViewCol) + colsAxis.getSize(cell.endViewCol) - scrollOffsetX
+
+        ctx.fillStyle = cell.selected
+          ? this.theme.colors.selectionBorder
+          : this.theme.colors.headerBackground
+        ctx.fillRect(left, rowTop, right - left, groupRowHeight)
+
+        ctx.fillStyle = cell.selected ? this.theme.colors.selectionText : this.theme.colors.headerText
+        ctx.fillText(cell.label, left + padX, rowTop + groupRowHeight / 2, Math.max(0, right - left - padX * 2))
+
+        const bottomY = snapLineInside(rowBottom, 0, headerHeight)
+        if (bottomY !== undefined) {
+          ctx.moveTo(left, bottomY)
+          ctx.lineTo(right, bottomY)
+        }
+        const rightX = snapLineInside(right, x, x + width)
+        if (rightX !== undefined) {
+          ctx.moveTo(rightX, rowTop)
+          ctx.lineTo(rightX, rowBottom)
+        }
+      }
+    }
+
+    ctx.stroke()
+  }
+
   private paintHeaderGridLines(
     ctx: CanvasRenderingContext2D,
     params: {
@@ -289,9 +396,11 @@ export class HeaderPainter {
       width: number
       scrollOffsetX: number
       headerHeight: number
+      /** 叶行区顶边（无列组为 0）；叶列竖线只画在叶行带内，不穿入组行区。 */
+      leafRowTop: number
     },
   ): void {
-    const { colsAxis, colRange, x, width, scrollOffsetX, headerHeight } = params
+    const { colsAxis, colRange, x, width, scrollOffsetX, headerHeight, leafRowTop } = params
     ctx.strokeStyle = this.theme.colors.gridLine
     ctx.lineWidth = this.theme.metrics.borderWidth
     ctx.beginPath()
@@ -301,7 +410,7 @@ export class HeaderPainter {
       const xRaw = x + xBase - scrollOffsetX
       const lineX = snapLineInside(xRaw, x, x + width)
       if (lineX === undefined) continue
-      ctx.moveTo(lineX, 0)
+      ctx.moveTo(lineX, leafRowTop)
       ctx.lineTo(lineX, headerHeight)
     }
 
