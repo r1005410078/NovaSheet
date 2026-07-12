@@ -1136,8 +1136,8 @@ export class DefaultGridEngine implements GridEngine {
 
   /**
    * 组可见叶列整列选中；组不存在或组内叶列全隐藏时返回 false，不改动选区。
-   * `activeCell`/`anchorCell` 落首可见叶列（row 0），`extentCell` 落末可见叶列（row
-   * rowCount-1）——与 `InputController.selectWholeColumnRange` 的整列选区字段填充惯例一致。
+   * `anchorCell` 落首可见叶列（左边界），`activeCell`/`extentCell` 落末可见叶列（右边界，row
+   * rowCount-1）——与 `InputController.selectWholeColumnRange(startCol, endCol)` 的整列选区字段填充惯例一致。
    */
   selectColumnGroup(groupId: string): boolean {
     const leafFieldIds = this.columnGroups.findGroupLeafFieldIds(groupId)
