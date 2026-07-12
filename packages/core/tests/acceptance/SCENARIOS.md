@@ -69,7 +69,7 @@
 | core.L2.grid-column-groups-bms-smoke | L2 | draft | BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup） |
 | core.L2.grid-column-groups-frame-layout | L2 | draft | 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高 |
 | core.L2.grid-column-groups-hide-shrink | L2 | draft | hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复 |
-| core.L2.grid-column-groups-scroll-to-group | L2 | draft | scrollToGroup 将组首个可见叶列滚入视口并按 align 对齐；不存在的 groupId no-op |
+| core.L2.grid-column-groups-scroll-to-group | L2 | draft | scrollToGroup 无条件按 align 把组首个可见叶列滚到位（与 scrollToRow/scrollToCell 语义一致）；不存在的 groupId no-op |
 | core.L2.grid-column-groups-select-group | L2 | draft | selectGroup 产生整列 range 选区；组头 selected 按 ⊇ 派生（含父组与相邻多组） |
 | core.L2.grid-column-groups-structural-mutations | L2 | draft | insert/delete/moveCols 与组树的一致性：归组规则、级联移除 + undo 恢复、跨组保守 no-op |
 | core.L2.grid-custom-editor-open-triggers | L2 | draft | 自定义 editor 由所有编辑入口统一触发 |
@@ -1802,7 +1802,7 @@ _（无）_
 ## core.L2.grid-column-groups-scroll-to-group
 
 - **layer**: L2
-- **summary**: scrollToGroup 将组首个可见叶列滚入视口并按 align 对齐；不存在的 groupId no-op
+- **summary**: scrollToGroup 无条件按 align 把组首个可见叶列滚到位（与 scrollToRow/scrollToCell 语义一致）；不存在的 groupId no-op
 - **status**: draft
 
 ### User Story

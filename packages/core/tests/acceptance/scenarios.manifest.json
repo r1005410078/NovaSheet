@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-11T22:40:54.836Z",
+  "generatedAt": "2026-07-12T08:45:33.270Z",
   "source": "tests/acceptance/**/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
@@ -1677,7 +1677,7 @@
     {
       "id": "core.L2.grid-column-groups-scroll-to-group",
       "layer": "L2",
-      "summary": "scrollToGroup 将组首个可见叶列滚入视口并按 align 对齐；不存在的 groupId no-op",
+      "summary": "scrollToGroup 无条件按 align 把组首个可见叶列滚到位（与 scrollToRow/scrollToCell 语义一致）；不存在的 groupId no-op",
       "userStory": "作为 Core 集成方，我调用 `scrollToGroup(groupId)` 时希望该组滚入视口（BMS `locateStack` 的定位半边），列宽和视口宽度变化时不需要自己算滚动坐标。",
       "tags": [
         "column-groups",
