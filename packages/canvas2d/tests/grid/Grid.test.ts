@@ -615,7 +615,15 @@ describe('Grid — Phase 4.4 view pipeline facade', () => {
     expect(delegate.engine.getData().getCell(0, 'age')).toBe(0)
     expect(delegate.engine.getData().getCell(49, 'age')).toBe(49)
 
+    delegate.runtime.handleHostContextMenu({
+      x: 210,
+      y: 10,
+      shiftKey: false,
+      clientX: 210,
+      clientY: 10,
+    })
     delegate.runtime.handleContextMenuSelected('sort-desc')
+    expect(handler).toHaveBeenCalledWith({ spec: { fieldId: 'age', direction: 'desc' } })
     expect(delegate.engine.getData().getCell(0, 'age')).toBe(49)
     grid.destroy()
   })
