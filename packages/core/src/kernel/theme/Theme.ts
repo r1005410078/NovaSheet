@@ -18,8 +18,10 @@ export interface IconDef {
 export interface ThemeMetrics {
   /** 默认行高（px） */
   readonly rowHeight: number
-  /** 表头高度（px） */
+  /** 表头 leaf 行（字段名行）高度（px）——列组存在时表头总高另加 `groupHeaderRowHeight × depth` */
   readonly headerHeight: number
+  /** 单个列组表头行高度（px）；无列组时不参与计算 */
+  readonly groupHeaderRowHeight: number
   /** 行号列宽（px）；0 表示不绘制行头 */
   readonly rowHeaderWidth: number
   /** 单元格水平内边距（px） */

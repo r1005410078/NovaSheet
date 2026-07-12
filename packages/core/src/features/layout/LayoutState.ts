@@ -15,6 +15,8 @@ export interface LayoutStateInput {
   readonly excelHeaders: boolean
   readonly frozenInput: Partial<FrozenConfig> | undefined
   readonly getSchema: () => Schema
+  /** 当前列组表头深度（层数）；无列组时返回 0。闭包指向 engine 的 ColumnGroupStore。 */
+  readonly getGroupHeaderDepth: () => number
 }
 
 /**
@@ -36,6 +38,7 @@ export interface LayoutState {
   setFrozenConfig(config: Partial<FrozenConfig>): void
   setViewportSize(width: number, height: number): void
   setScroll(logicalX: number, logicalY: number): void
+  /** 设置表头 leaf 行（字段名行）高度；总高 = leaf + 当前列组深度 × groupHeaderRowHeight，随之重算。 */
   setHeaderHeight(headerHeight: number): void
   getRowsAxis(): ChunkedAxis
   getColsAxis(): ChunkedAxis
@@ -48,6 +51,7 @@ export class DefaultLayoutState implements LayoutState {
   private readonly explicitDefaultRowHeight: number | undefined
   private readonly excelHeaders: boolean
   private readonly getSchema: () => Schema
+  private readonly getGroupHeaderDepth: () => number
   private readonly initialFrozenConfig: FrozenConfig
   private viewInitialized = false
   private rowsAxis!: ChunkedAxis
@@ -60,6 +64,7 @@ export class DefaultLayoutState implements LayoutState {
     this.explicitDefaultRowHeight = input.explicitDefaultRowHeight
     this.excelHeaders = input.excelHeaders
     this.getSchema = input.getSchema
+    this.getGroupHeaderDepth = input.getGroupHeaderDepth
     const f = input.frozenInput ?? {}
     this.initialFrozenConfig = {
       topRows: f.topRows ?? 0,
@@ -86,7 +91,7 @@ export class DefaultLayoutState implements LayoutState {
     this.colsAxis = colsAxis
     this.frozen = new FrozenRegions(rowsAxis, colsAxis, config)
     this.viewport = new Viewport(rowsAxis, colsAxis, this.frozen)
-    this.viewport.setHeaderHeight(this.theme.metrics.headerHeight)
+    this.applyHeaderHeights()
     this.applySheetChrome()
   }
 
@@ -102,7 +107,7 @@ export class DefaultLayoutState implements LayoutState {
 
   applyTheme(theme: Theme): void {
     this.theme = theme
-    this.viewport.setHeaderHeight(theme.metrics.headerHeight)
+    this.applyHeaderHeights()
     this.applySheetChrome()
   }
 
@@ -139,7 +144,7 @@ export class DefaultLayoutState implements LayoutState {
   }
 
   setHeaderHeight(headerHeight: number): void {
-    this.viewport.setHeaderHeight(headerHeight)
+    this.viewport.setHeaderHeights(this.computeTotalHeaderHeight(headerHeight), headerHeight)
   }
 
   /** 重建 frozen+viewport，保留当前 viewport 的 header/gutter/尺寸/滚动（mutation 路径用）。 */
@@ -147,10 +152,27 @@ export class DefaultLayoutState implements LayoutState {
     const snap = this.viewport.snapshot()
     this.frozen = new FrozenRegions(this.rowsAxis, this.colsAxis, this.frozen.getFrozenConfig())
     this.viewport = new Viewport(this.rowsAxis, this.colsAxis, this.frozen)
-    this.viewport.setHeaderHeight(snap.headerHeight)
+    // leaf 高不随列结构 mutation 变化，可放心搬旧值；但总高必须按当前 depth 重算——
+    // 直接搬 snap.headerHeight 会在列组深度已变化时留下过期总高（结构性正确性，
+    // depth 目前恒为 0，Task 5 接入真实 ColumnGroupStore 后此路径开始生效）。
+    this.viewport.setHeaderHeights(
+      this.computeTotalHeaderHeight(snap.leafHeaderHeight),
+      snap.leafHeaderHeight,
+    )
     this.viewport.setRowHeaderWidth(snap.rowHeaderWidth)
     this.viewport.setSize(snap.contentRect.width, snap.contentRect.height)
     this.viewport.setScroll(snap.scrollX, snap.scrollY)
+  }
+
+  /** 按当前 theme.metrics.headerHeight（leaf）与列组深度重算并下发总高——initView/applyTheme 用。 */
+  private applyHeaderHeights(): void {
+    const leaf = this.theme.metrics.headerHeight
+    this.viewport.setHeaderHeights(this.computeTotalHeaderHeight(leaf), leaf)
+  }
+
+  /** 总高 = leaf + 当前列组深度 × groupHeaderRowHeight；无列组（depth=0）时等于 leaf。 */
+  private computeTotalHeaderHeight(leaf: number): number {
+    return this.getGroupHeaderDepth() * this.theme.metrics.groupHeaderRowHeight + leaf
   }
 
   /** excel 风格 row header gutter（与抽离前 engine `applySheetChrome` 一致）。 */

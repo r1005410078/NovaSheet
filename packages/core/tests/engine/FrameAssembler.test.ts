@@ -63,6 +63,7 @@ describe('assembleRenderFrame', () => {
       scrollY: 10,
       contentRect: { width: 200, height: 200 },
       headerHeight: 32,
+      leafHeaderHeight: 32,
       rowHeaderWidth: 48,
       version: 0,
     }
@@ -113,6 +114,7 @@ describe('assembleRenderFrame', () => {
       scrollY: 0,
       contentRect: { width: 200, height: 200 },
       headerHeight: 32,
+      leafHeaderHeight: 32,
       rowHeaderWidth: 48,
       version: 0,
     }
@@ -167,6 +169,7 @@ describe('assembleRenderFrame', () => {
       scrollY: 0,
       contentRect: { width: 200, height: 200 },
       headerHeight: 32,
+      leafHeaderHeight: 32,
       rowHeaderWidth: 48,
       version: 0,
     }
@@ -224,6 +227,7 @@ describe('assembleRenderFrame', () => {
       scrollY: 0,
       contentRect: { width: 200, height: 200 },
       headerHeight: 32,
+      leafHeaderHeight: 32,
       rowHeaderWidth: 48,
       version: 0,
     }
@@ -280,6 +284,7 @@ describe('assembleRenderFrame', () => {
       scrollY: 0,
       contentRect: { width: 200, height: 200 },
       headerHeight: 32,
+      leafHeaderHeight: 32,
       rowHeaderWidth: 48,
       version: 0,
     }

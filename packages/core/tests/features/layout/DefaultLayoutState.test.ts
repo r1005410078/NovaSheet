@@ -24,6 +24,7 @@ function makeLayout(opts?: {
     excelHeaders: opts?.excelHeaders ?? false,
     frozenInput: opts?.frozenInput,
     getSchema: () => schemaOf(opts?.widths ?? [100, 100, 100]),
+    getGroupHeaderDepth: () => 0,
   })
 }
 

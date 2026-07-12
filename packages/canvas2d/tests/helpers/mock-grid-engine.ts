@@ -57,6 +57,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
       viewport: {
         contentRect: { width: 400, height: 300 },
         headerHeight: theme.metrics.headerHeight,
+        leafHeaderHeight: theme.metrics.headerHeight,
         rowHeaderWidth: 0,
         scrollX: 0,
         scrollY: 0,

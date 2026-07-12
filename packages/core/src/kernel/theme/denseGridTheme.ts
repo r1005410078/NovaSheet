@@ -19,6 +19,7 @@ export const denseGridTheme: Theme = {
   metrics: {
     rowHeight: 28,
     headerHeight: 32,
+    groupHeaderRowHeight: 28,
     rowHeaderWidth: 0,
     cellPaddingX: 8,
     cellPaddingY: 4,

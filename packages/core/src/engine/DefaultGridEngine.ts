@@ -309,6 +309,8 @@ export class DefaultGridEngine implements GridEngine {
       excelHeaders: this.excelHeaders,
       frozenInput: options.frozen,
       getSchema: () => this.rawData.getSchema(),
+      // TODO(column-groups-task-5): 接线真实 ColumnGroupStore 深度；列组特性上线前恒为 0（零成本路径）。
+      getGroupHeaderDepth: () => 0,
     })
     this.rowStructure = new DefaultRowStructure(this.rawData, () =>
       this.layout.resolveDefaultRowHeight(),

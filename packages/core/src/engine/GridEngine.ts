@@ -138,7 +138,11 @@ export interface GridLayout {
   /** 设置可视区域尺寸（CSS px），通常由 host ResizeObserver 驱动。 */
   setViewportSize(width: number, height: number): void
 
-  /** 设置表头高度；影响 body viewport 起点与 frame 布局。 */
+  /**
+   * 设置表头 leaf 行（字段名行）高度（px）。存在列组时表头总高会另加
+   * `depth × Theme.metrics.groupHeaderRowHeight`；`frame.viewport.headerHeight` 始终是总高，
+   * 影响 body viewport 起点与 frame 布局，`frame.viewport.leafHeaderHeight` 才是本方法设置的值。
+   */
   setHeaderHeight(headerHeight: number): void
 
   /** 设置逻辑滚动位置（CSS px）；runtime 负责 native scrollTop 到 logicalY 的映射。 */

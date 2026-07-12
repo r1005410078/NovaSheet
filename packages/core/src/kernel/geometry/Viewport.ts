@@ -69,8 +69,10 @@ export interface ViewportSnapshot {
   regions: RenderRegion[]
   /** canvas 当前 CSS 尺寸 */
   contentRect: { width: number; height: number }
-  /** 表头高度（px） */
+  /** 表头总高（px）——含列组表头行 + leaf 行；无列组时等于 leafHeaderHeight。内容区顶部偏移用此值。 */
   headerHeight: number
+  /** 表头 leaf 行（字段名行）高度（px），不含列组表头行；无列组时等于 headerHeight。 */
+  leafHeaderHeight: number
   /** 行号列宽（px） */
   rowHeaderWidth: number
   /** 水平滚动偏移（px） */
@@ -107,8 +109,10 @@ export class Viewport {
   private scrollX = 0
   /** 垂直滚动偏移（px） */
   private scrollY = 0
-  /** 表头高度（px），由主题驱动 */
+  /** 表头总高（px，含列组表头行 + leaf 行），由 LayoutState 按 theme + 组深度驱动 */
   private headerHeight = 0
+  /** 表头 leaf 行高度（px），由主题驱动；无列组时等于 headerHeight */
+  private leafHeaderHeight = 0
   /** 行号列宽（px）；Excel 门面启用时 > 0 */
   private rowHeaderWidth = 0
   /** 视口自身的变更版本号 */
@@ -165,16 +169,34 @@ export class Viewport {
   }
 
   /**
-   * 更新表头高度并递增版本号。
+   * 更新表头高度（无列组路径的便捷方法）：总高与 leaf 高设为同一值。
+   * 有列组时调用方应改用 `setHeaderHeights(total, leaf)` 分别下发两值。
    *
    * @example
    * ```ts
    * viewport.setHeaderHeight(32)
    * viewport.snapshot().headerHeight // 32
+   * viewport.snapshot().leafHeaderHeight // 32
    * ```
    */
   setHeaderHeight(h: number): void {
-    this.headerHeight = h
+    this.setHeaderHeights(h, h)
+  }
+
+  /**
+   * 分别设置表头总高与 leaf 行高并递增版本号（列组路径）。
+   *
+   * @example
+   * ```ts
+   * // 2 层列组表头，每层 28px，leaf 行 32px
+   * viewport.setHeaderHeights(2 * 28 + 32, 32)
+   * viewport.snapshot().headerHeight // 88
+   * viewport.snapshot().leafHeaderHeight // 32
+   * ```
+   */
+  setHeaderHeights(total: number, leaf: number): void {
+    this.headerHeight = total
+    this.leafHeaderHeight = leaf
     this._version++
   }
 
@@ -218,6 +240,7 @@ export class Viewport {
       regions,
       contentRect: { width: this.width, height: this.height },
       headerHeight: this.headerHeight,
+      leafHeaderHeight: this.leafHeaderHeight,
       rowHeaderWidth: this.rowHeaderWidth,
       scrollX: this.scrollX,
       scrollY: this.scrollY,
