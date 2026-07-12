@@ -1,4 +1,4 @@
-import type { CellValue, ColumnGroupChild, Field } from '../kernel/data/Schema'
+import type { CellValue, ColumnGroupChild, ColumnGroupsSnapshot, Field } from '../kernel/data/Schema'
 import { ColumnGroupStore } from '../features/column-groups/ColumnGroupStore'
 import {
   deriveSelectedGroupIds,
@@ -445,6 +445,7 @@ export class DefaultGridEngine implements GridEngine {
       restoreFormat: (layers) => this.formatState.restoreFormat(layers),
       restoreMerge: (regions) => this.formatState.restoreMerge(regions),
       restoreCellTypes: (snapshot) => this.restoreCellTypes(snapshot),
+      restoreColumnGroups: (snap) => this.columnGroups.restore(snap),
       restoreSelection: (selection) => this.selectionController.setSelection(selection),
     })
     this.validationService = new ValidationService({
@@ -965,18 +966,33 @@ export class DefaultGridEngine implements GridEngine {
 
   /** 在 schema field index 位置前插入 count 个文本列。 */
   insertCols(beforeFieldIndex: number, count: number): readonly Field[] {
+    // 无组时 hasGroups() 恒 false，columnGroupsBefore/After 缺省不写入 undo command
+    // （见 UndoCommand.ts 上的注释——JSON round-trip 兼容既有命令）。
+    const hasGroups = this.columnGroups.hasGroups()
+    let fieldsBeforeGroups: readonly Field[] = []
+    let columnGroupsBefore: ColumnGroupsSnapshot | undefined
     const event = this.structural.runCommandStructural({
+      beforeExecute: () => {
+        fieldsBeforeGroups = this.rawData.getSchema().fields
+        if (hasGroups) columnGroupsBefore = this.columnGroups.snapshot()
+      },
       execute: () =>
         this.insertColsCommand.execute({ kind: 'insertCols', beforeFieldIndex, count }),
       rebuild: 'cols',
       withFormatMerge: true,
       withFrozen: true,
-      afterExecute: (event) =>
+      afterExecute: (event) => {
         this.layout.remapFrozenAfterColInsert(
           event.at,
           event.count,
           this.rawData.getSchema().fields.length - event.count,
-        ),
+        )
+        this.columnGroups.applyInsertFields(
+          event.at,
+          event.newFields.map((f) => f.id),
+          fieldsBeforeGroups,
+        )
+      },
       buildUndo: (event, sel, ex) => ({
         kind: 'insertCols',
         at: event.at,
@@ -992,6 +1008,9 @@ export class DefaultGridEngine implements GridEngine {
         mergeAfter: ex!.mergeAfter!,
         cellTypeBefore: ex!.cellTypeBefore!,
         cellTypeAfter: ex!.cellTypeAfter!,
+        ...(hasGroups
+          ? { columnGroupsBefore: columnGroupsBefore!, columnGroupsAfter: this.columnGroups.snapshot() }
+          : {}),
       }),
     })
     return event?.newFields ?? []
@@ -1000,16 +1019,21 @@ export class DefaultGridEngine implements GridEngine {
   /** 按 fieldId 删除列，返回删除快照。 */
   deleteCols(fieldIds: readonly string[]): readonly RemovedFieldSnapshot[] {
     let totalColsBefore = 0
+    const hasGroups = this.columnGroups.hasGroups()
+    let columnGroupsBefore: ColumnGroupsSnapshot | undefined
     const event = this.structural.runCommandStructural({
       beforeExecute: () => {
         totalColsBefore = this.rawData.getSchema().fields.length
+        if (hasGroups) columnGroupsBefore = this.columnGroups.snapshot()
       },
       execute: () => this.deleteColsCommand.execute({ kind: 'deleteCols', fieldIds }),
       rebuild: 'cols',
       withFormatMerge: true,
       withFrozen: true,
-      afterExecute: (event) =>
-        this.layout.remapFrozenAfterColDelete(event.removedIndices, totalColsBefore),
+      afterExecute: (event) => {
+        this.layout.remapFrozenAfterColDelete(event.removedIndices, totalColsBefore)
+        this.columnGroups.applyDeleteFields(event.snapshots.map((s) => s.field.id))
+      },
       buildUndo: (event, sel, ex) => ({
         kind: 'deleteCols',
         snapshots: event.snapshots,
@@ -1024,6 +1048,9 @@ export class DefaultGridEngine implements GridEngine {
         mergeAfter: ex!.mergeAfter!,
         cellTypeBefore: ex!.cellTypeBefore!,
         cellTypeAfter: ex!.cellTypeAfter!,
+        ...(hasGroups
+          ? { columnGroupsBefore: columnGroupsBefore!, columnGroupsAfter: this.columnGroups.snapshot() }
+          : {}),
       }),
     })
     return event?.snapshots ?? []
@@ -1097,7 +1124,16 @@ export class DefaultGridEngine implements GridEngine {
   /** 按 fieldId 移动列组；cell 值、hidden 状态与列宽都按 fieldId 锚定。 */
   moveCols(fieldIds: readonly string[], beforeFieldId: string | null): boolean {
     if (!isMutableDataSource(this.rawData) || !this.rawData.moveFields) return false
+    // 组一致性预检——先于任何 fields 变更；跨组移动整体 no-op（组用 raw fields，隐藏是纯视图
+    // 概念，不影响树的 fieldId 归属判定，见 ColumnGroupStore.isMoveWithinSameGroup）。
+    if (
+      !this.columnGroups.isMoveWithinSameGroup(fieldIds, beforeFieldId, this.rawData.getSchema().fields)
+    ) {
+      return false
+    }
     this.finishActiveEdit()
+    const hasGroups = this.columnGroups.hasGroups()
+    const columnGroupsBefore = hasGroups ? this.columnGroups.snapshot() : undefined
     const event = this.structural.runCommandStructural({
       beforeExecute: () =>
         this.selectionController.captureVisibleFieldIdsBefore(
@@ -1106,6 +1142,10 @@ export class DefaultGridEngine implements GridEngine {
       execute: () => this.moveColsCommand.execute({ kind: 'moveCols', fieldIds, beforeFieldId }),
       rebuild: 'cols',
       withFormatMerge: true,
+      afterExecute: () => {
+        // execute() 已跑完 moveFields，此处 rawData schema 反映的是移动后的新序。
+        this.columnGroups.applyMoveFields(this.rawData.getSchema().fields)
+      },
       buildUndo: (event, sel, ex) => ({
         kind: 'moveCols',
         fieldIds: event.fieldIds,
@@ -1119,6 +1159,9 @@ export class DefaultGridEngine implements GridEngine {
         mergeAfter: ex!.mergeAfter!,
         cellTypeBefore: ex!.cellTypeBefore!,
         cellTypeAfter: ex!.cellTypeAfter!,
+        ...(hasGroups
+          ? { columnGroupsBefore: columnGroupsBefore!, columnGroupsAfter: this.columnGroups.snapshot() }
+          : {}),
       }),
     })
     return event !== null

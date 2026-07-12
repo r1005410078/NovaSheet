@@ -1,4 +1,4 @@
-import type { CellValue, Field } from '../data/Schema'
+import type { CellValue, ColumnGroupsSnapshot, Field } from '../data/Schema'
 import type { DeletedRowSnapshot, RemovedFieldSnapshot } from '../data/MutableDataSource'
 import type { MergeRegion } from '../coords/MergeRegion'
 import type { CellRange, GridSelection } from '../coords/SelectionTypes'
@@ -148,6 +148,9 @@ export type UndoCommand =
       readonly mergeAfter: readonly MergeRegion[]
       readonly cellTypeBefore?: CellTypeSnapshot
       readonly cellTypeAfter?: CellTypeSnapshot
+      // 仅当 schema 带列组时填充（无组时缺省，见 ColumnGroupStore.hasGroups）。
+      readonly columnGroupsBefore?: ColumnGroupsSnapshot
+      readonly columnGroupsAfter?: ColumnGroupsSnapshot
     }
   | {
       readonly kind: 'deleteCols'
@@ -163,6 +166,9 @@ export type UndoCommand =
       readonly mergeAfter: readonly MergeRegion[]
       readonly cellTypeBefore?: CellTypeSnapshot
       readonly cellTypeAfter?: CellTypeSnapshot
+      // 仅当 schema 带列组时填充（无组时缺省，见 ColumnGroupStore.hasGroups）。
+      readonly columnGroupsBefore?: ColumnGroupsSnapshot
+      readonly columnGroupsAfter?: ColumnGroupsSnapshot
     }
   | {
       readonly kind: 'hideCols'
@@ -197,6 +203,9 @@ export type UndoCommand =
       readonly mergeAfter: readonly MergeRegion[]
       readonly cellTypeBefore?: CellTypeSnapshot
       readonly cellTypeAfter?: CellTypeSnapshot
+      // 仅当 schema 带列组时填充（无组时缺省，见 ColumnGroupStore.hasGroups）。
+      readonly columnGroupsBefore?: ColumnGroupsSnapshot
+      readonly columnGroupsAfter?: ColumnGroupsSnapshot
     }
   | {
       readonly kind: 'format'

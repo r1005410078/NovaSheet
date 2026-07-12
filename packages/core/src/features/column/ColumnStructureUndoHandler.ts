@@ -5,6 +5,7 @@ import type { FormatLayer } from '../../kernel/protocol/FormatTypes'
 import type { MergeRegion } from '../merge/MergeStore'
 import type { GridSelection } from '../../kernel/coords/SelectionTypes'
 import type { CellTypeSnapshot } from '../../kernel/protocol/CellTypeTypes'
+import type { ColumnGroupsSnapshot } from '../column-groups/ColumnGroupStore'
 import type { UndoCommand } from '../../kernel/undo/UndoCommand'
 import type { UndoHandler } from '../../kernel/undo/UndoHandler'
 
@@ -27,6 +28,7 @@ export interface ColumnStructureUndoContext {
   restoreFormat(layers: readonly FormatLayer[]): void
   restoreMerge(regions: readonly MergeRegion[]): void
   restoreCellTypes?(snapshot: CellTypeSnapshot): void
+  restoreColumnGroups?(snapshot: ColumnGroupsSnapshot): void
   restoreSelection(selection: GridSelection): void
 }
 
@@ -56,6 +58,7 @@ export class ColumnStructureUndoHandler implements UndoHandler {
         this.ctx.restoreFormat(command.formatBefore)
         this.ctx.restoreMerge(command.mergeBefore)
         if (command.cellTypeBefore) this.ctx.restoreCellTypes?.(command.cellTypeBefore)
+        if (command.columnGroupsBefore) this.ctx.restoreColumnGroups?.(command.columnGroupsBefore)
         return
       case 'deleteCols':
         this.ctx.reinsertCols(command.snapshots, command.deletedWidths)
@@ -65,12 +68,14 @@ export class ColumnStructureUndoHandler implements UndoHandler {
         this.ctx.restoreFormat(command.formatBefore)
         this.ctx.restoreMerge(command.mergeBefore)
         if (command.cellTypeBefore) this.ctx.restoreCellTypes?.(command.cellTypeBefore)
+        if (command.columnGroupsBefore) this.ctx.restoreColumnGroups?.(command.columnGroupsBefore)
         return
       case 'moveCols':
         this.ctx.replayMoveCols(command.fieldIds, command.inverseBeforeFieldId, command.selectionBefore)
         this.ctx.restoreFormat(command.formatBefore)
         this.ctx.restoreMerge(command.mergeBefore)
         if (command.cellTypeBefore) this.ctx.restoreCellTypes?.(command.cellTypeBefore)
+        if (command.columnGroupsBefore) this.ctx.restoreColumnGroups?.(command.columnGroupsBefore)
         return
       default:
         return
@@ -91,6 +96,7 @@ export class ColumnStructureUndoHandler implements UndoHandler {
         this.ctx.restoreFormat(command.formatAfter)
         this.ctx.restoreMerge(command.mergeAfter)
         if (command.cellTypeAfter) this.ctx.restoreCellTypes?.(command.cellTypeAfter)
+        if (command.columnGroupsAfter) this.ctx.restoreColumnGroups?.(command.columnGroupsAfter)
         return
       case 'deleteCols':
         this.ctx.removeFieldsByIds(command.snapshots.map((s) => s.field.id))
@@ -100,12 +106,14 @@ export class ColumnStructureUndoHandler implements UndoHandler {
         this.ctx.restoreFormat(command.formatAfter)
         this.ctx.restoreMerge(command.mergeAfter)
         if (command.cellTypeAfter) this.ctx.restoreCellTypes?.(command.cellTypeAfter)
+        if (command.columnGroupsAfter) this.ctx.restoreColumnGroups?.(command.columnGroupsAfter)
         return
       case 'moveCols':
         this.ctx.replayMoveCols(command.fieldIds, command.beforeFieldId, command.selectionAfter)
         this.ctx.restoreFormat(command.formatAfter)
         this.ctx.restoreMerge(command.mergeAfter)
         if (command.cellTypeAfter) this.ctx.restoreCellTypes?.(command.cellTypeAfter)
+        if (command.columnGroupsAfter) this.ctx.restoreColumnGroups?.(command.columnGroupsAfter)
         return
       default:
         return

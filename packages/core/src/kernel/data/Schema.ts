@@ -60,6 +60,16 @@ export interface ColumnGroup {
   readonly children: readonly ColumnGroupChild[]
 }
 
+/**
+ * JSON 可往返的组树快照（undo command 携带用，勿放非纯数据）。
+ * 定义于 kernel（而非 `features/column-groups/ColumnGroupStore.ts`，其重新导出此类型）：
+ * `kernel/undo/UndoCommand.ts` 需要引用它，而 kernel 层禁止依赖 `features/**`（见
+ * `scripts/check-kernel-boundary.ts`）。
+ */
+export interface ColumnGroupsSnapshot {
+  readonly tree: readonly ColumnGroupChild[]
+}
+
 /** 表格 Schema：有序字段列表 */
 export interface Schema {
   readonly fields: readonly Field[]

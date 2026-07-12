@@ -1,10 +1,8 @@
-import type { ColumnGroupChild, Field } from '../../kernel/data/Schema'
+import type { ColumnGroupChild, ColumnGroupsSnapshot, Field } from '../../kernel/data/Schema'
 import { validateColumnGroups } from './validateColumnGroups'
 
-/** JSON 可往返的组树快照（undo command 携带用，勿放非纯数据）。 */
-export interface ColumnGroupsSnapshot {
-  readonly tree: readonly ColumnGroupChild[]
-}
+/** 重新导出：类型定义现居 kernel（见 `kernel/data/Schema.ts` 上的注释），此处保留导出路径兼容。 */
+export type { ColumnGroupsSnapshot }
 
 /**
  * 列组树运行时状态。构造即校验（见 `validateColumnGroups`）；结构 mutation（insert/delete/move）

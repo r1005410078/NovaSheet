@@ -327,6 +327,28 @@ describe('UndoCommand 序列化 round-trip', () => {
     assertSerializable(cmd)
   })
 
+  it('insertCols round-trip（含 columnGroups 快照）', () => {
+    const cmd: UndoCommand = {
+      kind: 'insertCols',
+      at: 1,
+      count: 1,
+      newFields: [FIELD],
+      selectionBefore: SELECTION,
+      selectionAfter: SELECTION_AFTER,
+      frozenBefore: FROZEN,
+      frozenAfter: FROZEN,
+      formatBefore: [],
+      formatAfter: [],
+      mergeBefore: [],
+      mergeAfter: [],
+      columnGroupsBefore: { tree: [{ fieldId: 'a' }] },
+      columnGroupsAfter: {
+        tree: [{ id: 'g1', label: 'G1', children: [{ fieldId: 'a' }, { fieldId: 'x' }] }],
+      },
+    }
+    assertSerializable(cmd)
+  })
+
   it('deleteCols round-trip（cells 用全 defined 值，避免 undefined→null 不对称）', () => {
     // 注：RemovedFieldSnapshot.cells 是 (CellValue | undefined)[]，真实空单元格的 undefined 经
     // JSON.stringify 会变 null → round-trip 不等。此处样例用全 defined 值守住「纯数据可序列化」；
