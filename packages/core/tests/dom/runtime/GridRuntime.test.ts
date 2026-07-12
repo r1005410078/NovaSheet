@@ -73,6 +73,7 @@ function makeEngine(): GridEngine {
       } as never,
       viewport: {
         contentRect: { width: 400, height: 300 },
+        headerHeight: 32,
         regions: [
           {
             id: 'main',
@@ -104,7 +105,7 @@ function makeEngine(): GridEngine {
       ({
         indexToPosition: () => 0,
       }) as never,
-    getViewport: mock(() => ({ getRowHeaderWidth: () => 0 }) as never),
+    getViewport: mock(() => ({ getRowHeaderWidth: () => 0, getHeaderHeight: () => 32 }) as never),
     getData: mock(() => ({}) as never),
     undo: mock(() => undefined),
     redo: mock(() => undefined),
@@ -258,7 +259,9 @@ function makeExcelHeaderRuntime(options: { rowHeaderWidth?: number; columnWidth?
   })
   const engine = makeEngine()
   engine.getData = mock(() => data as never)
-  engine.getViewport = mock(() => ({ getRowHeaderWidth: () => rowHeaderWidth }) as never)
+  engine.getViewport = mock(
+    () => ({ getRowHeaderWidth: () => rowHeaderWidth, getHeaderHeight: () => 32 }) as never,
+  )
   engine.getFrame = mock(() => ({
     data,
     theme: { metrics: { headerHeight: 32 } } as Theme,
@@ -279,6 +282,7 @@ function makeExcelHeaderRuntime(options: { rowHeaderWidth?: number; columnWidth?
     viewport: {
       contentRect: { width: 400, height: 300 },
       rowHeaderWidth,
+      headerHeight: 32,
       scrollX: 0,
       scrollY: 0,
       regions: [

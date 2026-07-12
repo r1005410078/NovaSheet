@@ -210,6 +210,11 @@ export class Viewport {
     return this.rowHeaderWidth
   }
 
+  /** 表头总高（px，含列组表头行 + leaf 行；无列组时等于 leaf 行高）。轻量读取，避免 snapshot() 分配。 */
+  getHeaderHeight(): number {
+    return this.headerHeight
+  }
+
   /**
    * 不可变快照。每帧绘制开始时调用一次；FrozenRegions 内部根据 viewport 状态实时切分绘制区域。
    * version 取 viewport 自身 + 两个 axis 的最大值——

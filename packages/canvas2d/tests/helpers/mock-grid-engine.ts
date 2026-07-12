@@ -117,6 +117,7 @@ export function makeMockGridEngine(options: MockGridEngineOptions = {}): GridEng
         ({
           ...frame.viewport,
           getRowHeaderWidth: () => frame.viewport.rowHeaderWidth,
+          getHeaderHeight: () => frame.viewport.headerHeight,
         }) as unknown as Viewport,
     ),
     getData: mock(() => data),

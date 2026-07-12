@@ -53,4 +53,11 @@ describe('Viewport — regions 快照', () => {
     expect(main.rowRange).toEqual([0, -1])
     expect(main.colRange).toEqual([0, -1])
   })
+
+  it('getHeaderHeight() 与 setHeaderHeights(total, leaf) 后的 snapshot().headerHeight 一致', () => {
+    const { vp } = setup()
+    vp.setHeaderHeights(88, 32) // 2 层列组表头，每层 28px，leaf 行 32px
+    expect(vp.getHeaderHeight()).toBe(vp.snapshot().headerHeight)
+    expect(vp.getHeaderHeight()).toBe(88)
+  })
 })

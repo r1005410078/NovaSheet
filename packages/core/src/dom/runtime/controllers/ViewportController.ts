@@ -101,7 +101,7 @@ export class ViewportController {
 
   /** 按内容尺寸与 header 尺寸更新 host scroll spacer。 */
   resizeSpacer(): void {
-    const headerH = this.deps.engine.getTheme().metrics.headerHeight
+    const headerH = this.deps.engine.getViewport().getHeaderHeight()
     const w = this.scrollMapper.computeSpacerSize(this.getColsContentWidth())
     const h = this.scrollMapper.computeSpacerSize(this.deps.engine.getRowsTotalSize() + headerH)
     this.deps.host.setScrollSize(w, h)
@@ -109,7 +109,7 @@ export class ViewportController {
 
   /** 计算当前 DOM scrollTop/scrollLeft 的最大边界。 */
   getScrollLimits(): { maxTop: number; maxLeft: number } {
-    const headerH = this.deps.engine.getTheme().metrics.headerHeight
+    const headerH = this.deps.engine.getViewport().getHeaderHeight()
     const { width, height } = this.deps.host.getContainerSize()
     return {
       maxTop: Math.max(
@@ -146,7 +146,7 @@ export class ViewportController {
     const top = rowsAxis.indexToPosition(rowIndex)
     const size = rowsAxis.getSize(rowIndex)
     const { height: clientH } = this.deps.host.getContainerSize()
-    const vpContentH = clientH - this.deps.engine.getTheme().metrics.headerHeight
+    const vpContentH = clientH - this.deps.engine.getViewport().getHeaderHeight()
     let logicalY: number
     if (align === 'start') logicalY = top
     else if (align === 'end') logicalY = top + size - vpContentH
@@ -194,7 +194,7 @@ export class ViewportController {
       scrollY: logicalY,
       viewportWidth: width,
       viewportHeight: height,
-      headerHeight: frame.theme.metrics.headerHeight,
+      headerHeight: frame.viewport.headerHeight,
       rowHeaderWidth: frame.viewport.rowHeaderWidth,
     })
     if (!reveal) return
@@ -210,7 +210,7 @@ export class ViewportController {
     scrollTop: number,
     scrollLeft: number,
   ): { logicalX: number; logicalY: number } {
-    const headerH = this.deps.engine.getTheme().metrics.headerHeight
+    const headerH = this.deps.engine.getViewport().getHeaderHeight()
     const contentH = this.deps.engine.getRowsTotalSize()
     const contentW = this.getColsContentWidth()
     const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
@@ -224,7 +224,7 @@ export class ViewportController {
 
   /** 将逻辑 Y 滚动坐标映射回 DOM scrollTop。 */
   private logicalToScrollY(logicalY: number): number {
-    const headerH = this.deps.engine.getTheme().metrics.headerHeight
+    const headerH = this.deps.engine.getViewport().getHeaderHeight()
     const contentH = this.deps.engine.getRowsTotalSize()
     const spacerH = this.scrollMapper.computeSpacerSize(contentH + headerH)
     const { height: clientH } = this.deps.host.getContainerSize()

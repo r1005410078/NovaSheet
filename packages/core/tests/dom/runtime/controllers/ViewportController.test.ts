@@ -29,7 +29,7 @@ function makeEngine(overrides: Partial<Record<string, unknown>> = {}) {
     colsAxis,
     rowsAxis,
     theme: { metrics: { headerHeight: 30 } },
-    viewport: { rowHeaderWidth: 0 },
+    viewport: { rowHeaderWidth: 0, headerHeight: 30 },
   }
   const base = {
     setViewportSize: mock(() => {}),
@@ -37,7 +37,7 @@ function makeEngine(overrides: Partial<Record<string, unknown>> = {}) {
     getRowsTotalSize: () => 1000,
     getColsTotalSize: () => 600,
     getTheme: () => ({ metrics: { headerHeight: 30 } }),
-    getViewport: () => ({ getRowHeaderWidth: () => 0 }),
+    getViewport: () => ({ getRowHeaderWidth: () => 0, getHeaderHeight: () => 30 }),
     getRowsAxis: () => rowsAxis,
     getColsAxis: () => colsAxis,
     getColumnIndex: (fieldId: string) => (fieldId === 'b' ? 1 : -1),
@@ -93,7 +93,7 @@ describe('ViewportController — scheduleHostResize', () => {
       getRowsTotalSize: () => 0,
       getColsTotalSize: () => 0,
       getTheme: () => ({ metrics: { headerHeight: 0 } }),
-      getViewport: () => ({ getRowHeaderWidth: () => 0 }),
+      getViewport: () => ({ getRowHeaderWidth: () => 0, getHeaderHeight: () => 0 }),
       getFrame: () => ({ colsAxis: { getTotalSize: () => 0, getCount: () => 0 } }),
     } as unknown as GridEngine
     const host = {
@@ -187,7 +187,7 @@ describe('ViewportController — spacer 与滚动边界', () => {
   })
 
   it('getColsContentWidth = colsTotal + rowHeaderWidth（Excel gutter）', () => {
-    const engine = makeEngine({ getViewport: () => ({ getRowHeaderWidth: () => 40 }) })
+    const engine = makeEngine({ getViewport: () => ({ getRowHeaderWidth: () => 40, getHeaderHeight: () => 30 }) })
     const host = makeHost()
     const vp = new ViewportController(makeDeps({ engine, host }))
     expect(vp.getColsContentWidth()).toBe(640)

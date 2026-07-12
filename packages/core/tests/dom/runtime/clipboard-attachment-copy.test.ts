@@ -67,6 +67,7 @@ function makeEngine(): GridEngine {
       } as never,
       viewport: {
         contentRect: { width: 400, height: 300 },
+        headerHeight: 32,
         regions: [
           {
             id: 'main',
@@ -98,7 +99,7 @@ function makeEngine(): GridEngine {
       ({
         indexToPosition: () => 0,
       }) as never,
-    getViewport: mock(() => ({ getRowHeaderWidth: () => 0 }) as never),
+    getViewport: mock(() => ({ getRowHeaderWidth: () => 0, getHeaderHeight: () => 32 }) as never),
     getData: mock(() => ({}) as never),
     undo: mock(() => undefined),
     redo: mock(() => undefined),
@@ -206,6 +207,7 @@ function makeFrameWithFields(
     } as never,
     viewport: {
       contentRect: { width: 400, height: 300 },
+      headerHeight: 32,
       regions: [
         {
           id: 'main',
