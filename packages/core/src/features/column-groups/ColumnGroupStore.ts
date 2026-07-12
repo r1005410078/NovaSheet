@@ -23,8 +23,9 @@ export class ColumnGroupStore {
     return this.tree.length > 0
   }
 
+  /** 当前组树的独立副本（与 `snapshot()` 一致：深拷贝，后续 `apply*` mutation 不会影响已取得的返回值）。 */
   getTree(): readonly ColumnGroupChild[] {
-    return this.tree
+    return cloneTree(this.tree)
   }
 
   /** 组层最大深度（叶不计）。无组返 0。 */
