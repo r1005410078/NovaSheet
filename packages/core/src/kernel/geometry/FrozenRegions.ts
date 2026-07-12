@@ -192,6 +192,11 @@ export class FrozenRegions {
     // 例如左冻结宽 100px、scrollX=50px，则中心区域应从内容坐标 150px 开始；
     // 不能写成 max(scrollX, leftWidth)，否则 0..100px 这段滚动会被吞掉，画面拖一段才动。
     const centerScrollX = leftWidth + Math.max(0, vp.scrollX)
+    // 与横轴不对称：vp.scrollY 本身就是绝对内容坐标（下限钳到 topHeight），不是"中间
+    // 区域已滚动量"再叠加 topHeight——故意不写成 `topHeight + max(0, vp.scrollY)`
+    // （那是横轴的形状，会把纵向目标坐标再多算一个 topHeight）。
+    // ViewportController.logicalToScrollY 正是据此不对目标 Y 做 -topHeight 修正；
+    // 对称地减会导致 scrollToRow('start') 在有顶部冻结行时定位偏差 topHeight px。
     const middleScrollY = Math.max(vp.scrollY, topHeight)
     const rightScrollX = rightCols > 0 ? this.colsAxis.indexToPosition(rightStart) : 0
     const centerColRange = this.centerVisibleRange(centerScrollX, centerWidth, leftCols, rightStart)
