@@ -386,14 +386,23 @@ it('优先绘制调用方提供的 string 与有限 number 行头标签', () => 
 
 ```ts
 it('缺失或不支持的标签值回退 1-based 行号，空字符串保持有效', () => {
-  const { ctx, ops } = createRecordingContext(240, 240)
-  const rowsAxis = new ChunkedAxis({ count: 6, defaultSize: 28 })
-  const labels = [undefined, null, true, ['x'], Number.NaN, ''] as const
+  const { ctx, ops } = createRecordingContext(240, 320)
+  const rowsAxis = new ChunkedAxis({ count: 8, defaultSize: 28 })
+  const labels = [
+    undefined,
+    null,
+    true,
+    ['x'],
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    '',
+  ] as const
 
   new RowHeaderPainter(denseGridTheme).paint(ctx, {
     rowsAxis,
-    rowRange: [0, 5],
-    rect: { x: 0, y: 32, width: 80, height: 180 },
+    rowRange: [0, 7],
+    rect: { x: 0, y: 32, width: 80, height: 240 },
     scrollOffsetY: 0,
     resolveLabel: (rowIndex) => labels[rowIndex],
   })
@@ -401,7 +410,7 @@ it('缺失或不支持的标签值回退 1-based 行号，空字符串保持有�
   const texts = ops
     .filter((op) => op.op === 'fillText')
     .map((op) => (op.op === 'fillText' ? op.args[0] : ''))
-  expect(texts).toEqual(['1', '2', '3', '4', '5', ''])
+  expect(texts).toEqual(['1', '2', '3', '4', '5', '6', '7', ''])
 })
 ```
 
