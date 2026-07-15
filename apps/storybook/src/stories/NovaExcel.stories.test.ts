@@ -58,10 +58,11 @@ describe('NovaExcel Storybook stories', () => {
 
       const render = CustomRowHeader.render
       expect(render).toBeDefined()
-      const renderedHost = (await renderStoryHost(
-        () => render!({}, {} as never) as HTMLElement,
-      )) as Exclude<typeof host, undefined>
-      host = renderedHost
+      const renderedHost = (await renderStoryHost(() => {
+        const storyHost = render!({}, {} as never) as Exclude<typeof host, undefined>
+        host = storyHost
+        return storyHost
+      })) as Exclude<typeof host, undefined>
 
       while (rafQueue.length > 0) {
         const callbacks = rafQueue.splice(0)
