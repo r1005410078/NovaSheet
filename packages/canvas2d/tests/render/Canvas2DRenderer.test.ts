@@ -124,6 +124,40 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(carol!.args[2]).toBe(46)
   })
 
+  it('render 按 rowHeaderField 从 frame view data 绘制自定义行头', () => {
+    const { renderer, ops, viewport, rowsAxis, colsAxis } = setup()
+    const viewData = new InMemoryDataSource({
+      schema: SCHEMA,
+      rows: [
+        { deviceCode: '设备-002', name: 'Bob', age: 25 },
+        { deviceCode: '设备-001', name: 'Alice', age: 30 },
+        { deviceCode: null, name: 'Carol', age: 40 },
+      ],
+    })
+    viewport.setRowHeaderWidth(80)
+    ops.length = 0
+
+    renderer.render({
+      data: viewData,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      rowHeaderField: 'deviceCode',
+    })
+
+    const texts = ops
+      .filter((op) => op.op === 'fillText')
+      .map((op) => (op.op === 'fillText' ? op.args[0] : ''))
+    expect(texts.filter((text) => text.startsWith('设备-') || text === '3')).toEqual([
+      '设备-002',
+      '设备-001',
+      '3',
+    ])
+  })
+
   it('render forwards frame.viewPipeline to header painter', () => {
     const { renderer, ops, viewport, data, rowsAxis, colsAxis } = setup()
     ops.length = 0

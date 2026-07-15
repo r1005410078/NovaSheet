@@ -418,7 +418,13 @@ export class Canvas2DRenderer implements RenderBackend {
         ctx.frame.columnGroupHeader,
         snapshot.leafHeaderHeight,
       )
-      this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
+      this.paintRowHeaders(
+        ctx.frame,
+        regions,
+        rowsAxis,
+        snapshot,
+        this.getSelectedRowHeaderRange(ctx.frame),
+      )
       return
     }
 
@@ -475,7 +481,13 @@ export class Canvas2DRenderer implements RenderBackend {
       ctx.frame.columnGroupHeader,
       snapshot.leafHeaderHeight,
     )
-    this.paintRowHeaders(regions, rowsAxis, snapshot, this.getSelectedRowHeaderRange(ctx.frame))
+    this.paintRowHeaders(
+      ctx.frame,
+      regions,
+      rowsAxis,
+      snapshot,
+      this.getSelectedRowHeaderRange(ctx.frame),
+    )
   }
 
   private paintGridLayer(ctx: Canvas2DPaintFrameContext): void {
@@ -652,6 +664,7 @@ export class Canvas2DRenderer implements RenderBackend {
   }
 
   private paintRowHeaders(
+    frame: RenderFrame,
     regions: RenderRegion[],
     rowsAxis: Axis,
     snapshot: RenderFrame['viewport'],
@@ -659,6 +672,11 @@ export class Canvas2DRenderer implements RenderBackend {
   ): void {
     const gutter = snapshot.rowHeaderWidth
     if (gutter <= 0) return
+    const rowHeaderField = frame.rowHeaderField
+    const resolveLabel =
+      rowHeaderField === undefined
+        ? undefined
+        : (viewRowIndex: number) => frame.data.getCell(viewRowIndex, rowHeaderField)
 
     this.rowHeaderPainter.paintCorner(this.ctx, gutter, snapshot.headerHeight)
 
@@ -670,6 +688,7 @@ export class Canvas2DRenderer implements RenderBackend {
         rect: { x: 0, y: topRegion.rect.y, width: gutter, height: topRegion.rect.height },
         scrollOffsetY: topRegion.scrollOffsetY,
         selectedRowRange,
+        resolveLabel,
       })
     }
 
@@ -681,6 +700,7 @@ export class Canvas2DRenderer implements RenderBackend {
         rect: { x: 0, y: main.rect.y, width: gutter, height: main.rect.height },
         scrollOffsetY: main.scrollOffsetY,
         selectedRowRange,
+        resolveLabel,
       })
     }
   }
