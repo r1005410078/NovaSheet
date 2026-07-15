@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { BlockCache } from '../../../../src/kernel/data/windowed/BlockCache'
 
 function block(rowSpan: number, colSpan: number, fill: (r: number, c: number) => unknown) {
-  const values: unknown[] = new Array(rowSpan * colSpan)
+  const values: unknown[] = Array.from({ length: rowSpan * colSpan })
   for (let r = 0; r < rowSpan; r += 1) {
     for (let c = 0; c < colSpan; c += 1) values[r * colSpan + c] = fill(r, c)
   }
