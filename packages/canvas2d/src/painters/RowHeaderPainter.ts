@@ -2,7 +2,7 @@
  * RowHeaderPainter——Excel 门面左侧 1-based 行号列。
  */
 
-import type { Axis, Theme } from '@novasheet/core'
+import type { Axis, CellValue, Theme } from '@novasheet/core'
 import { snapLineInside } from '../paint/line-snap'
 
 export interface RowHeaderPaintParams {
@@ -11,6 +11,7 @@ export interface RowHeaderPaintParams {
   rect: { x: number; y: number; width: number; height: number }
   scrollOffsetY: number
   selectedRowRange?: { startRow: number; endRow: number }
+  readonly resolveLabel?: (rowIndex: number) => CellValue | undefined
 }
 
 export class RowHeaderPainter {
@@ -75,7 +76,7 @@ export class RowHeaderPainter {
       } else {
         ctx.fillStyle = this.theme.colors.headerText
       }
-      ctx.fillText(String(r + 1), rect.x + rect.width / 2, y)
+      ctx.fillText(this.resolveText(r, params.resolveLabel), rect.x + rect.width / 2, y)
     }
 
     this.paintRowHeaderGridLines(ctx, { rowsAxis, rowRange, rect, scrollOffsetY })
@@ -88,6 +89,16 @@ export class RowHeaderPainter {
     range: RowHeaderPaintParams['selectedRowRange'],
   ): boolean {
     return range !== undefined && rowIndex >= range.startRow && rowIndex <= range.endRow
+  }
+
+  private resolveText(
+    rowIndex: number,
+    resolveLabel: RowHeaderPaintParams['resolveLabel'],
+  ): string {
+    const value = resolveLabel?.(rowIndex)
+    if (typeof value === 'string') return value
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+    return String(rowIndex + 1)
   }
 
   private paintRowHeaderGridLines(

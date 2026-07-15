@@ -21,6 +21,44 @@ describe('RowHeaderPainter', () => {
     expect(texts).toContain('3')
   })
 
+  it('优先绘制调用方提供的 string 与有限 number 行头标签', () => {
+    const { ctx, ops } = createRecordingContext(240, 200)
+    const rowsAxis = new ChunkedAxis({ count: 3, defaultSize: 28 })
+    const labels = ['设备-001', 2002, '设备-003'] as const
+
+    new RowHeaderPainter(denseGridTheme).paint(ctx, {
+      rowsAxis,
+      rowRange: [0, 2],
+      rect: { x: 0, y: 32, width: 80, height: 120 },
+      scrollOffsetY: 0,
+      resolveLabel: (rowIndex) => labels[rowIndex],
+    })
+
+    const texts = ops
+      .filter((op) => op.op === 'fillText')
+      .map((op) => (op.op === 'fillText' ? op.args[0] : ''))
+    expect(texts).toEqual(['设备-001', '2002', '设备-003'])
+  })
+
+  it('缺失或不支持的标签值回退 1-based 行号，空字符串保持有效', () => {
+    const { ctx, ops } = createRecordingContext(240, 240)
+    const rowsAxis = new ChunkedAxis({ count: 6, defaultSize: 28 })
+    const labels = [undefined, null, true, ['x'], Number.NaN, ''] as const
+
+    new RowHeaderPainter(denseGridTheme).paint(ctx, {
+      rowsAxis,
+      rowRange: [0, 5],
+      rect: { x: 0, y: 32, width: 80, height: 180 },
+      scrollOffsetY: 0,
+      resolveLabel: (rowIndex) => labels[rowIndex],
+    })
+
+    const texts = ops
+      .filter((op) => op.op === 'fillText')
+      .map((op) => (op.op === 'fillText' ? op.args[0] : ''))
+    expect(texts).toEqual(['1', '2', '3', '4', '5', ''])
+  })
+
   it('绘制行号列水平网格线与右侧强分隔线', () => {
     const { ctx, ops } = createRecordingContext(200, 200)
     const rowsAxis = new ChunkedAxis({ count: 5, defaultSize: 28 })
