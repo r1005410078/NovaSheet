@@ -51,9 +51,13 @@ save
   set:textBaseline = middle
   set:textAlign = left
   set:fillStyle = #656d76
+  set:textAlign = left
   fillText("A", 8, 16, 64)
+  set:textAlign = left
   set:fillStyle = #656d76
+  set:textAlign = left
   fillText("B", 88, 16, 64)
+  set:textAlign = left
   set:strokeStyle = #eaeef2
   set:lineWidth = 1
   beginPath

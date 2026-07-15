@@ -7,9 +7,13 @@ save
   set:textBaseline = middle
   set:textAlign = left
   set:fillStyle = #656d76
+  set:textAlign = left
   fillText("Name", 8, 16, 104)
+  set:textAlign = left
   set:fillStyle = #656d76
+  set:textAlign = left
   fillText("Age", 128, 16, 104)
+  set:textAlign = left
   set:strokeStyle = #eaeef2
   set:lineWidth = 1
   beginPath

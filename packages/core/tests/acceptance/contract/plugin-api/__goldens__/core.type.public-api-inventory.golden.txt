@@ -71,6 +71,7 @@ parseSelectionNavigationKey
 parseTsvToCells
 pasteTargetConflictsWithMerges
 rangesIntersect
+resolveGridInteractions
 resolveUnderlyingRow
 serialToDate
 serializeRowsToTsv
