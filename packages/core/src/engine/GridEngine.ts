@@ -76,6 +76,8 @@ export interface GridEngineOptions {
    * ```
    */
   excelHeaders?: boolean
+  /** Excel 行头标签来源字段；缺省或值不可显示时使用 1-based 序号。 */
+  readonly rowHeaderField?: string
   /** Phase 5-C — 自定义 formatter 命名注册表（custom kind 查此表）。 */
   formatters?: Readonly<Record<string, import('../kernel/protocol/FormatTypes').CellFormatter>>
   /** Phase 5-C — formatter locale；默认 'en-US'。 */

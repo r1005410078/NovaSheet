@@ -58,6 +58,8 @@ export interface RenderFrame {
   rowsAxis: Axis
   colsAxis: Axis
   viewport: ViewportSnapshot
+  /** Excel 行头标签来源字段；renderer 按 view row 从 frame.data 读取。 */
+  readonly rowHeaderField?: string
   selection?: GridSelection
   /** Phase 4.4 — view 管线提供列头排序/筛选装饰。 */
   viewPipeline?: HeaderDecorationSource

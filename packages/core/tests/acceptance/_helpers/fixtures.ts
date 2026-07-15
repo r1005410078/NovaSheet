@@ -69,6 +69,8 @@ interface RenderRecorder {
 export function mountRecordingGrid(
   options: {
     data?: InMemoryDataSource
+    excelHeaders?: boolean
+    rowHeaderField?: string
     onColumnsMoved?: (event: { fieldIds: readonly string[]; beforeFieldId: string | null }) => void
     onCopy?: (range: CellRange) => void
     onCut?: (range: CellRange) => void
@@ -89,6 +91,8 @@ export function mountRecordingGrid(
   const grid = new Grid(container, {
     data: options.data ?? createDenseData(),
     backend,
+    excelHeaders: options.excelHeaders,
+    rowHeaderField: options.rowHeaderField,
     onColumnsMoved: options.onColumnsMoved,
     onCopy: options.onCopy,
     onCut: options.onCut,

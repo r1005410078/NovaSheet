@@ -128,6 +128,7 @@ export class DefaultGridEngine implements GridEngine {
   private columnGroupLayoutCache: { version: number; layout: ColumnGroupLayout | null } | null = null
   private theme: Theme
   private readonly excelHeaders: boolean
+  private readonly rowHeaderField: string | undefined
   private explicitDefaultRowHeight: number | undefined
   /** Phase 5-C — 自定义 formatter 注册表。 */
   private readonly formatters: Readonly<Record<string, CellFormatter>>
@@ -316,6 +317,7 @@ export class DefaultGridEngine implements GridEngine {
     )
     this.theme = options.theme ?? denseGridTheme
     this.excelHeaders = options.excelHeaders === true
+    this.rowHeaderField = options.rowHeaderField
     this.explicitDefaultRowHeight = options.defaultRowHeight
     this.formatters = options.formatters ?? {}
     this.locale = options.locale ?? 'en-US'
@@ -709,6 +711,7 @@ export class DefaultGridEngine implements GridEngine {
       colsAxis: this.layout.getColsAxis(),
       viewport: this.layout.getViewport().snapshot(),
       selection: this.selection.getSelection(),
+      rowHeaderField: this.rowHeaderField,
       cellEdit: this.editController.getSession() ?? undefined,
       allRowGaps: this.rowStructure.getCollapsedGaps(),
       allColGaps: this.columnStructure.getCollapsedColGaps(),

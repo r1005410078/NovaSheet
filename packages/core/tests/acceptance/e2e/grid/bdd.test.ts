@@ -87,6 +87,22 @@ describe('Core BDD Batch 2 grid facade scenarios', () => {
       document.body.removeChild(container)
     }))
 
+  it('Grid facade 把自定义行头字段转发到 RenderFrame', () =>
+    withManualRaf((flushRaf) => {
+      const { container, grid, recorder } = mountRecordingGrid({
+        excelHeaders: true,
+        rowHeaderField: 'deviceCode',
+      })
+
+      grid.refresh()
+      flushRaf()
+
+      expect(lastFrame(recorder).rowHeaderField).toBe('deviceCode')
+
+      grid.destroy()
+      document.body.removeChild(container)
+    }))
+
   it('core.L2.grid-layout-row-column-size updates frame axes through public facade', () =>
     withManualRaf((flushRaf) => {
       const { container, grid, recorder } = mountRecordingGrid({ data: createMutableData() })

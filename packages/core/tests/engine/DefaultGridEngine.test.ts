@@ -115,6 +115,18 @@ describe('DefaultGridEngine — 默认引擎', () => {
     expect(frame.viewport.contentRect.width).toBe(400)
   })
 
+  it('把 rowHeaderField 放进 RenderFrame，缺省时保持 undefined', () => {
+    const custom = new DefaultGridEngine({
+      data: makeData(2),
+      excelHeaders: true,
+      rowHeaderField: 'deviceCode',
+    })
+    const defaults = new DefaultGridEngine({ data: makeData(2), excelHeaders: true })
+
+    expect(custom.getFrame().rowHeaderField).toBe('deviceCode')
+    expect(defaults.getFrame().rowHeaderField).toBeUndefined()
+  })
+
   it('把 selection 放进 RenderFrame，供 renderer overlay 绘制', () => {
     const engine = new DefaultGridEngine({ data: makeData(5) })
 

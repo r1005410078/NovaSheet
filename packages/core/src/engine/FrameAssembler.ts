@@ -47,6 +47,7 @@ export interface FrameAssemblerInput {
   readonly colsAxis: ChunkedAxis
   readonly viewport: ViewportSnapshot
   readonly selection: GridSelection
+  readonly rowHeaderField?: string
   readonly cellEdit?: CellEditSession
   readonly allRowGaps: readonly CollapsedGap[]
   readonly allColGaps: readonly Omit<RenderFrameCollapsedColGap, 'xPx'>[]
@@ -137,6 +138,7 @@ export function assembleRenderFrame(input: FrameAssemblerInput): RenderFrame {
     colsAxis,
     viewport: vpSnap,
     selection: input.selection,
+    rowHeaderField: input.rowHeaderField,
     cellEdit: input.cellEdit,
     collapsedRowGaps,
     collapsedColGaps,
