@@ -3,8 +3,8 @@ import { InMemoryDataSource, SparseExcelDataSource } from '@novasheet/core'
 import { NovaExcel } from '@novasheet/react'
 import React from 'react'
 import { flushSync } from 'react-dom'
-import { createRoot } from 'react-dom/client'
 
+import { createReactStoryHost } from '../react-story-host'
 import { docsMeta, docsStory } from '../story-docs'
 import novaExcelSrc from './snippets/react.nova-excel.snippet.ts?raw'
 
@@ -56,18 +56,14 @@ export const NovaExcelOutOfTheBox: Story = {
   ),
   render: () => {
     const data = createDemoData()
-
-    const host = document.createElement('div')
+    const host = createReactStoryHost()
     host.style.width = '100%'
     host.style.height = '100vh'
     host.style.minHeight = '560px'
 
-    const root = createRoot(host)
-    ;(host as unknown as HTMLElement & { __reactRoot: typeof root }).__reactRoot = root
-    ;(host as unknown as HTMLElement & { __excelWorkspaceData: SparseExcelDataSource }).__excelWorkspaceData =
-      data
+    ;(host as typeof host & { __excelWorkspaceData: SparseExcelDataSource }).__excelWorkspaceData = data
     flushSync(() => {
-      root.render(
+      host.__reactRoot.render(
         React.createElement(NovaExcel, {
           data,
           locale: 'zh-CN', // CNY 显示为 ¥（en-US 下会是 CN¥）
@@ -88,17 +84,14 @@ export const CustomRowHeader: Story = {
   ),
   render: () => {
     const data = createCustomRowHeaderData()
-    const host = document.createElement('div')
+    const host = createReactStoryHost()
     host.style.width = '100%'
     host.style.height = '100vh'
     host.style.minHeight = '560px'
 
-    const root = createRoot(host)
-    ;(host as unknown as HTMLElement & { __reactRoot: typeof root }).__reactRoot = root
-    ;(host as unknown as HTMLElement & { __customRowHeaderData: InMemoryDataSource }).__customRowHeaderData =
-      data
+    ;(host as typeof host & { __customRowHeaderData: InMemoryDataSource }).__customRowHeaderData = data
     flushSync(() => {
-      root.render(
+      host.__reactRoot.render(
         React.createElement(NovaExcel, {
           data,
           excelWorkspace: false,

@@ -1,6 +1,7 @@
 import type { Preview } from '@storybook/html'
 import { DocsPage } from '@storybook/addon-docs/blocks'
 
+import { unmountReactStoryHosts } from '../src/react-story-host'
 import './preview.css'
 
 const preview: Preview = {
@@ -14,6 +15,11 @@ const preview: Preview = {
         sourceState: 'shown',
       },
     },
+  },
+  beforeEach: ({ canvasElement }) => {
+    return () => {
+      unmountReactStoryHosts(canvasElement)
+    }
   },
   decorators: [
     (story) => {
