@@ -523,6 +523,102 @@ it('render 按 rowHeaderField 从 frame view data 绘制自定义行头', () => 
     '3',
   ])
 })
+
+it('render 在冻结顶部行与滚动主区域均按 rowHeaderField 绘制自定义行头', () => {
+  const { ctx, ops } = createRecordingContext()
+  const constructorData = new InMemoryDataSource({
+    schema: SCHEMA,
+    rows: [
+      { name: 'Constructor 1', age: 1 },
+      { name: 'Constructor 2', age: 2 },
+      { name: 'Constructor 3', age: 3 },
+      { name: 'Constructor 4', age: 4 },
+    ],
+  })
+  const viewData = new InMemoryDataSource({
+    schema: SCHEMA,
+    rows: [
+      { deviceCode: '设备-001', name: 'Alice', age: 30 },
+      { deviceCode: '设备-002', name: 'Bob', age: 25 },
+      { deviceCode: '设备-003', name: 'Carol', age: 40 },
+      { deviceCode: '设备-004', name: 'Dave', age: 35 },
+    ],
+  })
+  const rowsAxis = new ChunkedAxis({
+    count: viewData.getRowCount(),
+    defaultSize: denseGridTheme.metrics.rowHeight,
+  })
+  const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
+  const frozen = new FrozenRegions(rowsAxis, colsAxis, { topRows: 1 })
+  const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+  viewport.setSize(400, 144)
+  viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+  viewport.setRowHeaderWidth(80)
+  viewport.setScroll(0, 56)
+
+  const renderer = new Canvas2DRenderer({
+    ctx,
+    data: constructorData,
+    viewport,
+    rowsAxis,
+    colsAxis,
+    theme: denseGridTheme,
+  })
+  renderer.render({
+    data: viewData,
+    theme: denseGridTheme,
+    rowsAxis,
+    colsAxis,
+    viewport: viewport.snapshot(),
+    collapsedRowGaps: [],
+    collapsedColGaps: [],
+    rowHeaderField: 'deviceCode',
+  })
+
+  expect(ops).toContainEqual({ op: 'fillText', args: ['设备-001', 40, 46] })
+  expect(ops).toContainEqual({ op: 'fillText', args: ['设备-003', 40, 74] })
+})
+
+it('render 在整行选中强行头状态下仍按 rowHeaderField 绘制自定义标签', () => {
+  const { renderer, ops, viewport, rowsAxis, colsAxis } = setup()
+  const viewData = new InMemoryDataSource({
+    schema: SCHEMA,
+    rows: [
+      { deviceCode: '设备-001', name: 'Alice', age: 30 },
+      { deviceCode: '设备-002', name: 'Bob', age: 25 },
+      { deviceCode: '设备-003', name: 'Carol', age: 40 },
+    ],
+  })
+  viewport.setRowHeaderWidth(80)
+  ops.length = 0
+
+  renderer.render({
+    data: viewData,
+    theme: denseGridTheme,
+    rowsAxis,
+    colsAxis,
+    viewport: viewport.snapshot(),
+    collapsedRowGaps: [],
+    collapsedColGaps: [],
+    rowHeaderField: 'deviceCode',
+    selection: {
+      activeCell: { rowIndex: 1, colIndex: 0 },
+      anchorCell: { rowIndex: 1, colIndex: 0 },
+      extentCell: { rowIndex: 1, colIndex: SCHEMA.fields.length - 1 },
+      selectedRange: {
+        startRow: 1,
+        endRow: 1,
+        startCol: 0,
+        endCol: SCHEMA.fields.length - 1,
+      },
+    },
+  })
+
+  expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBorder })
+  expect(ops).toContainEqual({ op: 'fillRect', args: [0, 60, 80, 28] })
+  expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionText })
+  expect(ops).toContainEqual({ op: 'fillText', args: ['设备-002', 40, 74] })
+})
 ```
 
 - [ ] **Step 2: 运行 Renderer 红测**
@@ -533,7 +629,9 @@ Run:
 bun test packages/canvas2d/tests/render/Canvas2DRenderer.test.ts -t "rowHeaderField"
 ```
 
-Expected: FAIL because Canvas2DRenderer does not pass a label resolver to RowHeaderPainter.
+Expected: all three tests FAIL because Canvas2DRenderer does not pass a label resolver to either
+RowHeaderPainter region; the selected-row test continues to prove the strong header state while its
+label assertion receives the default `2` instead of `设备-002`.
 
 - [ ] **Step 3: 让 paintRowHeaders 接收完整 frame**
 
@@ -590,7 +688,8 @@ bun test packages/canvas2d/tests/render/Canvas2DRenderer.test.ts packages/canvas
 bun run --filter @novasheet/canvas2d typecheck
 ```
 
-Expected: all tests and typecheck PASS; selected row-header repaint also uses the same custom labels.
+Expected: all tests and typecheck PASS; frozen `topCenter` and scrolled `main` both use labels from
+`frame.data`, and selected row-header repaint preserves the strong state while drawing the custom label.
 
 - [ ] **Step 6: 提交 Renderer inner loop**
 
