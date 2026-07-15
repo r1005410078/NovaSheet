@@ -203,7 +203,8 @@ export type ReactStoryHost = HTMLElement & {
 }
 
 export function createReactStoryHost(): ReactStoryHost {
-  const host = document.createElement('div') as ReactStoryHost
+  // property 在此函数内创建、赋值，unknown bridge 只用于受控 DOM 扩展属性。
+  const host = document.createElement('div') as unknown as ReactStoryHost
   host.dataset.novasheetReactRoot = ''
   host.__reactRoot = createRoot(host)
   return host
