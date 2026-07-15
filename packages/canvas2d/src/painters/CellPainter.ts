@@ -255,7 +255,7 @@ export class CellPainter {
     )
     if (wrapped.lines.length === 0) return
 
-    const baseX = rect.x + padX
+    const baseX = this.resolveTextX(rect, ctx.textAlign)
     const firstY = rect.y + padY + lineHeight / 2
     for (let i = 0; i < wrapped.lines.length; i++) {
       const line = wrapped.lines[i]!
@@ -272,7 +272,7 @@ export class CellPainter {
     const padX = this.theme.metrics.cellPaddingX
     const availableWidth = rect.width - padX * 2
     if (availableWidth <= 0) return
-    const x = rect.x + padX
+    const x = this.resolveTextX(rect, ctx.textAlign)
     const lines = text.split('\n')
     if (lines.length === 1) {
       const display = this.hardCut(ctx, lines[0]!, availableWidth)
@@ -291,7 +291,7 @@ export class CellPainter {
     }
   }
 
-  /** 绘制数字类型单元格（右对齐，千分位格式化）。preformatted 非 undefined 时跳过 toLocaleString。 */
+  /** 绘制数字类型单元格（按 theme.cell.textAlignByType.number 对齐，默认右对齐）。preformatted 非 undefined 时跳过 toLocaleString。 */
   private paintNumber(ctx: CanvasRenderingContext2D, value: number, rect: QuadrantRect, preformatted?: string): void {
     // 固定用 'en-US' 千分位——与浏览器 locale 解耦，避免不同用户跑出不同结果（影响测试和回归）。
     // 真正的本地化在更高层处理，M2+ 引入 locale-aware 字段时再做。
@@ -300,11 +300,21 @@ export class CellPainter {
     const availableWidth = rect.width - padX * 2
     const display = this.truncate(ctx, text, availableWidth)
     if (!display) return
-    // 右对齐：锚点在 padding 内沿右边界；textAlign='right' 由调用方 paint() 设置
-    // （theme.cell.textAlignByType.number === 'right'）。
-    const x = rect.x + rect.width - padX
+    const x = this.resolveTextX(rect, ctx.textAlign)
     const y = rect.y + rect.height / 2
     ctx.fillText(display, x, y)
+  }
+
+  /**
+   * 按 textAlign 计算 fillText 水平锚点（与 cellPaddingX 配合）。
+   * @param rect 单元格矩形
+   * @param align Canvas textAlign
+   */
+  private resolveTextX(rect: QuadrantRect, align: CanvasTextAlign): number {
+    const padX = this.theme.metrics.cellPaddingX
+    if (align === 'right' || align === 'end') return rect.x + rect.width - padX
+    if (align === 'center') return rect.x + rect.width / 2
+    return rect.x + padX
   }
 
   /**

@@ -49,6 +49,31 @@ describe('HeaderPainter — 列头', () => {
     expect(texts).toContain('Active')
   })
 
+  it('headerTextAlign=center 时叶头字段名水平居中', () => {
+    const theme = {
+      ...denseGridTheme,
+      cell: { ...denseGridTheme.cell, headerTextAlign: 'center' as const },
+    }
+    const { ctx, ops } = createRecordingContext()
+    const colsAxis = new ChunkedAxis({ count: 1, defaultSize: 100 })
+    new HeaderPainter(theme).paint(ctx, {
+      schema: {
+        fields: [{ id: 'c0', name: '簇1', type: 'text', width: 100 }],
+      },
+      colsAxis,
+      colRange: [0, 0],
+      width: 100,
+    })
+    expect(ops).toContainEqual({ op: 'set:textAlign', value: 'center' })
+    const nameTxt = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === '簇1',
+    )
+    expect(nameTxt).toBeDefined()
+    // x = colLeft + colWidth/2 = 50
+    expect(nameTxt!.args[1]).toBe(50)
+  })
+
   it('绘制过滤状态图标并为文字预留空间（排序箭头不再显示）', () => {
     const { ctx, ops } = createRecordingContext()
     const colsAxis = new ChunkedAxis({ count: 3, defaultSize: 100 })

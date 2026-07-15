@@ -59,7 +59,9 @@ export class RowHeaderPainter {
     ctx.fillStyle = this.theme.colors.headerBackground
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
 
-    ctx.textAlign = 'center'
+    const align = this.theme.cell.rowHeaderTextAlign
+    const padX = this.theme.metrics.cellPaddingX
+    ctx.textAlign = align
     ctx.textBaseline = 'middle'
     ctx.font = `${this.theme.metrics.fontSize}px ${this.theme.metrics.fontFamily}`
 
@@ -76,7 +78,13 @@ export class RowHeaderPainter {
       } else {
         ctx.fillStyle = this.theme.colors.headerText
       }
-      ctx.fillText(this.resolveText(r, params.resolveLabel), rect.x + rect.width / 2, y)
+      const textX =
+        align === 'left' || align === 'start'
+          ? rect.x + padX
+          : align === 'right' || align === 'end'
+            ? rect.x + rect.width - padX
+            : rect.x + rect.width / 2
+      ctx.fillText(this.resolveText(r, params.resolveLabel), textX, y)
     }
 
     this.paintRowHeaderGridLines(ctx, { rowsAxis, rowRange, rect, scrollOffsetY })

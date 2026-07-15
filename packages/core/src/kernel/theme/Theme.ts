@@ -82,6 +82,16 @@ export interface ThemeColors {
 export interface ThemeCell {
   /** 按字段类型决定 ctx.textAlign。number 通常右对齐，其余左对齐。 */
   readonly textAlignByType: Readonly<Record<BuiltInFieldType, CanvasTextAlign>>
+  /**
+   * 叶列表头（字段名行）与列组表头（堆/父组行）共用的文字对齐。
+   * Excel 列标模式（A/B/…）仍强制居中，不受此字段影响。
+   */
+  readonly headerTextAlign: CanvasTextAlign
+  /**
+   * Excel 左侧行头文字对齐。默认 center（适合 1/2/3 行号）；
+   * 自定义 rowHeaderField（如点号名）时常设为 left。
+   */
+  readonly rowHeaderTextAlign: CanvasTextAlign
   /** singleSelect/multiSelect 标签圆角与水平内边距——M2+ 使用 */
   readonly tagRadius: number
   /** 标签徽章水平内边距（px） */

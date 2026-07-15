@@ -58,6 +58,8 @@ export const denseGridTheme: Theme = {
       checkbox: 'left',
       url: 'left',
     },
+    headerTextAlign: 'left',
+    rowHeaderTextAlign: 'center',
     tagRadius: 10,
     tagPaddingX: 6,
   },

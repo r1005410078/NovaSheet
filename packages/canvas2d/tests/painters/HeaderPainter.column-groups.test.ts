@@ -73,6 +73,28 @@ describe('HeaderPainter — 列组表头行', () => {
     expect(texts).toContain('堆2')
   })
 
+  it('headerTextAlign=center 时组头标签水平居中于跨列范围', () => {
+    const theme = {
+      ...denseGridTheme,
+      cell: { ...denseGridTheme.cell, headerTextAlign: 'center' as const },
+    }
+    const { ctx, ops } = createRecordingContext()
+    new HeaderPainter(theme).paint(ctx, {
+      schema: SCHEMA,
+      colsAxis: makeAxis(),
+      colRange: [0, 3],
+      width: 400,
+      columnGroupHeader: twoGroupHeader(),
+      leafHeaderHeight: LEAF_HEIGHT,
+    })
+    const stack1 = ops.find(
+      (o): o is { op: 'fillText'; args: [string, number, number, number?] } =>
+        o.op === 'fillText' && o.args[0] === '堆1',
+    )
+    // s1 跨 [100,300)，中心 x=200
+    expect(stack1?.args[1]).toBe(200)
+  })
+
   it('有列组且关闭 columnLetters 时叶头绘制字段名（簇子集），不画 A/B 列标', () => {
     const schema: Schema = {
       fields: [

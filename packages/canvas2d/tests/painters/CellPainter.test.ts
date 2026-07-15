@@ -58,6 +58,34 @@ describe('CellPainter — 单元格', () => {
     expect(fillTextOp).toBeDefined()
     if (fillTextOp?.op === 'fillText') {
       expect(fillTextOp.args[0]).toBe('1,234,567')
+      // x = rect.x + width - padX = 0 + 100 - 8
+      expect(fillTextOp.args[1]).toBe(92)
+    }
+  })
+
+  it('textAlignByType=center 时正文锚点在单元格水平中心', () => {
+    const theme = {
+      ...denseGridTheme,
+      cell: {
+        ...denseGridTheme.cell,
+        textAlignByType: {
+          ...denseGridTheme.cell.textAlignByType,
+          text: 'center' as const,
+        },
+      },
+    }
+    const { ctx, ops } = createRecordingContext()
+    new CellPainter(theme).paint(ctx, {
+      value: 'hello',
+      rect: { x: 10, y: 0, width: 100, height: 28 },
+      field: makeField({ type: 'text' }),
+    })
+    expect(ops).toContainEqual({ op: 'set:textAlign', value: 'center' })
+    const fillTextOp = ops.find((o) => o.op === 'fillText')
+    expect(fillTextOp).toBeDefined()
+    if (fillTextOp?.op === 'fillText') {
+      // x = rect.x + width/2 = 10 + 50
+      expect(fillTextOp.args[1]).toBe(60)
     }
   })
 

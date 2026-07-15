@@ -155,9 +155,17 @@ export class HeaderPainter {
         const showMenuButton =
           hoveredMenu?.colIndex === c && colWidth >= MIN_HEADER_MENU_BUTTON_COL_WIDTH
         const menuButtonReserve = showMenuButton ? HEADER_MENU_BUTTON_SIZE + padX : 0
-        const textX = colLeft + padX
+        const align = this.theme.cell.headerTextAlign
         const maxTextWidth = Math.max(0, colWidth - padX * 2 - iconReserve - menuButtonReserve)
+        const textX =
+          align === 'center'
+            ? colLeft + (colWidth - iconReserve - menuButtonReserve) / 2
+            : align === 'right' || align === 'end'
+              ? colLeft + colWidth - padX - iconReserve - menuButtonReserve
+              : colLeft + padX
+        ctx.textAlign = align
         ctx.fillText(field.name, textX, y, maxTextWidth)
+        ctx.textAlign = 'left'
         // filter 图标用强调色，比 headerText 灰色更醒目
         const iconColor = icons.length > 0 ? this.theme.colors.selectionBorder : textColor
         this.paintStateIcons(ctx, icons, {
@@ -372,7 +380,18 @@ export class HeaderPainter {
         ctx.fillRect(left, rowTop, right - left, groupRowHeight)
 
         ctx.fillStyle = cell.selected ? this.theme.colors.selectionText : this.theme.colors.headerText
-        ctx.fillText(cell.label, left + padX, rowTop + groupRowHeight / 2, Math.max(0, right - left - padX * 2))
+        const align = this.theme.cell.headerTextAlign
+        const width = right - left
+        const maxTextWidth = Math.max(0, width - padX * 2)
+        const textX =
+          align === 'center'
+            ? left + width / 2
+            : align === 'right' || align === 'end'
+              ? right - padX
+              : left + padX
+        ctx.textAlign = align
+        ctx.fillText(cell.label, textX, rowTop + groupRowHeight / 2, maxTextWidth)
+        ctx.textAlign = 'left'
       }
     }
   }

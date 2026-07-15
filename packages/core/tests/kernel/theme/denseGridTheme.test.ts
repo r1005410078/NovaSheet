@@ -34,6 +34,8 @@ describe('denseGridTheme — 默认主题', () => {
   it('按字段类型提供文本对齐', () => {
     expect(denseGridTheme.cell.textAlignByType.text).toBe('left')
     expect(denseGridTheme.cell.textAlignByType.number).toBe('right')
+    expect(denseGridTheme.cell.headerTextAlign).toBe('left')
+    expect(denseGridTheme.cell.rowHeaderTextAlign).toBe('center')
   })
 
   it('颜色含网格线与背景', () => {
