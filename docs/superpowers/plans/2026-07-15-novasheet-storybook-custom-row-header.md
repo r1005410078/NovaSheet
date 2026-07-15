@@ -537,6 +537,7 @@ git commit -m "feat(storybook): 增加自定义行头案例"
 
 **Files:**
 - Review only.
+- Modify (generated when `build-storybook` runs): `apps/storybook/src/generated/excel-scenario-board.ts`
 
 - [ ] **Step 1: 运行改动范围测试与 lint**
 
@@ -556,6 +557,10 @@ git log -2 --oneline
 ```
 
 Expected: 仅包含本计划列出的 Storybook 测试、story 文件与本计划文档；主工作区既有未提交改动仍保持未暂存。
+
+`build-storybook` 会先同步 Excel Scenario Board。若它更新
+`apps/storybook/src/generated/excel-scenario-board.ts` 以纳入已实现的
+`excel.L3a.custom-row-header-field`，将该派生产物与本 feature 一并提交；不要手改时间戳或内容。
 
 - [ ] **Step 3: 代码审查重点**
 
