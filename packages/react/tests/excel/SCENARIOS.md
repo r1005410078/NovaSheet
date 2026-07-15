@@ -4,6 +4,7 @@
 
 | id | layer | status | summary |
 | --- | --- | --- | --- |
+| excel.L3a.custom-row-header-field | L3a | draft | Excel 行头从数据字段显示自定义标签 |
 | excel.L3a.default-mount | L3a | draft | 默认挂载 excel/grid/toolbar/canvas |
 | excel.L3a.grid-hide-callbacks | L3a | draft | ref 隐藏行列触发隐藏状态回调 |
 | excel.L3a.grid-structural-callbacks | L3a | draft | ref 结构变更触发行列回调 |
@@ -37,6 +38,31 @@
 | excel.L3c.rich-text-toolbar-bold-substring | L3c | draft | 注册 cell-kit 后外部 React toolbar 可加粗编辑态子串 |
 | excel.L3c.sparse-ref-grid | L3c | draft | 稀疏默认工作区 ref.grid |
 | excel.L3c.undo-button-state | L3c | draft | undo 按钮启用/禁用 |
+
+## excel.L3a.custom-row-header-field
+
+- **layer**: L3a
+- **summary**: Excel 行头从数据字段显示自定义标签
+- **status**: draft
+
+### User Story
+
+作为业务表格使用者，当每行数据包含设备编码时，我希望 Excel 最左侧行头显示该编码，以便排序、筛选或移动行后仍能识别对应业务记录。
+
+### Given
+
+- `NovaExcel` 接收包含 `deviceCode` 附加字段的数据
+- `rowHeaderField="deviceCode"`
+- `deviceCode` 不在 `schema.fields` 中
+
+### When
+
+- 组件挂载并完成首帧绘制
+
+### Then
+
+- 左侧行头显示 `设备-001` 和 `设备-002`
+- `rowHeaderField` 不落到宿主 grid DOM attribute
 
 ## excel.L3a.default-mount
 

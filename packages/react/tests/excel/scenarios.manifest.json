@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-15T22:33:03.692Z",
-  "source": "packages/react/tests/excel/scenarios/**/*.md",
+  "generatedAt": "2026-07-15T07:49:09.200Z",
+  "source": "tests/excel/scenarios/**/*.md",
   "titleConvention": {
     "description": "测试用例名称必须以 scenario id 开头，后接空格与人类可读说明",
     "idPattern": "^excel\\.L3[abc]\\.[a-z0-9-]+$",
@@ -12,13 +12,37 @@
   },
   "scenarios": [
     {
+      "id": "excel.L3a.custom-row-header-field",
+      "layer": "L3a",
+      "summary": "Excel 行头从数据字段显示自定义标签",
+      "userStory": "作为业务表格使用者，当每行数据包含设备编码时，我希望 Excel 最左侧行头显示该编码，以便排序、筛选或移动行后仍能识别对应业务记录。",
+      "tags": [
+        "excel",
+        "row-header"
+      ],
+      "status": "draft",
+      "sourceFile": "tests/excel/scenarios/L3a-custom-row-header-field.md",
+      "given": [
+        "`NovaExcel` 接收包含 `deviceCode` 附加字段的数据",
+        "`rowHeaderField=\"deviceCode\"`",
+        "`deviceCode` 不在 `schema.fields` 中"
+      ],
+      "when": [
+        "组件挂载并完成首帧绘制"
+      ],
+      "then": [
+        "左侧行头显示 `设备-001` 和 `设备-002`",
+        "`rowHeaderField` 不落到宿主 grid DOM attribute"
+      ]
+    },
+    {
       "id": "excel.L3a.default-mount",
       "layer": "L3a",
       "summary": "默认挂载 excel/grid/toolbar/canvas",
       "userStory": "作为业务开发者，当我把 NovaExcel 放进页面时，我希望开箱即见完整的 Excel 壳层（表格、工具栏、画布），以便确认组件已正确挂载并可继续交互。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3a-default-mount.md",
+      "sourceFile": "tests/excel/scenarios/L3a-default-mount.md",
       "given": [
         "渲染 NovaExcel，dense data"
       ],
@@ -36,7 +60,7 @@
       "userStory": "作为集成方，当我通过 NovaExcel ref 隐藏或取消隐藏行列时，我希望隐藏状态回调能反映当前隐藏集合，以便外部 UI 与 Grid 的可见性状态保持同步。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3a-grid-hide-callbacks.md",
+      "sourceFile": "tests/excel/scenarios/L3a-grid-hide-callbacks.md",
       "given": [
         "NovaExcel 已挂载，持有 ref",
         "传入 onHideChange / onHideColsChange"
@@ -56,7 +80,7 @@
       "userStory": "作为集成方，当我通过 NovaExcel ref 调用底层 Grid 的行列结构 API 时，我希望对应 props 回调被触发，以便外部状态栏、审计日志或协同层能观察到结构变更。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3a-grid-structural-callbacks.md",
+      "sourceFile": "tests/excel/scenarios/L3a-grid-structural-callbacks.md",
       "given": [
         "NovaExcel 已挂载，持有 ref",
         "传入 onRowsInserted / onRowsDeleted / onColumnsInserted / onColumnsDeleted"
@@ -78,7 +102,7 @@
       "userStory": "作为集成方，当我需要自定义工具栏或嵌入只读表格时，我希望关闭内置 toolbar 后表格区域仍正常显示，以便用自有 UI 驱动同一套 Grid。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3a-no-toolbar.md",
+      "sourceFile": "tests/excel/scenarios/L3a-no-toolbar.md",
       "given": [
         "渲染 NovaExcel，showToolbar: false"
       ],
@@ -97,7 +121,7 @@
       "userStory": "作为集成方，当我监听 `onSelectionChange` 等 props 回调时，我希望用户或程序改变选区后回调能触发，以便同步外部状态栏或协同编辑逻辑。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3a-props-callbacks.md",
+      "sourceFile": "tests/excel/scenarios/L3a-props-callbacks.md",
       "given": [
         "NovaExcel 传入 onSelectionChange"
       ],
@@ -115,7 +139,7 @@
       "userStory": "作为业务开发者，当我持有 NovaExcel 的 ref 时，我希望能直接调用底层 Grid 与滚动 API，以便在外部按钮或自动化脚本里驱动表格。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3a-ref-exposes-grid.md",
+      "sourceFile": "tests/excel/scenarios/L3a-ref-exposes-grid.md",
       "given": [
         "NovaExcel 已挂载，持有 ref"
       ],
@@ -134,7 +158,7 @@
       "userStory": "作为用户，当我打开空白工作簿且未传入数据源时，我希望看到可滚动的 A–Z × 1000 行稀疏工作区，以便像 Excel 一样从空表开始录入。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3a-sparse-default.md",
+      "sourceFile": "tests/excel/scenarios/L3a-sparse-default.md",
       "given": [
         "渲染 NovaExcel，不传 data"
       ],
@@ -153,7 +177,7 @@
       "userStory": "作为 React 应用开发者，在 Strict Mode 下开发时，我希望 NovaExcel 经历双次挂载/卸载后不留泄漏、ref 仍可用，以便与 React 18 开发模式兼容。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3a-strict-mode-remount.md",
+      "sourceFile": "tests/excel/scenarios/L3a-strict-mode-remount.md",
       "given": [
         "React StrictMode 包裹 NovaExcel"
       ],
@@ -174,7 +198,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-borders.md",
+      "sourceFile": "tests/excel/scenarios/L3b-borders.md",
       "given": [
         "NovaExcel 已挂载，有选区"
       ],
@@ -194,7 +218,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-clipboard.md",
+      "sourceFile": "tests/excel/scenarios/L3b-clipboard.md",
       "given": [
         "NovaExcel 已挂载，有选区"
       ],
@@ -212,7 +236,7 @@
       "userStory": "作为表格用户，当内置色板没有我要的颜色时，我希望用自定义取色器（含透明度）选色并应用到选区，以便实现半透明填充效果。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-custom-fill-color.md",
+      "sourceFile": "tests/excel/scenarios/L3b-custom-fill-color.md",
       "given": [
         "NovaExcel 已挂载，监听 onToolbarAction"
       ],
@@ -233,7 +257,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-default-range-on-format.md",
+      "sourceFile": "tests/excel/scenarios/L3b-default-range-on-format.md",
       "given": [
         "NovaExcel 无显式选区"
       ],
@@ -253,7 +277,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-fill-color.md",
+      "sourceFile": "tests/excel/scenarios/L3b-fill-color.md",
       "given": [
         "NovaExcel 已挂载，有选区"
       ],
@@ -273,7 +297,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-merge-cells.md",
+      "sourceFile": "tests/excel/scenarios/L3b-merge-cells.md",
       "given": [
         "NovaExcel 已挂载，有选区"
       ],
@@ -293,7 +317,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-selection-sync.md",
+      "sourceFile": "tests/excel/scenarios/L3b-selection-sync.md",
       "given": [
         "NovaExcel 已挂载"
       ],
@@ -314,7 +338,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-text-wrap.md",
+      "sourceFile": "tests/excel/scenarios/L3b-text-wrap.md",
       "given": [
         "NovaExcel 已挂载，有选区"
       ],
@@ -334,7 +358,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-undo-disabled.md",
+      "sourceFile": "tests/excel/scenarios/L3b-undo-disabled.md",
       "given": [
         "grid.canUndo() 为 false"
       ],
@@ -354,7 +378,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-undo-redo.md",
+      "sourceFile": "tests/excel/scenarios/L3b-undo-redo.md",
       "given": [
         "NovaExcel 已挂载，spy grid.undo/redo"
       ],
@@ -375,7 +399,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-unmerge-cells.md",
+      "sourceFile": "tests/excel/scenarios/L3b-unmerge-cells.md",
       "given": [
         "NovaExcel 已挂载，合并选区"
       ],
@@ -396,7 +420,7 @@
         "format"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3b-value-format.md",
+      "sourceFile": "tests/excel/scenarios/L3b-value-format.md",
       "given": [
         "NovaExcel 已挂载，有选区"
       ],
@@ -415,7 +439,7 @@
       "userStory": "作为集成方，我希望为数据列配置 currency 值格式（`Field.format`）后，NovaExcel 能正常挂载并通过 `setValueFormat` 变更格式范围，而无任何运行时错误，以便确认 Phase 5-C currency 格式化链路在 React 层可用。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-currency-display.md",
+      "sourceFile": "tests/excel/scenarios/L3c-currency-display.md",
       "given": [
         "schema 含一个 `format: { kind: 'currency', currency: 'CNY' }` 的数字列",
         "locale 设为 `zh-CN`"
@@ -437,7 +461,7 @@
       "userStory": "作为表格用户，当我添加过自定义颜色后，我希望下次打开调色板时它还在，以便复用同一颜色。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-custom-color-persist.md",
+      "sourceFile": "tests/excel/scenarios/L3c-custom-color-persist.md",
       "given": [
         "localStorage 干净；NovaExcel 已挂载"
       ],
@@ -459,7 +483,7 @@
         "editing"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-custom-react-editor-commit-cancel.md",
+      "sourceFile": "tests/excel/scenarios/L3c-custom-react-editor-commit-cancel.md",
       "given": [
         "NovaExcel 使用 `assignee` 字段",
         "`cellEditors.assignee` 由 `createReactCellEditor(AssigneePicker, { kind: \"popover\" })` 创建",
@@ -487,7 +511,7 @@
         "filter"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-custom-react-filter-editor-apply-cancel.md",
+      "sourceFile": "tests/excel/scenarios/L3c-custom-react-filter-editor-apply-cancel.md",
       "given": [
         "`assignee` 类型定义注册了 `assignee-is-any-of` filter operator",
         "`cellFilterEditors.assignee` 由 `createReactCellFilterEditor(AssigneeFilter)` 创建",
@@ -511,7 +535,7 @@
       "userStory": "作为集成方，我希望在外部监听 onUndo/onRedo 时，与工具栏撤销重做保持同一触发路径。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-external-on-undo-on-redo.md",
+      "sourceFile": "tests/excel/scenarios/L3c-external-on-undo-on-redo.md",
       "given": [
         "传入 onUndo/onRedo"
       ],
@@ -529,7 +553,7 @@
       "userStory": "作为 Firefox/Safari 用户，我不希望看到一个点了没反应的吸管按钮，以便界面诚实反映能力。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-eyedropper-feature-detect.md",
+      "sourceFile": "tests/excel/scenarios/L3c-eyedropper-feature-detect.md",
       "given": [
         "环境无 `window.EyeDropper`（happy-dom 默认）"
       ],
@@ -547,7 +571,7 @@
       "userStory": "作为表格用户，当我为选区填色后，我希望工具栏能显示当前填色状态，以便确认操作已生效。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-fill-reflects-toolbar.md",
+      "sourceFile": "tests/excel/scenarios/L3c-fill-reflects-toolbar.md",
       "given": [
         "NovaExcel 有选区"
       ],
@@ -566,7 +590,7 @@
       "userStory": "作为开发者，当我隐藏工具栏只保留表格时，仍希望通过 ref 调用 scrollToCell 等 API。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-no-toolbar-grid-ref.md",
+      "sourceFile": "tests/excel/scenarios/L3c-no-toolbar-grid-ref.md",
       "given": [
         "showToolbar: false"
       ],
@@ -584,7 +608,7 @@
       "userStory": "作为表格用户，当我撤销了一个可重做操作后，我希望重做按钮变为可点；当我重做完成且无可重做项时，按钮应变灰。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-redo-button-state.md",
+      "sourceFile": "tests/excel/scenarios/L3c-redo-button-state.md",
       "given": [
         "NovaExcel 已挂载",
         "已产生一个可撤销操作"
@@ -608,7 +632,7 @@
         "rich-text"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-rich-text-default-not-bundled.md",
+      "sourceFile": "tests/excel/scenarios/L3c-rich-text-default-not-bundled.md",
       "given": [
         "默认 NovaExcel（未注册 richTextExtension）"
       ],
@@ -631,7 +655,7 @@
         "toolbar"
       ],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-rich-text-toolbar-bold-substring.md",
+      "sourceFile": "tests/excel/scenarios/L3c-rich-text-toolbar-bold-substring.md",
       "given": [
         "注册 richTextExtension（codec+renderer+editor）的 Grid",
         "React toolbar 挂载 rich-text extension item",
@@ -654,7 +678,7 @@
       "userStory": "作为用户，打开空白工作簿时，我仍希望能通过 ref 访问 grid 开始编辑。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-sparse-ref-grid.md",
+      "sourceFile": "tests/excel/scenarios/L3c-sparse-ref-grid.md",
       "given": [
         "无 data prop"
       ],
@@ -672,7 +696,7 @@
       "userStory": "作为表格用户，当我做了可撤销的操作后，撤销按钮应变可点；撤销后若无可撤销项，按钮应变灰。",
       "tags": [],
       "status": "draft",
-      "sourceFile": "packages/react/tests/excel/scenarios/L3c-undo-button-state.md",
+      "sourceFile": "tests/excel/scenarios/L3c-undo-button-state.md",
       "given": [
         "NovaExcel 已挂载"
       ],
