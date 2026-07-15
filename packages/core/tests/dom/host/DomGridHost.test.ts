@@ -227,6 +227,32 @@ describe('DomGridHost — 滚动条交汇角', () => {
   })
 })
 
+describe('DomGridHost — viewport 尺寸', () => {
+  it('经典滚动条占位时 getContainerSize 返回 scrollHost client 区，避免画布绘制到滚动条下方', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', { value: 400, configurable: true })
+    Object.defineProperty(container, 'clientHeight', { value: 300, configurable: true })
+    document.body.appendChild(container)
+
+    const host = new DomGridHost({
+      container,
+      scheduler: new FrameScheduler(),
+      onScroll: () => {},
+      onResize: () => {},
+    })
+    host.attach()
+
+    const scrollHost = container.querySelector('[data-novasheet-scroll-host]') as HTMLDivElement
+    Object.defineProperty(scrollHost, 'clientWidth', { value: 385, configurable: true })
+    Object.defineProperty(scrollHost, 'clientHeight', { value: 285, configurable: true })
+
+    expect(host.getContainerSize()).toEqual({ width: 385, height: 285 })
+
+    host.destroy()
+    document.body.removeChild(container)
+  })
+})
+
 describe('DomGridHost — contextmenu', () => {
   it('contextmenu on scroll-host invokes onContextMenu with local coords + clientX/Y', () => {
     const container = document.createElement('div')

@@ -73,6 +73,58 @@ describe('HeaderPainter — 列组表头行', () => {
     expect(texts).toContain('堆2')
   })
 
+  it('有列组且关闭 columnLetters 时叶头绘制字段名（簇子集），不画 A/B 列标', () => {
+    const schema: Schema = {
+      fields: [
+        { id: 'leaf-0', name: '簇1', type: 'text', width: 100 },
+        { id: 'leaf-1', name: '簇2', type: 'text', width: 100 },
+        { id: 'leaf-2', name: '簇1', type: 'text', width: 100 },
+        { id: 'leaf-3', name: '簇2', type: 'text', width: 100 },
+      ],
+    }
+    const columnGroupHeader: RenderFrameColumnGroupHeader = {
+      depth: 1,
+      rows: [
+        [
+          {
+            groupId: 'g-0',
+            label: '堆1',
+            startViewCol: 0,
+            endViewCol: 1,
+            selected: false,
+          },
+          {
+            groupId: 'g-1',
+            label: '堆2',
+            startViewCol: 2,
+            endViewCol: 3,
+            selected: false,
+          },
+        ],
+      ],
+      leafTopRowByViewCol: [1, 1, 1, 1],
+    }
+    const { ctx, ops } = createRecordingContext()
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema,
+      colsAxis: makeAxis(),
+      colRange: [0, 3],
+      width: 400,
+      columnLetters: false,
+      columnGroupHeader,
+      leafHeaderHeight: LEAF_HEIGHT,
+    })
+    const texts = ops
+      .filter((o) => o.op === 'fillText')
+      .map((o) => (o.op === 'fillText' ? o.args[0] : ''))
+    expect(texts).toContain('堆1')
+    expect(texts).toContain('堆2')
+    expect(texts.filter((t) => t === '簇1')).toHaveLength(2)
+    expect(texts.filter((t) => t === '簇2')).toHaveLength(2)
+    expect(texts).not.toContain('A')
+    expect(texts).not.toContain('B')
+  })
+
   it('表头背景总高 = depth × groupHeaderRowHeight + leafHeaderHeight', () => {
     const { ctx, ops } = createRecordingContext()
     new HeaderPainter(denseGridTheme).paint(ctx, {
@@ -165,6 +217,47 @@ describe('HeaderPainter — 列组表头行', () => {
       (o) => o.op === 'fillRect' && o.args[0] === 300 && o.args[2] === 100,
     )
     expect(s2FillRectIdx).toBeGreaterThan(-1)
+  })
+
+  it('整列选中时组 cell 底边在线 leaf 选中背景之后重画，避免被高亮覆盖', () => {
+    const { ctx, ops } = createRecordingContext()
+    new HeaderPainter(denseGridTheme).paint(ctx, {
+      schema: SCHEMA,
+      colsAxis: makeAxis(),
+      colRange: [0, 3],
+      width: 400,
+      columnGroupHeader: twoGroupHeader({ s1: true }),
+      leafHeaderHeight: LEAF_HEIGHT,
+      selectedColumnRange: { startCol: 1, endCol: 2 },
+    })
+
+    const selectedLeafFillIdx = ops.findIndex(
+      (o) =>
+        o.op === 'fillRect' &&
+        o.args[0] === 100 &&
+        o.args[1] === GROUP_ROW_HEIGHT &&
+        o.args[2] === 100 &&
+        o.args[3] === LEAF_HEIGHT,
+    )
+    expect(selectedLeafFillIdx).toBeGreaterThan(-1)
+
+    const groupBottomMoveIdx = ops.findIndex(
+      (o, idx) =>
+        idx > selectedLeafFillIdx &&
+        o.op === 'moveTo' &&
+        o.args[0] === 100 &&
+        o.args[1] === GROUP_ROW_HEIGHT + 0.5,
+    )
+    const groupBottomLineIdx = ops.findIndex(
+      (o, idx) =>
+        idx > groupBottomMoveIdx &&
+        o.op === 'lineTo' &&
+        o.args[0] === 300 &&
+        o.args[1] === GROUP_ROW_HEIGHT + 0.5,
+    )
+
+    expect(groupBottomMoveIdx).toBeGreaterThan(selectedLeafFillIdx)
+    expect(groupBottomLineIdx).toBeGreaterThan(groupBottomMoveIdx)
   })
 
   it('columnGroupHeader 缺省时（零成本路径）不画任何组行内容，行为与无 group 参数完全一致', () => {

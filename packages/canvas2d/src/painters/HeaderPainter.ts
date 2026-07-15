@@ -121,10 +121,8 @@ export class HeaderPainter {
         colsAxis,
         colRange,
         x,
-        width,
         scrollOffsetX,
         groupRowHeight,
-        headerHeight,
       })
     }
 
@@ -174,6 +172,19 @@ export class HeaderPainter {
           this.paintHeaderMenuButton(ctx, colLeft, colWidth, y, hoveredMenu?.buttonHovered ?? false)
         }
       }
+    }
+
+    if (columnGroupHeader) {
+      this.paintColumnGroupGridLines(ctx, {
+        columnGroupHeader,
+        colsAxis,
+        colRange,
+        x,
+        width,
+        scrollOffsetX,
+        groupRowHeight,
+        headerHeight,
+      })
     }
 
     this.paintHeaderGridLines(ctx, {
@@ -337,23 +348,15 @@ export class HeaderPainter {
       colsAxis: Axis
       colRange: [number, number]
       x: number
-      width: number
       scrollOffsetX: number
       groupRowHeight: number
-      headerHeight: number
     },
   ): void {
-    const { columnGroupHeader, colsAxis, colRange, x, width, scrollOffsetX, groupRowHeight, headerHeight } =
-      params
+    const { columnGroupHeader, colsAxis, colRange, x, scrollOffsetX, groupRowHeight } = params
     const padX = this.theme.metrics.cellPaddingX
-
-    ctx.strokeStyle = this.theme.colors.gridLine
-    ctx.lineWidth = this.theme.metrics.borderWidth
-    ctx.beginPath()
 
     for (let level = 0; level < columnGroupHeader.depth; level++) {
       const rowTop = level * groupRowHeight
-      const rowBottom = rowTop + groupRowHeight
       const cells = columnGroupHeader.rows[level] ?? []
 
       for (const cell of cells) {
@@ -370,6 +373,41 @@ export class HeaderPainter {
 
         ctx.fillStyle = cell.selected ? this.theme.colors.selectionText : this.theme.colors.headerText
         ctx.fillText(cell.label, left + padX, rowTop + groupRowHeight / 2, Math.max(0, right - left - padX * 2))
+      }
+    }
+  }
+
+  private paintColumnGroupGridLines(
+    ctx: CanvasRenderingContext2D,
+    params: {
+      columnGroupHeader: RenderFrameColumnGroupHeader
+      colsAxis: Axis
+      colRange: [number, number]
+      x: number
+      width: number
+      scrollOffsetX: number
+      groupRowHeight: number
+      headerHeight: number
+    },
+  ): void {
+    const { columnGroupHeader, colsAxis, colRange, x, width, scrollOffsetX, groupRowHeight, headerHeight } =
+      params
+
+    ctx.strokeStyle = this.theme.colors.gridLine
+    ctx.lineWidth = this.theme.metrics.borderWidth
+    ctx.beginPath()
+
+    for (let level = 0; level < columnGroupHeader.depth; level++) {
+      const rowTop = level * groupRowHeight
+      const rowBottom = rowTop + groupRowHeight
+      const cells = columnGroupHeader.rows[level] ?? []
+
+      for (const cell of cells) {
+        if (cell.endViewCol < colRange[0] || cell.startViewCol > colRange[1]) continue
+
+        const left = x + colsAxis.indexToPosition(cell.startViewCol) - scrollOffsetX
+        const right =
+          x + colsAxis.indexToPosition(cell.endViewCol) + colsAxis.getSize(cell.endViewCol) - scrollOffsetX
 
         const bottomY = snapLineInside(rowBottom, 0, headerHeight)
         if (bottomY !== undefined) {

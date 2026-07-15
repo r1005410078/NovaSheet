@@ -410,7 +410,8 @@ export class Canvas2DRenderer implements RenderBackend {
         paintOrder,
         data,
         colsAxis,
-        excelChrome,
+        // 有 columnGroups 时叶头用字段名（簇1/簇2），保留行头 gutter；无组时仍画 A/B 列标
+        excelChrome && !ctx.frame.columnGroupHeader,
         ctx.frame.viewPipeline,
         ctx.frame.collapsedColGaps,
         this.getSelectedColumnHeaderRange(ctx.frame),
@@ -473,7 +474,8 @@ export class Canvas2DRenderer implements RenderBackend {
       paintOrder,
       data,
       colsAxis,
-      excelChrome,
+      // 有 columnGroups 时叶头用字段名（簇1/簇2），保留行头 gutter；无组时仍画 A/B 列标
+      excelChrome && !ctx.frame.columnGroupHeader,
       ctx.frame.viewPipeline,
       ctx.frame.collapsedColGaps,
       this.getSelectedColumnHeaderRange(ctx.frame),
