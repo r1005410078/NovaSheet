@@ -4,7 +4,7 @@
 
 **Goal:** 在 NovaExcel Storybook 中展示 `rowHeaderField` 使用数据行的 `deviceCode` 作为左侧行头。
 
-**Architecture:** 复用现有 `NovaExcel` React story host；新增独立 `CustomRowHeader` story，使用 `InMemoryDataSource` 的行附加字段存储设备编码，正文 schema 不包含该字段。Storybook 渲染测试通过 story host 暴露的数据源检查示例配置，并以 `RecordingContext2D` 断言 Canvas 实际绘制 `设备-001`。
+**Architecture:** 使用共享 React story host helper 创建、标记并保存 React root；`preview.tsx` 的全局 `beforeEach` cleanup 在 HTML renderer 清空 `canvasElement` 前卸载全部带标记的 root。新增独立 `CustomRowHeader` story，使用 `InMemoryDataSource` 的行附加字段存储设备编码，正文 schema 不包含该字段。Storybook 渲染测试通过 story host 暴露的数据源检查示例配置，并以 `RecordingContext2D` 断言 Canvas 实际绘制 `设备-001`。
 
 **Tech Stack:** TypeScript、React 18、`@storybook/html`、`@novasheet/core`、`@novasheet/react`、`bun:test`
 
@@ -14,8 +14,10 @@
 
 | 文件 | 责任 |
 | --- | --- |
+| `apps/storybook/src/react-story-host.ts` | 创建带 `data-novasheet-react-root` 标记的 React host，并卸载指定 Storybook canvas 内的 root |
+| `apps/storybook/.storybook/preview.tsx` | 在 HTML renderer 清空 `canvasElement` 前调用 React host cleanup |
 | `apps/storybook/src/stories/NovaExcel.stories.ts` | 新增数据构造器与 `CustomRowHeader` Storybook 案例 |
-| `apps/storybook/src/stories/NovaExcel.stories.test.ts` | 覆盖新案例的组件挂载、数据与正文 schema |
+| `apps/storybook/src/stories/NovaExcel.stories.test.ts` | 覆盖 React root cleanup、新案例的组件挂载、数据与正文 schema |
 
 ### Task 1: 新增 Storybook 渲染回归测试
 
@@ -126,6 +128,217 @@ git add apps/storybook/src/stories/NovaExcel.stories.test.ts
 git commit -m "test(storybook): 定义自定义行头案例"
 ```
 
+### Task 2A: 清理 Storybook HTML renderer 前的 React root
+
+**Files:**
+- Create: `apps/storybook/src/react-story-host.ts`
+- Modify: `apps/storybook/.storybook/preview.tsx`
+- Modify: `apps/storybook/src/stories/NovaExcel.stories.ts`
+- Modify: `apps/storybook/src/stories/NovaExcel.stories.test.ts`
+
+- [ ] **Step 1: 写入失败的 Storybook canvas 清理测试**
+
+在 `apps/storybook/src/stories/NovaExcel.stories.test.ts` 顶部加入：
+
+```ts
+import { act } from 'react'
+
+import { unmountReactStoryHosts } from '../react-story-host'
+```
+
+在现有 `NovaExcelOutOfTheBox` 测试后加入：
+
+```ts
+it('unmounts NovaExcel roots before Storybook clears its canvas', async () => {
+  const render = NovaExcelOutOfTheBox.render
+  expect(render).toBeDefined()
+
+  const host = (await renderStoryHost(
+    () => render!({}, {} as never) as HTMLElement,
+  )) as HTMLElement & { __reactRoot: { unmount(): void } }
+  const canvasElement = document.createElement('div')
+  canvasElement.appendChild(host)
+
+  expect(canvasElement.querySelector('[data-novasheet-react-grid]')).not.toBeNull()
+  expect(canvasElement.querySelector('canvas')).not.toBeNull()
+
+  act(() => {
+    unmountReactStoryHosts(canvasElement)
+  })
+
+  expect(host.querySelector('[data-novasheet-react-grid]')).toBeNull()
+  expect(host.querySelector('canvas')).toBeNull()
+})
+```
+
+- [ ] **Step 2: 运行测试确认 RED**
+
+Run:
+
+```bash
+bun test apps/storybook/src/stories/NovaExcel.stories.test.ts
+```
+
+Expected: FAIL，报错找不到 `../react-story-host`，证明测试覆盖的是尚不存在的共享清理边界。
+
+- [ ] **Step 3: 提交失败测试**
+
+```bash
+git add apps/storybook/src/stories/NovaExcel.stories.test.ts
+git commit -m "test(storybook): 定义 React root 清理"
+```
+
+- [ ] **Step 4: 实现带标记的 host 与 canvas 范围 cleanup**
+
+创建 `apps/storybook/src/react-story-host.ts`：
+
+```ts
+import { createRoot } from 'react-dom/client'
+import type { Root } from 'react-dom/client'
+
+const reactStoryHostSelector = '[data-novasheet-react-root]'
+
+export type ReactStoryHost = HTMLElement & {
+  __reactRoot: Root
+}
+
+export function createReactStoryHost(): ReactStoryHost {
+  const host = document.createElement('div') as ReactStoryHost
+  host.dataset.novasheetReactRoot = ''
+  host.__reactRoot = createRoot(host)
+  return host
+}
+
+export function unmountReactStoryHosts(canvasElement: HTMLElement): void {
+  for (const host of canvasElement.querySelectorAll<ReactStoryHost>(reactStoryHostSelector)) {
+    host.__reactRoot.unmount()
+  }
+}
+```
+
+- [ ] **Step 5: 在 Storybook preview 注册 teardown**
+
+把 `apps/storybook/.storybook/preview.tsx` 改为：
+
+```tsx
+import type { Preview } from '@storybook/html'
+import { DocsPage } from '@storybook/addon-docs/blocks'
+
+import { unmountReactStoryHosts } from '../src/react-story-host'
+import './preview.css'
+
+const preview: Preview = {
+  tags: ['autodocs'],
+  parameters: {
+    controls: { expanded: true },
+    layout: 'fullscreen',
+    docs: {
+      page: DocsPage,
+      canvas: {
+        sourceState: 'shown',
+      },
+    },
+  },
+  beforeEach: ({ canvasElement }) => {
+    return () => {
+      unmountReactStoryHosts(canvasElement)
+    }
+  },
+  decorators: [
+    (story) => {
+      const wrapper = document.createElement('div')
+      wrapper.style.position = 'absolute'
+      wrapper.style.inset = '0'
+      wrapper.style.boxSizing = 'border-box'
+      wrapper.style.padding = '16px'
+      wrapper.style.overflow = 'hidden'
+      wrapper.style.display = 'flex'
+      wrapper.style.flexDirection = 'column'
+      const result = story()
+      if (result instanceof HTMLElement) {
+        result.style.flex = '1 1 auto'
+        result.style.minHeight = '0'
+        result.style.width = '100%'
+        if (!result.style.height) result.style.height = '100%'
+      }
+      wrapper.appendChild(result as Node)
+      return wrapper
+    },
+  ],
+}
+
+export default preview
+```
+
+- [ ] **Step 6: 将既有 NovaExcel story 迁移到共享 host helper**
+
+在 `apps/storybook/src/stories/NovaExcel.stories.ts` 中删除：
+
+```ts
+import { createRoot } from 'react-dom/client'
+```
+
+并在本地 import 中加入：
+
+```ts
+import { createReactStoryHost } from '../react-story-host'
+```
+
+将 `NovaExcelOutOfTheBox.render` 替换为：
+
+```ts
+render: () => {
+  const data = createDemoData()
+  const host = createReactStoryHost()
+  host.style.width = '100%'
+  host.style.height = '100vh'
+  host.style.minHeight = '560px'
+
+  ;(host as typeof host & { __excelWorkspaceData: SparseExcelDataSource }).__excelWorkspaceData = data
+  flushSync(() => {
+    host.__reactRoot.render(
+      React.createElement(NovaExcel, {
+        data,
+        locale: 'zh-CN', // CNY 显示为 ¥（en-US 下会是 CN¥）
+        className: 'h-full w-full',
+      }),
+    )
+  })
+
+  return host
+},
+```
+
+`CustomRowHeader` 尚未在此步骤创建；Task 2 Step 3 必须使用同一 `createReactStoryHost()`，
+从而与上述既有 story 共享 `data-novasheet-react-root` 标记和 `__reactRoot` 清理路径。
+
+- [ ] **Step 7: 运行测试确认 GREEN**
+
+Run:
+
+```bash
+bun test apps/storybook/src/stories/NovaExcel.stories.test.ts
+```
+
+Expected: PASS，三个 story 测试通过；生命周期测试确认共享 cleanup 卸载实际 `NovaExcel` Grid 和 canvas。
+
+- [ ] **Step 8: 运行 Storybook 类型检查**
+
+Run:
+
+```bash
+bun run --filter @novasheet/storybook typecheck
+```
+
+Expected: exit 0。
+
+- [ ] **Step 9: 提交生命周期修复**
+
+```bash
+git add apps/storybook/src/react-story-host.ts apps/storybook/.storybook/preview.tsx apps/storybook/src/stories/NovaExcel.stories.ts
+git commit -m "fix(storybook): 清理 React story root"
+```
+
 ### Task 2: 实现 CustomRowHeader Storybook 案例
 
 **Files:**
@@ -144,6 +357,12 @@ import { SparseExcelDataSource } from '@novasheet/core'
 
 ```ts
 import { InMemoryDataSource, SparseExcelDataSource } from '@novasheet/core'
+```
+
+并保留 Task 2A 已加入的共享 host import：
+
+```ts
+import { createReactStoryHost } from '../react-story-host'
 ```
 
 - [ ] **Step 2: 增加设备数据构造器**
@@ -181,17 +400,14 @@ export const CustomRowHeader: Story = {
   ),
   render: () => {
     const data = createCustomRowHeaderData()
-    const host = document.createElement('div')
+    const host = createReactStoryHost()
     host.style.width = '100%'
     host.style.height = '100vh'
     host.style.minHeight = '560px'
 
-    const root = createRoot(host)
-    ;(host as unknown as HTMLElement & { __reactRoot: typeof root }).__reactRoot = root
-    ;(host as unknown as HTMLElement & { __customRowHeaderData: InMemoryDataSource }).__customRowHeaderData =
-      data
+    ;(host as typeof host & { __customRowHeaderData: InMemoryDataSource }).__customRowHeaderData = data
     flushSync(() => {
-      root.render(
+      host.__reactRoot.render(
         React.createElement(NovaExcel, {
           data,
           excelWorkspace: false,
