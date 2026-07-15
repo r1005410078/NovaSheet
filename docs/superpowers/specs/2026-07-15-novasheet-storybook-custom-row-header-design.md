@@ -36,9 +36,10 @@
 1. 可挂载 `NovaExcel` 和 canvas；
 2. 获取到 story 私有的数据源时，正文 schema 不含 `deviceCode`；
 3. 第一行数据的 `deviceCode` 为 `设备-001`。
+4. 通过 `RecordingContext2D` 检查 canvas `fillText` 操作包含 `设备-001`，锁定
+   `rowHeaderField="deviceCode"` 的实际绘制路径。
 
-Storybook 单测不检查 Canvas 文本 op-log；该行为已经由 React L3a 和 Canvas2D 测试覆盖。
-这里锁定示例配置与示例数据，防止演示退化成普通序号行头。
+这里同时锁定示例配置、示例数据和行头 Canvas 输出，防止演示退化成普通序号行头。
 
 ## 4. 非目标
 
