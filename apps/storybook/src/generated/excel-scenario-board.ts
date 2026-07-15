@@ -9,11 +9,20 @@ export interface ExcelScenarioBoardRow {
   readonly fillColor: '#34a353' | '#ea4335'
 }
 
-export const EXCEL_SCENARIO_BOARD_GENERATED_AT = "2026-07-12T23:10:09.299Z"
+export const EXCEL_SCENARIO_BOARD_GENERATED_AT = "2026-07-15T10:44:51.750Z"
 
-export const EXCEL_SCENARIO_BOARD_STATS = {"covered":33,"total":33} as const
+export const EXCEL_SCENARIO_BOARD_STATS = {"covered":34,"total":34} as const
 
 export const EXCEL_SCENARIO_BOARD_ROWS: readonly ExcelScenarioBoardRow[] = [
+  {
+    "layer": "L3a",
+    "id": "excel.L3a.custom-row-header-field",
+    "summary": "Excel 行头从数据字段显示自定义标签",
+    "userStory": "作为业务表格使用者，当每行数据包含设备编码时，我希望 Excel 最左侧行头显示该编码，以便排序、筛选或移动行后仍能识别对应业务记录。",
+    "manifestStatus": "implemented",
+    "coverage": "covered",
+    "fillColor": "#34a353"
+  },
   {
     "layer": "L3a",
     "id": "excel.L3a.default-mount",
