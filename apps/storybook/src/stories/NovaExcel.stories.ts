@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { SparseExcelDataSource } from '@novasheet/core'
+import { InMemoryDataSource, SparseExcelDataSource } from '@novasheet/core'
 import { NovaExcel } from '@novasheet/react'
 import React from 'react'
 import { flushSync } from 'react-dom'
@@ -32,6 +32,22 @@ function createDemoData(): SparseExcelDataSource {
   return data
 }
 
+function createCustomRowHeaderData(): InMemoryDataSource {
+  return new InMemoryDataSource({
+    schema: {
+      fields: [
+        { id: 'name', name: '名称', type: 'text', width: 180 },
+        { id: 'status', name: '状态', type: 'text', width: 120 },
+      ],
+    },
+    rows: [
+      { deviceCode: '设备-001', name: '电池组 A', status: '运行' },
+      { deviceCode: '设备-002', name: '电池组 B', status: '待机' },
+      { deviceCode: '设备-003', name: '电池组 C', status: '停止' },
+    ],
+  })
+}
+
 export const NovaExcelOutOfTheBox: Story = {
   name: 'NovaExcel (out of the box)',
   ...docsStory(
@@ -55,6 +71,39 @@ export const NovaExcelOutOfTheBox: Story = {
         React.createElement(NovaExcel, {
           data,
           locale: 'zh-CN', // CNY 显示为 ¥（en-US 下会是 CN¥）
+          className: 'h-full w-full',
+        }),
+      )
+    })
+
+    return host
+  },
+}
+
+export const CustomRowHeader: Story = {
+  name: 'Custom row header',
+  ...docsStory(
+    '<NovaExcel data={data} excelWorkspace={false} rowHeaderField="deviceCode" showToolbar={false} />',
+    "Uses each row data object's deviceCode as the Excel row header. The deviceCode field remains outside the body schema.",
+  ),
+  render: () => {
+    const data = createCustomRowHeaderData()
+    const host = document.createElement('div')
+    host.style.width = '100%'
+    host.style.height = '100vh'
+    host.style.minHeight = '560px'
+
+    const root = createRoot(host)
+    ;(host as unknown as HTMLElement & { __reactRoot: typeof root }).__reactRoot = root
+    ;(host as unknown as HTMLElement & { __customRowHeaderData: InMemoryDataSource }).__customRowHeaderData =
+      data
+    flushSync(() => {
+      root.render(
+        React.createElement(NovaExcel, {
+          data,
+          excelWorkspace: false,
+          rowHeaderField: 'deviceCode',
+          showToolbar: false,
           className: 'h-full w-full',
         }),
       )
