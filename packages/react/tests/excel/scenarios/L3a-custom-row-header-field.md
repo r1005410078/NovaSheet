@@ -3,7 +3,7 @@ id: excel.L3a.custom-row-header-field
 layer: L3a
 summary: Excel 行头从数据字段显示自定义标签
 tags: [excel, row-header]
-status: draft
+status: implemented
 ---
 
 ## User Story

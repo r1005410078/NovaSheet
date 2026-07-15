@@ -15,9 +15,95 @@ import {
   type ReactCellFilterEditorProps,
 } from '../../src'
 import { unmountReactRoot } from '../helpers/dom'
+import { createRecordingContext } from '../../../canvas2d/tests/helpers/recording-context'
 import { createDenseData, mountNovaExcel, runGridUpdate, selectSingleCell } from './helpers'
 
 describe('NovaExcel L3a shell', () => {
+  it('excel.L3a.custom-row-header-field paints labels from row data without leaking the prop to DOM', async () => {
+    const originalGetContext = HTMLCanvasElement.prototype.getContext
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame
+    const rafQueue: FrameRequestCallback[] = []
+    const recordings: Array<{
+      readonly canvas: HTMLCanvasElement
+      readonly recording: ReturnType<typeof createRecordingContext>
+    }> = []
+
+    const data = new InMemoryDataSource({
+      schema: {
+        fields: [{ id: 'name', name: '名称', type: 'text', width: 180 }],
+      },
+      rows: [
+        { deviceCode: '设备-001', name: '电池组 A' },
+        { deviceCode: '设备-002', name: '电池组 B' },
+      ],
+    })
+
+    const container = document.createElement('div')
+    const ref = React.createRef<NovaExcelRef>()
+    let root: ReturnType<typeof createRoot> | undefined
+    try {
+      globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+        rafQueue.push(callback)
+        return rafQueue.length
+      }
+      HTMLCanvasElement.prototype.getContext = function getContext(
+        this: HTMLCanvasElement,
+        type: string,
+      ) {
+        if (type !== '2d') return null
+        const recording = createRecordingContext(this.width || 800, this.height || 600)
+        recordings.push({ canvas: this, recording })
+        return recording.ctx as never
+      } as never
+
+      const reactRoot = createRoot(container)
+      root = reactRoot
+      await act(async () => {
+        flushSync(() => {
+          reactRoot.render(
+            React.createElement(NovaExcel, {
+              data,
+              excelWorkspace: false,
+              ref,
+              rowHeaderField: 'deviceCode',
+              showToolbar: false,
+            }),
+          )
+        })
+        await Promise.resolve()
+      })
+
+      ref.current!.refresh()
+      while (rafQueue.length > 0) {
+        const callbacks = rafQueue.splice(0)
+        for (const callback of callbacks) callback(performance.now())
+      }
+
+      const gridRoot = container.querySelector('[data-novasheet-react-grid]')!
+      const canvas = gridRoot.querySelector<HTMLCanvasElement>('canvas')!
+      const visibleRecording = recordings.find((entry) => entry.canvas === canvas)?.recording
+      expect(visibleRecording).toBeDefined()
+
+      const texts = visibleRecording!.ops
+        .filter((op) => op.op === 'fillText')
+        .map((op) => (op.op === 'fillText' ? op.args[0] : ''))
+      expect(texts).toContain('设备-001')
+      expect(texts).toContain('设备-002')
+
+      expect(gridRoot.hasAttribute('rowHeaderField')).toBe(false)
+    } finally {
+      try {
+        try {
+          if (root) unmountReactRoot(root)
+        } finally {
+          HTMLCanvasElement.prototype.getContext = originalGetContext
+        }
+      } finally {
+        globalThis.requestAnimationFrame = originalRequestAnimationFrame
+      }
+    }
+  })
+
   it('excel.L3a.default-mount renders excel grid toolbar and canvas', async () => {
     const { container, unmount } = await mountNovaExcel({ data: createDenseData() })
 

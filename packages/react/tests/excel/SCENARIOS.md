@@ -4,7 +4,7 @@
 
 | id | layer | status | summary |
 | --- | --- | --- | --- |
-| excel.L3a.custom-row-header-field | L3a | draft | Excel 行头从数据字段显示自定义标签 |
+| excel.L3a.custom-row-header-field | L3a | implemented | Excel 行头从数据字段显示自定义标签 |
 | excel.L3a.default-mount | L3a | draft | 默认挂载 excel/grid/toolbar/canvas |
 | excel.L3a.grid-hide-callbacks | L3a | draft | ref 隐藏行列触发隐藏状态回调 |
 | excel.L3a.grid-structural-callbacks | L3a | draft | ref 结构变更触发行列回调 |
@@ -43,7 +43,7 @@
 
 - **layer**: L3a
 - **summary**: Excel 行头从数据字段显示自定义标签
-- **status**: draft
+- **status**: implemented
 
 ### User Story
 
