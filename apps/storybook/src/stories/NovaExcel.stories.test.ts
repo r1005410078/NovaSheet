@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
+import { act } from 'react'
 
 import { createRecordingContext } from '../../../../packages/canvas2d/tests/helpers/recording-context'
+import { unmountReactStoryHosts } from '../react-story-host'
 import { renderStoryHost, unmountReactRoot } from '../react-test-helpers'
 import { CustomRowHeader, NovaExcelOutOfTheBox } from './NovaExcel.stories'
 
@@ -23,6 +25,27 @@ describe('NovaExcel Storybook stories', () => {
     expect(host.__excelWorkspaceData.getSchema().fields).toHaveLength(26)
 
     unmountReactRoot((host as unknown as { __reactRoot: { unmount(): void } }).__reactRoot)
+  })
+
+  it('unmounts NovaExcel roots before Storybook clears its canvas', async () => {
+    const render = NovaExcelOutOfTheBox.render
+    expect(render).toBeDefined()
+
+    const host = (await renderStoryHost(
+      () => render!({}, {} as never) as HTMLElement,
+    )) as HTMLElement & { __reactRoot: { unmount(): void } }
+    const canvasElement = document.createElement('div')
+    canvasElement.appendChild(host)
+
+    expect(canvasElement.querySelector('[data-novasheet-react-grid]')).not.toBeNull()
+    expect(canvasElement.querySelector('canvas')).not.toBeNull()
+
+    act(() => {
+      unmountReactStoryHosts(canvasElement)
+    })
+
+    expect(host.querySelector('[data-novasheet-react-grid]')).toBeNull()
+    expect(host.querySelector('canvas')).toBeNull()
   })
 
   it('renders NovaExcel with device codes as custom row headers', async () => {
