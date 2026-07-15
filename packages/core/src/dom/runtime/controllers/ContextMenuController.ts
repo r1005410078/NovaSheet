@@ -63,6 +63,8 @@ export interface ContextMenuControllerDeps {
   getSortLayer(): SortLayer | undefined
   getFilterLayer(): FilterLayer | undefined
   getContextMenus(): ContextMenuExtensionConfig | undefined
+  /** 是否允许打开右键/列头菜单（含 hover 菜单按钮）。 */
+  isContextMenuEnabled(): boolean
   /** `resizeDrag.active || activeDrag?.active`。 */
   isDragActive(): boolean
   isCellEditing(): boolean
@@ -196,6 +198,7 @@ export class ContextMenuController {
   /** 处理 host contextmenu 事件，并根据列头/单元格命中打开对应菜单。 */
   handleHostContextMenu(event: WebPointerEvent): void {
     if (this.deps.isDestroyed()) return
+    if (!this.deps.isContextMenuEnabled()) return
     if (this.deps.isDragActive()) return
 
     if (this.deps.isCellEditing()) {
@@ -554,6 +557,14 @@ export class ContextMenuController {
    * 使用去重优化：状态未变时不调用 engine 也不 invalidate。
    */
   updateHoveredColumnHeaderMenu(event: WebPointerEvent): void {
+    if (!this.deps.isContextMenuEnabled()) {
+      if (this.lastHoveredColumnMenu !== null) {
+        this.lastHoveredColumnMenu = null
+        this.deps.engine.setHoveredColumnHeaderMenu(null)
+        this.deps.invalidate()
+      }
+      return
+    }
     const hit = this.deps.hitTestColumnHeader(event)
     if (!hit) {
       if (this.lastHoveredColumnMenu !== null) {
@@ -597,6 +608,7 @@ export class ContextMenuController {
 
   /** 打开指定列索引对应的列头上下文菜单（复用 openResolvedContextMenu）。 */
   openColumnHeaderContextMenu(colIndex: number, _event: WebPointerEvent): void {
+    if (!this.deps.isContextMenuEnabled()) return
     const viewPipeline = this.deps.getViewPipeline()
     if (!viewPipeline) return
     const frame = this.deps.engine.getFrame()

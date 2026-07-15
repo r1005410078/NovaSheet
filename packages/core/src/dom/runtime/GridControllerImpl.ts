@@ -38,6 +38,7 @@ import type { ExcelWorkspacePolicy } from '../../features/excel-workspace'
 import type { PasteSkippedCell } from '../../features/clipboard/types'
 import type { SortSpec } from '../../features/view/SortLayer'
 import type { Theme } from '../../kernel/theme/Theme'
+import type { GridInteractions } from './GridInteractions'
 import type { TextMeasurer } from '../../kernel/measure/TextMeasurer'
 import type { ViewLayerChange } from '../../features/view/ViewLayer'
 import { DomCellEditor } from '../interaction/DomCellEditor'
@@ -161,6 +162,7 @@ export class GridControllerImpl implements GridController {
           excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
           contextMenus?: ContextMenuExtensionConfig
           contextMenuRenderer?: ContextMenuRenderer
+          interactions?: GridInteractions
         }
       | undefined,
     backend: RenderBackendFactory,
@@ -254,6 +256,7 @@ export class GridControllerImpl implements GridController {
       excelWorkspace: gridOptions?.excelWorkspace,
       contextMenus: gridOptions?.contextMenus,
       contextMenuRenderer: gridOptions?.contextMenuRenderer,
+      interactions: gridOptions?.interactions,
       onSurfaceResize: (w, h) => this.handle.resizeSurface(w, h),
     })
 

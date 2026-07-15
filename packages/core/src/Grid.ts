@@ -26,6 +26,7 @@ import type { ExcelWorkspacePolicy } from './features/excel-workspace'
 import type { FilterLayer } from './features/view/FilterLayer'
 import type { SortLayer } from './features/view/SortLayer'
 import type { ViewPipeline } from './features/view/ViewPipeline'
+import type { GridInteractions } from './dom/runtime/GridInteractions'
 import { GridControllerImpl } from './dom/runtime/GridControllerImpl'
 import type {
   AutofitRowsOptions,
@@ -83,6 +84,11 @@ export interface GridOptions extends GridEngineOptions {
   excelWorkspace?: boolean | { readonly policy?: Partial<ExcelWorkspacePolicy> }
   /** 上下文菜单配置式扩展（append / prepend / replace + transform）。 */
   readonly contextMenus?: ContextMenuExtensionConfig
+  /**
+   * 交互能力开关：右键菜单、行列改尺寸、行列换位。
+   * 字段缺省为启用；监控只读表可传 `{ contextMenu: false, resize: false, reorder: false }`。
+   */
+  readonly interactions?: GridInteractions
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -136,6 +142,7 @@ export class Grid {
         excelWorkspace: options.excelWorkspace,
         contextMenus: options.contextMenus,
         contextMenuRenderer: options.contextMenuRenderer,
+        interactions: options.interactions,
       },
       options.backend,
     )

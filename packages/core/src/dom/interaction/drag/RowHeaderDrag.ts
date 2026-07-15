@@ -30,6 +30,8 @@ export interface RowHeaderDragDeps {
   hitTestRowHeader(event: WebPointerEvent): { rowIndex: number } | null
   isWholeRowSelection(range: CellRange): boolean
   selectWholeRowRange(anchorRow: number, extentRow: number): void
+  /** 是否允许进入行换位模式；false 时表头拖拽仅做整行拖选。 */
+  allowReorder?: boolean
 }
 
 interface ReorderState {
@@ -77,7 +79,8 @@ export class RowHeaderDrag implements Drag {
       range &&
       this.deps.isWholeRowSelection(range) &&
       hit.rowIndex >= range.startRow &&
-      hit.rowIndex <= range.endRow
+      hit.rowIndex <= range.endRow &&
+      this.deps.allowReorder !== false
     ) {
       const rowIds = Array.from(
         { length: range.endRow - range.startRow + 1 },

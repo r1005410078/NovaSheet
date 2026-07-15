@@ -5,6 +5,8 @@
 // 程序化引擎访问：使用下方 DefaultGridEngine。
 export { Grid, withExcelHeaders } from './Grid'
 export type { GridOptions } from './Grid'
+export type { GridInteractions, ResolvedGridInteractions } from './dom/runtime/GridInteractions'
+export { resolveGridInteractions } from './dom/runtime/GridInteractions'
 
 // 数据层
 export { InMemoryDataSource } from './kernel/data/InMemoryDataSource'

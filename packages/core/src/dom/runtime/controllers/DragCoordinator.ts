@@ -85,6 +85,10 @@ export interface DragCoordinatorDeps {
   readonly fillLayer?: DomFillHandleLayer
   readonly columnReorderOverlay?: ColumnReorderOverlay
   readonly rowReorderOverlay?: RowReorderOverlay
+  /** 是否允许拖拽改行高/列宽；默认 true。 */
+  readonly allowResize?: boolean
+  /** 是否允许拖拽换位；默认 true（表头拖选不受影响）。 */
+  readonly allowReorder?: boolean
 }
 
 export class DragCoordinator {
@@ -128,6 +132,7 @@ export class DragCoordinator {
       selectWholeColumn: (col) => this.deps.selectWholeColumn(col),
       selectWholeColumnRange: (anchor, extent) => this.deps.selectWholeColumnRange(anchor, extent),
       getColsTotalSize: () => this.deps.getColsTotalSize(),
+      allowReorder: this.deps.allowReorder !== false,
     })
     this.rowHeaderDrag = new RowHeaderDrag({
       engine: this.deps.engine,
@@ -142,6 +147,7 @@ export class DragCoordinator {
       hitTestRowHeader: (event) => this.deps.hitTestRowHeader(event),
       isWholeRowSelection: (range) => this.deps.isWholeRowSelection(range),
       selectWholeRowRange: (anchor, extent) => this.deps.selectWholeRowRange(anchor, extent),
+      allowReorder: this.deps.allowReorder !== false,
     })
     this.fillHandleDrag = new FillHandleDrag({
       engine: this.deps.engine,
@@ -237,6 +243,7 @@ export class DragCoordinator {
     clientX: number,
     clientY: number,
   ): void {
+    if (this.deps.allowResize === false) return
     if (this.resizeDrag.start(handle, pointerId, clientX, clientY)) {
       this.activeDrag = this.resizeDrag
     }
@@ -275,6 +282,7 @@ export class DragCoordinator {
 
   /** 处理键盘 resize，按 delta 调整行高或列宽。 */
   handleResizeKeyboard(handle: ResizeHandleRect, delta: number): void {
+    if (this.deps.allowResize === false) return
     const current = this.readResizeSize(handle)
     if (current === null) return
     const next = Math.max(MIN_RESIZE_SIZE, current + delta)

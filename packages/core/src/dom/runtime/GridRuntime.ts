@@ -79,6 +79,11 @@ import type { RenderBackend } from '../../ports/RenderBackend'
 import type { NativeScrollSource } from '../scroll/NativeScroller'
 import type { CellEditorRegistry } from '../interaction/CellEditorContract'
 import type { CellTypeRegistry } from '../../features/cell-types'
+import {
+  resolveGridInteractions,
+  type GridInteractions,
+  type ResolvedGridInteractions,
+} from './GridInteractions'
 
 /** GridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
 export interface AutofitRowsRuntimeOptions {
@@ -142,6 +147,8 @@ export interface GridRuntimeOptions {
   contextMenus?: ContextMenuExtensionConfig
   /** DOM override renderer：替换内置 DomContextMenuLayer，由 consumer 完全接管菜单渲染。 */
   contextMenuRenderer?: ContextMenuRenderer
+  /** 交互能力开关（菜单 / 改尺寸 / 换位）。 */
+  interactions?: GridInteractions
 }
 
 /** Undo 成功后的 runtime 事件。 */
@@ -253,6 +260,8 @@ export class GridRuntime {
   private onFill?: (event: FillEvent) => void
   /** 选区变化通知回调。 */
   private onSelectionChange?: (selection: GridSelection) => void
+  /** 归一化后的交互开关。 */
+  private readonly interactions: ResolvedGridInteractions
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: GridRuntimeOptions) {
@@ -274,6 +283,7 @@ export class GridRuntime {
     this.rowReorderOverlay = opts.rowReorderOverlay
     this.selectionOverlay = opts.selectionOverlay
     this.validationTooltip = opts.validationTooltip
+    this.interactions = resolveGridInteractions(opts.interactions)
     this.engine.setValidationRedrawCallback(() => this.invalidate())
     this.engine.setDataChangeRedrawCallback(() => this.invalidate())
     this.viewport = new ViewportController({
@@ -335,6 +345,7 @@ export class GridRuntime {
       getSortLayer: () => this.sortLayer,
       getFilterLayer: () => this.filterLayer,
       getContextMenus: () => opts.contextMenus,
+      isContextMenuEnabled: () => this.interactions.contextMenu,
       isDragActive: () => this.drag.isAnyDragActive(),
       isCellEditing: () => this.engine.isCellEditing(),
       commitCellEdit: (moveAfter) => this.cellEdit.commitCellEdit(moveAfter),
@@ -440,6 +451,8 @@ export class GridRuntime {
       fillLayer: this.fillLayer,
       columnReorderOverlay: this.columnReorderOverlay,
       rowReorderOverlay: this.rowReorderOverlay,
+      allowResize: this.interactions.resize,
+      allowReorder: this.interactions.reorder,
     })
     this.input = new InputController({
       engine: this.engine,
@@ -958,6 +971,10 @@ export class GridRuntime {
   /** 根据当前 frame 同步 resize handle layer；flush 路径复用已构建的 frame，避免重复 getFrame。 */
   private syncResizeHandles(frame?: ReturnType<GridEngine['getFrame']>): void {
     if (!this.handleLayer || this.drag.isResizeDragActive()) return
+    if (!this.interactions.resize) {
+      this.handleLayer.sync([])
+      return
+    }
     const f = frame ?? this.engine.getFrame()
     this.handleLayer.sync(computeResizeHandles(f))
   }

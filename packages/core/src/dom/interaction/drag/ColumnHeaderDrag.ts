@@ -32,6 +32,8 @@ export interface ColumnHeaderDragDeps {
   selectWholeColumn(colIndex: number): void
   selectWholeColumnRange(anchorCol: number, extentCol: number): void
   getColsTotalSize(): number
+  /** 是否允许进入列换位模式；false 时表头拖拽仅做整列拖选。 */
+  allowReorder?: boolean
 }
 
 interface ReorderState {
@@ -87,7 +89,8 @@ export class ColumnHeaderDrag implements Drag {
       !range ||
       !this.deps.isWholeColumnSelection(range) ||
       hit.colIndex < range.startCol ||
-      hit.colIndex > range.endCol
+      hit.colIndex > range.endCol ||
+      this.deps.allowReorder === false
     ) {
       this.deps.selectWholeColumn(hit.colIndex)
       this.state = { mode: 'select', anchorCol: hit.colIndex }
