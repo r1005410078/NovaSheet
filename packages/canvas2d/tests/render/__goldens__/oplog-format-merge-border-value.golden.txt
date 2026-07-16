@@ -1,3 +1,4 @@
+clearRect(0, 0, 320, 160)
 set:fillStyle = #ffffff
 fillRect(0, 0, 320, 160)
 save

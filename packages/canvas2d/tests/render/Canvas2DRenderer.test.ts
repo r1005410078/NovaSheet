@@ -49,6 +49,14 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     return { ctx, ops, data, viewport, rowsAxis, colsAxis, renderer }
   }
 
+  it('paint 每帧先清空完整视口，透明主题不累积旧帧', () => {
+    const { renderer, ops } = setup()
+
+    renderer.paint()
+
+    expect(ops[0]).toEqual({ op: 'clearRect', args: [0, 0, 400, 200] })
+  })
+
   it('paint 清背景并绘制列头与可见单元格', () => {
     const { renderer, ops } = setup()
     renderer.paint()

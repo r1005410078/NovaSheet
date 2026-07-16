@@ -380,6 +380,7 @@ export class Canvas2DRenderer implements RenderBackend {
 
   private paintBackgroundLayer(ctx: Canvas2DPaintFrameContext): void {
     const { contentRect, theme } = ctx
+    this.ctx.clearRect(0, 0, contentRect.width, contentRect.height)
     this.ctx.fillStyle = theme.colors.background
     this.ctx.fillRect(0, 0, contentRect.width, contentRect.height)
   }
