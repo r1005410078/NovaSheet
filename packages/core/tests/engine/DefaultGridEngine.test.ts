@@ -127,6 +127,18 @@ describe('DefaultGridEngine — 默认引擎', () => {
     expect(defaults.getFrame().rowHeaderField).toBeUndefined()
   })
 
+  it('把 rowHeaderCornerLabel 放进 RenderFrame，缺省时保持 undefined', () => {
+    const custom = new DefaultGridEngine({
+      data: makeData(2),
+      excelHeaders: true,
+      rowHeaderCornerLabel: '点号名称',
+    })
+    const defaults = new DefaultGridEngine({ data: makeData(2), excelHeaders: true })
+
+    expect(custom.getFrame().rowHeaderCornerLabel).toBe('点号名称')
+    expect(defaults.getFrame().rowHeaderCornerLabel).toBeUndefined()
+  })
+
   it('把 selection 放进 RenderFrame，供 renderer overlay 绘制', () => {
     const engine = new DefaultGridEngine({ data: makeData(5) })
 

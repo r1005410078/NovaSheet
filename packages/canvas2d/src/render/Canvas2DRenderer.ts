@@ -681,7 +681,12 @@ export class Canvas2DRenderer implements RenderBackend {
         ? undefined
         : (viewRowIndex: number) => frame.data.getCell(viewRowIndex, rowHeaderField)
 
-    this.rowHeaderPainter.paintCorner(this.ctx, gutter, snapshot.headerHeight)
+    this.rowHeaderPainter.paintCorner(
+      this.ctx,
+      gutter,
+      snapshot.headerHeight,
+      frame.rowHeaderCornerLabel,
+    )
 
     const topRegion = regions.find((r) => r.id === 'topCenter')
     if (topRegion && topRegion.rowRange[1] >= topRegion.rowRange[0]) {

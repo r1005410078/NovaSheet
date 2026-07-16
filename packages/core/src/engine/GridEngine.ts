@@ -78,6 +78,11 @@ export interface GridEngineOptions {
   excelHeaders?: boolean
   /** Excel 行头标签来源字段；缺省或值不可显示时使用 1-based 序号。 */
   readonly rowHeaderField?: string
+  /**
+   * 行头与列头交叉角格文案（如「点号名称」）。
+   * 仅在 excelHeaders / 行头 gutter 可见时由 renderer 绘制；缺省不画字。
+   */
+  readonly rowHeaderCornerLabel?: string
   /** Phase 5-C — 自定义 formatter 命名注册表（custom kind 查此表）。 */
   formatters?: Readonly<Record<string, import('../kernel/protocol/FormatTypes').CellFormatter>>
   /** Phase 5-C — formatter locale；默认 'en-US'。 */

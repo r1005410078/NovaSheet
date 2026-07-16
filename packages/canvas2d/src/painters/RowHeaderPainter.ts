@@ -24,8 +24,15 @@ export class RowHeaderPainter {
   /**
    * 左上角（列标/行号交汇）。`headerHeight` 须传表头**总高**（`viewport.headerHeight`，
    * 含列组表头行）——否则有列组时角块会比表头矮一截，与其余表头段错位。
+   *
+   * @param label 可选角格文案（如「点号名称」）；缺省只画底与边。
    */
-  paintCorner(ctx: CanvasRenderingContext2D, width: number, headerHeight: number): void {
+  paintCorner(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    headerHeight: number,
+    label?: string,
+  ): void {
     if (width <= 0) return
     ctx.fillStyle = this.theme.colors.headerBackground
     ctx.fillRect(0, 0, width, headerHeight)
@@ -45,6 +52,23 @@ export class RowHeaderPainter {
       ctx.lineTo(width, bottom)
     }
     ctx.stroke()
+
+    const text = label?.trim()
+    if (!text) return
+
+    const align = this.theme.cell.rowHeaderTextAlign
+    const padX = this.theme.metrics.cellPaddingX
+    ctx.fillStyle = this.theme.colors.headerText
+    ctx.textAlign = align
+    ctx.textBaseline = 'middle'
+    ctx.font = `${this.theme.metrics.fontSize}px ${this.theme.metrics.fontFamily}`
+    const textX =
+      align === 'left' || align === 'start'
+        ? padX
+        : align === 'right' || align === 'end'
+          ? width - padX
+          : width / 2
+    ctx.fillText(text, textX, headerHeight / 2)
   }
 
   paint(ctx: CanvasRenderingContext2D, params: RowHeaderPaintParams): void {

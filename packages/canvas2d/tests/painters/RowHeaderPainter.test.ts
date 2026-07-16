@@ -85,6 +85,23 @@ describe('RowHeaderPainter', () => {
     const totalHeaderHeight = denseGridTheme.metrics.headerHeight + 2 * denseGridTheme.metrics.groupHeaderRowHeight
     new RowHeaderPainter(denseGridTheme).paintCorner(ctx, 44, totalHeaderHeight)
     expect(ops).toContainEqual({ op: 'fillRect', args: [0, 0, 44, totalHeaderHeight] })
+    expect(ops.some((o) => o.op === 'fillText')).toBe(false)
+  })
+
+  it('paintCorner 有 label 时在角块内垂直居中绘制文案', () => {
+    const { ctx, ops } = createRecordingContext(200, 200)
+    const totalHeaderHeight = 64
+    new RowHeaderPainter(denseGridTheme).paintCorner(ctx, 140, totalHeaderHeight, '点号名称')
+
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.headerText })
+    expect(ops).toContainEqual({
+      op: 'fillText',
+      args: [
+        '点号名称',
+        140 / 2,
+        totalHeaderHeight / 2,
+      ],
+    })
   })
 
   it('整行选中时行头使用强选中背景与选中文字色', () => {
