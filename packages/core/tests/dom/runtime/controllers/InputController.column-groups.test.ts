@@ -97,6 +97,42 @@ function makeGroupedFrame(): RenderFrame {
   }
 }
 
+function makeFrozenGroupedFrame(): RenderFrame {
+  const frame = makeGroupedFrame()
+  return {
+    ...frame,
+    viewport: {
+      ...frame.viewport,
+      contentRect: { width: 300, height: 300 },
+      scrollX: 100,
+      regions: [
+        {
+          id: 'main',
+          rowBand: 'middle',
+          colBand: 'center',
+          rowRange: [0, 4],
+          colRange: [2, 2],
+          rect: { x: 100, y: TOTAL_HEADER_HEIGHT, width: 200, height: 240 },
+          scrollOffsetX: 200,
+          scrollOffsetY: 0,
+          zIndex: 10,
+        },
+        {
+          id: 'middleLeft',
+          rowBand: 'middle',
+          colBand: 'left',
+          rowRange: [0, 4],
+          colRange: [0, 0],
+          rect: { x: 0, y: TOTAL_HEADER_HEIGHT, width: 100, height: 240 },
+          scrollOffsetX: 0,
+          scrollOffsetY: 0,
+          zIndex: 20,
+        },
+      ],
+    },
+  }
+}
+
 function makeCtl(frame: RenderFrame, over: Record<string, unknown> = {}) {
   const engine = makeMockGridEngine({
     overrides: { getFrame: mock(() => frame) } as Partial<GridEngine>,
@@ -172,12 +208,48 @@ describe('InputController — hitTestGroupHeader（组头行命中）', () => {
   })
 
   it('锁定 level 后横向越界钳到该层首组或末组', () => {
-    const { ctl } = makeCtl(makeGroupedFrame())
+    const frame = makeGroupedFrame()
+    const { ctl } = makeCtl(frame)
     expect(
       ctl.hitTestGroupHeaderAtLevel({ x: -10, y: 200, shiftKey: false }, 0)?.groupId,
     ).toBe('s1')
     expect(
-      ctl.hitTestGroupHeaderAtLevel({ x: 350, y: 200, shiftKey: false }, 0)?.groupId,
+      ctl.hitTestGroupHeaderAtLevel({
+        x: frame.viewport.contentRect.width,
+        y: 200,
+        shiftKey: false,
+      }, 0)?.groupId,
+    ).toBe('s1')
+  })
+
+  it('leftCols > 0 且 scrollX > 0 时冻结无组列不误命中 center 组', () => {
+    const { ctl } = makeCtl(makeFrozenGroupedFrame())
+    expect(ctl.hitTestGroupHeader({ x: 50, y: 10, shiftKey: false })).toBeNull()
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: 50, y: 200, shiftKey: false }, 0),
+    ).toBeNull()
+  })
+
+  it('按 center region 的 scrollOffsetX 命中滚动后的可见组列', () => {
+    const { ctl } = makeCtl(makeFrozenGroupedFrame())
+    expect(ctl.hitTestGroupHeader({ x: 150, y: 10, shiftKey: false })).toEqual({
+      groupId: 's1',
+      level: 0,
+      startViewCol: 1,
+      endViewCol: 2,
+    })
+  })
+
+  it('锁层拖选进入 viewport 内冻结段时返回 null，只有真正越界才钳位', () => {
+    const { ctl } = makeCtl(makeFrozenGroupedFrame())
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: 50, y: 200, shiftKey: false }, 0),
+    ).toBeNull()
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: -1, y: 200, shiftKey: false }, 0)?.groupId,
+    ).toBe('s1')
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: 300, y: 200, shiftKey: false }, 0)?.groupId,
     ).toBe('s1')
   })
 

@@ -13,6 +13,10 @@ function makeDrag(options: {
   isWholeColumnSelection?: (range: CellRange) => boolean
   blocked?: boolean
   hitTestGroupHeader?: (event: WebPointerEvent) => ColumnGroupHeaderHit | null
+  hitTestGroupHeaderAtLevel?: (
+    event: WebPointerEvent,
+    level: number,
+  ) => ColumnGroupHeaderHit | null
 } = {}) {
   const selectWholeColumnRange = mock((_anchor: number, _extent: number) => {})
   const requestAutoScroll = mock((_event: WebPointerEvent) => {})
@@ -25,8 +29,8 @@ function makeDrag(options: {
     stopAutoScroll,
     isBlocked: () => options.blocked ?? false,
     hitTestGroupHeader: options.hitTestGroupHeader ?? ((event) => event.x < 300 ? s1 : s2),
-    hitTestGroupHeaderAtLevel: (event, level) =>
-      level === 0 ? (event.x < 300 ? s1 : s2) : null,
+    hitTestGroupHeaderAtLevel: options.hitTestGroupHeaderAtLevel ?? ((event, level) =>
+      level === 0 ? (event.x < 300 ? s1 : s2) : null),
     isWholeColumnSelection: options.isWholeColumnSelection ?? (() => false),
     selectWholeColumnRange,
   })
@@ -61,6 +65,27 @@ describe('ColumnGroupHeaderDrag', () => {
     const shifted = makeDrag({ selection, isWholeColumnSelection: () => true })
     shifted.drag.tryStart({ x: 350, y: 10, shiftKey: true, button: 0 })
     expect(shifted.selectWholeColumnRange).toHaveBeenLastCalledWith(1, 4)
+  })
+
+  it('move 进入冻结无组段未命中时保持 pointerdown 已建立的选区', () => {
+    const frozen = makeDrag({ hitTestGroupHeaderAtLevel: () => null })
+    frozen.drag.tryStart({ x: 150, y: 10, shiftKey: false, button: 0 })
+    expect(frozen.selectWholeColumnRange).toHaveBeenCalledTimes(1)
+    frozen.drag.move({ x: 50, y: 200, shiftKey: false })
+    expect(frozen.selectWholeColumnRange).toHaveBeenCalledTimes(1)
+    expect(frozen.selectWholeColumnRange).toHaveBeenLastCalledWith(1, 2)
+  })
+
+  it('Shift 从右侧整列 anchor 向左组扩选时使用目标组左边界', () => {
+    const selection = {
+      activeCell: { rowIndex: 0, colIndex: 4 },
+      anchorCell: { rowIndex: 0, colIndex: 4 },
+      extentCell: { rowIndex: 2, colIndex: 3 },
+      selectedRange: { startRow: 0, endRow: 2, startCol: 3, endCol: 4 },
+    }
+    const shifted = makeDrag({ selection, isWholeColumnSelection: () => true })
+    shifted.drag.tryStart({ x: 150, y: 10, shiftKey: true, button: 0 })
+    expect(shifted.selectWholeColumnRange).toHaveBeenLastCalledWith(4, 1)
   })
 
   it('blocked 或未命中时不消费 pointerdown', () => {

@@ -16,6 +16,7 @@
 import type { GridEngine } from '../../../engine/GridEngine'
 import { isTypableEditKey } from '../../../features/edit/CellEdit'
 import type { CellAddress, CellRange } from '../../../kernel/coords/SelectionTypes'
+import type { RenderRegion } from '../../../kernel/geometry/FrozenRegions'
 import { hitTestCell } from '../../../kernel/interaction/HitTest'
 import type { RenderFrameGroupHeaderCell } from '../../../kernel/render/RenderFrame'
 import type { CellActionHit, RenderBackend } from '../../../ports/RenderBackend'
@@ -341,14 +342,11 @@ export class InputController {
     if (!columnGroupHeader) return null
     const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
     if (event.y < 0 || event.y >= headerHeight) return null
-    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    const scrollX = frame.viewport.scrollX ?? 0
-    const logicalX = event.x - rowHeaderWidth + scrollX
-    const totalSize = this.deps.getColsTotalSizeForFrame(frame)
-    if (event.x < rowHeaderWidth || logicalX < 0 || logicalX >= totalSize) return null
     const level = Math.floor(event.y / frame.theme.metrics.groupHeaderRowHeight)
     if (level < 0 || level >= columnGroupHeader.depth) return null
-    return this.hitTestGroupHeaderAtLevel(event, level)
+    const colIndex = this.hitTestGroupHeaderViewCol(frame, event.x)
+    if (colIndex === null) return null
+    return this.findGroupHeaderHitAtColumn(columnGroupHeader.rows[level], level, colIndex)
   }
 
   hitTestGroupHeaderAtLevel(
@@ -359,15 +357,44 @@ export class InputController {
     const columnGroupHeader = frame.columnGroupHeader
     const row = columnGroupHeader?.rows[level]
     if (!row) return null
-    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    const scrollX = frame.viewport.scrollX ?? 0
-    const logicalX = event.x - rowHeaderWidth + scrollX
-    const totalSize = this.deps.getColsTotalSizeForFrame(frame)
     if (row.length === 0) return null
-    if (logicalX < 0) return this.toColumnGroupHeaderHit(row[0]!, level)
-    if (logicalX >= totalSize) return this.toColumnGroupHeaderHit(row[row.length - 1]!, level)
+    if (event.x < 0) return this.toColumnGroupHeaderHit(row[0]!, level)
+    if (event.x >= frame.viewport.contentRect.width) {
+      return this.toColumnGroupHeaderHit(row[row.length - 1]!, level)
+    }
+    const colIndex = this.hitTestGroupHeaderViewCol(frame, event.x)
+    if (colIndex === null) return null
+    return this.findGroupHeaderHitAtColumn(row, level, colIndex)
+  }
+
+  private hitTestGroupHeaderViewCol(
+    frame: RuntimeRenderFrame,
+    x: number,
+  ): number | null {
+    const region = this.findHorizontalHeaderRegion(frame, x)
+    if (!region) return null
+    const logicalX = region.scrollOffsetX + x - region.rect.x
     const colIndex = frame.colsAxis.positionToIndex(logicalX)
-    const cell = row.find(
+    if (colIndex < region.colRange[0] || colIndex > region.colRange[1]) return null
+    return colIndex
+  }
+
+  private findHorizontalHeaderRegion(
+    frame: RuntimeRenderFrame,
+    x: number,
+  ): RenderRegion | null {
+    return [...frame.viewport.regions]
+      .filter((region) => region.rowBand === 'middle')
+      .sort((a, b) => b.zIndex - a.zIndex)
+      .find((region) => x >= region.rect.x && x < region.rect.x + region.rect.width) ?? null
+  }
+
+  private findGroupHeaderHitAtColumn(
+    row: readonly RenderFrameGroupHeaderCell[] | undefined,
+    level: number,
+    colIndex: number,
+  ): ColumnGroupHeaderHit | null {
+    const cell = row?.find(
       (candidate) =>
         colIndex >= candidate.startViewCol && colIndex <= candidate.endViewCol,
     )
