@@ -31,7 +31,7 @@ bun run storybook
 
 - Keep changes scoped to one behavior or documentation improvement.
 - Add or update tests for runtime behavior changes.
-- Keep package boundaries intact: `@novasheet/core` must remain platform-independent.
+- Keep package boundaries intact: `@zhiguang/novasheet-core` must remain platform-independent.
 - Run `bun run lint`, `bun run typecheck`, `bun test`, and `bun run build` before requesting review.
 - Update README, architecture docs, or Storybook stories when public behavior changes.
 

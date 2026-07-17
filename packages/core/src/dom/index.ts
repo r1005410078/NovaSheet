@@ -14,7 +14,7 @@ export type {
 export { DomClipboardAdapter } from './clipboard/DomClipboardAdapter'
 
 // —— 运行时白盒测试公开面：GridRuntime + 几个 overlay/handle 句柄类型，
-//    供 @novasheet/canvas2d 的 GridRuntime.selection-overlay 集成测试白盒装配 runtime。
+//    供 @zhiguang/novasheet-canvas2d 的 GridRuntime.selection-overlay 集成测试白盒装配 runtime。
 //    其余 DOM 壳内部类（drag/popover/各 overlay/handle）保持内部，不进半稳定契约。
 export { DomFillHandleLayer } from './interaction/DomFillHandleLayer'
 export { SelectionOverlay } from './overlay/SelectionOverlay'

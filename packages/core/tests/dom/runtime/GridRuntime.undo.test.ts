@@ -4,10 +4,10 @@ import {
   InMemoryDataSource,
   type Schema,
   type UndoCommand,
-} from '@novasheet/core'
-import type { WebHost } from '@novasheet/core'
-import type { RenderBackend } from '@novasheet/core'
-import { GridRuntime } from '@novasheet/core'
+} from '@zhiguang/novasheet-core'
+import type { WebHost } from '@zhiguang/novasheet-core'
+import type { RenderBackend } from '@zhiguang/novasheet-core'
+import { GridRuntime } from '@zhiguang/novasheet-core'
 
 const schema: Schema = {
   fields: [

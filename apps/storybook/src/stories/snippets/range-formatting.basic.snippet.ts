@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { Grid } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
-import { InMemoryDataSource } from '@novasheet/core'
-import type { BorderPreset, BorderStyle, CellRange } from '@novasheet/core'
+import { Grid } from '@zhiguang/novasheet-core'
+import { canvas2dBackend } from '@zhiguang/novasheet-canvas2d'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
+import type { BorderPreset, BorderStyle, CellRange } from '@zhiguang/novasheet-core'
 
 const RED_BORDER: BorderStyle = { color: '#cc0000', width: 'medium', lineStyle: 'solid' }
 const THIN_BORDER: BorderStyle = { color: '#666666', width: 'thin', lineStyle: 'solid' }

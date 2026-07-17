@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { denseGridTheme } from '@novasheet/core'
+import { denseGridTheme } from '@zhiguang/novasheet-core'
 import { applyScrollbarTheme, ensureScrollbarStylesheet } from '../../../src/dom/host/scrollbar-style'
 
 describe('scrollbar-style', () => {

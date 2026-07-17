@@ -6,7 +6,7 @@
  * 是否为 anchor，以及取出区域以计算合并矩形。坐标已是 view 空间，不做任何翻译。
  */
 
-import type { CellRange, MergeRegion } from '@novasheet/core'
+import type { CellRange, MergeRegion } from '@zhiguang/novasheet-core'
 
 /** 只需 getSize 的轴契约（duck-typed，便于单测注入最简 stub）。 */
 interface SizedAxis {

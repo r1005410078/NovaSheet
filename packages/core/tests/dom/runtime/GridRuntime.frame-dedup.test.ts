@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { GridRuntime } from '@novasheet/core'
-import type { RenderBackend, WebHost } from '@novasheet/core'
+import { GridRuntime } from '@zhiguang/novasheet-core'
+import type { RenderBackend, WebHost } from '@zhiguang/novasheet-core'
 import { DomHandleLayer } from '../../../src/dom/interaction/DomHandleLayer'
 import { makeMockGridEngine } from '../../helpers/mock-grid-engine'
 

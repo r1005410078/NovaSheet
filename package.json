@@ -28,22 +28,22 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "bun run typecheck && bun run --filter @novasheet/core build && bun run --filter @novasheet/canvas2d build && bun run --filter @novasheet/react build && bun run --filter @novasheet/cell-kit build",
+    "build": "bun run typecheck && bun run --filter @zhiguang/novasheet-core build && bun run --filter @zhiguang/novasheet-canvas2d build && bun run --filter @zhiguang/novasheet-react build && bun run --filter @zhiguang/novasheet-cell-kit build",
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "bun run lint:architecture && bun run lint:react-boundary && bun run lint:cellkit-boundary && bun run lint:mbd && bun run lint:scenario-coverage && oxlint packages",
     "lint:architecture": "bun scripts/check-kernel-boundary.ts",
     "lint:react-boundary": "bun scripts/check-react-boundary.ts",
     "lint:cellkit-boundary": "bun scripts/check-cellkit-boundary.ts",
-    "lint:mbd": "bun run --filter @novasheet/mbd mbd validate",
-    "lint:scenario-coverage": "bun run --filter @novasheet/react lint:scenario-coverage",
+    "lint:mbd": "bun run --filter @zhiguang/novasheet-mbd mbd validate",
+    "lint:scenario-coverage": "bun run --filter @zhiguang/novasheet-react lint:scenario-coverage",
     "format": "prettier --write --cache --log-level warn \"**/*.{ts,tsx,js,json,md}\"",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run lint && bun run typecheck && bun test && bun run build && changeset publish",
-    "storybook": "bun run --filter @novasheet/storybook storybook",
-    "build-storybook": "bun run --filter @novasheet/storybook build-storybook",
-    "sync:mbd-manifest": "bun run --filter @novasheet/mbd mbd manifest"
+    "storybook": "bun run --filter @zhiguang/novasheet-storybook storybook",
+    "build-storybook": "bun run --filter @zhiguang/novasheet-storybook build-storybook",
+    "sync:mbd-manifest": "bun run --filter @zhiguang/novasheet-mbd mbd manifest"
   },
   "trustedDependencies": [
     "esbuild"

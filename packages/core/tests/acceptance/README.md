@@ -1,6 +1,6 @@
 # Core Acceptance Tests
 
-`@novasheet/core` 的 BDD 验收根目录。场景用 MBD Markdown 写契约，测试用手写 `bun:test` 执行；与 `tests/kernel`、`tests/features`、`tests/engine` 的 TDD 单元测并列。
+`@zhiguang/novasheet-core` 的 BDD 验收根目录。场景用 MBD Markdown 写契约，测试用手写 `bun:test` 执行；与 `tests/kernel`、`tests/features`、`tests/engine` 的 TDD 单元测并列。
 
 | 项 | 路径 |
 | --- | --- |
@@ -95,8 +95,8 @@ acceptance/
 ## 常用命令
 
 ```bash
-bun run --filter @novasheet/core lint:mbd
-bun run --filter @novasheet/core manifest:mbd
+bun run --filter @zhiguang/novasheet-core lint:mbd
+bun run --filter @zhiguang/novasheet-core manifest:mbd
 bun test packages/core/tests/acceptance
 bun test packages/core/tests/acceptance/e2e/grid
 ```

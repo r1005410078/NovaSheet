@@ -1,4 +1,4 @@
-import type { CellAttachmentCodec } from '@novasheet/core'
+import type { CellAttachmentCodec } from '@zhiguang/novasheet-core'
 import type { RichTextValue, TextRun } from './types'
 
 /** rich-text 附件 codec：runs ⇄ JSON 串，注册 'richText' namespace（spec §5.1/§6）。 */

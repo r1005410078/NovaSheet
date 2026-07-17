@@ -1,5 +1,5 @@
-import { Grid, type GridOptions } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
+import { Grid, type GridOptions } from '@zhiguang/novasheet-core'
+import { canvas2dBackend } from '@zhiguang/novasheet-canvas2d'
 
 /**
  * Creates a Grid-hosting div, instantiates a Grid inside it, returns the div with the

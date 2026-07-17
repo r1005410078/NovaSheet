@@ -1,4 +1,4 @@
-# @novasheet/react 项目结构
+# @zhiguang/novasheet-react 项目结构
 
 > 基于 [Bulletproof React](https://github.com/alan2207/bulletproof-react) 思想，适配**可发布库**（非 SPA）。组合层用 `excel/` 表达大组件，而非 SPA 的 `app/`。
 
@@ -70,7 +70,7 @@ lib / components  →  features/grid | features/toolbar  →  excel/  →  index
 | 跨 feature 复用按钮、输入框 | `components/` |
 | `cn` 等无业务工具 | `lib/` |
 | 对外新 export | 先在 feature `index.ts` 或 `excel/` 暴露，再在根 `index.ts` re-export |
-| 引擎 mutation、undo、view/raw | **不在本包** → `@novasheet/core` |
+| 引擎 mutation、undo、view/raw | **不在本包** → `@zhiguang/novasheet-core` |
 
 ## Feature Public API
 

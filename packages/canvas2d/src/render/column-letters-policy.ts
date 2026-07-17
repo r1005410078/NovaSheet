@@ -1,4 +1,4 @@
-import type { Field, RenderFrame } from '@novasheet/core'
+import type { Field, RenderFrame } from '@zhiguang/novasheet-core'
 
 /**
  * 是否绘制 Excel 列标（A/B/…）。

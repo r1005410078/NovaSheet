@@ -12,7 +12,7 @@
  * 冻结区域会使用自己的滚动基准。
  */
 
-import type { Axis, QuadrantRect, Theme } from '@novasheet/core'
+import type { Axis, QuadrantRect, Theme } from '@zhiguang/novasheet-core'
 import { snapLineInside } from '../paint/line-snap'
 import type { MergeLookup } from '../paint/merge-lookup'
 

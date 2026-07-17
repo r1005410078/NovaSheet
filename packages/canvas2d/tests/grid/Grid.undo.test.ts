@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { Grid } from '@novasheet/core'
-import { InMemoryDataSource, type Schema, type UndoCommand } from '@novasheet/core'
+import { Grid } from '@zhiguang/novasheet-core'
+import { InMemoryDataSource, type Schema, type UndoCommand } from '@zhiguang/novasheet-core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
 
 const schema: Schema = {

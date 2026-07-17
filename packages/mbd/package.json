@@ -1,5 +1,5 @@
 {
-  "name": "@novasheet/mbd",
+  "name": "@zhiguang/novasheet-mbd",
   "version": "0.0.0",
   "private": true,
   "description": "Markdown behavior scenario tooling for NovaSheet (monorepo internal).",

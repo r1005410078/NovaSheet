@@ -1,5 +1,5 @@
 /**
- * @novasheet/react test bootstrap.
+ * @zhiguang/novasheet-react test bootstrap.
  * core setup (happy-dom) runs first via bunfig preload chain.
  */
 

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { SparseExcelDataSource, withExcelHeaders } from '@novasheet/core'
+import { SparseExcelDataSource, withExcelHeaders } from '@zhiguang/novasheet-core'
 
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'

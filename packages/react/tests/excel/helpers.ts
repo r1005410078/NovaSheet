@@ -1,5 +1,5 @@
-import type { Grid } from '@novasheet/core'
-import { InMemoryDataSource } from '@novasheet/core'
+import type { Grid } from '@zhiguang/novasheet-core'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
 import type { NovaExcelProps, NovaExcelRef } from '../../src'
 import { NovaExcel } from '../../src'
 import React from 'react'

@@ -5,11 +5,11 @@ import {
   type GridEngine,
   type GridSelection,
   type Theme,
-} from '@novasheet/core'
-import { GridRuntime } from '@novasheet/core'
-import type { WebHost } from '@novasheet/core'
-import type { RenderBackend } from '@novasheet/core'
-import type { DomFillHandleLayer, OverlayRect } from '@novasheet/core'
+} from '@zhiguang/novasheet-core'
+import { GridRuntime } from '@zhiguang/novasheet-core'
+import type { WebHost } from '@zhiguang/novasheet-core'
+import type { RenderBackend } from '@zhiguang/novasheet-core'
+import type { DomFillHandleLayer, OverlayRect } from '@zhiguang/novasheet-core'
 import { makeMockGridEngine } from '../../helpers/mock-grid-engine'
 
 describe('GridRuntime fill handle', () => {

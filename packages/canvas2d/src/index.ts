@@ -1,9 +1,9 @@
 /**
- * @novasheet/canvas2d——Canvas2D 渲染端实现。
+ * @zhiguang/novasheet-canvas2d——Canvas2D 渲染端实现。
  *
  * 本包导出渲染器 / 量度器 / surface 工具 + `canvas2dBackend` 工厂，由 core 的
- * 通用装配层经 `RenderBackendFactory` 端口注入。引擎与数据契约从 `@novasheet/core`
- * 导入；公共 `Grid` facade 在 `@novasheet/core`。
+ * 通用装配层经 `RenderBackendFactory` 端口注入。引擎与数据契约从 `@zhiguang/novasheet-core`
+ * 导入；公共 `Grid` facade 在 `@zhiguang/novasheet-core`。
  */
 
 export { Canvas2DRenderer } from './render/Canvas2DRenderer'

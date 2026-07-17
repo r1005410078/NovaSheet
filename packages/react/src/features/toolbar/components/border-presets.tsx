@@ -1,4 +1,4 @@
-import type { BorderPreset } from '@novasheet/core'
+import type { BorderPreset } from '@zhiguang/novasheet-core'
 import type { ReactElement } from 'react'
 
 import { cn } from '@/lib/utils'

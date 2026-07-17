@@ -8,7 +8,7 @@
  * 坐标空间：接收的坐标已是 view 坐标，不做 raw↔view 翻译。
  */
 
-import type { ResolvedCellFormat } from '@novasheet/core'
+import type { ResolvedCellFormat } from '@zhiguang/novasheet-core'
 import type { MergeLookup } from '../paint/merge-lookup'
 
 /** FormatBorderPainter.paint() 所需参数（axes duck-typed，便于单测注入最简 stub） */

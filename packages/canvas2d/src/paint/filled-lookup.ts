@@ -6,7 +6,7 @@
  * 被覆盖的非 anchor 单元格忽略其填充——保证“跳线集合”与“实际填充区域”一致。
  */
 
-import type { ResolvedCellFormat } from '@novasheet/core'
+import type { ResolvedCellFormat } from '@zhiguang/novasheet-core'
 import type { MergeLookup } from './merge-lookup'
 import type { FilledCellLookup } from '../painters/GridLinesPainter'
 

@@ -1,5 +1,5 @@
-import type { Row, Schema } from '@novasheet/core'
-import { dateToSerial } from '@novasheet/core'
+import type { Row, Schema } from '@zhiguang/novasheet-core'
+import { dateToSerial } from '@zhiguang/novasheet-core'
 import { GeneratedDataSource } from './generated-data-source'
 
 /**

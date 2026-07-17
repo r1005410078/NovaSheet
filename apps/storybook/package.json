@@ -1,5 +1,5 @@
 {
-  "name": "@novasheet/storybook",
+  "name": "@zhiguang/novasheet-storybook",
   "version": "0.0.0",
   "private": true,
   "description": "Interactive NovaSheet component and behavior demos.",
@@ -14,13 +14,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@novasheet/canvas2d": "workspace:*",
-    "@novasheet/cell-kit": "workspace:*",
-    "@novasheet/core": "workspace:*",
-    "@novasheet/react": "workspace:*"
+    "@zhiguang/novasheet-canvas2d": "workspace:*",
+    "@zhiguang/novasheet-cell-kit": "workspace:*",
+    "@zhiguang/novasheet-core": "workspace:*",
+    "@zhiguang/novasheet-react": "workspace:*"
   },
   "devDependencies": {
-    "@novasheet/mbd": "workspace:*",
+    "@zhiguang/novasheet-mbd": "workspace:*",
     "@tailwindcss/vite": "^4.3.0",
     "@storybook/addon-docs": "10.4.0",
     "@storybook/html": "^10.4.0",

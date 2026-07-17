@@ -2,7 +2,7 @@
  * EmptyStatePainter——无数据时在正文区绘制插画与提示文案。
  */
 
-import type { Theme } from '@novasheet/core'
+import type { Theme } from '@zhiguang/novasheet-core'
 import { paintSvgPath } from '../paint/svg-path'
 
 export interface EmptyStatePaintParams {

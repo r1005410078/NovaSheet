@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource } from '@novasheet/core'
-import { withExcelHeaders } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
+import { withExcelHeaders } from '@zhiguang/novasheet-core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'

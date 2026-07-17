@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { richTextRenderer } from '../../src/rich-text/richTextRenderer'
-import { denseGridTheme, type TextMeasurer } from '@novasheet/core'
-import type { Canvas2DCellRenderParams } from '@novasheet/canvas2d'
+import { denseGridTheme, type TextMeasurer } from '@zhiguang/novasheet-core'
+import type { Canvas2DCellRenderParams } from '@zhiguang/novasheet-canvas2d'
 import type { RichTextValue } from '../../src/rich-text/types'
 import { createRecordingContext } from '../../../canvas2d/tests/helpers/recording-context'
 

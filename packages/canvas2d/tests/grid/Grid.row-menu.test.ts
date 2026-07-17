@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { Grid } from '@novasheet/core'
+import { Grid } from '@zhiguang/novasheet-core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
-import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
+import { InMemoryDataSource, denseGridTheme } from '@zhiguang/novasheet-core'
 
 describe('Grid row header context menu', () => {
   it('选中 1 行后菜单出现 Insert above / Insert below / Delete / Hide / Resize 5 项（无 hidden gap 时 Unhide 隐藏）', () => {

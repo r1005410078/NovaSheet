@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { Grid, InMemoryDataSource, dateToSerial } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
+import { Grid, InMemoryDataSource, dateToSerial } from '@zhiguang/novasheet-core'
+import { canvas2dBackend } from '@zhiguang/novasheet-canvas2d'
 
 // Column-level default formats (Field.format). Raw values stay numbers/dates —
 // only the painted text changes. Sorting/editing/export still use the raw value.

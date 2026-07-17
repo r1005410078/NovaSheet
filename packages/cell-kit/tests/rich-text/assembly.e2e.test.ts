@@ -4,8 +4,8 @@
  */
 import { describe, expect, it } from 'bun:test'
 import { richTextExtension } from '../../src/rich-text'
-import { denseGridTheme } from '@novasheet/core'
-import type { Canvas2DCellRenderParams } from '@novasheet/canvas2d'
+import { denseGridTheme } from '@zhiguang/novasheet-core'
+import type { Canvas2DCellRenderParams } from '@zhiguang/novasheet-canvas2d'
 import { createRecordingContext } from '../../../canvas2d/tests/helpers/recording-context'
 import type { RichTextValue } from '../../src/rich-text/types'
 

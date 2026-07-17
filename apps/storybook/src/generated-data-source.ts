@@ -15,7 +15,7 @@
  * business data should use InMemoryDataSource for smaller datasets or a paged
  * DataSource for larger ones.
  *
- * This intentionally stays outside @novasheet/core because it is a demo helper,
+ * This intentionally stays outside @zhiguang/novasheet-core because it is a demo helper,
  * not public API.
  */
 
@@ -29,7 +29,7 @@ import type {
   RemovedFieldSnapshot,
   Row,
   Schema,
-} from '@novasheet/core'
+} from '@zhiguang/novasheet-core'
 
 export type CellGenerator = (rowIndex: number, fieldId: string) => CellValue
 

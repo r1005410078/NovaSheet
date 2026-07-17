@@ -1,4 +1,4 @@
-import { SparseExcelDataSource } from '@novasheet/core'
+import { SparseExcelDataSource } from '@zhiguang/novasheet-core'
 import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react'
 import type { ReactElement } from 'react'
 

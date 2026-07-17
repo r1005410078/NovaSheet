@@ -6,7 +6,7 @@ import {
   SortLayer,
   SparseExcelDataSource,
   ViewPipeline,
-} from '@novasheet/core'
+} from '@zhiguang/novasheet-core'
 import type {
   CellAddress,
   CellEditorOpenContext,
@@ -24,10 +24,10 @@ import type {
   Row,
   Schema,
   Theme,
-} from '@novasheet/core'
-import type { WebHost } from '@novasheet/core'
-import type { RenderBackend } from '@novasheet/core'
-import { GridRuntime } from '@novasheet/core'
+} from '@zhiguang/novasheet-core'
+import type { WebHost } from '@zhiguang/novasheet-core'
+import type { RenderBackend } from '@zhiguang/novasheet-core'
+import { GridRuntime } from '@zhiguang/novasheet-core'
 
 function makeEngine(): GridEngine {
   return {

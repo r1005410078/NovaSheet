@@ -4,11 +4,11 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@novasheet/core": ["./packages/core/src/index.ts"],
-      "@novasheet/canvas2d": ["./packages/canvas2d/src/index.ts"],
-      "@novasheet/react": ["./packages/react/src/index.ts"],
-      "@novasheet/mbd": ["./packages/mbd/src/index.ts"],
-      "@novasheet/cell-kit": ["./packages/cell-kit/src/index.ts"],
+      "@zhiguang/novasheet-core": ["./packages/core/src/index.ts"],
+      "@zhiguang/novasheet-canvas2d": ["./packages/canvas2d/src/index.ts"],
+      "@zhiguang/novasheet-react": ["./packages/react/src/index.ts"],
+      "@zhiguang/novasheet-mbd": ["./packages/mbd/src/index.ts"],
+      "@zhiguang/novasheet-cell-kit": ["./packages/cell-kit/src/index.ts"],
       "@/*": ["./packages/react/src/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],

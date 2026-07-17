@@ -8,7 +8,7 @@ status: draft
 
 ## User Story
 
-作为集成方，当我不注册 `@novasheet/cell-kit` 时，我希望 NovaSheet 默认渲染纯文本、无任何字体组能力，以保证默认包零基础组件、可 tree-shake。
+作为集成方，当我不注册 `@zhiguang/novasheet-cell-kit` 时，我希望 NovaSheet 默认渲染纯文本、无任何字体组能力，以保证默认包零基础组件、可 tree-shake。
 
 ## Given
 
@@ -20,4 +20,4 @@ status: draft
 
 ## Then
 
-- 单元格走内置纯文本路径，无 rich-text renderer 介入；richTextExtension 不出现在 @novasheet/react 默认导出
+- 单元格走内置纯文本路径，无 rich-text renderer 介入；richTextExtension 不出现在 @zhiguang/novasheet-react 默认导出

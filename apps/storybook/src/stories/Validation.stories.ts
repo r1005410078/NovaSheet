@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource } from '@novasheet/core'
-import type { CellRange, Row, Schema, ValidationRule, ValidatorDefinition } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
+import type { CellRange, Row, Schema, ValidationRule, ValidatorDefinition } from '@zhiguang/novasheet-core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
 import { GeneratedDataSource } from '../generated-data-source'
@@ -94,7 +94,7 @@ export const Basic: Story = {
     const gridEl = createGridHost({ data }, '100%', '100%')
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/core').Grid }).__grid
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@zhiguang/novasheet-core').Grid }).__grid
 
     applyEmailBtn.addEventListener('click', () => {
       const emailValidation: ValidationRule = {
@@ -208,7 +208,7 @@ export const LargeDataset: Story = {
     )
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/core').Grid }).__grid
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@zhiguang/novasheet-core').Grid }).__grid
 
     function countInvalid(): number {
       let n = 0
@@ -341,7 +341,7 @@ export const CustomValidator: Story = {
     const gridEl = createGridHost({ data, validators: { duplicate: duplicateChecker } }, '100%', '100%')
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/core').Grid }).__grid
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@zhiguang/novasheet-core').Grid }).__grid
 
     // Set validation rule on entire username column
     const usernameValidation: ValidationRule = {

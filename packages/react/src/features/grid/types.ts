@@ -1,4 +1,4 @@
-import type { Grid, GridOptions, FrozenConfig } from '@novasheet/core'
+import type { Grid, GridOptions, FrozenConfig } from '@zhiguang/novasheet-core'
 import type { HTMLAttributes } from 'react'
 
 type GridDomProps = Omit<HTMLAttributes<HTMLDivElement>, 'children' | keyof GridOptions>

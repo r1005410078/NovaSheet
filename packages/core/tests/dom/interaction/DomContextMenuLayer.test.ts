@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { DomContextMenuLayer } from '../../../src/dom/interaction/DomContextMenuLayer'
-import { denseGridTheme } from '@novasheet/core'
+import { denseGridTheme } from '@zhiguang/novasheet-core'
 
 function makeContainer(): HTMLElement {
   const c = document.createElement('div')

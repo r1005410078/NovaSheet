@@ -2,8 +2,8 @@ import { describe, expect, it, mock } from 'bun:test'
 import React, { act } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import { InMemoryDataSource } from '@novasheet/core'
-import type { Field } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
+import type { Field } from '@zhiguang/novasheet-core'
 
 import * as NovaSheetReact from '../../src'
 import {
@@ -194,7 +194,10 @@ describe('NovaExcel L3a shell', () => {
   })
 
   // TODO(frozen-pane-selection): BDD 外环占位，plan 首任务转为红灯行为测试。
-  it.todo('excel.L3a.frozen-pane-selection-prop forwards selectionBehavior without leaking DOM attribute')
+  it.todo(
+    'excel.L3a.frozen-pane-selection-prop forwards selectionBehavior without leaking DOM attribute',
+    () => {},
+  )
 
   it('excel.L3a.grid-structural-callbacks forwards row and column mutation callbacks', async () => {
     const onRowsInserted = mock(() => {})

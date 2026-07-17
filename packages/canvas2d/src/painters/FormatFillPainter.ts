@@ -7,7 +7,7 @@
  * 坐标空间：painter 接收的坐标已是 view 坐标（engine 在 getFrame() 中完成 raw→view 翻译）。
  */
 
-import type { ResolvedCellFormat } from '@novasheet/core'
+import type { ResolvedCellFormat } from '@zhiguang/novasheet-core'
 import { isTranslucentColor } from '../paint/color-alpha'
 import { buildFilledCellLookup } from '../paint/filled-lookup'
 import { snapLineInside } from '../paint/line-snap'
