@@ -108,7 +108,9 @@ pointer point
 | `topRight` | `topRight` | `cell` / `row` / `column` | `cell` |
 | `main` | — | `cell` | `cell` |
 
-表头左上角仅在 `rowHeaderWidth > 0`、`headerHeight > 0`、pointer 位于两者交集且 `headerCorner: 'all'` 时返回 `all`。它不同于 `topLeft`：前者没有数据单元格，后者是冻结数据区。
+表头左上角角块 rect = `rowHeaderWidth × viewport.headerHeight`（总高，含列组表头层；有 `columnGroups` 时角块随总高变高）。仅在两者均 > 0、pointer 位于该 rect 内且 `headerCorner: 'all'` 时返回 `all`。它不同于 `topLeft`：前者没有数据单元格，后者是冻结数据区。
+
+resolver 的求值域封闭：仅对 header corner 命中与数据 region 命中求值。corner 命中且 `headerCorner: 'none'` 时返回 `none`（点击被吞掉、无选择动作，即现状）；非 corner 的表头带与空白区不进入 resolver，交回 §5.2 既有链路。`none` 只有这一个来源。
 
 ### 5.2 Pointer 优先级
 
@@ -134,6 +136,12 @@ pointer point
 | `none` | no-op | no-op |
 
 拖拽起点决定意图；拖入其它窗格时不切换轴。`activeCell`、`anchorCell`、`extentCell` 与 `selectedRange` 继续使用现有连续矩形表达，无需新选择状态。
+
+### 5.4 activeCell、编辑与键盘
+
+- `row` / `column` intent 的选区构造与 `activeCell` 锚定与现有 `InputController.selectWholeRowRange()` / `selectWholeColumnRange()` 完全一致：`row` 的 activeCell 在行首（col 0），`column` 的在列首（row 0）。
+- 选择器窗格不禁用编辑：双击、F2、type-to-edit 仍按现有编辑入口作用于 activeCell。只读是独立关切（全局只读开关见 backlog），本设计不越界。
+- 行/列选中后的方向键与 Shift+方向键行为与现有行头/列头选择后一致；本设计不新增键盘语义。
 
 ## 6. 架构
 
@@ -169,11 +177,11 @@ type SelectionIntent =
 | 情况 | 行为 |
 | --- | --- |
 | 未冻结对应边 | 配置无命中，普通区保持 `cell` |
-| 空行或空列 | `row` / `column` / `all` no-op，不产生非法范围 |
+| 空行或空列 | `row` / `column` / `all` no-op，不产生非法范围；由复用的 `selectWhole*Range` 既有 guard 保证，无需另写防御 |
 | 只冻结列、未冻结行 | 不存在 `topLeft` / `topRight`，只应用 `left` / `right` |
 | 多个冻结行或列 | 整个对应窗格适用同一 intent；交集由 `topLeft` / `topRight` 单独决定 |
 | 排序、筛选、列重排 | 行列选择使用命中时的 view index；不依赖业务字段或固定 index |
-| 合并格 | `cell` 保留既有合并吸附；`row` / `column` 使用完整行/列优先，不拆分为合并区域 |
+| 合并格 | `cell` 保留既有合并吸附；`row` / `column` 与现有行头/列头点击的合并格行为一致 |
 | 自定义 cell action | action 优先，选择不执行 |
 | header corner 有自定义文字 | 仅 `headerCorner: 'all'` 时点击全选；默认 `none` 保持旧行为 |
 
@@ -199,7 +207,7 @@ type SelectionIntent =
 | DOM drag | 单击、Shift、拖拽锁轴；起点跨窗格不切换轴；cell action 优先 |
 | Runtime | 配置从 Grid facade 到 `SelectionDrag`，header corner `all` |
 | React | `selectionBehavior` 转发且不成为 DOM attribute |
-| Regression | 行头/列头选择、普通冻结格 cell 选择、合并格 cell 选择、空表 no-op |
+| Regression | 行头/列头选择、普通冻结格 cell 选择、合并格 cell 选择、空表 no-op、选择器窗格双击仍进编辑、行/列选中后键盘行为不回归 |
 
 ## 9. 兼容性
 
@@ -217,6 +225,8 @@ type SelectionIntent =
 
 采纳边界配置。`fieldId` 会把基础组件耦合到业务 schema，row index 会在排序/筛选后漂移；`RenderRegion` 的 left/right/top 边界是当前可见布局的稳定语义。
 
+另评估了通用表格常见的列级配置（如 `column.selectionRole`——组件 schema 层属性，非业务 fieldId 耦合，二者不应混同）：因列 reorder 跨冻结边界后的语义归属问题被**推迟而非否决**，与边界配置不互斥，出现真实用例时可叠加。
+
 ### ADR-B：交集使用独立配置，而不是叠加两个规则
 
 采纳独立的 `topLeft` / `topRight`。叠加会令一次点击同时产生行与列意图，当前连续矩形选择模型无法表达且用户不可预测。缺省 `cell` 保留真实数据格能力。
@@ -228,6 +238,10 @@ type SelectionIntent =
 ### ADR-D：不把配置放进 `interactions`
 
 `interactions` 是 menu/resize/reorder 的开关；本功能定义的是命中后的选择**语义**，应该独立为 `selectionBehavior`，避免 `interactions` 成为无关策略的杂项容器。
+
+### ADR-E：未冻结对应边时配置静默失效，而非 fail-loud
+
+采纳静默失效。`setFrozen` 支持运行时变更，配置按当前 frame 边界自动适用或失效（§9）；若 fail-loud，每次 `setFrozen` 都可能把原本合法的配置变成错误。与 column groups 的 fail-loud 校验文化差异是有意为之：组树是静态结构契约，冻结边界是动态布局状态。
 
 ## 11. 实现切片
 
