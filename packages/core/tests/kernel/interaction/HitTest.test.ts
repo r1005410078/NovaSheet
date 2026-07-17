@@ -6,6 +6,7 @@ import {
   Viewport,
   denseGridTheme,
   hitTestCell,
+  hitTestCellWithRegion,
   type RenderFrame,
   type Schema,
 } from '../../../src'
@@ -72,5 +73,24 @@ describe('hitTestCell — canvas 坐标命中单元格', () => {
       rowIndex: 2,
       colIndex: 2,
     })
+  })
+})
+
+describe('hitTestCellWithRegion — 命中同时返回 RenderRegion', () => {
+  it('返回冻结与滚动区域的 region id，miss 返回 null', () => {
+    const frame = makeFrame()
+
+    expect(hitTestCellWithRegion(frame, { x: 20, y: 72 })).toMatchObject({
+      cell: { rowIndex: 2, colIndex: 0 },
+      region: { id: 'middleLeft' },
+    })
+    expect(hitTestCellWithRegion(frame, { x: 220, y: 72 })).toMatchObject({
+      cell: { rowIndex: 2, colIndex: 2 },
+      region: { id: 'middleRight' },
+    })
+    expect(hitTestCellWithRegion(frame, { x: 20, y: 40 })).toMatchObject({
+      region: { id: 'topLeft' },
+    })
+    expect(hitTestCellWithRegion(frame, { x: 120, y: 16 })).toBeNull()
   })
 })

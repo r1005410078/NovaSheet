@@ -134,8 +134,8 @@ export type {
   GridSelection,
   SelectCellOptions,
 } from './kernel/coords/SelectionTypes'
-export { hitTestCell } from './kernel/interaction/HitTest'
-export type { HitTestPoint } from './kernel/interaction/HitTest'
+export { hitTestCell, hitTestCellWithRegion } from './kernel/interaction/HitTest'
+export type { CellRegionHit, HitTestPoint } from './kernel/interaction/HitTest'
 export {
   applySelectionNavigation,
   parseSelectionNavigationKey,

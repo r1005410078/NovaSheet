@@ -7,13 +7,16 @@ export interface HitTestPoint {
   readonly y: number
 }
 
-/**
- * 把 canvas 坐标转换成单元格索引。
- *
- * Renderer 已经由 `FrozenRegions` 把画面切成 main / frozen regions；命中测试复用同一份
- * `RenderRegion`，这样右冻结列、左冻结列、顶部冻结行和滚动区域不会各算一套坐标。
- */
-export function hitTestCell(frame: RenderFrame, point: HitTestPoint): CellAddress | null {
+export interface CellRegionHit {
+  readonly cell: CellAddress
+  readonly region: RenderRegion
+}
+
+/** 命中单元格并返回其所在 RenderRegion，供冻结窗格选择意图解析复用。 */
+export function hitTestCellWithRegion(
+  frame: RenderFrame,
+  point: HitTestPoint,
+): CellRegionHit | null {
   const regions = [...frame.viewport.regions].sort((a, b) => b.zIndex - a.zIndex)
 
   for (const region of regions) {
@@ -33,11 +36,21 @@ export function hitTestCell(frame: RenderFrame, point: HitTestPoint): CellAddres
       colIndex >= region.colRange[0] &&
       colIndex <= region.colRange[1]
     ) {
-      return { rowIndex, colIndex }
+      return { cell: { rowIndex, colIndex }, region }
     }
   }
 
   return null
+}
+
+/**
+ * 把 canvas 坐标转换成单元格索引。
+ *
+ * Renderer 已经由 `FrozenRegions` 把画面切成 main / frozen regions；命中测试复用同一份
+ * `RenderRegion`，这样右冻结列、左冻结列、顶部冻结行和滚动区域不会各算一套坐标。
+ */
+export function hitTestCell(frame: RenderFrame, point: HitTestPoint): CellAddress | null {
+  return hitTestCellWithRegion(frame, point)?.cell ?? null
 }
 
 function contains(region: RenderRegion, point: HitTestPoint): boolean {
