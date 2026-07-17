@@ -6,6 +6,7 @@
 | --- | --- | --- | --- |
 | excel.L3a.custom-row-header-field | L3a | implemented | Excel 行头从数据字段显示自定义标签 |
 | excel.L3a.default-mount | L3a | draft | 默认挂载 excel/grid/toolbar/canvas |
+| excel.L3a.frozen-pane-selection-prop | L3a | draft | selectionBehavior prop 转发到 Grid 构造且不泄漏为 DOM attribute |
 | excel.L3a.grid-hide-callbacks | L3a | draft | ref 隐藏行列触发隐藏状态回调 |
 | excel.L3a.grid-structural-callbacks | L3a | draft | ref 结构变更触发行列回调 |
 | excel.L3a.no-toolbar | L3a | draft | showToolbar false 隐藏 toolbar |
@@ -85,6 +86,29 @@
 ### Then
 
 - 存在 data-novasheet-react-excel、grid、toolbar、canvas
+
+## excel.L3a.frozen-pane-selection-prop
+
+- **layer**: L3a
+- **summary**: selectionBehavior prop 转发到 Grid 构造且不泄漏为 DOM attribute
+- **status**: draft
+
+### User Story
+
+作为集成方，当我给 `NovaSheetGrid` 传入 `selectionBehavior` 时，我希望它被转发进 `Grid` 构造链并生效，且不作为未知 attribute 落到宿主 DOM 元素上，以便 React 层声明冻结窗格选择语义而无控制台告警。
+
+### Given
+
+- 渲染 `NovaSheetGrid`，传入 `selectionBehavior` 配置
+
+### When
+
+- 组件 mount 完成
+
+### Then
+
+- `Grid` 构造 options 中收到同一 `selectionBehavior` 引用
+- 宿主 DOM 元素上不存在 `selectionbehavior` attribute
 
 ## excel.L3a.grid-hide-callbacks
 

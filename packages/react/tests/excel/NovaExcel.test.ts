@@ -193,6 +193,9 @@ describe('NovaExcel L3a shell', () => {
     unmount()
   })
 
+  // TODO(frozen-pane-selection): BDD 外环占位，plan 首任务转为红灯行为测试。
+  it.todo('excel.L3a.frozen-pane-selection-prop forwards selectionBehavior without leaking DOM attribute')
+
   it('excel.L3a.grid-structural-callbacks forwards row and column mutation callbacks', async () => {
     const onRowsInserted = mock(() => {})
     const onRowsDeleted = mock(() => {})

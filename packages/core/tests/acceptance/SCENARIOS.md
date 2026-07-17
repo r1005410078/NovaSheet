@@ -83,6 +83,8 @@
 | core.L2.grid-format-text-wrap-cycle | L2 | implemented | Grid setTextWrap 在 overflow/wrap/clip 间切换 |
 | core.L2.grid-format-value-number-currency-date | L2 | implemented | setValueFormat 经 Grid facade 持久化值格式描述符 |
 | core.L2.grid-frozen-config-frame | L2 | implemented | Grid setFrozen 通过 RenderFrame frozen regions 可观测 |
+| core.L2.grid-frozen-pane-selection | L2 | draft | 冻结窗格按 selectionBehavior 配置选择整行、整列或单元格 |
+| core.L2.grid-header-corner-select-all | L2 | draft | 表头角块在 headerCorner all 时点击全选 |
 | core.L2.grid-header-menu-col-actions | L2 | implemented | Grid column header menu 暴露结构项并能执行 insert-col-left |
 | core.L2.grid-header-menu-row-actions | L2 | implemented | Grid row header menu 暴露结构项并能执行 insert-above |
 | core.L2.grid-layout-row-column-size | L2 | implemented | Grid layout facade 更新单行、批量行、单列、批量列尺寸 |
@@ -2149,6 +2151,59 @@ _（无）_
 
 - backend 收到的 frame 包含不止一个 viewport region
 - 至少包含 main region 与 frozen region
+
+## core.L2.grid-frozen-pane-selection
+
+- **layer**: L2
+- **summary**: 冻结窗格按 selectionBehavior 配置选择整行、整列或单元格
+- **status**: draft
+
+### User Story
+
+作为 Grid facade 使用者，当我把左冻结窗格声明为行选择器、顶部冻结窗格声明为列选择器时，我希望点击对应窗格的数据格分别选中整行、整列，而交叉数据区仍按单元格选择，以便用冻结窗格承载行/列标识的监视表可以整行、整列高亮。
+
+### Given
+
+- 一个 mounted Grid，`frozen: { leftCols: 1, topRows: 1 }`
+- `selectionBehavior.frozenPanes` 配置 `left: 'row'`、`top: 'column'`、`topLeft: 'cell'`
+- 注册 `onSelectionChange` 回调
+
+### When
+
+- 分别 pointerdown 点击左冻结窗格数据格、顶部冻结窗格数据格与两者交叉数据格
+
+### Then
+
+- 点击左冻结格后选区为该行的全列连续范围，`activeCell` 锚在行首（与行头点击一致）
+- 点击顶部冻结格后选区为该列的全行连续范围，`activeCell` 锚在列首（与列头点击一致）
+- 点击交叉数据格后选区为该单元格本身
+- `onSelectionChange` 依次获得对应连续范围
+- 未配置 `selectionBehavior` 时，同样的点击均为普通单元格选择
+
+## core.L2.grid-header-corner-select-all
+
+- **layer**: L2
+- **summary**: 表头角块在 headerCorner all 时点击全选
+- **status**: draft
+
+### User Story
+
+作为 Grid facade 使用者，当我启用 `headerCorner: 'all'` 时，我希望点击行头与列表头交叉的非数据角块选中当前 view 的全部行列，以便获得电子表格标准的全选入口且不改变未启用方的既有角块行为。
+
+### Given
+
+- 一个 mounted Grid，行头与列表头均可见
+- `selectionBehavior.headerCorner: 'all'`
+- 对照组：另一 Grid 未配置 `headerCorner`（缺省 `none`）
+
+### When
+
+- pointerdown 点击行头宽度 × 表头总高的交叉角块
+
+### Then
+
+- 启用组选区为全部 view 行 × 全部 view 列的连续范围
+- 对照组点击后选区不变（保持 no-op 现状）
 
 ## core.L2.grid-header-menu-col-actions
 
