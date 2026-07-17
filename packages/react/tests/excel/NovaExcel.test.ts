@@ -193,11 +193,40 @@ describe('NovaExcel L3a shell', () => {
     unmount()
   })
 
-  // TODO(frozen-pane-selection): BDD 外环占位，plan 首任务转为红灯行为测试。
-  it.todo(
-    'excel.L3a.frozen-pane-selection-prop forwards selectionBehavior without leaking DOM attribute',
-    () => {},
-  )
+  it('excel.L3a.frozen-pane-selection-prop forwards selectionBehavior without leaking DOM attribute', async () => {
+    const { container, ref, unmount } = await mountNovaExcel({
+      data: createDenseData(),
+      frozen: { leftCols: 1, topRows: 1 },
+      selectionBehavior: { frozenPanes: { left: 'row' } },
+    })
+    const host = container.querySelector<HTMLElement>('[data-novasheet-react-grid]')
+    expect(host).not.toBeNull()
+    expect(host?.hasAttribute('selectionBehavior')).toBe(false)
+
+    await act(async () => {
+      host!.querySelector<HTMLElement>('[data-novasheet-scroll-host]')!.dispatchEvent(
+        new MouseEvent('pointerdown', {
+          bubbles: true,
+          cancelable: true,
+          clientX: 50,
+          clientY: 74,
+          button: 0,
+        }),
+      )
+      host!.querySelector<HTMLElement>('[data-novasheet-scroll-host]')!.dispatchEvent(
+        new MouseEvent('pointerup', { bubbles: true, cancelable: true, button: 0 }),
+      )
+      await Promise.resolve()
+    })
+    expect(ref.current!.grid.getSelection().selectedRange).toEqual({
+      startRow: 1,
+      endRow: 1,
+      startCol: 0,
+      endCol: 1,
+    })
+
+    unmount()
+  })
 
   it('excel.L3a.grid-structural-callbacks forwards row and column mutation callbacks', async () => {
     const onRowsInserted = mock(() => {})
