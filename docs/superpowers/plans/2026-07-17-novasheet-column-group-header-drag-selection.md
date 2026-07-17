@@ -46,7 +46,7 @@
 **Interfaces:**
 - Produces: scenario id `core.L2.grid-column-group-header-drag-selection`，Task 4 的行为测试 title 必须以前述 id 开头。
 
-- [ ] **Step 1: 写 scenario**
+- [x] **Step 1: 写 scenario**
 
 ```md
 ---
@@ -82,7 +82,7 @@ status: draft
 - `reorder: false` 不阻止上述连续选择
 ```
 
-- [ ] **Step 2: 校验并生成 manifest**
+- [x] **Step 2: 校验并生成 manifest**
 
 Run:
 
@@ -93,7 +93,7 @@ bun run --filter @zhiguang/novasheet-core manifest:mbd
 
 Expected: `mbd validate` 报告全部 scenario ok；manifest/SCENARIOS 生成且包含新 id。
 
-- [ ] **Step 3: 检查生成差异**
+- [x] **Step 3: 检查生成差异**
 
 Run:
 
@@ -106,7 +106,7 @@ git diff --check -- packages/core/tests/acceptance
 
 Expected: 三处均命中，`git diff --check` 无输出。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/core/tests/acceptance/interaction/selection/scenarios/L2-grid-column-group-header-drag-selection.md \
@@ -131,7 +131,7 @@ git commit -m "test(core): 定义分组表头连续拖选场景"
   - `InputController.hitTestGroupHeaderAtLevel(event: WebPointerEvent, level: number): ColumnGroupHeaderHit | null`
 - Consumes: `RenderFrameColumnGroupHeader.rows[level]` 的 view 闭区间。
 
-- [ ] **Step 1: 把现有 hit 测试改成完整契约，并新增锁层命中测试**
+- [x] **Step 1: 把现有 hit 测试改成完整契约，并新增锁层命中测试**
 
 把现有 `返回该组 groupId` 期望改为：
 
@@ -172,13 +172,13 @@ it('锁定 level 后横向越界钳到该层首组或末组', () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试确认红**
+- [x] **Step 2: 跑测试确认红**
 
 Run: `bun test packages/core/tests/dom/runtime/controllers/InputController.column-groups.test.ts`
 
 Expected: FAIL；旧返回值缺 `level/startViewCol/endViewCol`，且 `hitTestGroupHeaderAtLevel` 不存在。
 
-- [ ] **Step 3: 新增共享类型**
+- [x] **Step 3: 新增共享类型**
 
 ```ts
 // packages/core/src/dom/interaction/ColumnGroupHeaderHit.ts
@@ -191,7 +191,7 @@ export interface ColumnGroupHeaderHit {
 }
 ```
 
-- [ ] **Step 4: 重构 InputController 命中实现**
+- [x] **Step 4: 重构 InputController 命中实现**
 
 在 `InputController.ts` import 该 type，并把现有方法改为：
 
@@ -256,7 +256,7 @@ private toColumnGroupHeaderHit(
 
 此 task 不改变 `handleHostPointerDown()` 的旧短路行为。
 
-- [ ] **Step 5: 跑测试和 typecheck 确认绿**
+- [x] **Step 5: 跑测试和 typecheck 确认绿**
 
 Run:
 
@@ -267,7 +267,7 @@ bun run --filter @zhiguang/novasheet-core typecheck
 
 Expected: PASS / 0 error。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core/src/dom/interaction/ColumnGroupHeaderHit.ts \
@@ -288,7 +288,7 @@ git commit -m "refactor(core): 扩展分组表头命中契约"
 - Consumes: Task 2 的 `ColumnGroupHeaderHit`。
 - Produces: `ColumnGroupHeaderDrag implements Drag` 与 `ColumnGroupHeaderDragDeps`。
 
-- [ ] **Step 1: 写失败测试 fixture 和核心用例**
+- [x] **Step 1: 写失败测试 fixture 和核心用例**
 
 测试文件使用 `bun:test` 的 `mock`，构造两个同层组：`s1=[1,2]`、`s2=[3,4]`。完整 helper：
 
@@ -388,13 +388,13 @@ it('move 请求自动滚动，reevaluate 重算目标，commit/cancel 停止滚�
 `CellRange`、`GridSelection`、`WebPointerEvent`、`makeMockGridEngine` 以及
 `describe/expect/it/mock`。
 
-- [ ] **Step 2: 跑测试确认红**
+- [x] **Step 2: 跑测试确认红**
 
 Run: `bun test packages/core/tests/dom/interaction/drag/ColumnGroupHeaderDrag.test.ts`
 
 Expected: FAIL（module 不存在）。
 
-- [ ] **Step 3: 实现最小 Drag 状态机**
+- [x] **Step 3: 实现最小 Drag 状态机**
 
 ```ts
 import type { CellRange } from '../../../kernel/coords/SelectionTypes'
@@ -492,13 +492,13 @@ export class ColumnGroupHeaderDrag implements Drag {
 }
 ```
 
-- [ ] **Step 4: 跑目标测试确认绿**
+- [x] **Step 4: 跑目标测试确认绿**
 
 Run: `bun test packages/core/tests/dom/interaction/drag/ColumnGroupHeaderDrag.test.ts`
 
 Expected: 全部 PASS。
 
-- [ ] **Step 5: 跑相邻 Drag 回归和 typecheck**
+- [x] **Step 5: 跑相邻 Drag 回归和 typecheck**
 
 Run:
 
@@ -510,7 +510,7 @@ bun run --filter @zhiguang/novasheet-core typecheck
 
 Expected: PASS / 0 error。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core/src/dom/interaction/drag/ColumnGroupHeaderDrag.ts \
@@ -536,7 +536,7 @@ git commit -m "feat(core): 新增分组表头选择拖拽"
 
 **Plan-risk（STOP+ASK）：** 行为测试坐标基于 `groupHeaderRowHeight=28`、leaf header `32`、列宽 `100`。若命中不符，先打印/检查 frame header 几何，不得把期望退化为叶列表头拖选。
 
-- [ ] **Step 1: 先写 L2 行为测试并观察红**
+- [x] **Step 1: 先写 L2 行为测试并观察红**
 
 在 `bdd.test.ts` 增加 pointer move helper：
 
@@ -627,7 +627,7 @@ Run: `bun test packages/core/tests/acceptance/interaction/selection/bdd.test.ts`
 
 Expected: FAIL；pointerdown 只选择 `s1=[1,2]`，move 后仍未扩展到 col 4。
 
-- [ ] **Step 2: 写 InputController 路由失败测试**
+- [x] **Step 2: 写 InputController 路由失败测试**
 
 把旧测试改为：
 
@@ -646,7 +646,7 @@ Run: `bun test packages/core/tests/dom/runtime/controllers/InputController.colum
 
 Expected: FAIL；当前仍直接 `selectColumnGroup()` 并 return。
 
-- [ ] **Step 3: 接入 DragCoordinator**
+- [x] **Step 3: 接入 DragCoordinator**
 
 `DragCoordinatorDeps` 增加：
 
@@ -681,7 +681,7 @@ this.drags = [
 新增 private field，并 import `ColumnGroupHeaderDrag`、`ColumnGroupHeaderHit`。不要把
 `allowReorder` 传入组头 Drag。
 
-- [ ] **Step 4: 接入 GridRuntime closure**
+- [x] **Step 4: 接入 GridRuntime closure**
 
 在 `new DragCoordinator({...})` 加：
 
@@ -693,7 +693,7 @@ hitTestGroupHeaderAtLevel: (event, level) =>
 
 closure 构造时不执行，因此与当前 `this.drag` 先于 `this.input` 赋值的顺序兼容。
 
-- [ ] **Step 5: 移除 InputController 组头短路**
+- [x] **Step 5: 移除 InputController 组头短路**
 
 删除 `handleHostPointerDown()` 中以下分支：
 
@@ -708,7 +708,7 @@ if (groupHit) {
 
 保留菜单按钮分支，然后统一执行 `this.deps.tryStartDrag(event)`。
 
-- [ ] **Step 6: 更新 DragCoordinator fixture 并验证目标测试转绿**
+- [x] **Step 6: 更新 DragCoordinator fixture 并验证目标测试转绿**
 
 `makeCoordinator()` deps 增加：
 
@@ -728,7 +728,7 @@ bun test packages/core/tests/dom/runtime/controllers/InputController.column-grou
 
 Expected: 全部 PASS，L2 行为选区为 rows 0..2 / cols 1..4。
 
-- [ ] **Step 7: 跑列表头与组头回归**
+- [x] **Step 7: 跑列表头与组头回归**
 
 Run:
 
@@ -742,7 +742,7 @@ bun run --filter @zhiguang/novasheet-core typecheck
 
 Expected: PASS / 0 error。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add packages/core/src/dom/runtime/controllers/DragCoordinator.ts \
@@ -768,11 +768,11 @@ git commit -m "feat(core): 支持分组表头连续拖选"
 - Consumes: Task 1–4 全部交付物。
 - Produces: 可合并、无未解释回归的验证证据。
 
-- [ ] **Step 1: 对照 spec 自审**
+- [x] **Step 1: 对照 spec 自审**
 
 逐项确认：同层正反向拖选、纵向偏移锁层、Shift 扩选、`reorder: false`、单击组头、叶头拖选、无 SelectionModel/Canvas/SCADA 改动。
 
-- [ ] **Step 2: 运行四项门禁**
+- [x] **Step 2: 运行四项门禁**
 
 ```bash
 bun run lint
@@ -791,7 +791,7 @@ Expected:
 - test：0 fail。
 - build：core → canvas2d → react → cell-kit 全部 exit 0。
 
-- [ ] **Step 3: 检查工作区范围**
+- [x] **Step 3: 检查工作区范围**
 
 ```bash
 git diff --check
@@ -801,7 +801,7 @@ git log --oneline -5
 
 Expected: 无空白错误；所有剩余未提交文件都能明确归属，既有用户改动未被覆盖。
 
-- [ ] **Step 4: 更新 plan 勾选并提交**
+- [x] **Step 4: 更新 plan 勾选并提交**
 
 ```bash
 git add docs/superpowers/plans/2026-07-17-novasheet-column-group-header-drag-selection.md
