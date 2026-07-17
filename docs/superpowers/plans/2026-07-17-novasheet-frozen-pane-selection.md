@@ -6,9 +6,9 @@
 
 **Architecture:** kernel 增加纯 resolver（region→intent），`SelectionDrag` 升级为 intent 锁轴状态机，配置经 `Grid → GridControllerImpl → GridRuntime → DragCoordinator` 下传；不进 engine/RenderFrame/渲染层。行/列/全选选区构造复用 `InputController.selectWhole*Range` 既有 helper。
 
-**Tech Stack:** TypeScript strict（bun workspaces）、`bun:test`（非 vitest）、React 适配层 `@novasheet/react`。
+**Tech Stack:** TypeScript strict（bun workspaces）、`bun:test`（非 vitest）、React 适配层 `@zhiguang/novasheet-react`。
 
-**场景契约（外环，已定稿于 `133c219`）：**
+**场景契约（外环文档已定稿于 `133c219`；行为测试仍由 Task 2/7 落地）：**
 - `packages/core/tests/acceptance/interaction/selection/scenarios/L2-grid-frozen-pane-selection.md`
 - `packages/core/tests/acceptance/interaction/selection/scenarios/L2-grid-header-corner-select-all.md`
 - `packages/react/tests/excel/scenarios/L3a-frozen-pane-selection-prop.md`
@@ -21,7 +21,7 @@
 - TDD strict：红先行→实现→绿→commit；一 task 一 commit，Conventional Commits 中文 subject。
 - 边界：`kernel/**` 不 import `dom/**`、不碰 DOM 全局；配置不得进入 `DefaultGridEngine`/`RenderFrame`/Canvas2DRenderer。
 - type-only import 用 `import type`（verbatimModuleSyntax）；`noUncheckedIndexedAccess` 下索引访问需 guard。
-- 分支：开工前从 `main` 建 `feat-frozen-pane-selection`（Task 1 Step 0）。
+- 分支：当前直接在 `main` 实施；发布分支已合并，避免重复分支和后续合并漂移。
 - 本 plan 与 spec 冲突时 STOP+ASK，勿静默选边。
 
 **关键既有事实（implementer 必读，勿重复发明）：**
@@ -49,13 +49,7 @@
 **Interfaces:**
 - Produces: `FrozenPaneSelectionBehavior`、`GridSelectionBehavior`、`ResolvedSelectionBehavior`、`resolveSelectionBehavior(input?: GridSelectionBehavior): ResolvedSelectionBehavior`；`GridOptions.selectionBehavior?: GridSelectionBehavior`。后续所有 task 依赖这些名字。
 
-- [ ] **Step 0: 建分支**
-
-```bash
-git checkout -b feat-frozen-pane-selection
-```
-
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 0: 写失败测试**
 
 ```ts
 // packages/core/tests/kernel/interaction/SelectionBehavior.test.ts
@@ -192,15 +186,15 @@ git commit -m "feat(core): 新增 selectionBehavior 配置类型与归一化"
 
 ---
 
-### Task 2: 外环行为测试落地并红（L2 两场景）
+### Task 2: 外环行为测试落地并红（既有 L2 场景契约）
 
 **Files:**
 - Modify: `packages/core/tests/acceptance/_helpers/fixtures.ts`（`mountRecordingGrid` options 扩展）
-- Modify: `packages/core/tests/acceptance/interaction/selection/bdd.test.ts`（新增两个 it）
+- Modify: `packages/core/tests/acceptance/interaction/selection/bdd.test.ts`（新增三条 it：两条红灯行为 + 一条未配置回归对照）
 
 **Interfaces:**
 - Consumes: Task 1 的 `GridSelectionBehavior`（fixtures 签名用）。
-- Produces: 两个红灯行为测试，title 以 `core.L2.grid-frozen-pane-selection` / `core.L2.grid-header-corner-select-all` 开头；Task 6 使其转绿。
+- Produces: 两个红灯行为测试与一条未配置回归对照，title 以 `core.L2.grid-frozen-pane-selection` / `core.L2.grid-header-corner-select-all` 开头；Task 6 使红灯转绿。
 
 **Plan-risk（STOP+ASK 点）：** 下方点击坐标由 `denseGridTheme.metrics`（headerHeight 32 / rowHeight 28）与 `mutableSchema` 列宽（100/80/100/100）推得。若实际命中行列与期望不符，先核对 region 几何再改坐标，**不得改场景期望的选区形状**。
 
@@ -221,7 +215,7 @@ onSelectionChange: options.onSelectionChange,
 
 `import type { FrozenConfig, GridSelection, GridSelectionBehavior } from '../../../src'`（并入现有 import）。
 
-- [ ] **Step 2: 写两个失败行为测试**
+- [ ] **Step 2: 写三条行为测试（两条失败 + 一条回归对照）**
 
 在 `bdd.test.ts` 外层 describe 内新增（`dispatchGridPointerDown` 从 e2e bdd.test.ts 复制为本文件局部 helper，或提升进 `_helpers/fixtures.ts` 供两处复用——提升时同步改 e2e 引用）：
 
@@ -294,7 +288,7 @@ it('core.L2.grid-header-corner-select-all selects everything only when opted in'
 - [ ] **Step 3: 跑测试确认红（外环红）**
 
 Run: `bun test packages/core/tests/acceptance/interaction/selection/bdd.test.ts`
-Expected: 前两个新 it FAIL（配置未消费，点击仍是单格选择——期望整行 `endCol: 3` 实得 `endCol: 0`；corner 期望全选实得 `null`）；第二个 it（未配置对照）PASS。
+Expected: 行/列/交叉区用例与 header corner 用例 FAIL（配置未消费，点击仍是单格选择；corner 期望全选实得 `null`）；未配置对照 PASS。
 
 - [ ] **Step 4: Commit（外环红灯入库）**
 
@@ -955,7 +949,7 @@ Expected: 该用例 FAIL——prop 未转发时落到 `...domProps`，可能出�
 
 - [ ] **Step 4: 跑 react 全量 + coverage 确认绿**
 
-Run: `bun test packages/react && bun run --filter @novasheet/react lint:scenario-coverage`
+Run: `bun test packages/react && bun run --filter @zhiguang/novasheet-react lint:scenario-coverage`
 Expected: PASS；coverage 35/35。
 
 - [ ] **Step 5: Commit**
@@ -988,7 +982,8 @@ cd ../react && bun run lint:mbd && bun run manifest:mbd
 bun test
 bun run --filter '*' typecheck
 bun run lint
-bun run --filter @novasheet/core build && bun run --filter @novasheet/canvas2d build
+bun run --filter @zhiguang/novasheet-core build && bun run --filter @zhiguang/novasheet-canvas2d build
+bun run --filter @zhiguang/novasheet-react build && bun run --filter @zhiguang/novasheet-cell-kit build
 ```
 
 Expected: 全绿（`lint` 含 architecture/boundary/mbd/scenario-coverage）。
@@ -1000,7 +995,7 @@ git add packages/core/tests/acceptance packages/react/tests/excel
 git commit -m "test(bdd): 冻结窗格选择场景转 implemented 并重生成 manifest"
 ```
 
-- [ ] **Step 4: dispatch code-reviewer**（CLAUDE.md：里程碑收尾必审，即便四门全绿）——审查范围 `main..feat-frozen-pane-selection`，重点：架构不变量 3（selection 写门面）、9（kernel 边界）、SelectionDrag 状态机轴锁、坐标语义（view）。审查通过后走 superpowers:finishing-a-development-branch。
+- [ ] **Step 4: dispatch code-reviewer**（CLAUDE.md：里程碑收尾必审，即便四门全绿）——审查当前 `main` 的冻结窗格选择提交，重点：架构不变量 3（selection 写门面）、9（kernel 边界）、SelectionDrag 状态机轴锁、坐标语义（view）。审查通过后走 superpowers:finishing-a-development-branch。
 
 ---
 
