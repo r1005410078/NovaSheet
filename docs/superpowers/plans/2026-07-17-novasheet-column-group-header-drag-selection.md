@@ -837,7 +837,7 @@ git commit -m "docs(plan): 完成分组表头连续拖选计划"
   - `DragCoordinator.cancelActiveDrag()` 与 `destroy()` 后，后续 pointermove 不再修改 selection，
     且 `DRAG_AUTO_SCROLL_KEY` 无待执行 scheduler task。
 
-- [ ] **Step 1: 写冻结区命中的失败测试**
+- [x] **Step 1: 写冻结区命中的失败测试**
 
 在 `InputController.column-groups.test.ts` 新增 `makeFrozenGroupedFrame()`。保留
 `makeGroupedFrame()` 的 3 列 group tree，并只替换 viewport，使 col0 冻结、center 已滚动 100px：
@@ -918,7 +918,7 @@ it('锁层拖选进入 viewport 内冻结段时返回 null，只有真正越界�
 同时把原“横向越界钳位”测试的右侧坐标由 `350` 改为
 `frame.viewport.contentRect.width`，明确边界是 viewport 而非列总宽。
 
-- [ ] **Step 2: 跑冻结区目标测试确认红**
+- [x] **Step 2: 跑冻结区目标测试确认红**
 
 Run:
 
@@ -929,7 +929,7 @@ bun test packages/core/tests/dom/runtime/controllers/InputController.column-grou
 Expected: FAIL；冻结段 `x=50` 被旧公式
 `event.x - rowHeaderWidth + scrollX` 算成逻辑列 1 并误命中 `s1`。
 
-- [ ] **Step 3: 以最小 region 公式修正两个 group hit 方法**
+- [x] **Step 3: 以最小 region 公式修正两个 group hit 方法**
 
 在 `InputController.ts` 从 `../../../kernel/geometry/FrozenRegions` type-only import
 `RenderRegion`，新增两个 private helper；不修改 `ColumnGroupHeaderHit`、group tree、selection 或
@@ -1007,7 +1007,7 @@ logicalX = region.scrollOffsetX + event.x - region.rect.x
 `scrollX`/`rowHeaderWidth` 公式；pointer 在 viewport 内但未命中 region 时保持 `null`，使组拖选
 进入冻结无组列后保持上一次有效 selection。
 
-- [ ] **Step 4: 跑冻结区命中测试与 typecheck 确认绿**
+- [x] **Step 4: 跑冻结区命中测试与 typecheck 确认绿**
 
 Run:
 
@@ -1018,7 +1018,7 @@ bun run --filter @zhiguang/novasheet-core typecheck
 
 Expected: PASS / 0 error；冻结无组列返回 `null`，center 仍返回 `s1`，viewport 外仍钳首/末组。
 
-- [ ] **Step 5: 写 Shift 右到左与 cancel/destroy 清理回归测试**
+- [x] **Step 5: 写 Shift 右到左与 cancel/destroy 清理回归测试**
 
 在 `ColumnGroupHeaderDrag.test.ts` 的 `makeDrag()` options 增加：
 
@@ -1114,7 +1114,7 @@ it('destroy 取消活跃组拖选并清除 auto-scroll task，且保持幂等', 
 保留；若因 fake scheduler 改造不再累计 cancel 调用次数，只把断言收紧为两次 `destroy()` 不抛且
 `pending.size === 0`，不得删除幂等覆盖。
 
-- [ ] **Step 6: 跑新增回归测试**
+- [x] **Step 6: 跑新增回归测试**
 
 Run:
 
@@ -1127,7 +1127,7 @@ bun test packages/core/tests/dom/interaction/drag/ColumnGroupHeaderDrag.test.ts 
 Expected: 全部 PASS；右到左 Shift 选择调用为 `(4, 1)`，cancel/destroy 后 selection 调用数不再
 增加且 `pending.size === 0`，现有 Escape → `cancelActiveDrag()` 路由测试仍绿。
 
-- [ ] **Step 7: 跑冻结选择、组头与拖拽 focused 回归**
+- [x] **Step 7: 跑冻结选择、组头与拖拽 focused 回归**
 
 Run:
 
@@ -1143,7 +1143,7 @@ bun test packages/core/tests/dom/runtime/controllers/InputController.column-grou
 Expected: 全部 PASS；既有组头正反拖选、冻结列、`reorder: false`、列换位和 column group 行为无
 回归。
 
-- [ ] **Step 8: 运行四项全量门禁**
+- [x] **Step 8: 运行四项全量门禁**
 
 Run:
 
@@ -1158,7 +1158,7 @@ bun run --filter @zhiguang/novasheet-core build && \
 Expected: lint 0 error / 0 warning；所有 workspace typecheck exit 0；test 0 fail；build 严格按
 core → canvas2d 顺序全部 exit 0。
 
-- [ ] **Step 9: 检查范围并提交实现修正**
+- [x] **Step 9: 检查范围并提交实现修正**
 
 Run:
 
