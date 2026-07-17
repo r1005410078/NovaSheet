@@ -139,10 +139,46 @@ function makeCtl(frame: RenderFrame, over: Record<string, unknown> = {}) {
 }
 
 describe('InputController — hitTestGroupHeader（组头行命中）', () => {
-  it('组行 y、组列 x → 返回该组 groupId', () => {
+  it('组行 y、组列 x → 返回该组完整命中契约', () => {
     const { ctl } = makeCtl(makeGroupedFrame())
-    const hit = ctl.hitTestGroupHeader({ x: 150, y: 10, shiftKey: false })
-    expect(hit).toEqual({ groupId: 's1' })
+    expect(ctl.hitTestGroupHeader({ x: 150, y: 10, shiftKey: false })).toEqual({
+      groupId: 's1',
+      level: 0,
+      startViewCol: 1,
+      endViewCol: 2,
+    })
+  })
+
+  it('锁定 level 后忽略 pointer y，仍按 x 返回该层组区间', () => {
+    const { ctl } = makeCtl(makeGroupedFrame())
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: 150, y: 200, shiftKey: false }, 0),
+    ).toEqual({
+      groupId: 's1',
+      level: 0,
+      startViewCol: 1,
+      endViewCol: 2,
+    })
+  })
+
+  it('锁定 level 越界或 x 落在同层无组空隙时返回 null', () => {
+    const { ctl } = makeCtl(makeGroupedFrame())
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: 50, y: 200, shiftKey: false }, 0),
+    ).toBeNull()
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: 150, y: 200, shiftKey: false }, 1),
+    ).toBeNull()
+  })
+
+  it('锁定 level 后横向越界钳到该层首组或末组', () => {
+    const { ctl } = makeCtl(makeGroupedFrame())
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: -10, y: 200, shiftKey: false }, 0)?.groupId,
+    ).toBe('s1')
+    expect(
+      ctl.hitTestGroupHeaderAtLevel({ x: 350, y: 200, shiftKey: false }, 0)?.groupId,
+    ).toBe('s1')
   })
 
   it('组行 y、无组列（伸满列）x → null（该列该行无组 cell，落回叶头语义）', () => {

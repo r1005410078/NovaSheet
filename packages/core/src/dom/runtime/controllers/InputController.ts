@@ -17,8 +17,10 @@ import type { GridEngine } from '../../../engine/GridEngine'
 import { isTypableEditKey } from '../../../features/edit/CellEdit'
 import type { CellAddress, CellRange } from '../../../kernel/coords/SelectionTypes'
 import { hitTestCell } from '../../../kernel/interaction/HitTest'
+import type { RenderFrameGroupHeaderCell } from '../../../kernel/render/RenderFrame'
 import type { CellActionHit, RenderBackend } from '../../../ports/RenderBackend'
 import type { CellEditorTrigger } from '../../interaction/CellEditorContract'
+import type { ColumnGroupHeaderHit } from '../../interaction/ColumnGroupHeaderHit'
 import type { WebHost, WebKeyboardEvent, WebPointerEvent } from '../../host/Host'
 import type { ValidationTooltip } from '../../overlay/ValidationTooltip'
 import type { RuntimeRenderFrame } from '../runtime-frame'
@@ -340,26 +342,55 @@ export class InputController {
   }
 
   /** 供 pointer 路由消费；组头点击选组入口。 */
-  hitTestGroupHeader(event: WebPointerEvent): { groupId: string } | null {
+  hitTestGroupHeader(event: WebPointerEvent): ColumnGroupHeaderHit | null {
     const frame = this.deps.engine.getFrame()
     const columnGroupHeader = frame.columnGroupHeader
     if (!columnGroupHeader) return null
     const headerHeight = frame.viewport.headerHeight ?? frame.theme.metrics.headerHeight
     if (event.y < 0 || event.y >= headerHeight) return null
     const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
-    if (event.x < rowHeaderWidth) return null
     const scrollX = frame.viewport.scrollX ?? 0
     const logicalX = event.x - rowHeaderWidth + scrollX
     const totalSize = this.deps.getColsTotalSizeForFrame(frame)
-    if (logicalX < 0 || logicalX >= totalSize) return null
-    const groupRowHeight = frame.theme.metrics.groupHeaderRowHeight
-    const level = Math.floor(event.y / groupRowHeight)
-    if (level >= columnGroupHeader.depth) return null
+    if (event.x < rowHeaderWidth || logicalX < 0 || logicalX >= totalSize) return null
+    const level = Math.floor(event.y / frame.theme.metrics.groupHeaderRowHeight)
+    if (level < 0 || level >= columnGroupHeader.depth) return null
+    return this.hitTestGroupHeaderAtLevel(event, level)
+  }
+
+  hitTestGroupHeaderAtLevel(
+    event: WebPointerEvent,
+    level: number,
+  ): ColumnGroupHeaderHit | null {
+    const frame = this.deps.engine.getFrame()
+    const columnGroupHeader = frame.columnGroupHeader
+    const row = columnGroupHeader?.rows[level]
+    if (!row) return null
+    const rowHeaderWidth = frame.viewport.rowHeaderWidth ?? 0
+    const scrollX = frame.viewport.scrollX ?? 0
+    const logicalX = event.x - rowHeaderWidth + scrollX
+    const totalSize = this.deps.getColsTotalSizeForFrame(frame)
+    if (row.length === 0) return null
+    if (logicalX < 0) return this.toColumnGroupHeaderHit(row[0]!, level)
+    if (logicalX >= totalSize) return this.toColumnGroupHeaderHit(row[row.length - 1]!, level)
     const colIndex = frame.colsAxis.positionToIndex(logicalX)
-    const row = columnGroupHeader.rows[level] ?? []
-    const cell = row.find((c) => colIndex >= c.startViewCol && colIndex <= c.endViewCol)
-    if (!cell) return null
-    return { groupId: cell.groupId }
+    const cell = row.find(
+      (candidate) =>
+        colIndex >= candidate.startViewCol && colIndex <= candidate.endViewCol,
+    )
+    return cell ? this.toColumnGroupHeaderHit(cell, level) : null
+  }
+
+  private toColumnGroupHeaderHit(
+    cell: RenderFrameGroupHeaderCell,
+    level: number,
+  ): ColumnGroupHeaderHit {
+    return {
+      groupId: cell.groupId,
+      level,
+      startViewCol: cell.startViewCol,
+      endViewCol: cell.endViewCol,
+    }
   }
 
   /** 供 DragCoordinator deps 反向消费。 */
