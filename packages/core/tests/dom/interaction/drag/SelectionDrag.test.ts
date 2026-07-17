@@ -135,4 +135,66 @@ describe('SelectionDrag', () => {
     expect(selectAllCells).toHaveBeenCalledTimes(1)
     expect(drag.move({ x: 100, y: 100, shiftKey: false })).toBe(false)
   })
+
+  it('Shift+行选择沿既有整行 anchor 扩展', () => {
+    const frame = makeSelectionFrame()
+    const engine = makeMockGridEngine({
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 0, colIndex: 2 },
+        selectedRange: { startRow: 0, endRow: 0, startCol: 0, endCol: 2 },
+      },
+      overrides: { getFrame: () => frame },
+    })
+    const selectWholeRowRange = mock((_anchor: number, _extent: number) => {})
+    const drag = new SelectionDrag({
+      engine,
+      refresh: () => {},
+      requestAutoScroll: () => {},
+      stopAutoScroll: () => {},
+      syncFillHandle: () => {},
+      isBlocked: () => false,
+      getSelectionBehavior: () => resolveSelectionBehavior({ frozenPanes: { left: 'row' } }),
+      selectWholeRowRange,
+      selectWholeColumnRange: () => {},
+      selectAllCells: () => {},
+      isWholeRowSelection: () => true,
+      isWholeColumnSelection: () => false,
+    })
+
+    expect(drag.tryStart({ x: 50, y: 102, shiftKey: true, button: 0 })).toBe(true)
+    expect(selectWholeRowRange).toHaveBeenLastCalledWith(0, 2)
+  })
+
+  it('Shift+列选择沿既有整列 anchor 扩展', () => {
+    const frame = makeSelectionFrame()
+    const engine = makeMockGridEngine({
+      selection: {
+        activeCell: { rowIndex: 0, colIndex: 0 },
+        anchorCell: { rowIndex: 0, colIndex: 0 },
+        extentCell: { rowIndex: 2, colIndex: 0 },
+        selectedRange: { startRow: 0, endRow: 2, startCol: 0, endCol: 0 },
+      },
+      overrides: { getFrame: () => frame },
+    })
+    const selectWholeColumnRange = mock((_anchor: number, _extent: number) => {})
+    const drag = new SelectionDrag({
+      engine,
+      refresh: () => {},
+      requestAutoScroll: () => {},
+      stopAutoScroll: () => {},
+      syncFillHandle: () => {},
+      isBlocked: () => false,
+      getSelectionBehavior: () => resolveSelectionBehavior({ frozenPanes: { top: 'column' } }),
+      selectWholeRowRange: () => {},
+      selectWholeColumnRange,
+      selectAllCells: () => {},
+      isWholeRowSelection: () => false,
+      isWholeColumnSelection: () => true,
+    })
+
+    expect(drag.tryStart({ x: 150, y: 46, shiftKey: true, button: 0 })).toBe(true)
+    expect(selectWholeColumnRange).toHaveBeenLastCalledWith(0, 1)
+  })
 })

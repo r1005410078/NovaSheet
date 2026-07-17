@@ -10,7 +10,6 @@ export { resolveGridInteractions } from './dom/runtime/GridInteractions'
 export type {
   FrozenPaneSelectionBehavior,
   GridSelectionBehavior,
-  ResolvedSelectionBehavior,
 } from './kernel/interaction/SelectionBehavior'
 
 // 数据层
@@ -134,8 +133,8 @@ export type {
   GridSelection,
   SelectCellOptions,
 } from './kernel/coords/SelectionTypes'
-export { hitTestCell, hitTestCellWithRegion } from './kernel/interaction/HitTest'
-export type { CellRegionHit, HitTestPoint } from './kernel/interaction/HitTest'
+export { hitTestCell } from './kernel/interaction/HitTest'
+export type { HitTestPoint } from './kernel/interaction/HitTest'
 export {
   applySelectionNavigation,
   parseSelectionNavigationKey,

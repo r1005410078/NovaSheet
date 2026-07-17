@@ -59,7 +59,6 @@ getCellTypeDefinition
 getColumnHeaderContextMenuItems
 getRowHeaderContextMenuItems
 hitTestCell
-hitTestCellWithRegion
 isCellInRange
 isEditableFieldType
 isEditableFieldTypeWithTypes

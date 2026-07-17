@@ -6,10 +6,10 @@ import {
   Viewport,
   denseGridTheme,
   hitTestCell,
-  hitTestCellWithRegion,
   type RenderFrame,
   type Schema,
 } from '../../../src'
+import { hitTestCellWithRegion } from '../../../src/kernel/interaction/HitTest'
 
 const SCHEMA: Schema = {
   fields: [
