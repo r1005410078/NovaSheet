@@ -66,6 +66,7 @@
 | core.L2.grid-cols-hide-unhide-visible-count | L2 | implemented | Grid hideCols 与 unhideCols 更新隐藏集合和 render frame schema |
 | core.L2.grid-cols-insert-delete-undo-redo | L2 | implemented | Grid 列插入、删除与 undo/redo 通过 facade 保持 schema 一致 |
 | core.L2.grid-cols-move-callback | L2 | implemented | Grid moveCols 移动列组、触发 onColumnsMoved，并支持 undo/redo |
+| core.L2.grid-column-group-header-drag-selection | L2 | draft | 同层分组表头支持连续拖选且不依赖列换位配置 |
 | core.L2.grid-column-groups-bms-smoke | L2 | implemented | BMS 形态冒烟：两层组 + 无组冻结指标列 + locateStack 等价流（scrollToGroup + selectGroup） |
 | core.L2.grid-column-groups-frame-layout | L2 | implemented | 嵌套组树经 getFrame().columnGroupHeader 下发：depth/rows 区间/leafTopRowByViewCol/表头总高 |
 | core.L2.grid-column-groups-hide-shrink | L2 | implemented | hideCols 使组头按可见叶列收缩，全隐则组头从 frame 消失；组树本身不变，unhide 恢复 |
@@ -1714,6 +1715,36 @@
 - 移动后 schema 顺序为 `b,c,d,a`
 - 回调收到 `{ fieldIds: ['a'], beforeFieldId: null }`
 - undo / redo 还原并重放 schema 顺序
+
+## core.L2.grid-column-group-header-drag-selection
+
+- **layer**: L2
+- **summary**: 同层分组表头支持连续拖选且不依赖列换位配置
+- **status**: draft
+
+### User Story
+
+作为带多级列表头的 Grid 使用者，我希望从一个分组表头横向拖到同层另一个分组表头时，选中两组之间全部连续叶列，以便在关闭列换位的只读监控表中连续高亮多个业务列组。
+
+### Given
+
+- 一个 mounted Grid，schema 为无组指标列 + `堆1 → 簇1/簇2` + `堆2 → 簇1/簇2`
+- 无组指标列通过 `frozen: { leftCols: 1 }` 冻结在左侧
+- `interactions: { reorder: false }`
+- 每列宽度 100，三行数据
+
+### When
+
+- pointerdown 第一层组头 `堆1`
+- pointermove 横向到第一层组头 `堆2`，期间 pointer 的 y 移入叶头行
+- pointerup
+
+### Then
+
+- 最终 `selectedRange` 覆盖全部数据行与 `堆1`、`堆2` 的四个叶列
+- 无组指标列不在选区内
+- 组头拖选不改变 schema 字段顺序
+- `reorder: false` 不阻止上述连续选择
 
 ## core.L2.grid-column-groups-bms-smoke
 
