@@ -459,4 +459,19 @@ describe('InputController — 表头命中测试 / 整行整列选择', () => {
       selectedRange: { startRow: 1, endRow: 3, startCol: 0, endCol: 1 },
     })
   })
+
+  it('selectAllCells 选择当前视图全部数据，空表 no-op', () => {
+    const { ctl, deps } = makeCtl({}, { rowCount: 3, colCount: 2 })
+    ctl.selectAllCells()
+    expect(deps.engine.setSelection).toHaveBeenCalledWith({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: 2, colIndex: 1 },
+      selectedRange: { startRow: 0, endRow: 2, startCol: 0, endCol: 1 },
+    })
+
+    const empty = makeCtl({}, { rowCount: 0, colCount: 2 })
+    empty.ctl.selectAllCells()
+    expect(empty.deps.engine.setSelection).not.toHaveBeenCalled()
+  })
 })

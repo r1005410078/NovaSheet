@@ -411,4 +411,18 @@ export class InputController {
       selectedRange: { startRow, endRow, startCol: 0, endCol: colCount - 1 },
     })
   }
+
+  /** 选择当前视图中的全部数据单元格。 */
+  selectAllCells(): void {
+    const frame = this.deps.engine.getFrame()
+    const rowCount = frame.data.getRowCount()
+    const colCount = frame.data.getSchema().fields.length
+    if (rowCount <= 0 || colCount <= 0) return
+    this.deps.engine.setSelection({
+      activeCell: { rowIndex: 0, colIndex: 0 },
+      anchorCell: { rowIndex: 0, colIndex: 0 },
+      extentCell: { rowIndex: rowCount - 1, colIndex: colCount - 1 },
+      selectedRange: { startRow: 0, endRow: rowCount - 1, startCol: 0, endCol: colCount - 1 },
+    })
+  }
 }

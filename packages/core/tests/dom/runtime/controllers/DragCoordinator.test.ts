@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from 'bun:test'
 import { DragCoordinator } from '../../../../src/dom/runtime/controllers/DragCoordinator'
 import { makeMockGridEngine } from '../../../helpers/mock-grid-engine'
 import type { WebHost } from '../../../../src/dom/host/Host'
+import { resolveSelectionBehavior } from '../../../../src/kernel/interaction/SelectionBehavior'
 
 function makeCoordinator() {
   const cancel = mock(() => {})
@@ -33,6 +34,8 @@ function makeCoordinator() {
     selectWholeColumn: () => {},
     selectWholeColumnRange: () => {},
     selectWholeRowRange: () => {},
+    selectAllCells: () => {},
+    getSelectionBehavior: () => resolveSelectionBehavior(),
   })
   return { drag, cancel }
 }

@@ -84,6 +84,10 @@ import {
   type GridInteractions,
   type ResolvedGridInteractions,
 } from './GridInteractions'
+import {
+  resolveSelectionBehavior,
+  type ResolvedSelectionBehavior,
+} from '../../kernel/interaction/SelectionBehavior'
 import type { GridSelectionBehavior } from '../../kernel/interaction/SelectionBehavior'
 
 /** GridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
@@ -265,6 +269,8 @@ export class GridRuntime {
   private onSelectionChange?: (selection: GridSelection) => void
   /** 归一化后的交互开关。 */
   private readonly interactions: ResolvedGridInteractions
+  /** 归一化后的冻结窗格选择语义。 */
+  private readonly selectionBehavior: ResolvedSelectionBehavior
 
   /** 创建 runtime 并保存 backend 注入的 engine/host/renderer/layer 依赖。 */
   constructor(opts: GridRuntimeOptions) {
@@ -287,6 +293,7 @@ export class GridRuntime {
     this.selectionOverlay = opts.selectionOverlay
     this.validationTooltip = opts.validationTooltip
     this.interactions = resolveGridInteractions(opts.interactions)
+    this.selectionBehavior = resolveSelectionBehavior(opts.selectionBehavior)
     this.engine.setValidationRedrawCallback(() => this.invalidate())
     this.engine.setDataChangeRedrawCallback(() => this.invalidate())
     this.viewport = new ViewportController({
@@ -450,6 +457,8 @@ export class GridRuntime {
       selectWholeColumn: (col) => this.input.selectWholeColumn(col),
       selectWholeColumnRange: (anchor, extent) => this.input.selectWholeColumnRange(anchor, extent),
       selectWholeRowRange: (anchor, extent) => this.input.selectWholeRowRange(anchor, extent),
+      selectAllCells: () => this.input.selectAllCells(),
+      getSelectionBehavior: () => this.selectionBehavior,
       handleLayer: this.handleLayer,
       fillLayer: this.fillLayer,
       columnReorderOverlay: this.columnReorderOverlay,

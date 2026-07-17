@@ -12,6 +12,7 @@
 import type { AutofitRowsResult } from '../../../features/row/AutofitRowHeights'
 import type { GridEngine } from '../../../engine/GridEngine'
 import type { CellRange } from '../../../kernel/coords/SelectionTypes'
+import type { ResolvedSelectionBehavior } from '../../../kernel/interaction/SelectionBehavior'
 import { clamp } from '../../../kernel/geometry/range'
 import { MIN_RESIZE_SIZE } from '../../../kernel/interaction/HandleLayout'
 import type { ResizeHandleRect } from '../../../kernel/interaction/HandleLayout'
@@ -80,6 +81,8 @@ export interface DragCoordinatorDeps {
   selectWholeColumn(colIndex: number): void
   selectWholeColumnRange(anchorCol: number, extentCol: number): void
   selectWholeRowRange(anchorRow: number, extentRow: number): void
+  selectAllCells(): void
+  getSelectionBehavior(): ResolvedSelectionBehavior
   // DOM layers（可选注入，与 GridRuntimeOptions 同名项一致）
   readonly handleLayer?: DomHandleLayer
   readonly fillLayer?: DomFillHandleLayer
@@ -169,6 +172,12 @@ export class DragCoordinator {
       stopAutoScroll: () => this.stopDragAutoScroll(),
       syncFillHandle: () => this.deps.syncFillHandle(),
       isBlocked: () => this.isDragBlocked(),
+      getSelectionBehavior: () => this.deps.getSelectionBehavior(),
+      selectWholeRowRange: (anchor, extent) => this.deps.selectWholeRowRange(anchor, extent),
+      selectWholeColumnRange: (anchor, extent) => this.deps.selectWholeColumnRange(anchor, extent),
+      selectAllCells: () => this.deps.selectAllCells(),
+      isWholeRowSelection: (range) => this.deps.isWholeRowSelection(range),
+      isWholeColumnSelection: (range) => this.deps.isWholeColumnSelection(range),
     })
     this.drags = [this.columnHeaderDrag, this.rowHeaderDrag, this.selectionDrag]
   }
