@@ -450,6 +450,9 @@ export class GridRuntime {
       handleHostScroll: (scrollTop, scrollLeft) => this.viewport.handleHostScroll(scrollTop, scrollLeft),
       getScrollLimits: () => this.viewport.getScrollLimits(),
       getColsTotalSize: () => this.viewport.getColsTotalSizeForFrame(this.engine.getFrame()),
+      hitTestGroupHeader: (event) => this.input.hitTestGroupHeader(event),
+      hitTestGroupHeaderAtLevel: (event, level) =>
+        this.input.hitTestGroupHeaderAtLevel(event, level),
       hitTestColumnHeader: (event) => this.input.hitTestColumnHeader(event),
       hitTestRowHeader: (event) => this.input.hitTestRowHeader(event),
       isWholeColumnSelection: (range) => this.input.isWholeColumnSelection(range),

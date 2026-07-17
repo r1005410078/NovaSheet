@@ -27,6 +27,8 @@ function makeCoordinator() {
     handleHostScroll: () => {},
     getScrollLimits: () => ({ maxTop: 1000, maxLeft: 1000 }),
     getColsTotalSize: () => 4000,
+    hitTestGroupHeader: () => null,
+    hitTestGroupHeaderAtLevel: () => null,
     hitTestColumnHeader: () => null,
     hitTestRowHeader: () => null,
     isWholeColumnSelection: () => false,

@@ -99,13 +99,6 @@ export class InputController {
       this.deps.openColumnHeaderContextMenu(menuButtonHit.colIndex, event)
       return
     }
-    // 组头行命中：单击选中整组；不进入 tryStartDrag/DragCoordinator（组头拖拽扩展选区不在本期范围）
-    const groupHit = this.hitTestGroupHeader(event)
-    if (groupHit) {
-      this.deps.engine.selectColumnGroup(groupHit.groupId)
-      this.deps.refresh()
-      return
-    }
     this.deps.tryStartDrag(event)
   }
 

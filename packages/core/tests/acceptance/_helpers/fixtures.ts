@@ -11,6 +11,7 @@ import {
   type ExcelWorkspacePort,
   type GridEngineFrameSource,
   type FrozenConfig,
+  type GridInteractions,
   type GridSelection,
   type GridSelectionBehavior,
   type PasteSkippedCell,
@@ -73,6 +74,7 @@ export function mountRecordingGrid(
     data?: InMemoryDataSource
     excelHeaders?: boolean
     frozen?: Partial<FrozenConfig>
+    interactions?: GridInteractions
     selectionBehavior?: GridSelectionBehavior
     onSelectionChange?: (selection: GridSelection) => void
     rowHeaderField?: string
@@ -98,6 +100,7 @@ export function mountRecordingGrid(
     backend,
     excelHeaders: options.excelHeaders,
     frozen: options.frozen,
+    interactions: options.interactions,
     selectionBehavior: options.selectionBehavior,
     onSelectionChange: options.onSelectionChange,
     rowHeaderField: options.rowHeaderField,

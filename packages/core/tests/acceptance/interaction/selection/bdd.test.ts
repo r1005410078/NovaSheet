@@ -28,6 +28,18 @@ function dispatchGridPointerDown(target: HTMLElement, point: { x: number; y: num
   )
 }
 
+function dispatchGridPointerMove(target: HTMLElement, point: { x: number; y: number }): void {
+  target.dispatchEvent(
+    new MouseEvent('pointermove', {
+      bubbles: true,
+      cancelable: true,
+      clientX: point.x,
+      clientY: point.y,
+      button: 0,
+    }),
+  )
+}
+
 function dispatchGridPointerUp(target: HTMLElement): void {
   target.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, cancelable: true, button: 0 }))
 }
@@ -42,6 +54,32 @@ function createRemapData(): InMemoryDataSource {
       c: `c${index}`,
       d: `d${index}`,
     })) satisfies Row[],
+  })
+}
+
+function createGroupedSelectionData(): InMemoryDataSource {
+  return new InMemoryDataSource({
+    schema: {
+      fields: [
+        { id: 'metric', name: '点号名称', type: 'text', width: 100 },
+        { id: 's1c1', name: '簇1', type: 'number', width: 100 },
+        { id: 's1c2', name: '簇2', type: 'number', width: 100 },
+        { id: 's2c1', name: '簇1', type: 'number', width: 100 },
+        { id: 's2c2', name: '簇2', type: 'number', width: 100 },
+      ],
+      columnGroups: [
+        { fieldId: 'metric' },
+        { id: 's1', label: '堆1', children: [{ fieldId: 's1c1' }, { fieldId: 's1c2' }] },
+        { id: 's2', label: '堆2', children: [{ fieldId: 's2c1' }, { fieldId: 's2c2' }] },
+      ],
+    },
+    rows: Array.from({ length: 3 }, (_, row) => ({
+      metric: `m${row}`,
+      s1c1: row,
+      s1c2: row,
+      s2c1: row,
+      s2c2: row,
+    })),
   })
 }
 
@@ -159,6 +197,37 @@ describe('Core BDD Batch 4 selection navigation coordinates scenarios', () => {
       endCol: 0,
     })
 
+    grid.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('core.L2.grid-column-group-header-drag-selection locks group level and selects contiguous groups', () => {
+    const data = createGroupedSelectionData()
+    const { container, grid } = mountRecordingGrid({
+      data,
+      frozen: { leftCols: 1 },
+      interactions: { reorder: false },
+    })
+    const scrollHost = container.querySelector<HTMLElement>('[data-novasheet-scroll-host]')
+    if (scrollHost === null) throw new Error('expected Grid scroll host')
+
+    dispatchGridPointerDown(scrollHost, { x: 150, y: 10 })
+    dispatchGridPointerMove(scrollHost, { x: 350, y: 45 })
+    dispatchGridPointerUp(scrollHost)
+
+    expect(grid.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 2,
+      startCol: 1,
+      endCol: 4,
+    })
+    expect(data.getSchema().fields.map((field) => field.id)).toEqual([
+      'metric',
+      's1c1',
+      's1c2',
+      's2c1',
+      's2c2',
+    ])
     grid.destroy()
     document.body.removeChild(container)
   })

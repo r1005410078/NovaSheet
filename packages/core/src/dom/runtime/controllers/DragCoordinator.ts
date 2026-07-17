@@ -1,9 +1,9 @@
 /**
- * DragCoordinator——5 类 Drag 手势（resize/列表头/行表头/填充柄/选区）的构造、pointerdown
+ * DragCoordinator——6 类 Drag 手势（resize/分组表头/列表头/行表头/填充柄/选区）的构造、pointerdown
  * 派发、活跃拖拽状态与拖拽期间边缘自动滚动 tick 的编排（GridRuntime 拆分 Task 8，见
  * `docs/superpowers/specs/2026-07-11-grid-runtime-decomposition-design.md` §3.2）。
  *
- * `drags` 数组（列表头/行表头/选区）供 pointerdown 顺序尝试起拖；resize/填充柄走各自专用
+ * `drags` 数组（分组表头/列表头/行表头/选区）供 pointerdown 顺序尝试起拖；resize/填充柄走各自专用
  * pointer handler（由 host 层独立的 handle-layer/fill-layer 触发，不进入通用 pointerdown
  * 派发循环）。`activeDrag` 记录当前活跃拖拽，驱动 move/commit/cancel 与边缘自动滚动 tick
  * 的落点重算——所有拖拽收尾都会清空它，故 destroy/afterEngineMutation 都要经它复位。
@@ -19,7 +19,9 @@ import type { ResizeHandleRect } from '../../../kernel/interaction/HandleLayout'
 import type { FrameScheduler } from '../../../kernel/util/raf'
 import type { DomFillHandleLayer } from '../../interaction/DomFillHandleLayer'
 import type { DomHandleLayer } from '../../interaction/DomHandleLayer'
+import type { ColumnGroupHeaderHit } from '../../interaction/ColumnGroupHeaderHit'
 import type { Drag } from '../../interaction/drag/Drag'
+import { ColumnGroupHeaderDrag } from '../../interaction/drag/ColumnGroupHeaderDrag'
 import { ColumnHeaderDrag } from '../../interaction/drag/ColumnHeaderDrag'
 import { FillHandleDrag } from '../../interaction/drag/FillHandleDrag'
 import { ResizeDrag } from '../../interaction/drag/ResizeDrag'
@@ -69,6 +71,8 @@ export interface DragCoordinatorDeps {
   handleHostScroll(scrollTop: number, scrollLeft: number): void
   getScrollLimits(): { maxTop: number; maxLeft: number }
   getColsTotalSize(): number
+  hitTestGroupHeader(event: WebPointerEvent): ColumnGroupHeaderHit | null
+  hitTestGroupHeaderAtLevel(event: WebPointerEvent, level: number): ColumnGroupHeaderHit | null
   /**
    * 返回类型比 brief 摘要（`{ colIndex: number }`）宽：需带 `fieldId` 才能满足
    * `ColumnHeaderDragDeps.hitTestColumnHeader` 的返回类型（原体本就返回两者），
@@ -104,6 +108,8 @@ export class DragCoordinator {
   private readonly resizeDrag: ResizeDrag
   /** 列表头拖拽（reorder + 表头拖选）。 */
   private readonly columnHeaderDrag: ColumnHeaderDrag
+  /** 分组表头拖拽（锁定层级并扩展整列选区）。 */
+  private readonly columnGroupHeaderDrag: ColumnGroupHeaderDrag
   /** 行表头拖拽（reorder + 表头拖选）。 */
   private readonly rowHeaderDrag: RowHeaderDrag
   /** 填充柄拖拽。 */
@@ -136,6 +142,18 @@ export class DragCoordinator {
       selectWholeColumnRange: (anchor, extent) => this.deps.selectWholeColumnRange(anchor, extent),
       getColsTotalSize: () => this.deps.getColsTotalSize(),
       allowReorder: this.deps.allowReorder !== false,
+    })
+    this.columnGroupHeaderDrag = new ColumnGroupHeaderDrag({
+      engine: this.deps.engine,
+      refresh: () => this.deps.refresh(),
+      requestAutoScroll: (pointer) => this.requestDragAutoScroll(pointer),
+      stopAutoScroll: () => this.stopDragAutoScroll(),
+      isBlocked: () => this.isDragBlocked(),
+      hitTestGroupHeader: (event) => this.deps.hitTestGroupHeader(event),
+      hitTestGroupHeaderAtLevel: (event, level) =>
+        this.deps.hitTestGroupHeaderAtLevel(event, level),
+      isWholeColumnSelection: (range) => this.deps.isWholeColumnSelection(range),
+      selectWholeColumnRange: (anchor, extent) => this.deps.selectWholeColumnRange(anchor, extent),
     })
     this.rowHeaderDrag = new RowHeaderDrag({
       engine: this.deps.engine,
@@ -179,7 +197,12 @@ export class DragCoordinator {
       isWholeRowSelection: (range) => this.deps.isWholeRowSelection(range),
       isWholeColumnSelection: (range) => this.deps.isWholeColumnSelection(range),
     })
-    this.drags = [this.columnHeaderDrag, this.rowHeaderDrag, this.selectionDrag]
+    this.drags = [
+      this.columnGroupHeaderDrag,
+      this.columnHeaderDrag,
+      this.rowHeaderDrag,
+      this.selectionDrag,
+    ]
   }
 
   /** pointerdown 按序尝试起拖（GridRuntime `handleHostPointerDown` 的 drags 循环）。 */

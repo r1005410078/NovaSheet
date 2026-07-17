@@ -242,13 +242,12 @@ describe('InputController — hitTestColumnHeader 分层（组头存在时仅叶
   })
 })
 
-describe('InputController — pointer down 组头点击选组', () => {
-  it('点击组行命中的组头：selectColumnGroup(groupId) + refresh，短路不进入 tryStartDrag', () => {
+describe('InputController — pointer down 组头路由', () => {
+  it('组头 pointerdown 交给 DragCoordinator，不再直接 selectColumnGroup', () => {
     const { ctl, deps } = makeCtl(makeGroupedFrame())
     ctl.handleHostPointerDown({ x: 150, y: 10, shiftKey: false, button: 0 })
-    expect(deps.engine.selectColumnGroup).toHaveBeenCalledWith('s1')
-    expect(deps.refresh).toHaveBeenCalled()
-    expect(deps.tryStartDrag).not.toHaveBeenCalled()
+    expect(deps.tryStartDrag).toHaveBeenCalled()
+    expect(deps.engine.selectColumnGroup).not.toHaveBeenCalled()
   })
 
   it('点击叶头区（无组）：不调用 selectColumnGroup，落入 tryStartDrag', () => {
@@ -265,5 +264,6 @@ describe('InputController — pointer down 组头点击选组', () => {
     ctl.handleHostPointerDown({ x: 150, y: 10, shiftKey: false, button: 0 })
     expect(deps.openColumnHeaderContextMenu).toHaveBeenCalledWith(1, expect.anything())
     expect(deps.engine.selectColumnGroup).not.toHaveBeenCalled()
+    expect(deps.tryStartDrag).not.toHaveBeenCalled()
   })
 })
