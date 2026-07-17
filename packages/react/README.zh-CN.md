@@ -1,23 +1,23 @@
-# `@novasheet/react`
+# `@zhiguang/react`
 
 [English README](README.md)
 
-NovaSheet 的 React 适配包。本包把 `@novasheet/core` 的 imperative `Grid`（经 `@novasheet/canvas2d` 渲染）包装成 React 组件、hooks 与一套开箱即用的 Excel 风格壳层。它**不是**引擎也不是渲染器——不持有表格状态，不实现 mutation 逻辑，不做 Canvas 绘制。下面每项能力最终都会调用某个公开 `Grid` 方法；这些方法的行为保证见 [`@novasheet/core`](../core/README.zh-CN.md)。
+NovaSheet 的 React 适配包。本包把 `@zhiguang/core` 的 imperative `Grid`（经 `@zhiguang/canvas2d` 渲染）包装成 React 组件、hooks 与一套开箱即用的 Excel 风格壳层。它**不是**引擎也不是渲染器——不持有表格状态，不实现 mutation 逻辑，不做 Canvas 绘制。下面每项能力最终都会调用某个公开 `Grid` 方法；这些方法的行为保证见 [`@zhiguang/core`](../core/README.zh-CN.md)。
 
 行为同时以 Given/When/Then 场景固化在 [`tests/excel/scenarios/*.md`](tests/excel)（索引见 [`tests/excel/SCENARIOS.md`](tests/excel/SCENARIOS.md)），分 L3a（壳层/DOM/props/ref/StrictMode）→ L3b（toolbar 点击 → `grid.*` 接线）→ L3c（用户旅程）三层——见文末[测试](#测试)。
 
 ## 安装
 
 ```bash
-bun add @novasheet/react react react-dom
+bun add @zhiguang/react react react-dom
 ```
 
-`@novasheet/core` 与 `@novasheet/canvas2d` 作为本包自身依赖一并安装；`react`/`react-dom`（>=18.3）是 peer dependency。
+`@zhiguang/core` 与 `@zhiguang/canvas2d` 作为本包自身依赖一并安装；`react`/`react-dom`（>=18.3）是 peer dependency。
 
 ## 快速开始
 
 ```tsx
-import { NovaExcel } from '@novasheet/react'
+import { NovaExcel } from '@zhiguang/react'
 
 // 零配置：自带工具栏的空白、可无限滚动的 A–Z × 1000 稀疏工作簿。
 export function BlankWorkbook() {
@@ -26,8 +26,8 @@ export function BlankWorkbook() {
 ```
 
 ```tsx
-import { InMemoryDataSource } from '@novasheet/core'
-import { NovaSheetGrid } from '@novasheet/react'
+import { InMemoryDataSource } from '@zhiguang/core'
+import { NovaSheetGrid } from '@zhiguang/react'
 
 const data = new InMemoryDataSource({
   schema: { fields: [{ id: 'name', name: 'Name', type: 'text', width: 160 }] },
@@ -40,7 +40,7 @@ export function PlainGrid() {
 }
 ```
 
-`@novasheet/react` 不内置全局 CSS。内置工具栏使用 Tailwind utility class，消费方需要在应用里加载 Tailwind，并把 `packages/react/src/**/*`（或发布后的组件代码）纳入 Tailwind content scan。
+`@zhiguang/react` 不内置全局 CSS。内置工具栏使用 Tailwind utility class，消费方需要在应用里加载 Tailwind，并把 `packages/react/src/**/*`（或发布后的组件代码）纳入 Tailwind content scan。
 
 ## 职责
 
@@ -48,15 +48,15 @@ export function PlainGrid() {
 | --- | --- |
 | React 生命周期绑定 | 在 mount 时创建 `Grid`，在 unmount 时调用 `Grid.destroy()`；兼容 Strict Mode 的 mount → unmount → mount 流程。 |
 | DOM 容器管理 | 持有表格宿主元素，把 container ref 与 `Grid` facade 连接起来；自身不绘制 canvas。 |
-| 后端默认装配 | 默认组合 `@novasheet/core` 的 `Grid` 与 `@novasheet/canvas2d` 的 `canvas2dBackend`。 |
+| 后端默认装配 | 默认组合 `@zhiguang/core` 的 `Grid` 与 `@zhiguang/canvas2d` 的 `canvas2dBackend`。 |
 | React API 适配 | 在 imperative facade 之上提供组件、hooks、ref handle、typed 事件回调与 props diff 策略。 |
 | 业务工具栏 | 提供 `NovaSheetToolbar`——只负责展示和派发 typed action，React 层不实现引擎逻辑。 |
 | 业务集成入口 | 为应用层接入数据源、schema、theme、frozen、selection、editing、clipboard、undo/redo 提供稳定入口。 |
 
 | 不做什么 | 原因 |
 | --- | --- |
-| 不实现引擎状态 | `DefaultGridEngine`、mutation、undo、view/raw 坐标、`DataSource` 协议属于 `@novasheet/core`。 |
-| 不实现 Canvas 绘制 | renderer、painters、HighDPI、text measure 属于 `@novasheet/canvas2d`。 |
+| 不实现引擎状态 | `DefaultGridEngine`、mutation、undo、view/raw 坐标、`DataSource` 协议属于 `@zhiguang/core`。 |
+| 不实现 Canvas 绘制 | renderer、painters、HighDPI、text measure 属于 `@zhiguang/canvas2d`。 |
 | 不绕过 `Grid` facade | 所有 mutation 必须经 `Grid` 的公开方法。 |
 | 不读取 renderer 内部状态 | 只持有公开 `Grid` handle，不依赖 `Canvas2DRenderer` 或 painter 私有结构。 |
 | 不硬编码视觉值 | 视觉值仍来自 core 的 `Theme`；本层只管容器尺寸与业务 props。 |
@@ -64,16 +64,16 @@ export function PlainGrid() {
 ## 依赖方向
 
 ```text
-@novasheet/core      Grid facade · engine · DOM runtime · contracts
+@zhiguang/core      Grid facade · engine · DOM runtime · contracts
         ↑
-@novasheet/canvas2d  Canvas2D RenderBackend implementation
+@zhiguang/canvas2d  Canvas2D RenderBackend implementation
         ↑
-@novasheet/react     React component/hooks adapter
+@zhiguang/react     React component/hooks adapter
         ↑
 business apps        React applications
 ```
 
-`@novasheet/react` 可以依赖 `core` 与 `canvas2d`，反向依赖禁止——两者都不得 import 本包。包内分层（`excel/` vs `features/grid` vs `features/toolbar` vs `components`/`lib`）与 import 方向规则见 [`docs/project-structure.md`](docs/project-structure.md)、[`docs/project-standards.md`](docs/project-standards.md)；由 `bun run lint:react-boundary` 强制。
+`@zhiguang/react` 可以依赖 `core` 与 `canvas2d`，反向依赖禁止——两者都不得 import 本包。包内分层（`excel/` vs `features/grid` vs `features/toolbar` vs `components`/`lib`）与 import 方向规则见 [`docs/project-structure.md`](docs/project-structure.md)、[`docs/project-standards.md`](docs/project-standards.md)；由 `bun run lint:react-boundary` 强制。
 
 ## 组件
 
@@ -93,8 +93,8 @@ business apps        React applications
 ### 纯表格
 
 ```tsx
-import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
-import { NovaSheetGrid, type NovaSheetGridRef } from '@novasheet/react'
+import { InMemoryDataSource, denseGridTheme } from '@zhiguang/core'
+import { NovaSheetGrid, type NovaSheetGridRef } from '@zhiguang/react'
 import { useRef } from 'react'
 
 export function Sheet({ data }: { data: InMemoryDataSource }) {
@@ -116,8 +116,8 @@ export function Sheet({ data }: { data: InMemoryDataSource }) {
 ### 带/不带数据的 Excel 壳层
 
 ```tsx
-import { SparseExcelDataSource } from '@novasheet/core'
-import { NovaExcel } from '@novasheet/react'
+import { SparseExcelDataSource } from '@zhiguang/core'
+import { NovaExcel } from '@zhiguang/react'
 
 const data = new SparseExcelDataSource()
 data.updateCell(0, 'A', 'NovaSheet')
@@ -155,7 +155,7 @@ export function BlankExcel() {
 
 ```tsx
 import { useRef } from 'react'
-import { NovaSheetGrid, useNovaExcelToolbar, type NovaSheetGridRef } from '@novasheet/react'
+import { NovaSheetGrid, useNovaExcelToolbar, type NovaSheetGridRef } from '@zhiguang/react'
 
 function CustomToolbarSheet({ data }) {
   const gridRef = useRef<NovaSheetGridRef>(null)
@@ -179,7 +179,7 @@ function CustomToolbarSheet({ data }) {
 ### 独立使用 `NovaSheetToolbar`
 
 ```tsx
-import { NovaSheetToolbar } from '@novasheet/react'
+import { NovaSheetToolbar } from '@zhiguang/react'
 
 export function SheetToolbar() {
   return (
@@ -196,7 +196,7 @@ export function SheetToolbar() {
 ### 自定义单元格编辑器
 
 ```tsx
-import { createReactCellEditor, type ReactCellEditorProps } from '@novasheet/react'
+import { createReactCellEditor, type ReactCellEditorProps } from '@zhiguang/react'
 
 function AssigneePicker({ value, commit, cancel }: ReactCellEditorProps) {
   return (
@@ -218,7 +218,7 @@ const assigneeEditor = createReactCellEditor(AssigneePicker, { kind: 'popover' }
 ### 自定义筛选编辑器
 
 ```tsx
-import { createReactCellFilterEditor, type ReactCellFilterEditorProps } from '@novasheet/react'
+import { createReactCellFilterEditor, type ReactCellFilterEditorProps } from '@zhiguang/react'
 
 function AssigneeFilter({ value, apply, cancel }: ReactCellFilterEditorProps) {
   const selected = new Set(Array.isArray(value) ? value : [])
@@ -242,13 +242,13 @@ const assigneeFilterEditor = createReactCellFilterEditor(AssigneeFilter)
 
 ### 在 React 里把一个自定义类型完整拼起来
 
-把 `createReactCellEditor`、`cellAttachments`、canvas renderer 与 `NovaSheetToolbar` 扩展项组合起来的旗舰示例，是 `@novasheet/cell-kit` 里交付的 rich-text 单元格类型，完整接线见 [`apps/storybook/src/stories/RichText.stories.ts`](../../apps/storybook/src/stories/RichText.stories.ts)。它的 `richTextExtension.toolbarExtension(controller)` 接入 `NovaSheetToolbar` 的 `extensionItems` prop——这正是任何需要操作"当前打开的单元格编辑器"（而非操作 grid 选区）的自定义 React 控件（取色器、公式栏按钮……）该用的同一条缝。
+把 `createReactCellEditor`、`cellAttachments`、canvas renderer 与 `NovaSheetToolbar` 扩展项组合起来的旗舰示例，是 `@zhiguang/cell-kit` 里交付的 rich-text 单元格类型，完整接线见 [`apps/storybook/src/stories/RichText.stories.ts`](../../apps/storybook/src/stories/RichText.stories.ts)。它的 `richTextExtension.toolbarExtension(controller)` 接入 `NovaSheetToolbar` 的 `extensionItems` prop——这正是任何需要操作"当前打开的单元格编辑器"（而非操作 grid 选区）的自定义 React 控件（取色器、公式栏按钮……）该用的同一条缝。
 
 ## 已知缺口：并非所有 `GridOptions` 字段都会被转发
 
 `NovaSheetGridProps` 的类型是 `Omit<GridOptions, 'backend'>`，所以 TypeScript 会接受任何 core `GridOptions` 字段作为 prop。但目前运行时，`NovaSheetGrid` / `useNovaSheetGrid` 只转发：`data`、`theme`、`frozen`、`defaultRowHeight`、`excelHeaders`、`excelWorkspace`、`locale`、`formatters`、`cellEditors`，以及已文档化的回调（`onContextMenuAction`、剪贴板的 `onCopy`/`onCut`/`onPaste`/`onPasteSkipped`、`onUndo`/`onRedo`/`onFill`、结构性的 `onRows*`/`onColumns*`/`onHide*Change`、`onSelectionChange`）。
 
-**尚未转发**：`cellTypes`、`cellAttachments`、`validators`、`validationBatchSize`、`validationMaxConcurrent`、`contextMenus`、`contextMenuRenderer`、`fillCellTypes`。把它们当 JSX prop 传入不会报类型错误，但对配置表格来说是个 no-op——而且具体到 `<NovaSheetGrid>`/`<NovaExcel>`，这个未识别的 prop 会落到宿主 `<div>` 上变成一个原始 DOM 属性（React 会在控制台报未知属性警告）。如果现在就需要用到这些选项，请直接构造 `Grid`（见 [`@novasheet/core`](../core/README.zh-CN.md)）而不要经过这层适配，或者去扩展 `useNovaSheetGrid` 的解构列表。
+**尚未转发**：`cellTypes`、`cellAttachments`、`validators`、`validationBatchSize`、`validationMaxConcurrent`、`contextMenus`、`contextMenuRenderer`、`fillCellTypes`。把它们当 JSX prop 传入不会报类型错误，但对配置表格来说是个 no-op——而且具体到 `<NovaSheetGrid>`/`<NovaExcel>`，这个未识别的 prop 会落到宿主 `<div>` 上变成一个原始 DOM 属性（React 会在控制台报未知属性警告）。如果现在就需要用到这些选项，请直接构造 `Grid`（见 [`@zhiguang/core`](../core/README.zh-CN.md)）而不要经过这层适配，或者去扩展 `useNovaSheetGrid` 的解构列表。
 
 ## 测试
 
@@ -258,4 +258,4 @@ bun run lint:scenario-coverage
 bun run typecheck
 ```
 
-`tests/excel/` 是本包主要的行为测试战场（Core 自己的 L0–L2 行为测试套件在 `@novasheet/core`，见其 README）。场景分层为 **L3a** 壳层/DOM/props/ref/StrictMode、**L3b** toolbar 点击 → `grid.*` 接线、**L3c** 用户旅程——索引见 [`tests/excel/SCENARIOS.md`](tests/excel/SCENARIOS.md)，全文在 `tests/excel/scenarios/*.md`。`lint:scenario-coverage` 会对没有对应测试的场景、以及没有对应场景的测试都判失败。
+`tests/excel/` 是本包主要的行为测试战场（Core 自己的 L0–L2 行为测试套件在 `@zhiguang/core`，见其 README）。场景分层为 **L3a** 壳层/DOM/props/ref/StrictMode、**L3b** toolbar 点击 → `grid.*` 接线、**L3c** 用户旅程——索引见 [`tests/excel/SCENARIOS.md`](tests/excel/SCENARIOS.md)，全文在 `tests/excel/scenarios/*.md`。`lint:scenario-coverage` 会对没有对应测试的场景、以及没有对应场景的测试都判失败。

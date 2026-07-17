@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ChunkedAxis, denseGridTheme } from '@novasheet/core'
+import { ChunkedAxis, denseGridTheme } from '@zhiguang/core'
 import { GridLinesPainter } from '../../src/painters/GridLinesPainter'
 import { createRecordingContext } from '../helpers/recording-context'
 

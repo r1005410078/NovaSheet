@@ -172,9 +172,9 @@ resolve → `rowsChanged` → 增量填充。"空白"升级为 shimmer 骨架属
 ### 使用示例
 
 ```ts
-import { Grid, WindowedDataSource } from '@novasheet/core'
-import type { WindowedDataProvider, RangeSlice } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
+import { Grid, WindowedDataSource } from '@zhiguang/core'
+import type { WindowedDataProvider, RangeSlice } from '@zhiguang/core'
+import { canvas2dBackend } from '@zhiguang/canvas2d'
 
 function createDocProvider(docId: string): WindowedDataProvider {
   return {

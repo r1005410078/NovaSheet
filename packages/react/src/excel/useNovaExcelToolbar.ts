@@ -5,7 +5,7 @@ import type {
   GridSelection,
   TextWrapMode,
   ValueFormat,
-} from '@novasheet/core'
+} from '@zhiguang/core'
 import { useCallback, useEffect } from 'react'
 
 import type { ToolbarAction, ToolbarActionId, ToolbarStateGridAccess } from '@/features/toolbar'

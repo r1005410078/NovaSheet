@@ -3,7 +3,7 @@ import {
   computeFillHandleRect,
   computeRangeOverlayRects,
 } from '../../../src/dom/overlay/RangeOverlayRects'
-import type { RenderFrame } from '@novasheet/core'
+import type { RenderFrame } from '@zhiguang/core'
 
 describe('RangeOverlayRects', () => {
   it('computes visible rect for range intersection with region', () => {

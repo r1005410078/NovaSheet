@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import type { CellValue, ColumnGroupChild, Field, Grid, Schema } from '@novasheet/core'
+import type { CellValue, ColumnGroupChild, Field, Grid, Schema } from '@zhiguang/core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
 import { docsMeta, docsStory } from '../story-docs'

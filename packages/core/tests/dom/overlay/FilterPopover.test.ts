@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { denseGridTheme, type Field, type FilterOp } from '@novasheet/core'
+import { denseGridTheme, type Field, type FilterOp } from '@zhiguang/core'
 import { FilterPopover } from '../../../src/dom/overlay/FilterPopover'
 
 function makeContainer(): HTMLElement {

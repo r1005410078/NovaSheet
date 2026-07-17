@@ -1,5 +1,5 @@
-import { InMemoryDataSource, type Row, type Schema } from '@novasheet/core'
-import { NovaExcel, type NovaExcelRef } from '@novasheet/react'
+import { InMemoryDataSource, type Row, type Schema } from '@zhiguang/core'
+import { NovaExcel, type NovaExcelRef } from '@zhiguang/react'
 import React, { useEffect, useMemo, useRef } from 'react'
 
 import {

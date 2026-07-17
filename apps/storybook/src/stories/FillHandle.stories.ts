@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource, dateToSerial } from '@novasheet/core'
+import { InMemoryDataSource, dateToSerial } from '@zhiguang/core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/fill-handle.basic.snippet.ts?raw'

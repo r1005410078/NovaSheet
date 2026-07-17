@@ -23,8 +23,8 @@ import type {
   TextMeasurer,
   TextWrapMode,
   Theme,
-} from '@novasheet/core'
-import { wrapText } from '@novasheet/core'
+} from '@zhiguang/core'
+import { wrapText } from '@zhiguang/core'
 
 /** 行高倍数（默认 1.4 倍 fontSize）。可在 theme 里加 token 让它可配。 */
 const LINE_HEIGHT_MULTIPLIER = 1.4

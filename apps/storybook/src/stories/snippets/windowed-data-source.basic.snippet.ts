@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { Grid, WindowedDataSource } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
+import { Grid, WindowedDataSource } from '@zhiguang/core'
+import { canvas2dBackend } from '@zhiguang/canvas2d'
 import { FakeWindowedProvider } from '../fake-windowed-provider'
 
 // 100 columns total (symbol + region + 98 metrics) so horizontal scroll also

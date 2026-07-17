@@ -2,8 +2,8 @@ import { describe, expect, it, mock } from 'bun:test'
 import { InputController } from '../../../../src/dom/runtime/controllers/InputController'
 import { makeMockGridEngine } from '../../../helpers/mock-grid-engine'
 import type { WebHost } from '../../../../src/dom/host/Host'
-import { denseGridTheme } from '@novasheet/core'
-import type { Axis, GridEngine, RenderFrame } from '@novasheet/core'
+import { denseGridTheme } from '@zhiguang/core'
+import type { Axis, GridEngine, RenderFrame } from '@zhiguang/core'
 
 /**
  * hit-test 分层场景：3 列（field-0/1/2），depth=1 组 s1 覆盖 view [1,2]，

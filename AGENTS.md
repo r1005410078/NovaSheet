@@ -19,7 +19,7 @@ both `AGENTS.md` and `CLAUDE.md` as binding for any agent operating on NovaSheet
   - `bun run lint` — oxlint, must be **0 errors / 0 warnings**
   - `bun run --filter '*' typecheck` — strict TS, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`
   - `bun test`
-  - `bun run --filter @novasheet/web build && bun run --filter @novasheet/canvas2d build && bun run --filter @novasheet/core build` (order matters)
+  - `bun run --filter @zhiguang/web build && bun run --filter @zhiguang/canvas2d build && bun run --filter @zhiguang/core build` (order matters)
 
 ### Tests
 

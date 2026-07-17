@@ -13,7 +13,7 @@
  * 缓存被 `clearCache()` 主动失效——主题 / 字段 schema 变更时由调用方调一次。
  */
 
-import type { TextMeasurer } from '@novasheet/core'
+import type { TextMeasurer } from '@zhiguang/core'
 
 const DEFAULT_CACHE_LIMIT = 20_000
 

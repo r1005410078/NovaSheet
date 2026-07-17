@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { readManifest } from '@novasheet/mbd'
+import { readManifest } from '@zhiguang/mbd'
 import {
   collectScenarioIdsFromTestRoots,
   computeScenarioCoverage,

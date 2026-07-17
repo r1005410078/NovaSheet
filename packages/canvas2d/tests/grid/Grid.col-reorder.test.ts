@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { InMemoryDataSource, denseGridTheme } from '@novasheet/core'
-import { Grid } from '@novasheet/core'
+import { InMemoryDataSource, denseGridTheme } from '@zhiguang/core'
+import { Grid } from '@zhiguang/core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
 
 const schema = {

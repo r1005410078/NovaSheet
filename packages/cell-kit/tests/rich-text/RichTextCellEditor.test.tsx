@@ -3,7 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RichTextToolbarProvider, useRichTextToolbarController } from '../../src/rich-text/RichTextToolbarProvider'
 import { createRichTextEditor, richTextEditor } from '../../src/rich-text/RichTextCellEditor'
-import type { CellEditorOpenContext } from '@novasheet/core'
+import type { CellEditorOpenContext } from '@zhiguang/core'
 import type { RichTextToolbarController } from '../../src/rich-text/RichTextToolbarProvider'
 
 function open(over: Partial<CellEditorOpenContext> = {}) {

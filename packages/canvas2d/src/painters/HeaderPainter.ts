@@ -20,7 +20,7 @@ import {
   type Schema,
   type Theme,
   type ViewPipeline,
-} from '@novasheet/core'
+} from '@zhiguang/core'
 import { snapLineInside } from '../paint/line-snap'
 import { paintSvgPath } from '../paint/svg-path'
 

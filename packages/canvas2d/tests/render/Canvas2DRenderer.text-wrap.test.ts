@@ -7,7 +7,7 @@ import {
   denseGridTheme,
   type Schema,
   type TextMeasurer,
-} from '@novasheet/core'
+} from '@zhiguang/core'
 import { Canvas2DRenderer } from '../../src/render/Canvas2DRenderer'
 import { createRecordingContext } from '../helpers/recording-context'
 

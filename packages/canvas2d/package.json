@@ -1,5 +1,5 @@
 {
-  "name": "@novasheet/canvas2d",
+  "name": "@zhiguang/canvas2d",
   "version": "0.1.0",
   "description": "Canvas2D renderer for the NovaSheet spreadsheet engine.",
   "license": "MIT",
@@ -41,7 +41,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@novasheet/core": "^0.1.0"
+    "@zhiguang/core": "^0.1.0"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.9.0",

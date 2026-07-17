@@ -1,4 +1,4 @@
-import type { BorderLineStyle, BorderPreset, BorderStyle } from '@novasheet/core'
+import type { BorderLineStyle, BorderPreset, BorderStyle } from '@zhiguang/core'
 import { ChevronDown, PenLine } from 'lucide-react'
 import { useEffect, useState, type Ref } from 'react'
 

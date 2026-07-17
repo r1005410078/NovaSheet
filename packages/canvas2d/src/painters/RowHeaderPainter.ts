@@ -2,7 +2,7 @@
  * RowHeaderPainter——Excel 门面左侧 1-based 行号列。
  */
 
-import type { Axis, CellValue, Theme } from '@novasheet/core'
+import type { Axis, CellValue, Theme } from '@zhiguang/core'
 import { snapLineInside } from '../paint/line-snap'
 
 export interface RowHeaderPaintParams {

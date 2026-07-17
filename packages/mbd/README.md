@@ -1,4 +1,4 @@
-# @novasheet/mbd
+# @zhiguang/mbd
 
 Markdown 行为场景工具（**monorepo 内部**，`private: true`）。
 
@@ -22,12 +22,12 @@ Markdown 行为场景工具（**monorepo 内部**，`private: true`）。
 │  mbd（本包）     validate + manifest                          │
 │                  MD → scenarios.manifest.json + SCENARIOS.md  │
 ├─────────────────────────────────────────────────────────────┤
-│  @novasheet/react                                           │
+│  @zhiguang/react                                           │
 │    手写 tests/excel/*.test.ts（it title = 场景 id）          │
 │    lint:scenario-coverage（读 manifest 算结构覆盖率）          │
 │    bun test（行为断言）                                      │
 ├─────────────────────────────────────────────────────────────┤
-│  @novasheet/core     TDD 单测（持续）                         │
+│  @zhiguang/core     TDD 单测（持续）                         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -121,8 +121,8 @@ it('excel.L3b.undo-redo dispatches grid.undo', () => { ... })
 ## CLI（仅两条）
 
 ```bash
-bun run --filter @novasheet/mbd mbd validate
-bun run --filter @novasheet/mbd mbd manifest
+bun run --filter @zhiguang/mbd mbd validate
+bun run --filter @zhiguang/mbd mbd manifest
 bun run sync:mbd-manifest    # 根目录快捷
 ```
 

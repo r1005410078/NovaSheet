@@ -4,7 +4,7 @@ import type {
   GridSelection,
   MergeRegion,
   TextWrapMode,
-} from '@novasheet/core'
+} from '@zhiguang/core'
 
 import type { NovaSheetToolbarState } from '../types'
 

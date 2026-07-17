@@ -9,7 +9,7 @@ import {
   type MergeRegion,
   type RenderFrame,
   type Schema,
-} from '@novasheet/core'
+} from '@zhiguang/core'
 import { Canvas2DRenderer } from '../../src/render/Canvas2DRenderer'
 import { expectGolden } from '../helpers/golden'
 import { dumpOps } from '../helpers/op-dump'

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import type { Field, TextMeasurer } from '@novasheet/core'
-import { dateToSerial } from '@novasheet/core'
+import type { Field, TextMeasurer } from '@zhiguang/core'
+import { dateToSerial } from '@zhiguang/core'
 import { CellPainter } from '../../src/painters/CellPainter'
-import { denseGridTheme } from '@novasheet/core'
+import { denseGridTheme } from '@zhiguang/core'
 import { createRecordingContext } from '../helpers/recording-context'
 
 function makeField(overrides: Partial<Field> = {}): Field {

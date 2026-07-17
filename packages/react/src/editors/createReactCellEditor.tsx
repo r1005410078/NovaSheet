@@ -1,6 +1,6 @@
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { CellEditor, CellEditorOpenContext, CellValue } from '@novasheet/core'
+import type { CellEditor, CellEditorOpenContext, CellValue } from '@zhiguang/core'
 
 export interface ReactCellEditorProps<TValue extends CellValue = CellValue>
   extends CellEditorOpenContext {

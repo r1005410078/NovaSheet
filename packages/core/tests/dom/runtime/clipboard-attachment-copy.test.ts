@@ -3,7 +3,7 @@
  * 复用 custom-editor-attachment.test.ts 的 makeEngine/makeHost/makeRenderer/makeFrameWithFields 模式。
  */
 import { describe, expect, it, mock } from 'bun:test'
-import { InMemoryDataSource } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/core'
 import type {
   CellAttachmentCodec,
   CellRange,
@@ -14,10 +14,10 @@ import type {
   Row,
   Schema,
   Theme,
-} from '@novasheet/core'
-import type { WebHost } from '@novasheet/core'
-import type { RenderBackend } from '@novasheet/core'
-import { GridRuntime } from '@novasheet/core'
+} from '@zhiguang/core'
+import type { WebHost } from '@zhiguang/core'
+import type { RenderBackend } from '@zhiguang/core'
+import { GridRuntime } from '@zhiguang/core'
 
 // ---------------------------------------------------------------------------
 // Test doubles — mirrors custom-editor-attachment.test.ts setup

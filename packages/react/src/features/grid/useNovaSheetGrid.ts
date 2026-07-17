@@ -1,5 +1,5 @@
-import { canvas2dBackend } from '@novasheet/canvas2d'
-import { Grid } from '@novasheet/core'
+import { canvas2dBackend } from '@zhiguang/canvas2d'
+import { Grid } from '@zhiguang/core'
 import { useCallback, useEffect, useRef } from 'react'
 import type { MutableRefObject, RefObject } from 'react'
 

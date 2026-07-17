@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck — storybook docs display snippet; references
-import { SparseExcelDataSource, withExcelHeaders } from '@novasheet/core'
+import { SparseExcelDataSource, withExcelHeaders } from '@zhiguang/core'
 import { createGridHost } from '../grid-host'
 
 const data = new SparseExcelDataSource()

@@ -15,11 +15,11 @@ The long-term goal is to provide infrastructure for AI-native data workbenches: 
 ## Why NovaSheet
 
 - **Canvas-first performance**: a single visible-region redraw path for large datasets.
-- **Portable engine**: `@novasheet/core`'s engine layers (kernel/features/engine) are DOM-free; rendering is injected through a `RenderBackend` port, so core never depends on Canvas.
-- **Public facade in core**: `import { Grid } from '@novasheet/core'`, with the renderer passed in as `backend: canvas2dBackend()`.
-- **Dedicated renderer package**: `@novasheet/canvas2d` owns Canvas2D painting and the custom cell-renderer registry.
-- **React adapter**: `@novasheet/react` ships `<NovaExcel />` (a ready-made Excel-style shell) and `<NovaSheetGrid />`.
-- **Extensible cells**: register custom cell types, editors, attachments, and canvas painters — `@novasheet/cell-kit`'s rich-text cell is the first-party reference implementation.
+- **Portable engine**: `@zhiguang/core`'s engine layers (kernel/features/engine) are DOM-free; rendering is injected through a `RenderBackend` port, so core never depends on Canvas.
+- **Public facade in core**: `import { Grid } from '@zhiguang/core'`, with the renderer passed in as `backend: canvas2dBackend()`.
+- **Dedicated renderer package**: `@zhiguang/canvas2d` owns Canvas2D painting and the custom cell-renderer registry.
+- **React adapter**: `@zhiguang/react` ships `<NovaExcel />` (a ready-made Excel-style shell) and `<NovaSheetGrid />`.
+- **Extensible cells**: register custom cell types, editors, attachments, and canvas painters — `@zhiguang/cell-kit`'s rich-text cell is the first-party reference implementation.
 - **Spreadsheet interactions**: selection, keyboard navigation, editing, clipboard, undo/redo, fill handle, sorting, filtering, row/column operations, merge cells, value formatting, and validation.
 - **Live Storybook demos**: interactive examples for scroll, frozen regions, autofit, Excel-style headers, editing, clipboard, selection, formatting, windowed data, and more.
 - **Tested monorepo**: 1,797 passing `bun:test` tests across the workspace, with BDD acceptance scenarios backing the public API.
@@ -30,14 +30,14 @@ NovaSheet is pre-1.0 and actively developed.
 
 | Area       | Status                                                                                                |
 | ---------- | ----------------------------------------------------------------------------------------------------- |
-| Packages   | `@novasheet/core`, `@novasheet/canvas2d`, `@novasheet/react`, `@novasheet/cell-kit`, `@novasheet/mbd` |
+| Packages   | `@zhiguang/core`, `@zhiguang/canvas2d`, `@zhiguang/react`, `@zhiguang/cell-kit`, `@zhiguang/mbd` |
 | Tests      | 1,797 passing tests with `bun:test`                                                                   |
 | CI gates   | lint, typecheck, test, build                                                                          |
-| Public API | `import { Grid } from '@novasheet/core'` + `backend: canvas2dBackend()`                               |
+| Public API | `import { Grid } from '@zhiguang/core'` + `backend: canvas2dBackend()`                               |
 | Demo       | Storybook on GitHub Pages                                                                             |
 | License    | MIT                                                                                                   |
 
-Recently delivered: **Phase 5-C value formatting, custom cell-type extension API (+ `@novasheet/cell-kit` rich text), cell validation, `WindowedDataSource` remote data, and the React adapter**.
+Recently delivered: **Phase 5-C value formatting, custom cell-type extension API (+ `@zhiguang/cell-kit` rich text), cell validation, `WindowedDataSource` remote data, and the React adapter**.
 
 Next milestone: **Phase 5-D conditional formatting**.
 
@@ -56,13 +56,13 @@ NovaSheet uses Bun workspaces.
 
 ```bash
 bun install
-bun run --filter @novasheet/core build
-bun run --filter @novasheet/canvas2d build
+bun run --filter @zhiguang/core build
+bun run --filter @zhiguang/canvas2d build
 ```
 
 ```ts
-import { Grid, InMemoryDataSource, denseGridTheme } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
+import { Grid, InMemoryDataSource, denseGridTheme } from '@zhiguang/core'
+import { canvas2dBackend } from '@zhiguang/canvas2d'
 
 const data = new InMemoryDataSource({
   schema: {
@@ -117,11 +117,11 @@ Open Storybook and choose the `Table /` stories to explore interactive variants.
 ```text
 novasheet/
 ├── packages/
-│   ├── core/                @novasheet/core — engine + DOM shell + public Grid facade
-│   ├── canvas2d/            @novasheet/canvas2d — Canvas2D render backend
-│   ├── react/               @novasheet/react — React adapter (NovaExcel shell, hooks)
-│   ├── cell-kit/            @novasheet/cell-kit — opt-in cell components (rich text)
-│   └── mbd/                 @novasheet/mbd — markdown BDD scenario tooling (dev-only)
+│   ├── core/                @zhiguang/core — engine + DOM shell + public Grid facade
+│   ├── canvas2d/            @zhiguang/canvas2d — Canvas2D render backend
+│   ├── react/               @zhiguang/react — React adapter (NovaExcel shell, hooks)
+│   ├── cell-kit/            @zhiguang/cell-kit — opt-in cell components (rich text)
+│   └── mbd/                 @zhiguang/mbd — markdown BDD scenario tooling (dev-only)
 ├── apps/
 │   └── storybook/           interactive demo app
 ├── docs/
@@ -138,13 +138,13 @@ novasheet/
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│   Composition roots: apps/storybook · @novasheet/react      │
+│   Composition roots: apps/storybook · @zhiguang/react      │
 │   new Grid(container, { data, backend: canvas2dBackend() }) │
 └──────────────┬──────────────────────────┬───────────────────┘
                │ uses                     │ injects
                ▼                          ▼
 ┌──────────────────────────┐   ┌─────────────────────────────┐
-│   @novasheet/core        │   │   @novasheet/canvas2d       │
+│   @zhiguang/core        │   │   @zhiguang/canvas2d       │
 │   Grid (public facade)   │   │   canvas2dBackend()         │
 │   DefaultGridEngine      │◄──│   Canvas2DRenderer          │
 │   kernel/features/engine │   │   painters · HighDPI        │
@@ -153,7 +153,7 @@ novasheet/
 └──────────────────────────┘   └─────────────────────────────┘
 ```
 
-Dependency direction is intentionally one-way — `core` never imports a renderer; `@novasheet/canvas2d` implements core's `RenderBackend` port and depends back on core:
+Dependency direction is intentionally one-way — `core` never imports a renderer; `@zhiguang/canvas2d` implements core's `RenderBackend` port and depends back on core:
 
 ```text
 core <- canvas2d <- cell-kit
@@ -174,10 +174,10 @@ See [docs/architecture.md](docs/architecture.md) for the detailed architecture n
 | Phase 5-A Merge + basic formatting | merge/unmerge, fill color, basic borders, undo/redo, Storybook coverage                                               | Done    |
 | Phase 5-B Advanced borders         | per-edge borders, dashed/dotted/double line styles                                                                    | Done    |
 | Phase 5-C Value formatting         | number/currency/percent/date formats, custom formatter registry, three-state text wrap                                | Done    |
-| Cell extension API                 | custom cell types/editors/attachments, canvas cell renderers, per-cell type override, `@novasheet/cell-kit` rich text | Done    |
+| Cell extension API                 | custom cell types/editors/attachments, canvas cell renderers, per-cell type override, `@zhiguang/cell-kit` rich text | Done    |
 | Cell validation                    | sync/async `ValidatorDefinition`, auto-wired to every write path (edit/paste/fill/undo)                               | Done    |
 | Windowed remote data               | `WindowedDataSource` sliding-window fetch/subscribe with LRU block cache                                              | Done    |
-| React adapter                      | `@novasheet/react`: `<NovaExcel />` shell, `<NovaSheetGrid />`, hooks, toolbar                                        | Done    |
+| React adapter                      | `@zhiguang/react`: `<NovaExcel />` shell, `<NovaSheetGrid />`, hooks, toolbar                                        | Done    |
 | Phase 5-D Conditional formatting   | conditional formatting rules                                                                                          | Next    |
 | Phase 6 Schema + field types       | field editor, lookup, rollup, grouping, aggregation                                                                   | Planned |
 | Phase 7 Formulas + import/export   | formula engine, multi-sheet support, named ranges, pivot tables, charts, xlsx/csv                                     | Planned |
@@ -203,9 +203,9 @@ bun run build-storybook
 Package-level commands:
 
 ```bash
-bun run --filter @novasheet/core test
-bun run --filter @novasheet/core typecheck
-bun run --filter @novasheet/core build
+bun run --filter @zhiguang/core test
+bun run --filter @zhiguang/core typecheck
+bun run --filter @zhiguang/core build
 ```
 
 Build Storybook with the same base path used by GitHub Pages:

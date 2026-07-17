@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { denseGridTheme } from '@novasheet/core'
+import { denseGridTheme } from '@zhiguang/core'
 import { CellPainter, type Canvas2DCellRenderer } from '../../src/painters/CellPainter'
 import { createRecordingContext } from '../helpers/recording-context'
 

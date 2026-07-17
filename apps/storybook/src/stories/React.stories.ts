@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/core'
 import {
   NovaSheetGrid,
   NovaSheetToolbar,
   useNovaSheetToolbarState,
-} from '@novasheet/react'
+} from '@zhiguang/react'
 import React, { useCallback, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import type { CellRange, TextWrapMode } from '@novasheet/core'
-import type { NovaSheetGridRef, ToolbarAction } from '@novasheet/react'
+import type { CellRange, TextWrapMode } from '@zhiguang/core'
+import type { NovaSheetGridRef, ToolbarAction } from '@zhiguang/react'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
 import basicReactSrc from './snippets/react.basic.snippet.ts?raw'
@@ -18,7 +18,7 @@ const meta: Meta = {
   title: 'Table/React',
   parameters: { layout: 'fullscreen' },
   ...docsMeta(
-    '`@novasheet/react` wraps the core Grid and Canvas2D backend into React components. React apps can render NovaSheetGrid directly without manually injecting a backend.',
+    '`@zhiguang/react` wraps the core Grid and Canvas2D backend into React components. React apps can render NovaSheetGrid directly without manually injecting a backend.',
   ),
 }
 export default meta

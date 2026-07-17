@@ -2,8 +2,8 @@ import { describe, expect, it, mock } from 'bun:test'
 import React, { act } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import { InMemoryDataSource } from '@novasheet/core'
-import type { Field } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/core'
+import type { Field } from '@zhiguang/core'
 
 import * as NovaSheetReact from '../../src'
 import {

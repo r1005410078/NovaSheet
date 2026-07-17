@@ -8,9 +8,9 @@ Do not publish from a dirty working tree.
 
 Changesets publishes packages in dependency order:
 
-1. `@novasheet/core`
-2. `@novasheet/canvas2d`
-3. `@novasheet/web`
+1. `@zhiguang/core`
+2. `@zhiguang/canvas2d`
+3. `@zhiguang/web`
 
 The root workspace and Storybook app are private and should not be published.
 
@@ -103,4 +103,4 @@ npm publish --access public
 - Confirm the Changesets release commit and tags were pushed by the release workflow, or create and push a signed or annotated `v0.1.0` tag manually.
 - Create a GitHub release that links to [docs/release/0.1.0.md](release/0.1.0.md).
 - Confirm the Storybook deployment is available at `https://r1005410078.github.io/NovaSheet/`.
-- Open a fresh project and install `@novasheet/web` to validate the published package path.
+- Open a fresh project and install `@zhiguang/web` to validate the published package path.

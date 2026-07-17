@@ -11,15 +11,15 @@ const meta: Meta = {
   title: 'Table/React',
   parameters: { layout: 'fullscreen' },
   ...docsMeta(
-    'NovaExcel **行为场景看板**：21 条 L3 场景来自 `scenarios.manifest.json`；**测试覆盖**列绿（`#34a353`）= 有对应 `it("excel.L3x…")`，红（`#ea4335`）= 缺失。改场景 MD 后执行 `bun run sync:mbd-manifest` 与 `bun run --filter @novasheet/storybook sync:excel-scenario-board`。',
+    'NovaExcel **行为场景看板**：21 条 L3 场景来自 `scenarios.manifest.json`；**测试覆盖**列绿（`#34a353`）= 有对应 `it("excel.L3x…")`，红（`#ea4335`）= 缺失。改场景 MD 后执行 `bun run sync:mbd-manifest` 与 `bun run --filter @zhiguang/storybook sync:excel-scenario-board`。',
   ),
 }
 export default meta
 
 type Story = StoryObj
 
-const boardSnippet = `import { NovaExcel } from '@novasheet/react'
-import { InMemoryDataSource } from '@novasheet/core'
+const boardSnippet = `import { NovaExcel } from '@zhiguang/react'
+import { InMemoryDataSource } from '@zhiguang/core'
 // Rows + fill colors generated from scenarios.manifest.json — see ExcelScenarioBoardHost.
 
 <NovaExcel data={boardData} excelWorkspace={false} />`

@@ -1,4 +1,4 @@
-# @novasheet/react 项目规范
+# @zhiguang/react 项目规范
 
 ## 工具链
 
@@ -13,7 +13,7 @@
 
 ## 分层约束
 
-1. **不实现引擎状态**——mutation、undo、坐标映射在 `@novasheet/core`
+1. **不实现引擎状态**——mutation、undo、坐标映射在 `@zhiguang/core`
 2. **不绕过 `Grid` facade**——React 层只调公开 `Grid` API
 3. **不跨 feature import**——组合放在 `excel/`（见 `project-structure.md` R1–R5）
 4. **不硬编码视觉值**——主题来自 core tokens；Tailwind 仅用于容器与工具栏布局
@@ -22,7 +22,7 @@
 
 - 包内跨层：优先 `@/features/grid`、`@/lib/utils` 等 path alias
 - 跨 feature：仅 `excel/` 通过 `@/features/<name>`（即 feature `index.ts`）
-- 对外：消费者只 `import { ... } from '@novasheet/react'`
+- 对外：消费者只 `import { ... } from '@zhiguang/react'`
 
 ## 测试
 
@@ -32,13 +32,13 @@
 
 ### 与 Core 的分工（Phase 0）
 
-| | `@novasheet/core` | `@novasheet/react`（本包） |
+| | `@zhiguang/core` | `@zhiguang/react`（本包） |
 | --- | --- | --- |
 | **TDD** | **继续** — `kernel/`、`features/`、`engine/` 驱动实现 | 不适用 |
 | **行为测试** | **暂缓** — 不扩 Grid 门面 E2E / `acceptance` | **`tests/excel/` 主战场** |
 | **场景结构覆盖率** | — | **`lint:scenario-coverage`**（读 mbd 导出的 manifest，非 mbd CLI；missing 与 orphan 均 fail） |
 
-完整分层见：[`docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md`](../../../docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md)（含 Phase 0 节与附录 C）。场景 MD 由 [`@novasheet/mbd`](../../../docs/superpowers/specs/2026-06-09-novasheet-mbd-package-design.md) 导出 `scenarios.manifest.json`；**场景结构覆盖率**由本包 `lint:scenario-coverage`（实现期，`scripts/check-scenario-coverage.ts` 读 manifest）计算，**不在 mbd 包**。
+完整分层见：[`docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md`](../../../docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md)（含 Phase 0 节与附录 C）。场景 MD 由 [`@zhiguang/mbd`](../../../docs/superpowers/specs/2026-06-09-novasheet-mbd-package-design.md) 导出 `scenarios.manifest.json`；**场景结构覆盖率**由本包 `lint:scenario-coverage`（实现期，`scripts/check-scenario-coverage.ts` 读 manifest）计算，**不在 mbd 包**。
 
 新场景从 `tests/excel/scenarios/_template.md` 复制并重命名（`_` 前缀文件不参与 mbd 扫描）。
 
@@ -70,7 +70,7 @@
 
 ```bash
 bun run lint:react-boundary   # 根 monorepo
-bun run --filter @novasheet/react lint:boundary   # 仅 react 包
+bun run --filter @zhiguang/react lint:boundary   # 仅 react 包
 ```
 
 违规示例：`features/grid` import `features/toolbar/...`；`components/button.ts` import `features/grid/...`。

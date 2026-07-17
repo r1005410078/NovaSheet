@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { Grid } from '@novasheet/core'
+import { Grid } from '@zhiguang/core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
-import { InMemoryDataSource } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/core'
 
 describe('Grid Phase 5-A APIs', () => {
   it('exposes the current selection for range formatting controls', () => {

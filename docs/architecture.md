@@ -1,8 +1,8 @@
 # NovaSheet 当前架构设计图
 
 - **范围**：`main` 分支当前源码状态（2026-07，GridRuntime 分解合并后）
-- **包**：`@novasheet/core` · `@novasheet/canvas2d` · `@novasheet/react` · `@novasheet/cell-kit` · `@novasheet/mbd`
-- **对外入口**：`import { Grid } from '@novasheet/core'`，渲染后端经 `GridOptions.backend` 注入（`canvas2dBackend()`）；React 场景用 `@novasheet/react` 的 `<NovaExcel />` / `<NovaSheetGrid />`
+- **包**：`@zhiguang/core` · `@zhiguang/canvas2d` · `@zhiguang/react` · `@zhiguang/cell-kit` · `@zhiguang/mbd`
+- **对外入口**：`import { Grid } from '@zhiguang/core'`，渲染后端经 `GridOptions.backend` 注入（`canvas2dBackend()`）；React 场景用 `@zhiguang/react` 的 `<NovaExcel />` / `<NovaSheetGrid />`
 - **能力状态**：Phase 4 全交付；Phase 5-A/5-B/5-C（合并 + 边框 + 值格式化）、单元格扩展 API、数据校验、WindowedDataSource 已交付；下一里程碑 Phase 5-D 条件格式
 
 ---
@@ -13,10 +13,10 @@
 flowchart TB
   subgraph Apps["组合根（应用层）"]
     SB["apps/storybook<br/>vanilla stories"]
-    React["@novasheet/react<br/>NovaExcel / NovaSheetGrid / hooks"]
+    React["@zhiguang/react<br/>NovaExcel / NovaSheetGrid / hooks"]
   end
 
-  subgraph CoreP["@novasheet/core — 引擎 + DOM 壳 + 公开 facade"]
+  subgraph CoreP["@zhiguang/core — 引擎 + DOM 壳 + 公开 facade"]
     Grid["Grid.ts 公开 facade<br/>GridOptions.backend 注入"]
     Ctl["GridControllerImpl<br/>mutation 直调 engine"]
     RT["GridRuntime 组合根<br/>+ 8 域 controller + flush pipeline"]
@@ -28,14 +28,14 @@ flowchart TB
     RT --> Port
   end
 
-  subgraph C2D["@novasheet/canvas2d — Canvas2D 渲染后端"]
+  subgraph C2D["@zhiguang/canvas2d — Canvas2D 渲染后端"]
     Backend["canvas2dBackend()<br/>RenderBackendFactory"]
     Renderer["Canvas2DRenderer + painters + HighDPI"]
     Backend --> Renderer
   end
 
-  CellKit["@novasheet/cell-kit<br/>opt-in 单元格组件（rich-text）"]
-  MBD["@novasheet/mbd<br/>MD 场景校验工具（dev-only）"]
+  CellKit["@zhiguang/cell-kit<br/>opt-in 单元格组件（rich-text）"]
+  MBD["@zhiguang/mbd<br/>MD 场景校验工具（dev-only）"]
 
   SB --> Grid
   React --> Grid
@@ -50,11 +50,11 @@ flowchart TB
 
 | 包                    | 职责                                                                                                                                                                             | 不含                  |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `@novasheet/core`     | 全部状态与行为：数据、几何、选区、编辑、格式、合并、fill、剪贴板、undo/redo、校验 + DOM 壳（host/scroll/interaction/overlay/runtime）+ 公开 `Grid` facade + `RenderBackend` 端口 | 任何 Canvas 绘制      |
-| `@novasheet/canvas2d` | `RenderBackend` 唯一 shipped 实现：`Canvas2DRenderer`、painters、HighDPI、`cellRenderers` 自定义绘制注册                                                                         | 引擎状态、DOM 编排    |
-| `@novasheet/react`    | React 适配：`<NovaExcel />` Excel 壳、`<NovaSheetGrid />`、hooks、toolbar；一切能力最终调用公开 `Grid` 方法                                                                      | 引擎/渲染逻辑         |
-| `@novasheet/cell-kit` | 第一方 opt-in 单元格组件（首个 rich-text：codec + canvas renderer + inline 编辑器 + React toolbar），与第三方扩展走同一注册路径                                                  | 默认打包进 core/react |
-| `@novasheet/mbd`      | BDD 场景 MD 的 `validate`/`manifest` 工具链（dev-only）                                                                                                                          | 运行时代码            |
+| `@zhiguang/core`     | 全部状态与行为：数据、几何、选区、编辑、格式、合并、fill、剪贴板、undo/redo、校验 + DOM 壳（host/scroll/interaction/overlay/runtime）+ 公开 `Grid` facade + `RenderBackend` 端口 | 任何 Canvas 绘制      |
+| `@zhiguang/canvas2d` | `RenderBackend` 唯一 shipped 实现：`Canvas2DRenderer`、painters、HighDPI、`cellRenderers` 自定义绘制注册                                                                         | 引擎状态、DOM 编排    |
+| `@zhiguang/react`    | React 适配：`<NovaExcel />` Excel 壳、`<NovaSheetGrid />`、hooks、toolbar；一切能力最终调用公开 `Grid` 方法                                                                      | 引擎/渲染逻辑         |
+| `@zhiguang/cell-kit` | 第一方 opt-in 单元格组件（首个 rich-text：codec + canvas renderer + inline 编辑器 + React toolbar），与第三方扩展走同一注册路径                                                  | 默认打包进 core/react |
+| `@zhiguang/mbd`      | BDD 场景 MD 的 `validate`/`manifest` 工具链（dev-only）                                                                                                                          | 运行时代码            |
 
 核心关系：
 
@@ -126,7 +126,7 @@ flowchart TB
   N --> Layers["DOM layers 同步<br/>resize/fill/hide handle + 编辑器位置"]
 ```
 
-- `@novasheet/canvas2d` 侧：`Canvas2DRenderer.render(frame)` 只读 frame 绘制；painters：`CellPainter`、`HeaderPainter`、`RowHeaderPainter`、`GridLinesPainter`、`FormatFillPainter`、`FormatBorderPainter`、`EmptyStatePainter`；HighDPI 位图管理在 `surface/`。
+- `@zhiguang/canvas2d` 侧：`Canvas2DRenderer.render(frame)` 只读 frame 绘制；painters：`CellPainter`、`HeaderPainter`、`RowHeaderPainter`、`GridLinesPainter`、`FormatFillPainter`、`FormatBorderPainter`、`EmptyStatePainter`；HighDPI 位图管理在 `surface/`。
 - 自定义单元格绘制经 `canvas2dBackend({ cellRenderers })` 注册，按 cell 的**解析后**类型选 painter。
 - 冻结区（顶/左/右）已实装分区绘制与分隔线。
 
@@ -209,10 +209,10 @@ flowchart LR
 | 冻结区（顶/左/右）分区绘制 · 动态行高 · autofit                                                                                  | ✅                                             |
 | 选择/键盘导航/resize/编辑/右键菜单/剪贴板/undo-redo/填充柄/排序筛选/行列结构/列重排                                              | ✅（Phase 3–4 全量）                           |
 | 合并 + 填充色 + 高级边框 + 值格式化（number/currency/percent/date + 自定义 formatter）+ text-wrap 三态                           | ✅（Phase 5-A/5-B/5-C）                        |
-| 单元格扩展 API：`cellTypes` / `cellEditors` / `cellAttachments` / `cellRenderers`（backend 侧）+ per-cell `setCellType` override | ✅（参考实现 `@novasheet/cell-kit` rich-text） |
+| 单元格扩展 API：`cellTypes` / `cellEditors` / `cellAttachments` / `cellRenderers`（backend 侧）+ per-cell `setCellType` override | ✅（参考实现 `@zhiguang/cell-kit` rich-text） |
 | 数据校验（sync/async `ValidatorDefinition`，全写入路径自动接线）                                                                 | ✅                                             |
 | 远程滑动窗口数据源 `WindowedDataSource`                                                                                          | ✅                                             |
-| React 适配 `@novasheet/react`（NovaExcel 壳 + hooks）                                                                            | ✅                                             |
+| React 适配 `@zhiguang/react`（NovaExcel 壳 + hooks）                                                                            | ✅                                             |
 | 条件格式（Phase 5-D）                                                                                                            | 下一里程碑                                     |
 | 公式引擎 / 导入导出 / 多 sheet                                                                                                   | planned（Phase 7）                             |
 | 协同 / OPFS / 多视图（Kanban/Calendar/…）                                                                                        | planned（Phase 8）                             |
@@ -225,8 +225,8 @@ flowchart LR
 
 ```ts
 // Vanilla
-import { Grid, InMemoryDataSource, denseGridTheme } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
+import { Grid, InMemoryDataSource, denseGridTheme } from '@zhiguang/core'
+import { canvas2dBackend } from '@zhiguang/canvas2d'
 
 const grid = new Grid(container, {
   data,
@@ -238,11 +238,11 @@ const grid = new Grid(container, {
 
 ```tsx
 // React
-import { NovaExcel } from '@novasheet/react'
+import { NovaExcel } from '@zhiguang/react'
 export const App = () => <NovaExcel className="h-[600px] w-full" />
 ```
 
-- 引擎、类型与数据：`@novasheet/core`（[README](../packages/core/README.md)）
-- Canvas2D 后端与自定义 painter：`@novasheet/canvas2d`
-- React 组件：`@novasheet/react`（[README](../packages/react/README.md)）
+- 引擎、类型与数据：`@zhiguang/core`（[README](../packages/core/README.md)）
+- Canvas2D 后端与自定义 painter：`@zhiguang/canvas2d`
+- React 组件：`@zhiguang/react`（[README](../packages/react/README.md)）
 - 高级定制：实现 `ports/RenderBackend.ts` 端口即可替换整个渲染层（WebGL、测试 stub）

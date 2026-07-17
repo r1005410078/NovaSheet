@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { Grid, InMemoryDataSource, dateToSerial } from '@novasheet/core'
-import { canvas2dBackend } from '@novasheet/canvas2d'
+import { Grid, InMemoryDataSource, dateToSerial } from '@zhiguang/core'
+import { canvas2dBackend } from '@zhiguang/canvas2d'
 
 const schema = {
   fields: [

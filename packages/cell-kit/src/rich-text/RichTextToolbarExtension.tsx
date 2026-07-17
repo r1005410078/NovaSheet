@@ -5,7 +5,7 @@ import {
   ToolbarColorPalette,
   ToolbarColorPaletteCustom,
   type ToolbarExtensionItem,
-} from '@novasheet/react'
+} from '@zhiguang/react'
 import type { RichTextToolbarController } from './RichTextToolbarProvider'
 
 const RICH_TEXT_TOOLBAR_GROUP_CLASS = 'inline-flex flex-none items-center gap-0.5'

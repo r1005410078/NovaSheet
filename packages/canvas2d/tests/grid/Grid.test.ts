@@ -6,8 +6,8 @@ import {
   type DataSource,
   type GridSelection,
   type Schema,
-} from '@novasheet/core'
-import { Grid } from '@novasheet/core'
+} from '@zhiguang/core'
+import { Grid } from '@zhiguang/core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
 
 const SCHEMA: Schema = {

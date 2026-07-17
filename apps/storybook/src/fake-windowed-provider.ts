@@ -5,7 +5,7 @@
  * a short interval — tick-by-tick market-data style — to stand in for a live
  * WebSocket feed on the subscribed window.
  *
- * Demo helper only — not shipped from @novasheet/core.
+ * Demo helper only — not shipped from @zhiguang/core.
  */
 
 import type {
@@ -18,7 +18,7 @@ import type {
   WindowedDataEvent,
   WindowedDataProvider,
   WindowSubscription,
-} from '@novasheet/core'
+} from '@zhiguang/core'
 
 export type FakeCellGenerator = (row: number, fieldId: string) => CellValue
 

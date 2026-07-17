@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { Grid } from '@novasheet/core'
+import { Grid } from '@zhiguang/core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
-import { InMemoryDataSource } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/core'
 
 describe('Grid facade — fill event', () => {
   it('onFill returns an unsubscribe function', () => {

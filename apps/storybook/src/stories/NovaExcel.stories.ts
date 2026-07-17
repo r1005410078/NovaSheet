@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource, SparseExcelDataSource } from '@novasheet/core'
-import { NovaExcel } from '@novasheet/react'
+import { InMemoryDataSource, SparseExcelDataSource } from '@zhiguang/core'
+import { NovaExcel } from '@zhiguang/react'
 import React from 'react'
 import { flushSync } from 'react-dom'
 

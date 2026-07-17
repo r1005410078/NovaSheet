@@ -1,18 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/html'
 import React from 'react'
-import { canvas2dBackend, type Canvas2DCellRenderer } from '@novasheet/canvas2d'
+import { canvas2dBackend, type Canvas2DCellRenderer } from '@zhiguang/canvas2d'
 import {
   Grid,
   InMemoryDataSource,
   SKIP_CELL_VALUE,
   type CellTypeDefinition,
-} from '@novasheet/core'
+} from '@zhiguang/core'
 import {
   createReactCellEditor,
   createReactCellFilterEditor,
   type ReactCellEditorProps,
   type ReactCellFilterEditorProps,
-} from '@novasheet/react'
+} from '@zhiguang/react'
 import { createGridHost } from '../grid-host'
 import { generateRows, mixedTypesSchema } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'

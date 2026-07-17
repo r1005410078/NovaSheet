@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource } from '@novasheet/core'
+import { InMemoryDataSource } from '@zhiguang/core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/undo.basic.snippet.ts?raw'
@@ -90,7 +90,7 @@ export const Basic: Story = {
     )
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@novasheet/core').Grid })
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@zhiguang/core').Grid })
       .__grid
 
     function syncButtons() {

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource, denseGridTheme, type Theme } from '@novasheet/core'
+import { InMemoryDataSource, denseGridTheme, type Theme } from '@zhiguang/core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { Schema } from '@novasheet/core'
+import type { Schema } from '@zhiguang/core'
 import { GeneratedDataSource } from './generated-data-source'
 
 const schema: Schema = {

@@ -7,7 +7,7 @@ import {
   denseGridTheme,
   type MergeRegion,
   type Schema,
-} from '@novasheet/core'
+} from '@zhiguang/core'
 import { Canvas2DRenderer } from '../../src/render/Canvas2DRenderer'
 import { createRecordingContext, type RecordedOp } from '../helpers/recording-context'
 

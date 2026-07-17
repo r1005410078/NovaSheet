@@ -1,4 +1,4 @@
-import type { BorderPreset, BorderStyle, ValueFormat } from '@novasheet/core'
+import type { BorderPreset, BorderStyle, ValueFormat } from '@zhiguang/core'
 import type { ReactNode } from 'react'
 
 export type ToolbarActionId =
