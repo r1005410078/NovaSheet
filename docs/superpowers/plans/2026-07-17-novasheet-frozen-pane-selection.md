@@ -1,6 +1,6 @@
 # 冻结窗格选择语义 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 按 spec `docs/superpowers/specs/2026-07-17-novasheet-frozen-pane-selection-design.md`，让调用方以冻结窗格边界声明整行/整列选择语义（`GridOptions.selectionBehavior`），并支持表头角块 opt-in 全选。
 
@@ -49,7 +49,7 @@
 **Interfaces:**
 - Produces: `FrozenPaneSelectionBehavior`、`GridSelectionBehavior`、`ResolvedSelectionBehavior`、`resolveSelectionBehavior(input?: GridSelectionBehavior): ResolvedSelectionBehavior`；`GridOptions.selectionBehavior?: GridSelectionBehavior`。后续所有 task 依赖这些名字。
 
-- [ ] **Step 0: 写失败测试**
+- [x] **Step 0: 写失败测试**
 
 ```ts
 // packages/core/tests/kernel/interaction/SelectionBehavior.test.ts
@@ -86,12 +86,12 @@ describe('resolveSelectionBehavior', () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试确认红**
+- [x] **Step 2: 跑测试确认红**
 
 Run: `cd /Users/rongts/www/NovaSheet && bun test packages/core/tests/kernel/interaction/SelectionBehavior.test.ts`
 Expected: FAIL（module 不存在）
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 ```ts
 // packages/core/src/kernel/interaction/SelectionBehavior.ts
@@ -172,12 +172,12 @@ export type {
 
 各文件 `import type { GridSelectionBehavior } from ...`（core 内相对路径）。
 
-- [ ] **Step 4: 跑测试 + typecheck 确认绿**
+- [x] **Step 4: 跑测试 + typecheck 确认绿**
 
 Run: `bun test packages/core/tests/kernel/interaction/SelectionBehavior.test.ts && bun run --filter '*' typecheck`
 Expected: PASS / 0 error
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src packages/core/tests
@@ -198,7 +198,7 @@ git commit -m "feat(core): 新增 selectionBehavior 配置类型与归一化"
 
 **Plan-risk（STOP+ASK 点）：** 下方点击坐标由 `denseGridTheme.metrics`（headerHeight 32 / rowHeight 28）与 `mutableSchema` 列宽（100/80/100/100）推得。若实际命中行列与期望不符，先核对 region 几何再改坐标，**不得改场景期望的选区形状**。
 
-- [ ] **Step 1: 扩展 fixtures**
+- [x] **Step 1: 扩展 fixtures**
 
 `mountRecordingGrid` 的 options 参数加三个字段并透传给 `new Grid`：
 
@@ -215,7 +215,7 @@ onSelectionChange: options.onSelectionChange,
 
 `import type { FrozenConfig, GridSelection, GridSelectionBehavior } from '../../../src'`（并入现有 import）。
 
-- [ ] **Step 2: 写三条行为测试（两条失败 + 一条回归对照）**
+- [x] **Step 2: 写三条行为测试（两条失败 + 一条回归对照）**
 
 在 `bdd.test.ts` 外层 describe 内新增（`dispatchGridPointerDown` 从 e2e bdd.test.ts 复制为本文件局部 helper，或提升进 `_helpers/fixtures.ts` 供两处复用——提升时同步改 e2e 引用）：
 
@@ -285,12 +285,12 @@ it('core.L2.grid-header-corner-select-all selects everything only when opted in'
 })
 ```
 
-- [ ] **Step 3: 跑测试确认红（外环红）**
+- [x] **Step 3: 跑测试确认红（外环红）**
 
 Run: `bun test packages/core/tests/acceptance/interaction/selection/bdd.test.ts`
 Expected: 行/列/交叉区用例与 header corner 用例 FAIL（配置未消费，点击仍是单格选择；corner 期望全选实得 `null`）；未配置对照 PASS。
 
-- [ ] **Step 4: Commit（外环红灯入库）**
+- [x] **Step 4: Commit（外环红灯入库）**
 
 ```bash
 git add packages/core/tests/acceptance
@@ -308,7 +308,7 @@ git commit -m "test(bdd): 冻结窗格选择 L2 行为测试红灯"
 **Interfaces:**
 - Produces: `interface CellRegionHit { readonly cell: CellAddress; readonly region: RenderRegion }`、`hitTestCellWithRegion(frame: RenderFrame, point: HitTestPoint): CellRegionHit | null`。`hitTestCell` 语义不变（变薄 wrapper）。Task 4 消费。
 
-- [ ] **Step 1: 写失败测试**（HitTest.test.ts 追加；`makeFrame` 已有 frozen `{topRows:1,leftCols:1,rightCols:1}` + scroll (100,56)，行高 28、表头 32、3 列宽 100）
+- [x] **Step 1: 写失败测试**（HitTest.test.ts 追加；`makeFrame` 已有 frozen `{topRows:1,leftCols:1,rightCols:1}` + scroll (100,56)，行高 28、表头 32、3 列宽 100）
 
 ```ts
 import { hitTestCellWithRegion } from '../../../src/kernel/interaction/HitTest'
@@ -335,12 +335,12 @@ describe('hitTestCellWithRegion — 命中同时返回 RenderRegion', () => {
 
 （`x:20,y:40` 若未命中 `topLeft`，按 `makeFrame` 的 viewport 快照核对 region rect 后调整坐标，勿改期望 region。）
 
-- [ ] **Step 2: 跑测试确认红**
+- [x] **Step 2: 跑测试确认红**
 
 Run: `bun test packages/core/tests/kernel/interaction/HitTest.test.ts`
 Expected: FAIL（`hitTestCellWithRegion` 未导出）
 
-- [ ] **Step 3: 实现**——把现有循环体改为返回 `{ cell, region }`：
+- [x] **Step 3: 实现**——把现有循环体改为返回 `{ cell, region }`：
 
 ```ts
 export interface CellRegionHit {
@@ -386,12 +386,12 @@ export function hitTestCell(frame: RenderFrame, point: HitTestPoint): CellAddres
 
 （`import type { RenderRegion }` 已在文件头。原 `hitTestCell` 的 TSDoc 保留在 `hitTestCellWithRegion` 上。）
 
-- [ ] **Step 4: 跑 kernel interaction 全部测试确认绿**
+- [x] **Step 4: 跑 kernel interaction 全部测试确认绿**
 
 Run: `bun test packages/core/tests/kernel/interaction/`
 Expected: PASS（含既有 hitTestCell 用例）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/kernel/interaction/HitTest.ts packages/core/tests/kernel/interaction/HitTest.test.ts
@@ -427,7 +427,7 @@ export function resolveSelectionIntent(
 
 返回 `null` = 不消费（非 corner 表头带/空白区，交回既有链路）；`none` 仅来自 corner + `headerCorner:'none'`（spec §5.1 封闭求值域）。
 
-- [ ] **Step 1: 写失败测试**——fixture 复制 `HitTest.test.ts` 的 `makeFrame` 模式，但 **corner 用例需 `viewport.setRowHeaderWidth(48)`**（`Viewport.setRowHeaderWidth` 已存在）：
+- [x] **Step 1: 写失败测试**——fixture 复制 `HitTest.test.ts` 的 `makeFrame` 模式，但 **corner 用例需 `viewport.setRowHeaderWidth(48)`**（`Viewport.setRowHeaderWidth` 已存在）：
 
 ```ts
 // packages/core/tests/kernel/interaction/SelectionIntent.test.ts
@@ -534,12 +534,12 @@ describe('resolveSelectionIntent — region → 选择意图', () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试确认红**
+- [x] **Step 2: 跑测试确认红**
 
 Run: `bun test packages/core/tests/kernel/interaction/SelectionIntent.test.ts`
 Expected: FAIL（module 不存在）
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 ```ts
 // packages/core/src/kernel/interaction/SelectionIntent.ts
@@ -589,12 +589,12 @@ export function resolveSelectionIntent(
 }
 ```
 
-- [ ] **Step 4: 跑测试确认绿**
+- [x] **Step 4: 跑测试确认绿**
 
 Run: `bun test packages/core/tests/kernel/interaction/`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/kernel/interaction packages/core/tests/kernel/interaction
@@ -632,7 +632,7 @@ export interface SelectionDragDeps {
 }
 ```
 
-- [ ] **Step 1: 更新既有测试的 deps 构造**——`SelectionDrag.test.ts` 现有用例的 `new SelectionDrag({...})` 补：
+- [x] **Step 1: 更新既有测试的 deps 构造**——`SelectionDrag.test.ts` 现有用例的 `new SelectionDrag({...})` 补：
 
 ```ts
 getSelectionBehavior: () => resolveSelectionBehavior(),
@@ -645,7 +645,7 @@ isWholeColumnSelection: () => false,
 
 （`import { resolveSelectionBehavior } from '../../../../src/kernel/interaction/SelectionBehavior'`。）
 
-- [ ] **Step 2: 写失败的新用例**——frame 用 `makeMockGridEngine({ frame })`，frame 沿用 Task 4 测试的 `makeFrame()`（提为本文件局部 helper；mock engine 其余能力由 `makeMockGridEngine` 提供，`overrides` 注入 `getFrame: () => frame`）：
+- [x] **Step 2: 写失败的新用例**——frame 用 `makeMockGridEngine({ frame })`，frame 沿用 Task 4 测试的 `makeFrame()`（提为本文件局部 helper；mock engine 其余能力由 `makeMockGridEngine` 提供，`overrides` 注入 `getFrame: () => frame`）：
 
 ```ts
 it('left row 配置下 pointerdown 选整行，drag 锁 row 轴', () => {
@@ -721,12 +721,12 @@ it('corner none 配置 pointerdown 不消费（现状 no-op）', () => {
 
 `baseDeps(engine)` 为本文件 helper，返回 Step 1 的全量缺省 deps。
 
-- [ ] **Step 3: 跑测试确认红**
+- [x] **Step 3: 跑测试确认红**
 
 Run: `bun test packages/core/tests/dom/interaction/drag/SelectionDrag.test.ts`
 Expected: 新用例 FAIL（deps 字段不存在 / 仍走 selectCell）
 
-- [ ] **Step 4: 实现状态机**
+- [x] **Step 4: 实现状态机**
 
 ```ts
 // SelectionDrag.ts 重写核心（imports 按需补）：
@@ -802,12 +802,12 @@ private wholeColAnchor(): number | undefined {
 
 `commit()`/`cancel()`/`reevaluate()`/`active` 保持现状。
 
-- [ ] **Step 5: 跑 drag 域全部测试确认绿**
+- [x] **Step 5: 跑 drag 域全部测试确认绿**
 
 Run: `bun test packages/core/tests/dom/interaction/drag/`
 Expected: PASS（含既有用例）
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core/src/dom/interaction/drag/SelectionDrag.ts packages/core/tests/dom/interaction/drag/SelectionDrag.test.ts
@@ -828,7 +828,7 @@ git commit -m "feat(core): SelectionDrag 升级为 intent 锁轴状态机"
 - Consumes: Task 1 `resolveSelectionBehavior`、Task 5 的 `SelectionDragDeps`。
 - Produces: `InputController.selectAllCells(): void`；`DragCoordinatorDeps` 新增 `getSelectionBehavior(): ResolvedSelectionBehavior` 与 `selectAllCells(): void`。
 
-- [ ] **Step 1: 写 `selectAllCells` 失败单测**（放进现有 InputController 测试文件；断言 `engine.setSelection` 收到全表范围，空表 no-op）
+- [x] **Step 1: 写 `selectAllCells` 失败单测**（放进现有 InputController 测试文件；断言 `engine.setSelection` 收到全表范围，空表 no-op）
 
 ```ts
 it('selectAllCells 写入全表选区，空表 no-op', () => {
@@ -843,7 +843,7 @@ it('selectAllCells 写入全表选区，空表 no-op', () => {
 })
 ```
 
-- [ ] **Step 2: 跑确认红**，然后实现（`selectWholeRowRange` 旁）：
+- [x] **Step 2: 跑确认红**，然后实现（`selectWholeRowRange` 旁）：
 
 ```ts
 /** 供 DragCoordinator deps 反向消费（header corner 全选）。 */
@@ -861,7 +861,7 @@ selectAllCells(): void {
 }
 ```
 
-- [ ] **Step 3: DragCoordinator 接线**——`DragCoordinatorDeps`（`selectWholeRowRange` 旁）加：
+- [x] **Step 3: DragCoordinator 接线**——`DragCoordinatorDeps`（`selectWholeRowRange` 旁）加：
 
 ```ts
 getSelectionBehavior(): ResolvedSelectionBehavior
@@ -879,7 +879,7 @@ isWholeRowSelection: (range) => this.deps.isWholeRowSelection(range),
 isWholeColumnSelection: (range) => this.deps.isWholeColumnSelection(range),
 ```
 
-- [ ] **Step 4: GridRuntime 接线**——字段（`interactions` 旁）与构造：
+- [x] **Step 4: GridRuntime 接线**——字段（`interactions` 旁）与构造：
 
 ```ts
 /** 构造期归一化的选择语义；不进 engine/frame（spec §6.2）。 */
@@ -893,12 +893,12 @@ selectAllCells: () => this.input.selectAllCells(),
 
 （deps 均为 lambda，`this.input` 晚绑定与既有 443-449 行一致。）
 
-- [ ] **Step 5: 跑外环 L2 + 全量 core 测试确认绿**
+- [x] **Step 5: 跑外环 L2 + 全量 core 测试确认绿**
 
 Run: `bun test packages/core/tests/acceptance/interaction/selection/bdd.test.ts && bun test packages/core && bun run --filter '*' typecheck`
 Expected: Task 2 的红灯全部转绿；core 全量 PASS；typecheck 0 error。若 L2 坐标命中偏差，回 Task 2 的 plan-risk 说明处理。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core/src packages/core/tests
@@ -918,7 +918,7 @@ git commit -m "feat(core): selectionBehavior 贯通 runtime，冻结窗格行列
 - Consumes: core 已导出的 `GridSelectionBehavior`（类型经 `NovaSheetGridProps extends Omit<GridOptions, 'backend'>` 自动获得，无需改 `types.ts`）。
 - Produces: `selectionBehavior` prop 端到端生效；DOM 无泄漏。
 
-- [ ] **Step 1: 把 `it.todo('excel.L3a.frozen-pane-selection-prop ...')` 改为真实失败测试**——渲染 `NovaSheetGrid`（mount 模式参考同文件 `excel.L3a.custom-row-header-field` 的 canvas stub/raf 处理与 `tests/excel/helpers.ts`）：
+- [x] **Step 1: 把 `it.todo('excel.L3a.frozen-pane-selection-prop ...')` 改为真实失败测试**——渲染 `NovaSheetGrid`（mount 模式参考同文件 `excel.L3a.custom-row-header-field` 的 canvas stub/raf 处理与 `tests/excel/helpers.ts`）：
 
 ```ts
 it('excel.L3a.frozen-pane-selection-prop forwards selectionBehavior without leaking DOM attribute', async () => {
@@ -940,19 +940,19 @@ it('excel.L3a.frozen-pane-selection-prop forwards selectionBehavior without leak
 })
 ```
 
-- [ ] **Step 2: 跑确认红**
+- [x] **Step 2: 跑确认红**
 
 Run: `bun test packages/react/tests/excel/NovaExcel.test.ts`
 Expected: 该用例 FAIL——prop 未转发时落到 `...domProps`，可能出现 attribute 泄漏或选区仍为单格。
 
-- [ ] **Step 3: 实现转发**——两处 destructure 各加一行 `selectionBehavior,`：`NovaSheetGrid.ts` 的 props 解构（`frozen,` 旁）与 `useNovaSheetGrid` 调用对象（`frozen,` 旁）；`useNovaSheetGrid.ts` 的参数解构（`frozen,` 旁）与 `new Grid` options 对象（`frozen,` 行旁加 `selectionBehavior,`）。
+- [x] **Step 3: 实现转发**——两处 destructure 各加一行 `selectionBehavior,`：`NovaSheetGrid.ts` 的 props 解构（`frozen,` 旁）与 `useNovaSheetGrid` 调用对象（`frozen,` 旁）；`useNovaSheetGrid.ts` 的参数解构（`frozen,` 旁）与 `new Grid` options 对象（`frozen,` 行旁加 `selectionBehavior,`）。
 
-- [ ] **Step 4: 跑 react 全量 + coverage 确认绿**
+- [x] **Step 4: 跑 react 全量 + coverage 确认绿**
 
 Run: `bun test packages/react && bun run --filter @zhiguang/novasheet-react lint:scenario-coverage`
 Expected: PASS；coverage 35/35。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/react
@@ -967,7 +967,7 @@ git commit -m "feat(react): NovaSheetGrid 转发 selectionBehavior 并补 L3a �
 - Modify: 三个场景 MD 的 frontmatter `status: draft` → `status: implemented`
 - Modify: 两包 manifest（由 `manifest:mbd` 重生成）
 
-- [ ] **Step 1: 场景状态翻转 + manifest 重生成**
+- [x] **Step 1: 场景状态翻转 + manifest 重生成**
 
 三个场景 MD frontmatter 改 `status: implemented`，然后：
 
@@ -976,7 +976,7 @@ cd packages/core && bun run lint:mbd && bun run manifest:mbd
 cd ../react && bun run lint:mbd && bun run manifest:mbd
 ```
 
-- [ ] **Step 2: 四门全跑（根目录）**
+- [x] **Step 2: 四门全跑（根目录）**
 
 ```bash
 bun test
@@ -988,14 +988,14 @@ bun run --filter @zhiguang/novasheet-react build && bun run --filter @zhiguang/n
 
 Expected: 全绿（`lint` 含 architecture/boundary/mbd/scenario-coverage）。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add packages/core/tests/acceptance packages/react/tests/excel
 git commit -m "test(bdd): 冻结窗格选择场景转 implemented 并重生成 manifest"
 ```
 
-- [ ] **Step 4: dispatch code-reviewer**（CLAUDE.md：里程碑收尾必审，即便四门全绿）——审查当前 `main` 的冻结窗格选择提交，重点：架构不变量 3（selection 写门面）、9（kernel 边界）、SelectionDrag 状态机轴锁、坐标语义（view）。审查通过后走 superpowers:finishing-a-development-branch。
+- [x] **Step 4: dispatch code-reviewer**（CLAUDE.md：里程碑收尾必审，即便四门全绿）——审查当前 `main` 的冻结窗格选择提交，重点：架构不变量 3（selection 写门面）、9（kernel 边界）、SelectionDrag 状态机轴锁、坐标语义（view）。审查通过后走 superpowers:finishing-a-development-branch。
 
 ---
 
