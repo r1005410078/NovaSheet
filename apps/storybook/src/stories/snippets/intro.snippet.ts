@@ -1,8 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck — storybook docs display snippet; references
-import { Grid } from '@zhiguang/core'
-import { canvas2dBackend } from '@zhiguang/canvas2d'
-import { InMemoryDataSource, denseGridTheme } from '@zhiguang/core'
+import { Grid } from '@zhiguang/novasheet-core'
+import { canvas2dBackend } from '@zhiguang/novasheet-canvas2d'
+import { InMemoryDataSource, denseGridTheme } from '@zhiguang/novasheet-core'
 
 const grid = new Grid(container, {
   backend: canvas2dBackend(),

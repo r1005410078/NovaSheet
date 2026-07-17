@@ -1,5 +1,5 @@
 {
-  "name": "@zhiguang/core",
+  "name": "@zhiguang/novasheet-core",
   "version": "0.1.0",
   "description": "Platform-independent core engine for NovaSheet.",
   "license": "MIT",
@@ -35,8 +35,8 @@
   ],
   "scripts": {
     "build": "bun run build.ts",
-    "lint:mbd": "bun run --filter @zhiguang/mbd mbd validate --config ../../packages/core/mbd.config.ts",
-    "manifest:mbd": "bun run --filter @zhiguang/mbd mbd manifest --config ../../packages/core/mbd.config.ts",
+    "lint:mbd": "bun run --filter @zhiguang/novasheet-mbd mbd validate --config ../../packages/core/mbd.config.ts",
+    "manifest:mbd": "bun run --filter @zhiguang/novasheet-mbd mbd manifest --config ../../packages/core/mbd.config.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "typecheck": "tsc --noEmit"

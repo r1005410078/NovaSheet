@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { WindowedDataSource } from '@zhiguang/core'
-import type { Schema } from '@zhiguang/core'
+import { WindowedDataSource } from '@zhiguang/novasheet-core'
+import type { Schema } from '@zhiguang/novasheet-core'
 import { createGridHost } from '../grid-host'
 import { FakeWindowedProvider } from '../fake-windowed-provider'
 import { docsMeta, docsStory } from '../story-docs'

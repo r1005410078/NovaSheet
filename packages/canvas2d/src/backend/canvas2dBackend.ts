@@ -12,7 +12,7 @@ import type {
   RenderBackend,
   RenderBackendFactory,
   GridEngineFrameSource,
-} from '@zhiguang/core'
+} from '@zhiguang/novasheet-core'
 import type { Canvas2DCellRendererRegistry } from '../painters/CellPainter'
 import { Canvas2DRenderer } from '../render/Canvas2DRenderer'
 import { Canvas2DTextMeasurer } from '../measure/Canvas2DTextMeasurer'

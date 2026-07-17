@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { Grid } from '@zhiguang/core'
+import { Grid } from '@zhiguang/novasheet-core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
-import { InMemoryDataSource, denseGridTheme } from '@zhiguang/core'
+import { InMemoryDataSource, denseGridTheme } from '@zhiguang/novasheet-core'
 
 const schema = {
   fields: [

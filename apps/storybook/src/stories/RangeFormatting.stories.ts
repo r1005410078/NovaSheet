@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource } from '@zhiguang/core'
-import type { BorderPreset, BorderStyle, CellRange } from '@zhiguang/core'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
+import type { BorderPreset, BorderStyle, CellRange } from '@zhiguang/novasheet-core'
 import { createGridHost } from '../grid-host'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
@@ -139,7 +139,7 @@ export const Basic: Story = {
     const gridEl = createGridHost({ data }, '100%', '100%')
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@zhiguang/core').Grid })
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@zhiguang/novasheet-core').Grid })
       .__grid
 
     function syncButtons(): void {

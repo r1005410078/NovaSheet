@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { denseGridTheme, wrapText } from '@zhiguang/core'
+import { denseGridTheme, wrapText } from '@zhiguang/novasheet-core'
 import { paintStyledText, type StyledSegment, type StyledTextLayout } from '../../src/painters/styledText'
 import { createRecordingContext } from '../helpers/recording-context'
 
@@ -162,7 +162,7 @@ describe('paintStyledText — 多行 + 混排行高', () => {
   })
 })
 
-const m7: import('@zhiguang/core').TextMeasurer = { measureWidth: (t) => t.length * 7 }
+const m7: import('@zhiguang/novasheet-core').TextMeasurer = { measureWidth: (t) => t.length * 7 }
 
 describe('paintStyledText — wrap 多段', () => {
   it('单段 wrap 与 core wrapText 同字体产出一致的行内容', () => {

@@ -5,13 +5,13 @@ import {
   type DataSource,
   type GridEngine,
   type GridSelection,
-} from '@zhiguang/core'
-import { Grid } from '@zhiguang/core'
+} from '@zhiguang/novasheet-core'
+import { Grid } from '@zhiguang/novasheet-core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
-import type { WebHost } from '@zhiguang/core'
-import type { RenderBackend } from '@zhiguang/core'
-import type { SelectionOverlay, SelectionOverlayState, DomFillHandleLayer, OverlayRect } from '@zhiguang/core'
-import { GridRuntime } from '@zhiguang/core'
+import type { WebHost } from '@zhiguang/novasheet-core'
+import type { RenderBackend } from '@zhiguang/novasheet-core'
+import type { SelectionOverlay, SelectionOverlayState, DomFillHandleLayer, OverlayRect } from '@zhiguang/novasheet-core'
+import { GridRuntime } from '@zhiguang/novasheet-core'
 import { makeMockGridEngine } from '../helpers/mock-grid-engine'
 
 function makeFillLayer(): DomFillHandleLayer {

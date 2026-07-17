@@ -1,5 +1,5 @@
 import type { Ref } from 'react'
-import type { ValueFormat } from '@zhiguang/core'
+import type { ValueFormat } from '@zhiguang/novasheet-core'
 
 /** 工具栏值格式预设（Phase 5-C）。raw 值不变，仅改显示。 */
 const VALUE_FORMAT_ITEMS: readonly {

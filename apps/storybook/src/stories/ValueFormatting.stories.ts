@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { InMemoryDataSource, dateToSerial } from '@zhiguang/core'
-import type { CellFormatter, CellRange, Row, Schema, ValueFormat } from '@zhiguang/core'
+import { InMemoryDataSource, dateToSerial } from '@zhiguang/novasheet-core'
+import type { CellFormatter, CellRange, Row, Schema, ValueFormat } from '@zhiguang/novasheet-core'
 import { createGridHost } from '../grid-host'
 import { docsMeta, docsStory } from '../story-docs'
 import basicSrc from './snippets/value-formatting.basic.snippet.ts?raw'
@@ -107,7 +107,7 @@ export const Basic: Story = {
     const gridEl = createGridHost({ data, locale: LOCALE, formatters: { fileSize } }, '100%', '100%')
     gridContainer.appendChild(gridEl)
 
-    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@zhiguang/core').Grid }).__grid
+    const grid = (gridEl as unknown as HTMLElement & { __grid: import('@zhiguang/novasheet-core').Grid }).__grid
 
     function syncButtons(): void {
       undoBtn.disabled = !grid.canUndo()

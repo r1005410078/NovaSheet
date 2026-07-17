@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { DefaultGridEngine, InMemoryDataSource } from '@zhiguang/core'
+import { DefaultGridEngine, InMemoryDataSource } from '@zhiguang/novasheet-core'
 
 import { deriveToolbarStateFromGrid, type ToolbarStateGridAccess } from '../../../src/features/toolbar'
 

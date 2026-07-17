@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { act } from 'react'
-import type { Grid } from '@zhiguang/core'
+import type { Grid } from '@zhiguang/novasheet-core'
 
 import { renderStoryHost, unmountReactRoot } from '../react-test-helpers'
 import { Registered } from './RichText.stories'

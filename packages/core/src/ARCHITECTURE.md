@@ -1,4 +1,4 @@
-# `@zhiguang/core` 源码导航
+# `@zhiguang/novasheet-core` 源码导航
 
 > **状态：Engine 重构 7 步 + Composer Phase 2 + Web→Core（依赖反转）已完成**（分支 `refactor-default-grid-engine-decomposition`）  
 > core 现含**纯层**（`kernel/features/engine/ports`）+ **DOM 壳**（`dom/`）+ 公开 `Grid` facade；`@zhiguang/web` 已并入并删除。
@@ -27,9 +27,9 @@ Grid.ts          公开 facade：GridOptions.backend 注入渲染后端
 
 **单向边界**：`dom/**` 可依赖纯层；纯层不得 import `dom/**`，`kernel|features|engine` 不得触碰 DOM 全局。由 `scripts/check-kernel-boundary.ts` 强制。
 
-**渲染后端依赖反转**：`@zhiguang/canvas2d` 实现 `ports/RenderBackend`、反向依赖 core；core `src/` 永不 import canvas2d。组合根（storybook）`new Grid({ data, backend: canvas2dBackend })` 注入。
+**渲染后端依赖反转**：`@zhiguang/novasheet-canvas2d` 实现 `ports/RenderBackend`、反向依赖 core；core `src/` 永不 import canvas2d。组合根（storybook）`new Grid({ data, backend: canvas2dBackend })` 注入。
 
-**外部包** 只从 `@zhiguang/core` 的 `index.ts` 按名导入。
+**外部包** 只从 `@zhiguang/novasheet-core` 的 `index.ts` 按名导入。
 
 ---
 

@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck — storybook docs display snippet; references
-import type { Field, Schema } from '@zhiguang/core'
+import type { Field, Schema } from '@zhiguang/novasheet-core'
 import { createGridHost } from '../grid-host'
 import { GeneratedDataSource } from '../generated-data-source'
 

@@ -40,7 +40,7 @@ import type {
 import type { RenderBackendFactory } from './ports/RenderBackend'
 
 export interface GridOptions extends GridEngineOptions {
-  /** 渲染后端工厂——由调用方注入（如 `@zhiguang/canvas2d` 的 `canvas2dBackend`），反转 core→backend 依赖。 */
+  /** 渲染后端工厂——由调用方注入（如 `@zhiguang/novasheet-canvas2d` 的 `canvas2dBackend`），反转 core→backend 依赖。 */
   backend: RenderBackendFactory
   /** Phase 4.0 — 右键菜单项被选中时触发；4.1 之后不传走默认引擎（grid.copy/cut/paste）。自定义 id 以 string 到达回调。 */
   onContextMenuAction?: (action: ContextMenuAction | string, ctx: ContextMenuContext) => void
@@ -99,7 +99,7 @@ export function withExcelHeaders<T extends Omit<GridOptions, 'backend'>>(options
 /**
  * 对外 Grid 门面（spec §7）。
  *
- * 渲染后端经 `options.backend` 注入（如 `@zhiguang/canvas2d` 的 `canvas2dBackend`），
+ * 渲染后端经 `options.backend` 注入（如 `@zhiguang/novasheet-canvas2d` 的 `canvas2dBackend`），
  * core 不依赖任何具体后端。公共 API 方法全部转发给注入后端装配出的 `GridController` 实现。
  */
 export class Grid {

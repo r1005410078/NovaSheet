@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import type { Grid } from '@zhiguang/core'
-import { InMemoryDataSource, type Schema } from '@zhiguang/core'
+import type { Grid } from '@zhiguang/novasheet-core'
+import { InMemoryDataSource, type Schema } from '@zhiguang/novasheet-core'
 import { createGridHost } from '../grid-host'
 import { generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'

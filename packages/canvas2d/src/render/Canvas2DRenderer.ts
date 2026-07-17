@@ -69,8 +69,8 @@ import type {
   TextMeasurer,
   TextWrapMode,
   Theme,
-} from '@zhiguang/core'
-import { FrameScheduler, type Axis, type Viewport } from '@zhiguang/core'
+} from '@zhiguang/novasheet-core'
+import { FrameScheduler, type Axis, type Viewport } from '@zhiguang/novasheet-core'
 import { MergeLookup, mergedRectSize } from '../paint/merge-lookup'
 import { buildFilledCellLookup } from '../paint/filled-lookup'
 import { CellPainter, type Canvas2DCellRendererRegistry } from '../painters/CellPainter'

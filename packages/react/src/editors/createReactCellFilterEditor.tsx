@@ -1,6 +1,6 @@
 import React from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { CellValue, Field } from '@zhiguang/core'
+import type { CellValue, Field } from '@zhiguang/novasheet-core'
 
 export interface CellFilterApply {
   readonly operatorId: string

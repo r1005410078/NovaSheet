@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import type { Grid } from '@zhiguang/core'
-import { InMemoryDataSource } from '@zhiguang/core'
+import type { Grid } from '@zhiguang/novasheet-core'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
 import { createGridHost } from '../grid-host'
 import {
   createWrapAutofitBigDataSource,

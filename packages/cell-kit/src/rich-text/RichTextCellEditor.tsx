@@ -1,6 +1,6 @@
 import { useEffect, useRef, type FocusEvent } from 'react'
-import { createReactCellEditor, type ReactCellEditorProps } from '@zhiguang/react'
-import type { CellEditor } from '@zhiguang/core'
+import { createReactCellEditor, type ReactCellEditorProps } from '@zhiguang/novasheet-react'
+import type { CellEditor } from '@zhiguang/novasheet-core'
 import { richTextToHtml, htmlElementToRichText } from './serialize'
 import { FloatingFormatToolbar } from './FloatingFormatToolbar'
 import { createRichTextEditingSession } from './editingSession'

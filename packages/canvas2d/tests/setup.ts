@@ -1,5 +1,5 @@
 /**
- * @zhiguang/canvas2d test bootstrap.
+ * @zhiguang/novasheet-canvas2d test bootstrap.
  * happy-dom + canvas stub: core setup runs first; we only install RecordingContext here
  * so painter/renderer tests get 2d without double-registering happy-dom.
  */

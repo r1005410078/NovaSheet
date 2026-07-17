@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { MergeRegion, ResolvedCellFormat } from '@zhiguang/core'
+import type { MergeRegion, ResolvedCellFormat } from '@zhiguang/novasheet-core'
 import { MergeLookup } from '../../src/paint/merge-lookup'
 import { buildFilledCellLookup } from '../../src/paint/filled-lookup'
 

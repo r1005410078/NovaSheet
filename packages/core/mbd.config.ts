@@ -1,4 +1,4 @@
-import type { MbdConfig } from '@zhiguang/mbd'
+import type { MbdConfig } from '@zhiguang/novasheet-mbd'
 
 const config: MbdConfig = {
   scenarios: 'tests/acceptance/**/scenarios/**/*.md',

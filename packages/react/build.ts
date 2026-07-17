@@ -1,5 +1,5 @@
 /**
- * Build script for @zhiguang/react. Same artifact shape as core/canvas2d.
+ * Build script for @zhiguang/novasheet-react. Same artifact shape as core/canvas2d.
  */
 
 import { copyFile, rm } from 'node:fs/promises'
@@ -9,8 +9,8 @@ const ROOT = new URL('.', import.meta.url).pathname
 await rm(`${ROOT}dist`, { recursive: true, force: true })
 
 const EXTERNALS = [
-  '@zhiguang/core',
-  '@zhiguang/canvas2d',
+  '@zhiguang/novasheet-core',
+  '@zhiguang/novasheet-canvas2d',
   'react',
   'react-dom',
   'lucide-react',

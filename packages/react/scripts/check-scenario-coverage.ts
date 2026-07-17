@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { readManifest } from '@zhiguang/mbd'
-import type { ScenarioManifest } from '@zhiguang/mbd'
+import { readManifest } from '@zhiguang/novasheet-mbd'
+import type { ScenarioManifest } from '@zhiguang/novasheet-mbd'
 
 const SCENARIO_ID_RE = /\bit(?:\.todo|\.skip)?\(\s*['"](excel\.L3[abc]\.[a-z0-9-]+)/g
 

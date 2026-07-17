@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { Grid } from '@zhiguang/core'
-import { canvas2dBackend } from '@zhiguang/canvas2d'
-import { InMemoryDataSource } from '@zhiguang/core'
+import { Grid } from '@zhiguang/novasheet-core'
+import { canvas2dBackend } from '@zhiguang/novasheet-canvas2d'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
 
 const schema = {
   fields: [

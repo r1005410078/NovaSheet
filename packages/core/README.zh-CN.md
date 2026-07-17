@@ -1,22 +1,22 @@
-# `@zhiguang/core`
+# `@zhiguang/novasheet-core`
 
 [English README](README.md)
 
-NovaSheet 的平台无关引擎——一个面向大数据量、Canvas-first 的表格引擎。`core` 持有全部状态与行为（数据、viewport、选区、编辑、格式化、合并、填充、剪贴板、undo/redo、校验），自身不渲染任何像素。`RenderBackend` 在构造时由调用方注入（如 [`@zhiguang/canvas2d`](../canvas2d)），因此 `core` 对 Canvas/DOM 渲染器零依赖，可在 worker 或不画一笔的测试环境中独立使用。
+NovaSheet 的平台无关引擎——一个面向大数据量、Canvas-first 的表格引擎。`core` 持有全部状态与行为（数据、viewport、选区、编辑、格式化、合并、填充、剪贴板、undo/redo、校验），自身不渲染任何像素。`RenderBackend` 在构造时由调用方注入（如 [`@zhiguang/novasheet-canvas2d`](../canvas2d)），因此 `core` 对 Canvas/DOM 渲染器零依赖，可在 worker 或不画一笔的测试环境中独立使用。
 
 下文每一条行为保证都对应一条 BDD 验收场景，见 [`tests/acceptance/**/scenarios/*.md`](tests/acceptance)；如何浏览这些场景见文末 [测试](#测试)。
 
 ## 安装
 
 ```bash
-bun add @zhiguang/core @zhiguang/canvas2d
+bun add @zhiguang/novasheet-core @zhiguang/novasheet-canvas2d
 ```
 
 ## 快速开始
 
 ```ts
-import { Grid, InMemoryDataSource, denseGridTheme } from '@zhiguang/core'
-import { canvas2dBackend } from '@zhiguang/canvas2d'
+import { Grid, InMemoryDataSource, denseGridTheme } from '@zhiguang/novasheet-core'
+import { canvas2dBackend } from '@zhiguang/novasheet-canvas2d'
 
 const data = new InMemoryDataSource({
   schema: {
@@ -52,14 +52,14 @@ grid.setColumnWidth('revenue', 140)
 | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `Grid`（[`Grid.ts`](src/Grid.ts)）                                                                 | 公开门面。每个挂载容器对应一个实例；下面所有方法都挂在它上面。                                                                                                                                                                                                                                                           |
 | `DataSource`（`InMemoryDataSource`、`SparseExcelDataSource`、`WindowedDataSource`）                | 行存储层。`InMemoryDataSource` 持有纯数组（约 30 万行 × 50 列）；`SparseExcelDataSource` 是稀疏、自增长的 Excel 风格工作区；`WindowedDataSource` 针对可视区域滑动窗口做拉取/订阅，背后是一个传输无关的 `WindowedDataProvider` 端口（HTTP + WebSocket）。三者都实现同一个同步 `DataSource` 接口——需要分页实现可自行接入。 |
-| `RenderBackend` / `RenderBackendFactory`（[`ports/RenderBackend.ts`](src/ports/RenderBackend.ts)） | `core` 渲染所经过的端口。`@zhiguang/canvas2d` 是已交付实现；任何实现该端口的后端（WebGL、WebGPU、测试 stub）都可作为 `GridOptions.backend` 传入。                                                                                                                                                                       |
+| `RenderBackend` / `RenderBackendFactory`（[`ports/RenderBackend.ts`](src/ports/RenderBackend.ts)） | `core` 渲染所经过的端口。`@zhiguang/novasheet-canvas2d` 是已交付实现；任何实现该端口的后端（WebGL、WebGPU、测试 stub）都可作为 `GridOptions.backend` 传入。                                                                                                                                                                       |
 | `Theme`（`denseGridTheme`）                                                                        | painter 使用的所有颜色/字体/间距 token 的唯一来源。用 `grid.setTheme(theme)` 替换。                                                                                                                                                                                                                                      |
 | `CellTypeRegistry`                                                                                 | 按 `Field.type` 定义的**业务**语义：值如何被编辑、解析、排序、过滤与剪贴板序列化。内置覆盖 `text`/`number`/`date`；其余类型（如 `rating`）自行注册。作用域是整列。                                                                                                                                                       |
 | `CellTypeStore`（`setCellType`/`clearCellType`/`getCellType`）                                     | 对单个**单元格**覆盖其 resolved 标量类型（`text`/`number`/`date`/`checkbox`），独立于该列的 `Field.type`——即"一列多类型"。以 raw 坐标索引，可 undo，结构变更后能正确重映射。                                                                                                                                             |
 | `ValidatorDefinition`                                                                              | 每条规则的校验逻辑（同步或异步），自动接入所有写入路径。                                                                                                                                                                                                                                                                 |
 | `CellAttachmentCodec`                                                                              | 不透明、按 namespace 隔离的单元格附加数据（如富文本 runs、评论），随复制/粘贴、填充与 undo 一起流转。                                                                                                                                                                                                                    |
 | `CellEditorRegistry`                                                                               | 按 `Field.type` 注册的 DOM/overlay 编辑器，用于单个输入框表达不了的交互（日期选择器、下拉框）。                                                                                                                                                                                                                          |
-| Canvas painter 注册表（`cellRenderers`）                                                           | **不属于 `core`**——`core` 不渲染任何东西，按类型分发的显示 painter 注册在渲染后端工厂上（如 `@zhiguang/canvas2d` 的 `canvas2dBackend({ cellRenderers })`）。`core` 只保证 painter 需要的 resolved field/value/附件数据能经 frame 送达。                                                                                 |
+| Canvas painter 注册表（`cellRenderers`）                                                           | **不属于 `core`**——`core` 不渲染任何东西，按类型分发的显示 painter 注册在渲染后端工厂上（如 `@zhiguang/novasheet-canvas2d` 的 `canvas2dBackend({ cellRenderers })`）。`core` 只保证 painter 需要的 resolved field/value/附件数据能经 frame 送达。                                                                                 |
 | `ViewPipeline`（`SortLayer`、`FilterLayer`、`HideRowsLayer`）                                      | 叠加在 raw `DataSource` 上的可组合 view 坐标变换；`Grid` 暴露组合后的结果，所有 mutation 最终都解析回 raw 坐标。                                                                                                                                                                                                         |
 | `RangeStyleStore` / `MergeStore`                                                                   | 按区域键控的格式与合并状态，以 raw 坐标索引，在结构变更与 undo 后仍能存活。                                                                                                                                                                                                                                              |
 
@@ -95,7 +95,7 @@ grid.setSelection({
 按 `Field.type` 注册一个 `CellTypeDefinition`，一次性把编辑、剪贴板、排序、过滤与单元格 action 接到同一套业务类型语义上——作用于该列的每一格（除非被下文的单格覆盖打断）。
 
 ```ts
-import { SKIP_CELL_VALUE, type CellTypeDefinition } from '@zhiguang/core'
+import { SKIP_CELL_VALUE, type CellTypeDefinition } from '@zhiguang/novasheet-core'
 
 const ratingType: CellTypeDefinition = {
   editable: true,
@@ -211,7 +211,7 @@ grid.getHiddenCols() // ['joined']
 ### 远程 / 滑动窗口数据（`WindowedDataSource`）
 
 ```ts
-import { WindowedDataSource, type WindowedDataProvider } from '@zhiguang/core'
+import { WindowedDataSource, type WindowedDataProvider } from '@zhiguang/novasheet-core'
 
 const provider: WindowedDataProvider = {
   loadRange: (window, signal) =>
@@ -235,7 +235,7 @@ const grid = new Grid(container, { backend: canvas2dBackend(), data })
 ### 校验
 
 ```ts
-import type { ValidatorDefinition } from '@zhiguang/core'
+import type { ValidatorDefinition } from '@zhiguang/novasheet-core'
 
 const positiveNumber: ValidatorDefinition = {
   validate: (value) =>
@@ -257,7 +257,7 @@ validator 可以是同步函数，也可以返回 `Promise`；异步校验会按
 ### 单元格附件
 
 ```ts
-import type { CellAttachmentCodec } from '@zhiguang/core'
+import type { CellAttachmentCodec } from '@zhiguang/novasheet-core'
 
 const richTextCodec: CellAttachmentCodec<{ runs: unknown[] }> = {
   namespace: 'rich-text',
@@ -307,7 +307,7 @@ new Grid(container, {
 ### 自定义 DOM 单元格编辑器
 
 ```ts
-import type { CellEditor } from '@zhiguang/core'
+import type { CellEditor } from '@zhiguang/novasheet-core'
 
 const dateEditor: CellEditor = {
   open(ctx) {
@@ -327,10 +327,10 @@ new Grid(container, { backend: canvas2dBackend(), data, cellEditors: { date: dat
 
 ### 自定义单元格显示（canvas painter）
 
-`core` 自身不渲染任何东西，所以 `GridOptions` 上没有显示相关字段——按类型分发的 painter 注册表归渲染后端所有。对 `@zhiguang/canvas2d` 而言就是 `canvas2dBackend({ cellRenderers })`：
+`core` 自身不渲染任何东西，所以 `GridOptions` 上没有显示相关字段——按类型分发的 painter 注册表归渲染后端所有。对 `@zhiguang/novasheet-canvas2d` 而言就是 `canvas2dBackend({ cellRenderers })`：
 
 ```ts
-import type { Canvas2DCellRenderer } from '@zhiguang/canvas2d'
+import type { Canvas2DCellRenderer } from '@zhiguang/novasheet-canvas2d'
 
 const ratingRenderer: Canvas2DCellRenderer = {
   paint(ctx, { value, rect, theme }) {
@@ -349,7 +349,7 @@ new Grid(container, {
 })
 ```
 
-这个 renderer 同样按 `Field.type` 键控，但渲染器在调用 `paint(ctx, params)` 前，传入的 `field` 已经被换成该单元格的**resolved type**——`setCellType` 覆盖会自动选中匹配的 painter，"不回退到列 painter" 的规则与 `cellEditors`/`cellTypes` 一致。`params` 上还有 `getAttachment(namespace, viewRow, viewCol)`（读取 `cellAttachments` codec 为这一格写入的内容）和 `formatCell(...)`（resolved `ValueFormat` 的显示文本），自定义 renderer 不需要重新推导这两类数据。`Canvas2DCellRenderer` 由 `@zhiguang/canvas2d` 导出，不属于 `core`——这个类型活在渲染发生的地方。
+这个 renderer 同样按 `Field.type` 键控，但渲染器在调用 `paint(ctx, params)` 前，传入的 `field` 已经被换成该单元格的**resolved type**——`setCellType` 覆盖会自动选中匹配的 painter，"不回退到列 painter" 的规则与 `cellEditors`/`cellTypes` 一致。`params` 上还有 `getAttachment(namespace, viewRow, viewCol)`（读取 `cellAttachments` codec 为这一格写入的内容）和 `formatCell(...)`（resolved `ValueFormat` 的显示文本），自定义 renderer 不需要重新推导这两类数据。`Canvas2DCellRenderer` 由 `@zhiguang/novasheet-canvas2d` 导出，不属于 `core`——这个类型活在渲染发生的地方。
 
 ### 把一个自定义类型完整拼起来
 
@@ -372,7 +372,7 @@ new Grid(container, {
 })
 ```
 
-这套模式已交付的参考实现是 `@zhiguang/cell-kit` 里的 rich-text 单元格类型（codec + canvas renderer + inline contenteditable 编辑器 + 外部 React toolbar），完整接线见 [`apps/storybook/src/stories/RichText.stories.ts`](../../apps/storybook/src/stories/RichText.stories.ts)——超出本 README 篇幅的完整可运行示例都在那份文件里。
+这套模式已交付的参考实现是 `@zhiguang/novasheet-cell-kit` 里的 rich-text 单元格类型（codec + canvas renderer + inline contenteditable 编辑器 + 外部 React toolbar），完整接线见 [`apps/storybook/src/stories/RichText.stories.ts`](../../apps/storybook/src/stories/RichText.stories.ts)——超出本 README 篇幅的完整可运行示例都在那份文件里。
 
 ### 生命周期、布局、冻结区域
 

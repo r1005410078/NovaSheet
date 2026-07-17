@@ -6,7 +6,7 @@ import {
   Viewport,
   denseGridTheme,
   type Schema,
-} from '@zhiguang/core'
+} from '@zhiguang/novasheet-core'
 import { Canvas2DRenderer } from '../../src/render/Canvas2DRenderer'
 import { createRecordingContext } from '../helpers/recording-context'
 

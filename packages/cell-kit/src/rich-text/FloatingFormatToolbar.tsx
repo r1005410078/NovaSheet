@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CustomColorPicker } from '@zhiguang/react'
+import { CustomColorPicker } from '@zhiguang/novasheet-react'
 
 export interface FloatingFormatToolbarProps {
   readonly editableRef: { current: HTMLElement | null }

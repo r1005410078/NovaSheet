@@ -1,6 +1,6 @@
 // NOTE: 与 packages/core/tests/helpers/mock-grid-engine.ts 保持同步（测试 helper 不跨包共享）。
 import { mock } from 'bun:test'
-import { denseGridTheme } from '@zhiguang/core'
+import { denseGridTheme } from '@zhiguang/novasheet-core'
 import type {
   Axis,
   CellRange,
@@ -15,7 +15,7 @@ import type {
   Schema,
   Theme,
   Viewport,
-} from '@zhiguang/core'
+} from '@zhiguang/novasheet-core'
 
 export interface MockGridEngineOptions {
   readonly selection?: GridSelection

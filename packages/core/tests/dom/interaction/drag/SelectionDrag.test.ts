@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { SelectionDrag } from '../../../../src/dom/interaction/drag/SelectionDrag'
-import type { WebPointerEvent } from '@zhiguang/core'
+import type { WebPointerEvent } from '@zhiguang/novasheet-core'
 import { makeMockGridEngine } from '../../../helpers/mock-grid-engine'
 
 describe('SelectionDrag', () => {

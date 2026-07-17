@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { FrameScheduler } from '@zhiguang/core'
+import { FrameScheduler } from '@zhiguang/novasheet-core'
 import { DomGridHost } from '../../../src/dom/host/DomGridHost'
 import type { WebPointerEvent } from '../../../src/dom/host/Host'
 

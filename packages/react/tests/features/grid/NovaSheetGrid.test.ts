@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource } from '@zhiguang/core'
-import type { Grid } from '@zhiguang/core'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
+import type { Grid } from '@zhiguang/novasheet-core'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 

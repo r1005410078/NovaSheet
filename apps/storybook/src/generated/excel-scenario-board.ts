@@ -288,7 +288,7 @@ export const EXCEL_SCENARIO_BOARD_ROWS: readonly ExcelScenarioBoardRow[] = [
     "layer": "L3c",
     "id": "excel.L3c.rich-text-default-not-bundled",
     "summary": "默认 Grid 不带 rich-text；未注册 cell-kit 时纯文本无字体组",
-    "userStory": "作为集成方，当我不注册 `@zhiguang/cell-kit` 时，我希望 NovaSheet 默认渲染纯文本、无任何字体组能力，以保证默认包零基础组件、可 tree-shake。",
+    "userStory": "作为集成方，当我不注册 `@zhiguang/novasheet-cell-kit` 时，我希望 NovaSheet 默认渲染纯文本、无任何字体组能力，以保证默认包零基础组件、可 tree-shake。",
     "manifestStatus": "draft",
     "coverage": "covered",
     "fillColor": "#34a353"

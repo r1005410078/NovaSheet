@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { denseGridTheme } from '@zhiguang/core'
+import { denseGridTheme } from '@zhiguang/novasheet-core'
 import {
   applyResizeHandleTheme,
   ensureResizeHandleStylesheet,

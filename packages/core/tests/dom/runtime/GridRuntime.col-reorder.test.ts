@@ -1,10 +1,10 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { DefaultGridEngine, denseGridTheme, InMemoryDataSource } from '@zhiguang/core'
-import type { GridEngine, ResizeHandleRect, Schema } from '@zhiguang/core'
+import { DefaultGridEngine, denseGridTheme, InMemoryDataSource } from '@zhiguang/novasheet-core'
+import type { GridEngine, ResizeHandleRect, Schema } from '@zhiguang/novasheet-core'
 import type { ColumnReorderOverlay } from '../../../src/dom/overlay/ColumnReorderOverlay'
-import type { WebHost } from '@zhiguang/core'
-import type { RenderBackend } from '@zhiguang/core'
-import { GridRuntime } from '@zhiguang/core'
+import type { WebHost } from '@zhiguang/novasheet-core'
+import type { RenderBackend } from '@zhiguang/novasheet-core'
+import { GridRuntime } from '@zhiguang/novasheet-core'
 
 function makeEngine(): DefaultGridEngine {
   const schema: Schema = {

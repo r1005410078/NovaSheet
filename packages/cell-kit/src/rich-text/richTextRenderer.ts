@@ -1,5 +1,5 @@
-import type { Canvas2DCellRenderer } from '@zhiguang/canvas2d'
-import { paintStyledText } from '@zhiguang/canvas2d'
+import type { Canvas2DCellRenderer } from '@zhiguang/novasheet-canvas2d'
+import { paintStyledText } from '@zhiguang/novasheet-canvas2d'
 import { splitIntoSegments, type CellTextDefault } from './segments'
 import type { RichTextValue } from './types'
 

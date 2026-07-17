@@ -14,8 +14,8 @@
  */
 
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource, denseGridTheme, type SortSpec } from '@zhiguang/core'
-import { Grid } from '@zhiguang/core'
+import { InMemoryDataSource, denseGridTheme, type SortSpec } from '@zhiguang/novasheet-core'
+import { Grid } from '@zhiguang/novasheet-core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
 
 const SCHEMA = { fields: [{ id: 'a', name: 'A', type: 'text' as const, width: 100 }] }

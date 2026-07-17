@@ -1,5 +1,5 @@
 /**
- * Build script for @zhiguang/canvas2d. Same pattern as packages/core/build.ts.
+ * Build script for @zhiguang/novasheet-canvas2d. Same pattern as packages/core/build.ts.
  */
 
 import { rm, copyFile } from 'node:fs/promises'
@@ -8,7 +8,7 @@ const ROOT = new URL('.', import.meta.url).pathname
 
 await rm(`${ROOT}dist`, { recursive: true, force: true })
 
-const EXTERNALS = ['@zhiguang/core'] as const
+const EXTERNALS = ['@zhiguang/novasheet-core'] as const
 
 const common = {
   entrypoints: [`${ROOT}src/index.ts`],

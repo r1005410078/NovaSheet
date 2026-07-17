@@ -1,7 +1,7 @@
 /**
  * 所有渲染后端的共享契约（Canvas2D / WebGL / WebGPU）。
  *
- * 实现分布在各后端包（如 `@zhiguang/canvas2d`、未来 `@zhiguang/webgl`）。
+ * 实现分布在各后端包（如 `@zhiguang/novasheet-canvas2d`、未来 `@zhiguang/webgl`）。
  * 只负责绘制表面生命周期；滚动与布局状态由宿主编排层与 `GridEngine` 管理。
  */
 

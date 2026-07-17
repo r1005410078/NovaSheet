@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { InMemoryDataSource } from '@zhiguang/core'
-import { NovaSheetGrid, NovaSheetToolbar } from '@zhiguang/react'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
+import { NovaSheetGrid, NovaSheetToolbar } from '@zhiguang/novasheet-react'
 import React, { useRef, useState } from 'react'
 
 const data = new InMemoryDataSource({

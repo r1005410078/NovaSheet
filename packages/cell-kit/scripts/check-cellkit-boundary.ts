@@ -11,7 +11,7 @@ export interface CellKitBoundaryViolation {
 const IMPORT_RE = /\bimport(?:\s+type)?[\s\S]*?\bfrom\s+['"]([^'"]+)['"]/g
 /** core/canvas2d/react 三层禁止反向依赖 cell-kit（spec §4.4）。 */
 const FORBIDDEN_IMPORTER = /\/packages\/(core|canvas2d|react)\/src\//
-const CELLKIT_SPECIFIER = /^@zhiguang\/cell-kit(\/|$)/
+const CELLKIT_SPECIFIER = /^@zhiguang\/novasheet-cell-kit(\/|$)/
 
 export function findCellKitBoundaryViolations(
   files: ReadonlyMap<string, string>,

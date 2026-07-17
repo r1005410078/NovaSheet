@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { SparseExcelDataSource } from '@zhiguang/core'
-import { NovaExcel } from '@zhiguang/react'
+import { SparseExcelDataSource } from '@zhiguang/novasheet-core'
+import { NovaExcel } from '@zhiguang/novasheet-react'
 import React from 'react'
 
 const data = new SparseExcelDataSource()

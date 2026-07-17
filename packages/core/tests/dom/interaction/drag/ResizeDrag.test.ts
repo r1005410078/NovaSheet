@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { ResizeDrag } from '../../../../src/dom/interaction/drag/ResizeDrag'
 import type { DomHandleLayer } from '../../../../src/dom/interaction/DomHandleLayer'
-import type { ResizeHandleRect } from '@zhiguang/core'
+import type { ResizeHandleRect } from '@zhiguang/novasheet-core'
 import { makeMockGridEngine } from '../../../helpers/mock-grid-engine'
 
 describe('ResizeDrag', () => {

@@ -1,12 +1,12 @@
-# @zhiguang/cell-kit
+# @zhiguang/novasheet-cell-kit
 
-第一方 opt-in 单元格组件（首个：rich-text）。默认**不进** `@zhiguang/core`/`@zhiguang/react`——和外部第三方扩展走同一注册路径。
+第一方 opt-in 单元格组件（首个：rich-text）。默认**不进** `@zhiguang/novasheet-core`/`@zhiguang/novasheet-react`——和外部第三方扩展走同一注册路径。
 
 ## 装配（display 半）
 
 ```ts
-import { richTextExtension } from '@zhiguang/cell-kit'
-import { canvas2dBackend } from '@zhiguang/canvas2d'
+import { richTextExtension } from '@zhiguang/novasheet-cell-kit'
+import { canvas2dBackend } from '@zhiguang/novasheet-canvas2d'
 
 new Grid(container, {
   data,

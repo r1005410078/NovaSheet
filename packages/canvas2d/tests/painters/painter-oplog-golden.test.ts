@@ -1,5 +1,5 @@
 import { describe, it } from 'bun:test'
-import { ChunkedAxis, denseGridTheme, type Schema } from '@zhiguang/core'
+import { ChunkedAxis, denseGridTheme, type Schema } from '@zhiguang/novasheet-core'
 import { EmptyStatePainter } from '../../src/painters/EmptyStatePainter'
 import { HeaderPainter } from '../../src/painters/HeaderPainter'
 import { RowHeaderPainter } from '../../src/painters/RowHeaderPainter'

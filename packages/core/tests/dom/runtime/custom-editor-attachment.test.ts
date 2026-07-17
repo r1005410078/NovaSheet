@@ -3,7 +3,7 @@
  * 复用 GridRuntime.test.ts 的 makeEngine/makeHost/makeRenderer/makeFrameWithFields 模式。
  */
 import { describe, expect, it, mock } from 'bun:test'
-import { InMemoryDataSource } from '@zhiguang/core'
+import { InMemoryDataSource } from '@zhiguang/novasheet-core'
 import type {
   CellEditorOpenContext,
   CellRange,
@@ -14,10 +14,10 @@ import type {
   Row,
   Schema,
   Theme,
-} from '@zhiguang/core'
-import type { WebHost } from '@zhiguang/core'
-import type { RenderBackend } from '@zhiguang/core'
-import { GridRuntime } from '@zhiguang/core'
+} from '@zhiguang/novasheet-core'
+import type { WebHost } from '@zhiguang/novasheet-core'
+import type { RenderBackend } from '@zhiguang/novasheet-core'
+import { GridRuntime } from '@zhiguang/novasheet-core'
 
 function makeEngine(): GridEngine {
   return {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
 import { NativeScroller } from '../../../src/dom/scroll/NativeScroller'
-import { FrameScheduler } from '@zhiguang/core'
+import { FrameScheduler } from '@zhiguang/novasheet-core'
 
 describe('NativeScroller — 原生滚动', () => {
   let rafs: Array<() => void> = []

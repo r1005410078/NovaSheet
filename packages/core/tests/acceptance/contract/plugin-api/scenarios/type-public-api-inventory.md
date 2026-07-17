@@ -12,11 +12,11 @@ status: implemented
 
 ## Given
 
-- `@zhiguang/core` 公开 barrel
+- `@zhiguang/novasheet-core` 公开 barrel
 
 ## When
 
-- `bun run --filter @zhiguang/core typecheck` 与 BDD smoke 引用代表性类型
+- `bun run --filter @zhiguang/novasheet-core typecheck` 与 BDD smoke 引用代表性类型
 
 ## Then
 

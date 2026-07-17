@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import React, { act } from 'react'
 import { createReactCellEditor } from '../../src'
-import type { CellEditorOpenContext } from '@zhiguang/core'
+import type { CellEditorOpenContext } from '@zhiguang/novasheet-core'
 
 describe('createReactCellEditor', () => {
   it('mounts overlay inside the grid container coordinate space', async () => {

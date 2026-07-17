@@ -5,14 +5,14 @@ Loaded into every agent session — invariants easy to get wrong without context
 ## Project shape
 
 - High-performance Canvas table engine → eventual AI-Native data workbench. Greenfield TS monorepo (bun workspaces).
-- **两包**：`@zhiguang/core`（引擎 + DOM 壳 `dom/` + 公开 `Grid` facade + `RenderBackend` 端口）、`@zhiguang/canvas2d`（Canvas2D 后端，**反向依赖 core**，导出 `canvas2dBackend`）。组合根（storybook/react）`new Grid({ data, backend: canvas2dBackend })` 注入后端。
+- **两包**：`@zhiguang/novasheet-core`（引擎 + DOM 壳 `dom/` + 公开 `Grid` facade + `RenderBackend` 端口）、`@zhiguang/novasheet-canvas2d`（Canvas2D 后端，**反向依赖 core**，导出 `canvas2dBackend`）。组合根（storybook/react）`new Grid({ data, backend: canvas2dBackend })` 注入后端。
 
 ## Current state
 
 - **Active branch:** `main`（GridRuntime 分解已合并；旧 `refactor-default-grid-engine-decomposition` 亦已并入）。功能线开发前 read recent commits for delta。
 - **Next milestone:** Phase 5-D conditional formatting — unless redirected.（5-C value formatting 已 ship，见 Shipped。）
 - **Backlog（未 spec）:** ① **公开 API 缺口 P0——SlickGrid BMS 面板替换驱动（下一个 spec 候选）**：驱动用例 `~/www/scada-console-web/src/pages/monitor/index/panels/SlickBmsTablePanel.vue`（BMS 堆/簇实时监视表：5s 轮询增量更新 2 万+ 格、两级列头 堆→簇、点格开点号抽屉、整行/列组选中高亮、纯只读）。**原唯一硬阻塞 column groups 已 ship（见 Shipped）**，剩余缺口（打包 host-integration API 第二个 spec）：(a) **cell 点击事件** `on('cellClick')` 带 view/raw 坐标 + 原生 event（开抽屉入口；现仅 `onSelectionChange` 无点击语义——workaround：右键菜单 `contextMenus` + `onContextMenuAction` 的 `CellMenuContext.cell` 带精确坐标）；(b) **程序化值读写** `getCellValue`/`setCellValue`/`updateCells` 批量 + `onCellChange`（走 engine 全链路 undo/validation/事件；增量重绘架构已天然支持——`updateCell`→订阅→FrameScheduler 单帧合并，缺的是公开契约与批量糖）；(c) **全局只读开关**（现只能靠不注册 cellTypes 兜底，内建 text/number/date 仍可编辑）；(d) 整行/整列选择糖 `selectRows`/`selectCols`（`setSelection` 可凑，core README 已有等价写法）。已具备勿重复造：column groups 全套（组树/绘制/点选/`selectGroup`/`scrollToGroup`）、headerHeight（Theme）、自定义 pill 绘制（`cellRenderers`）、冻结左列、深色主题。② **公开 API 缺口 P1（通用）**：编辑生命周期（`isEditing`/`getEditingCell`/`commitEdit`/`cancelEdit`）、视口（`getScrollPosition`/`setScroll`/`getVisibleRange`）、几何映射（`getCellRect`/`getCellAtPoint`）、布局对称读（`getColumnWidth`/`getRowHeight`/`getFrozen`）+ `onColumnResize`/`onRowResize` 事件；P2：`batch()` 事务（多 mutation 合一 undo step + 一次重绘）、`sortBy` 糖、view 空间 `getRowCount`。③ **perf**：`formatValue` 内 `Intl.NumberFormat` 每调用 new，列级格式化时热路径反复构造；终审裁为 Minor，后续按 format 签名做 `Map<string, Intl.NumberFormat>` 缓存（`TODO(phase-5-c-perf)`）。
-- **Shipped（细节见 git log + `docs/superpowers/specs/`）:** Phase 4 全完成、Phase 5-A/5-B、fill×merge/format、text-wrap 三态 + Alt+Enter 多行、**5-C value formatting（ValueFormat descriptor number/currency/percent/date + 自定义 formatter 注册表，raw 不变，`Grid.setValueFormat`/`GridOptions.formatters`）**、单元格扩展 API 四轴（`cellTypes`/`cellEditors`/`cellAttachments` + backend 侧 `cellRenderers`，参考实现 `@zhiguang/cell-kit` rich-text）、per-cell type override（`setCellType`）、数据校验（sync/async ValidatorDefinition）、`WindowedDataSource`、React 适配 `@zhiguang/react`（NovaExcel 壳）、Engine Composer Phase 2、Web 合并进 core（依赖反转）、GridRuntime 分解（薄组合根 + 8 域 controller + RenderFlushPipeline，mutation 改道 GridControllerImpl 直调 engine）、**列组表头 column groups（`Schema.columnGroups` 任意深度组树 + fail-loud 校验、`getFrame().columnGroupHeader` view 坐标下发、`viewport.headerHeight` 语义升级为总高 + `leafHeaderHeight`、组头点击选组、`Grid.getColumnGroups`/`selectGroup`/`scrollToGroup`、结构 mutation/undo 组树一致性；顺带修复预存 `scrollTo*` 冻结偏移 bug——注意 FrozenRegions 两轴冻结约定不对称：横轴 scrollX 为中心区相对量、纵轴 scrollY 为绝对量钳 topHeight，勿对称化"修复"**）。
+- **Shipped（细节见 git log + `docs/superpowers/specs/`）:** Phase 4 全完成、Phase 5-A/5-B、fill×merge/format、text-wrap 三态 + Alt+Enter 多行、**5-C value formatting（ValueFormat descriptor number/currency/percent/date + 自定义 formatter 注册表，raw 不变，`Grid.setValueFormat`/`GridOptions.formatters`）**、单元格扩展 API 四轴（`cellTypes`/`cellEditors`/`cellAttachments` + backend 侧 `cellRenderers`，参考实现 `@zhiguang/novasheet-cell-kit` rich-text）、per-cell type override（`setCellType`）、数据校验（sync/async ValidatorDefinition）、`WindowedDataSource`、React 适配 `@zhiguang/novasheet-react`（NovaExcel 壳）、Engine Composer Phase 2、Web 合并进 core（依赖反转）、GridRuntime 分解（薄组合根 + 8 域 controller + RenderFlushPipeline，mutation 改道 GridControllerImpl 直调 engine）、**列组表头 column groups（`Schema.columnGroups` 任意深度组树 + fail-loud 校验、`getFrame().columnGroupHeader` view 坐标下发、`viewport.headerHeight` 语义升级为总高 + `leafHeaderHeight`、组头点击选组、`Grid.getColumnGroups`/`selectGroup`/`scrollToGroup`、结构 mutation/undo 组树一致性；顺带修复预存 `scrollTo*` 冻结偏移 bug——注意 FrozenRegions 两轴冻结约定不对称：横轴 scrollX 为中心区相对量、纵轴 scrollY 为绝对量钳 topHeight，勿对称化"修复"**）。
 - **易错不变量（仅 format/merge 域）:** `RangeStyleStore`/`MergeStore` 用 **raw** 行列键控；`getFrame()` raw→view，painter 只吃 VIEW 坐标；mutation 经 `viewRangeToRawRange` 转连续 raw 区间，sort/filter 打散时保守 no-op（返 `false`）。
 - **Locked decisions（别轻易翻案，见 spec ADR §A）:** 单 Canvas full visible-region redraw、native scroll + 非线性 `scrollTop`（拒绝自绘滚动条）、`CHUNK_SIZE=1024`、`<handle-layer>` sibling 做 resize hit-zone（M4）。
 
@@ -26,7 +26,7 @@ Loaded into every agent session — invariants easy to get wrong without context
 ## Toolchain (NON-NEGOTIABLE)
 
 - **bun (≥1.2) only** — never npm/yarn/pnpm（desync lockfile，破 CI）。
-- Test `bun test`；Typecheck `bun run --filter '*' typecheck`（strict + `noUncheckedIndexedAccess` + `verbatimModuleSyntax`）；Lint `bun run lint`（0 error/warning，含 `lint:architecture`）；Build `bun run --filter @zhiguang/core build && bun run --filter @zhiguang/canvas2d build`（core 先）。四者全过才能进 `main`（CI 强制）。
+- Test `bun test`；Typecheck `bun run --filter '*' typecheck`（strict + `noUncheckedIndexedAccess` + `verbatimModuleSyntax`）；Lint `bun run lint`（0 error/warning，含 `lint:architecture`）；Build `bun run --filter @zhiguang/novasheet-core build && bun run --filter @zhiguang/novasheet-canvas2d build`（core 先）。四者全过才能进 `main`（CI 强制）。
 - 测试用 `bun:test`（`mock`/`spyOn`，**非 vitest**）；global stub 用 `tests/helpers/global-stub.ts`（无 `vi.stubGlobal`）。
 
 ## Architectural invariants (enforce in review)
@@ -73,7 +73,7 @@ Loaded into every agent session — invariants easy to get wrong without context
 | 渲染后端端口 + 工厂 | `core/src/ports/RenderBackend.ts`、`canvas2d/src/backend/canvas2dBackend.ts` |
 | 行为测试规格 | `docs/superpowers/specs/2026-06-08-novasheet-behavioral-testing-design.md`（L0–L4、Phase 1 Core L0–L2 分批启动） |
 | Core BDD 路线 | `docs/superpowers/plans/2026-06-11-novasheet-core-public-api-bdd-roadmap.md`（公开 API 场景矩阵 + 分批路径） |
-| MD 场景工具 | `packages/mbd/`（`validate`/`manifest`）；覆盖率 `@zhiguang/react` `lint:scenario-coverage`；规格 `2026-06-09-novasheet-mbd-package-design.md` |
+| MD 场景工具 | `packages/mbd/`（`validate`/`manifest`）；覆盖率 `@zhiguang/novasheet-react` `lint:scenario-coverage`；规格 `2026-06-09-novasheet-mbd-package-design.md` |
 | React 包架构 | `packages/react/docs/project-{structure,standards}.md` |
 | 测试 | each `packages/<pkg>/tests/` mirrors `src/`（core: kernel/features/engine；canvas2d: grid/integration/runtime/painters） |
 

@@ -1,22 +1,22 @@
 import type { Meta, StoryObj } from '@storybook/html'
-import { Grid, InMemoryDataSource } from '@zhiguang/core'
-import type { CellRange, TextWrapMode } from '@zhiguang/core'
-import { canvas2dBackend } from '@zhiguang/canvas2d'
+import { Grid, InMemoryDataSource } from '@zhiguang/novasheet-core'
+import type { CellRange, TextWrapMode } from '@zhiguang/novasheet-core'
+import { canvas2dBackend } from '@zhiguang/novasheet-canvas2d'
 import {
   createRichTextEditor,
   richTextExtension,
   RichTextToolbarProvider,
   useRichTextToolbarController,
-} from '@zhiguang/cell-kit'
-import { NovaSheetToolbar } from '@zhiguang/react'
-import type { ToolbarAction } from '@zhiguang/react'
+} from '@zhiguang/novasheet-cell-kit'
+import { NovaSheetToolbar } from '@zhiguang/novasheet-react'
+import type { ToolbarAction } from '@zhiguang/novasheet-react'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { basicTextSchema, generateRows } from '../mock-data'
 import { docsMeta, docsStory } from '../story-docs'
 
 const RICH_TEXT_DOCS = `
-Rich-text cell editing via \`@zhiguang/cell-kit\`.
+Rich-text cell editing via \`@zhiguang/novasheet-cell-kit\`.
 
 ### Google Sheets-like external toolbar
 

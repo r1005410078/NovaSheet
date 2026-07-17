@@ -1,4 +1,4 @@
-import type { StyledSegment } from '@zhiguang/canvas2d'
+import type { StyledSegment } from '@zhiguang/novasheet-canvas2d'
 import type { RichTextValue, TextRunAttrs } from './types'
 
 /** cell 默认 typography（来自 theme），run 缺省字段继承它。 */

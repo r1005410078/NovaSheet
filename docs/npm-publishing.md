@@ -8,8 +8,8 @@ Do not publish from a dirty working tree.
 
 Changesets publishes packages in dependency order:
 
-1. `@zhiguang/core`
-2. `@zhiguang/canvas2d`
+1. `@zhiguang/novasheet-core`
+2. `@zhiguang/novasheet-canvas2d`
 3. `@zhiguang/web`
 
 The root workspace and Storybook app are private and should not be published.

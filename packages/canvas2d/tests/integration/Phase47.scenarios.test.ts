@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { InMemoryDataSource, denseGridTheme, type GridEngine } from '@zhiguang/core'
-import { Grid } from '@zhiguang/core'
+import { InMemoryDataSource, denseGridTheme, type GridEngine } from '@zhiguang/novasheet-core'
+import { Grid } from '@zhiguang/novasheet-core'
 import { canvas2dBackend } from '../../src/backend/canvas2dBackend'
 
 const SCHEMA = {

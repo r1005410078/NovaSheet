@@ -4,7 +4,7 @@ import {
   denseGridTheme,
   type RenderFrameColumnGroupHeader,
   type Schema,
-} from '@zhiguang/core'
+} from '@zhiguang/novasheet-core'
 import { HeaderPainter } from '../../src/painters/HeaderPainter'
 import { createRecordingContext } from '../helpers/recording-context'
 

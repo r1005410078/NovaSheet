@@ -1,9 +1,9 @@
 import { describe, expect, it, mock } from 'bun:test'
-import { DefaultGridEngine, InMemoryDataSource, denseGridTheme } from '@zhiguang/core'
-import type { Row, Schema } from '@zhiguang/core'
-import type { WebHost } from '@zhiguang/core'
-import type { RenderBackend } from '@zhiguang/core'
-import { GridRuntime } from '@zhiguang/core'
+import { DefaultGridEngine, InMemoryDataSource, denseGridTheme } from '@zhiguang/novasheet-core'
+import type { Row, Schema } from '@zhiguang/novasheet-core'
+import type { WebHost } from '@zhiguang/novasheet-core'
+import type { RenderBackend } from '@zhiguang/novasheet-core'
+import { GridRuntime } from '@zhiguang/novasheet-core'
 
 function bigEngine(cols = 12, rows = 60): DefaultGridEngine {
   const schema: Schema = {

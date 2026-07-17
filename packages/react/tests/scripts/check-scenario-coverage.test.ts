@@ -2,7 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import type { ScenarioManifest } from '@zhiguang/mbd'
+import type { ScenarioManifest } from '@zhiguang/novasheet-mbd'
 
 import {
   computeScenarioCoverage,

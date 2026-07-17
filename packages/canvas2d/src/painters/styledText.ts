@@ -1,5 +1,5 @@
-import { tokenize } from '@zhiguang/core'
-import type { QuadrantRect, TextMeasurer, TextWrapMode, ThemeText } from '@zhiguang/core'
+import { tokenize } from '@zhiguang/novasheet-core'
+import type { QuadrantRect, TextMeasurer, TextWrapMode, ThemeText } from '@zhiguang/novasheet-core'
 
 export interface StyledSegment {
   readonly text: string

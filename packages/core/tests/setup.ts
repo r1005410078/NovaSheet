@@ -1,6 +1,6 @@
 /**
- * Test environment bootstrap for @zhiguang/core tests.
- * happy-dom only — canvas stub lives in @zhiguang/canvas2d/tests/setup.ts.
+ * Test environment bootstrap for @zhiguang/novasheet-core tests.
+ * happy-dom only — canvas stub lives in @zhiguang/novasheet-canvas2d/tests/setup.ts.
  */
 
 import { afterEach } from 'bun:test'
