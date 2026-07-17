@@ -46,6 +46,7 @@ computeFillWrites
 computePasteTarget
 computeResizeHandles
 computeScrollReveal
+createSnapshotWindowedProvider
 dateToSerial
 decideExcelWorkspaceResize
 denseGridTheme

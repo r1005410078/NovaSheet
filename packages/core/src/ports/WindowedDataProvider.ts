@@ -20,9 +20,19 @@ export interface RangeSlice {
   readonly version?: number
 }
 
+/**
+ * Provider → WindowedDataSource 推送事件。
+ *
+ * 通道红线（误用会导致主线程卡顿甚至假死）：
+ * - `cells`：定时刷新 / WS 推送的**默认**通道；只改已缓存块，不清库
+ * - `rowCount` / `invalidate`：结构漂移或快照软失效；标 stale 后重拉窗口，旧值过渡
+ * - `resync`：**仅**断线重连或确认丢推送；清全部缓存并重拉。禁止用于周期性全量刷新
+ */
 export type WindowedDataEvent =
   | { type: 'cells'; updates: readonly CellUpdate[] }
   | { type: 'rowCount'; rowCount: number; version?: number }
+  /** 软失效：markAllStale + 重拉当前预取窗口，不清空缓存（快照轮询可用）。 */
+  | { type: 'invalidate' }
   | { type: 'resync'; rowCount?: number }
 
 export interface WindowSubscription {
@@ -32,8 +42,16 @@ export interface WindowSubscription {
 }
 
 export interface WindowedDataProvider {
-  /** 拉取矩形区间。 */
+  /**
+   * 拉取矩形区间。
+   *
+   * 实现必须 O(窗口)：只物化 `[startRow..endRow] × [startCol..endCol]`。
+   * 禁止先构建全表再 slice——大表下会被预取多块并发打满主线程。
+   */
   loadRange(window: DataWindow, signal: AbortSignal): Promise<RangeSlice>
-  /** 建立推送通道（典型 WebSocket），返回可变窗口的订阅句柄；构造 WindowedDataSource 时调用一次。 */
+  /**
+   * 建立推送通道（典型 WebSocket），返回可变窗口的订阅句柄；构造 WindowedDataSource 时调用一次。
+   * 定时换数请对当前 `setWindow` 发 `cells`，不要发 `resync`。
+   */
   subscribe(onEvent: (event: WindowedDataEvent) => void): WindowSubscription
 }

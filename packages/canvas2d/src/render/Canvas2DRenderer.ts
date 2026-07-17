@@ -81,6 +81,7 @@ import { GridLinesPainter, type FilledCellLookup } from '../painters/GridLinesPa
 import { HeaderPainter } from '../painters/HeaderPainter'
 import { RowHeaderPainter } from '../painters/RowHeaderPainter'
 import { CANVAS2D_PAINT_LAYERS, type Canvas2DPaintLayer } from './PaintLayer'
+import { resolveShouldPaintColumnLetters } from './column-letters-policy'
 
 /** Canvas2DRenderer 构造选项 */
 export interface Canvas2DRendererOptions {
@@ -411,8 +412,13 @@ export class Canvas2DRenderer implements RenderBackend {
         paintOrder,
         data,
         colsAxis,
-        // 有 columnGroups 时叶头用字段名（簇1/簇2），保留行头 gutter；无组时仍画 A/B 列标
-        excelChrome && !ctx.frame.columnGroupHeader,
+        // excel 行头 gutter 可开；叶头：有 columnGroups 或扁平字段已带 name → 画字段名；
+        // 仅「无组且字段无名」时才画 A/B 列标（一层头显示 name 的场景）
+        this.shouldPaintColumnLetters(
+          excelChrome,
+          ctx.frame.columnGroupHeader,
+          data,
+        ),
         ctx.frame.viewPipeline,
         ctx.frame.collapsedColGaps,
         this.getSelectedColumnHeaderRange(ctx.frame),
@@ -475,8 +481,13 @@ export class Canvas2DRenderer implements RenderBackend {
       paintOrder,
       data,
       colsAxis,
-      // 有 columnGroups 时叶头用字段名（簇1/簇2），保留行头 gutter；无组时仍画 A/B 列标
-      excelChrome && !ctx.frame.columnGroupHeader,
+      // excel 行头 gutter 可开；叶头：有 columnGroups 或扁平字段已带 name → 画字段名；
+      // 仅「无组且字段无名」时才画 A/B 列标（一层头显示 name 的场景）
+      this.shouldPaintColumnLetters(
+        excelChrome,
+        ctx.frame.columnGroupHeader,
+        data,
+      ),
       ctx.frame.viewPipeline,
       ctx.frame.collapsedColGaps,
       this.getSelectedColumnHeaderRange(ctx.frame),
@@ -612,6 +623,26 @@ export class Canvas2DRenderer implements RenderBackend {
     const maybe = ctx.data.getRows(main.rowRange[0], main.rowRange[1])
     // M1 仅同步源；M2+ 接异步源时这里要加 `if (maybe instanceof Promise) maybe.then(invalidate)`
     void maybe
+  }
+
+  /**
+   * 是否绘制 Excel 列标（A/B/…）。
+   *
+   * - 无 excel 行头 gutter：不画列标
+   * - 有 columnGroups：叶头用字段名（簇名），不画列标
+   * - 扁平列且任一 field.name 非空：一层头直接画 name（如液冷A1），不画列标
+   * - 扁平列且字段均无名：保留 A/B 列标
+   */
+  private shouldPaintColumnLetters(
+    excelChrome: boolean,
+    columnGroupHeader: RenderFrame['columnGroupHeader'] | undefined,
+    data: DataSource,
+  ): boolean {
+    return resolveShouldPaintColumnLetters(
+      excelChrome,
+      columnGroupHeader,
+      data.getSchema()?.fields ?? [],
+    )
   }
 
   private paintHeaders(

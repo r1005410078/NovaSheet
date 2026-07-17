@@ -478,4 +478,57 @@ describe('WindowedDataSource — error boundaries (§7)', () => {
     expect(fake.pendingLoads().length).toBeGreaterThan(0) // no cooldown — re-requested right away
     source.dispose()
   })
+
+  it('warns when resync fires twice within the frequent-resync window', () => {
+    const fake = createFakeWindowedProvider()
+    const source = new WindowedDataSource({
+      schema,
+      rowCount: 100,
+      provider: fake.provider,
+      warnOnFrequentResync: true,
+      blockRows: 15,
+      blockCols: 2,
+    })
+    const warn = console.warn
+    const messages: string[] = []
+    console.warn = (...args: unknown[]) => {
+      messages.push(String(args[0] ?? ''))
+      warn(...args)
+    }
+    try {
+      fake.emit({ type: 'resync' })
+      fake.emit({ type: 'resync' })
+      expect(messages.some((m) => m.includes('Frequent resync'))).toBe(true)
+    } finally {
+      console.warn = warn
+      source.dispose()
+    }
+  })
+
+  it('invalidate marks cache stale and re-fetches without clearing cached values', async () => {
+    const fake = createFakeWindowedProvider()
+    const source = new WindowedDataSource({
+      schema,
+      rowCount: 1000,
+      provider: fake.provider,
+      blockRows: 15,
+      blockCols: 2,
+    })
+    source.hintWindow({ startRow: 0, endRow: 9, startCol: 0, endCol: 1 })
+    const [firstLoad] = fake.pendingLoads()
+    firstLoad!.resolve({
+      rows: Array.from({ length: firstLoad!.window.endRow - firstLoad!.window.startRow + 1 }, () => ({
+        name: 'old',
+        score: 1,
+      })),
+    })
+    await tick()
+    expect(source.getCell(0, 'name')).toBe('old')
+
+    fake.emit({ type: 'invalidate' })
+    // soft path: old value still readable until refetch lands
+    expect(source.getCell(0, 'name')).toBe('old')
+    expect(fake.pendingLoads().length).toBeGreaterThan(0)
+    source.dispose()
+  })
 })

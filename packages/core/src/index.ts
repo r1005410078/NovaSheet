@@ -31,6 +31,12 @@ export type {
 } from './ports/WindowedDataProvider'
 export { WindowedDataSource } from './kernel/data/windowed/WindowedDataSource'
 export type { WindowedDataSourceOptions } from './kernel/data/windowed/WindowedDataSource'
+export { createSnapshotWindowedProvider } from './kernel/data/windowed/createSnapshotWindowedProvider'
+export type {
+  SnapshotCellReader,
+  SnapshotWindowedProvider,
+  SnapshotWindowedProviderOptions,
+} from './kernel/data/windowed/createSnapshotWindowedProvider'
 export { isMutableDataSource } from './kernel/data/MutableDataSource'
 export type { MutableDataSource, RemovedFieldSnapshot } from './kernel/data/MutableDataSource'
 export type {

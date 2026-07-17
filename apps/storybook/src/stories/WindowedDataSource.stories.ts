@@ -37,9 +37,13 @@ const meta: Meta = {
     '`WindowedDataSource` fetches remote data for the visible region plus an overscan margin ' +
       '(`preloadScreens`) so scrolling ahead rarely blocks on network, and subscribes for ' +
       'WebSocket-style push updates on the settled visible window — here simulated as a ' +
-      'tick-by-tick market-data feed (a batch of cell updates every 150ms). The activity log ' +
-      'below shows `loadRange` (fetch), `tick` (push batch) and `subscribe window` (debounced ' +
-      'follow) events from the transport-agnostic `WindowedDataProvider` port as you scroll.',
+      'tick-by-tick market-data feed (a batch of cell updates every 150ms). ' +
+      'Anti-pattern: do NOT poll with `{ type: \"resync\" }` (hard cache clear); use `cells` ' +
+      'for live/poll updates, `invalidate` for soft snapshot refresh, and `resync` only on reconnect. ' +
+      '`loadRange` must be O(window), never build the full table then slice. ' +
+      'Prefer `createSnapshotWindowedProvider` for snapshot polling. ' +
+      'The activity log below shows `loadRange` (fetch), `tick` (push batch) and `subscribe window` ' +
+      '(debounced follow) events from the transport-agnostic `WindowedDataProvider` port as you scroll.',
   ),
 }
 export default meta

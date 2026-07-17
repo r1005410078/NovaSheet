@@ -16,6 +16,8 @@ const schema = {
 // Provider is the only thing the app writes: loadRange fetches a rectangle,
 // subscribe opens a push channel (WebSocket in production) for the visible window.
 // Here the push side is simulated as a tick-by-tick feed: an 8-cell batch every 150ms.
+// Anti-pattern: never poll with { type: 'resync' }; use cells (this demo) or invalidate.
+// loadRange must only materialize the requested window (O(window)), not the full table.
 const provider = new FakeWindowedProvider({
   schema,
   rowCount: 100_000,

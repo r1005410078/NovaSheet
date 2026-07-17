@@ -99,13 +99,15 @@ export interface RangeSlice {
 }
 
 export type WindowedDataEvent =
-  | { type: 'cells'; updates: readonly CellUpdate[] }   // 订阅窗口内的批量改值
+  | { type: 'cells'; updates: readonly CellUpdate[] }   // 定时/WS 默认通道
   /**
    * 可选：服务端主动通告总行数变化（epoch 软失效）。
    * 用于静止页面的滚动条实时收缩/增长；不推也行——下一次拉取的捎带 rowCount 同样能检出。
    */
   | { type: 'rowCount'; rowCount: number; version?: number }
-  /** 硬失效闸门（断线重连等）：清缓存重拉当前窗口，可携新 rowCount。 */
+  /** 软失效：标 stale + 重拉，不清空（快照轮询）。 */
+  | { type: 'invalidate' }
+  /** 硬失效闸门（断线重连等）：清缓存重拉当前窗口。禁止用于周期性全量刷新。 */
   | { type: 'resync'; rowCount?: number }
 
 export interface WindowSubscription {
@@ -208,7 +210,18 @@ hintWindow?(window: DataWindow): void
 | `cells` / in-flight | 进该块 pending buffer，loadRange 落地后回放（防"拉取快照旧于推送"竞态） |
 | `cells` / 未加载 | 丢弃（块被拉取时自然是新值） |
 | `rowCount` | epoch 软失效（§6.4），无数据落块 |
+| `invalidate` | 软失效：`markAllStale` + 重拉当前预取窗口，**不清空**缓存（快照轮询） |
 | `resync` | abort 全部 in-flight + 清缓存与 buffer + 若携 rowCount 则更新并 emit `rowCountChanged` + 重拉当前预取窗口 + emit `reset` |
+
+### 6.3.1 Anti-patterns（禁止）
+
+| 错误做法 | 为何卡死 / 劣化 | 正确做法 |
+| --- | --- | --- |
+| 定时 poll 发 `resync` | 每轮清全部缓存并重拉预取窗口；若 `loadRange` 再全表 build，主线程假死 | 发 `cells`（可见窗）或 `invalidate`（软重拉） |
+| `loadRange` 先全表物化再 slice | 预取多块并发 × O(行×列) | 只物化请求矩形，O(窗口) |
+| 业务手写 poll + remount Grid | 滚动归零、重建成本高 | 用 `createSnapshotWindowedProvider` / 保留 Grid + `replaceSnapshot` |
+
+`resync` **不是**库缺陷：它是断线硬失效闸门。卡死通常来自业务 provider 全表 `loadRange` × 误用定时 `resync` 放大。DEV 下短时间多次 `resync` 会 `console.warn`。
 
 ### 6.4 缓存新鲜度：SWR + epoch
 

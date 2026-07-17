@@ -23,6 +23,15 @@ import type {
   WindowSubscription,
 } from '../../../ports/WindowedDataProvider'
 
+/** 频繁 resync 告警：窗口内至少这么多次才 warn。 */
+const FREQUENT_RESYNC_THRESHOLD = 2
+/** 频繁 resync 告警：统计时间窗（ms）。 */
+const FREQUENT_RESYNC_WINDOW_MS = 10_000
+
+const runtimeProcess = (globalThis as {
+  readonly process?: { readonly env?: { readonly NODE_ENV?: string } }
+}).process
+
 export interface WindowedDataSourceOptions {
   readonly schema: Schema
   readonly rowCount: number
@@ -33,6 +42,11 @@ export interface WindowedDataSourceOptions {
   readonly maxCachedBlocks?: number
   readonly subscribeDebounceMs?: number
   readonly staleAfterMs?: number
+  /**
+   * 短时间内多次 resync 时是否 console.warn（提示改用 cells / invalidate）。
+   * 默认：非 production 开启。不改变 resync 语义。
+   */
+  readonly warnOnFrequentResync?: boolean
 }
 
 interface InFlightRequest {
@@ -53,6 +67,7 @@ export class WindowedDataSource implements DataSource {
   private readonly blockColsSize: number
   private readonly subscribeDebounceMs: number
   private readonly staleAfterMs: number
+  private readonly warnOnFrequentResync: boolean
   private readonly cache: BlockCache
   private readonly fieldIdToCol = new Map<string, number>()
   private readonly listeners = new Set<DataSourceListener>()
@@ -60,6 +75,8 @@ export class WindowedDataSource implements DataSource {
   private subscribeTimer: ReturnType<typeof setTimeout> | null = null
   private disposed = false
   private lastHintWindow: DataWindow | null = null
+  /** 近期 resync 时间戳，用于频繁误用告警。 */
+  private readonly recentResyncAt: number[] = []
 
   private readonly requests = new Map<string, InFlightRequest>()
   private readonly inFlightByBlock = new Map<string, string>()
@@ -78,6 +95,9 @@ export class WindowedDataSource implements DataSource {
     this.blockColsSize = options.blockCols ?? 16
     this.subscribeDebounceMs = options.subscribeDebounceMs ?? 150
     this.staleAfterMs = options.staleAfterMs ?? 30_000
+    this.warnOnFrequentResync =
+      options.warnOnFrequentResync ??
+      (runtimeProcess !== undefined && runtimeProcess.env?.NODE_ENV !== 'production')
     this.cache = new BlockCache({ maxCachedBlocks: options.maxCachedBlocks ?? 256 })
     this.schema.fields.forEach((field, index) => this.fieldIdToCol.set(field.id, index))
 
@@ -341,7 +361,14 @@ export class WindowedDataSource implements DataSource {
         this.handleRowCountEvent(event.rowCount, event.version)
         return
       }
-      this.handleResyncEvent(event.rowCount)
+      if (event.type === 'invalidate') {
+        this.handleInvalidateEvent()
+        return
+      }
+      if (event.type === 'resync') {
+        this.handleResyncEvent(event.rowCount)
+        return
+      }
     } catch (error) {
       console.warn('[WindowedDataSource] error handling provider event', error)
     }
@@ -381,7 +408,17 @@ export class WindowedDataSource implements DataSource {
     if (this.lastHintWindow) this.planAndFetch(this.lastHintWindow)
   }
 
+  /**
+   * 软失效：保留旧缓存值过渡显示，标 stale 后重拉当前预取窗口。
+   * 供快照轮询使用；不要用 resync 代替。
+   */
+  private handleInvalidateEvent(): void {
+    this.cache.markAllStale()
+    if (this.lastHintWindow) this.planAndFetch(this.lastHintWindow)
+  }
+
   private handleResyncEvent(rowCount?: number): void {
+    this.maybeWarnFrequentResync()
     for (const request of this.requests.values()) request.controller.abort()
     this.requests.clear()
     this.inFlightByBlock.clear()
@@ -394,5 +431,28 @@ export class WindowedDataSource implements DataSource {
     }
     this.emit({ type: 'reset' })
     if (this.lastHintWindow) this.planAndFetch(this.lastHintWindow)
+  }
+
+  /**
+   * 短时间多次 resync 时告警：通常是把硬失效误用于定时刷新。
+   * @returns {void}
+   */
+  private maybeWarnFrequentResync(): void {
+    if (!this.warnOnFrequentResync) return
+    const now = Date.now()
+    this.recentResyncAt.push(now)
+    while (
+      this.recentResyncAt.length > 0 &&
+      now - this.recentResyncAt[0]! > FREQUENT_RESYNC_WINDOW_MS
+    ) {
+      this.recentResyncAt.shift()
+    }
+    if (this.recentResyncAt.length >= FREQUENT_RESYNC_THRESHOLD) {
+      console.warn(
+        '[WindowedDataSource] Frequent resync within ' +
+          `${FREQUENT_RESYNC_WINDOW_MS}ms — use { type: 'cells' } for live/poll updates ` +
+          "or { type: 'invalidate' } for soft snapshot refresh; resync is for reconnect only.",
+      )
+    }
   }
 }
