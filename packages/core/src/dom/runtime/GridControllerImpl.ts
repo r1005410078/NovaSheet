@@ -71,6 +71,7 @@ import type {
 } from './GridController'
 import type { RenderBackend, RenderBackendFactory, RenderBackendHandle } from '../../ports/RenderBackend'
 import type { CellEditorRegistry } from '../interaction/CellEditorContract'
+import type { GridSelectionBehavior } from '../../kernel/interaction/SelectionBehavior'
 
 /**
  * 通用 Grid 装配（`Grid` facade 转发到此）。
@@ -163,6 +164,7 @@ export class GridControllerImpl implements GridController {
           contextMenus?: ContextMenuExtensionConfig
           contextMenuRenderer?: ContextMenuRenderer
           interactions?: GridInteractions
+          selectionBehavior?: GridSelectionBehavior
         }
       | undefined,
     backend: RenderBackendFactory,
@@ -257,6 +259,7 @@ export class GridControllerImpl implements GridController {
       contextMenus: gridOptions?.contextMenus,
       contextMenuRenderer: gridOptions?.contextMenuRenderer,
       interactions: gridOptions?.interactions,
+      selectionBehavior: gridOptions?.selectionBehavior,
       onSurfaceResize: (w, h) => this.handle.resizeSurface(w, h),
     })
 

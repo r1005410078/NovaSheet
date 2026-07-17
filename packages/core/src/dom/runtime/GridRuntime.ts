@@ -84,6 +84,7 @@ import {
   type GridInteractions,
   type ResolvedGridInteractions,
 } from './GridInteractions'
+import type { GridSelectionBehavior } from '../../kernel/interaction/SelectionBehavior'
 
 /** GridRuntime.autofitRows 入参子集（不包含 measurer，runtime 自己持有）。 */
 export interface AutofitRowsRuntimeOptions {
@@ -149,6 +150,8 @@ export interface GridRuntimeOptions {
   contextMenuRenderer?: ContextMenuRenderer
   /** 交互能力开关（菜单 / 改尺寸 / 换位）。 */
   interactions?: GridInteractions
+  /** 冻结窗格与表头角块的选择语义（构造期配置）。 */
+  selectionBehavior?: GridSelectionBehavior
 }
 
 /** Undo 成功后的 runtime 事件。 */

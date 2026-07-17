@@ -7,6 +7,11 @@ export { Grid, withExcelHeaders } from './Grid'
 export type { GridOptions } from './Grid'
 export type { GridInteractions, ResolvedGridInteractions } from './dom/runtime/GridInteractions'
 export { resolveGridInteractions } from './dom/runtime/GridInteractions'
+export type {
+  FrozenPaneSelectionBehavior,
+  GridSelectionBehavior,
+  ResolvedSelectionBehavior,
+} from './kernel/interaction/SelectionBehavior'
 
 // 数据层
 export { InMemoryDataSource } from './kernel/data/InMemoryDataSource'

@@ -38,6 +38,7 @@ import type {
   UndoEvent,
 } from './dom/runtime/GridController'
 import type { RenderBackendFactory } from './ports/RenderBackend'
+import type { GridSelectionBehavior } from './kernel/interaction/SelectionBehavior'
 
 export interface GridOptions extends GridEngineOptions {
   /** 渲染后端工厂——由调用方注入（如 `@zhiguang/novasheet-canvas2d` 的 `canvas2dBackend`），反转 core→backend 依赖。 */
@@ -89,6 +90,8 @@ export interface GridOptions extends GridEngineOptions {
    * 字段缺省为启用；监控只读表可传 `{ contextMenu: false, resize: false, reorder: false }`。
    */
   readonly interactions?: GridInteractions
+  /** 冻结窗格与表头角块的选择语义（构造期配置）。 */
+  readonly selectionBehavior?: GridSelectionBehavior
 }
 
 /** 启用 Excel 风格列标（A/B/…）与左侧行号。 */
@@ -144,6 +147,7 @@ export class Grid {
         contextMenus: options.contextMenus,
         contextMenuRenderer: options.contextMenuRenderer,
         interactions: options.interactions,
+        selectionBehavior: options.selectionBehavior,
       },
       options.backend,
     )
