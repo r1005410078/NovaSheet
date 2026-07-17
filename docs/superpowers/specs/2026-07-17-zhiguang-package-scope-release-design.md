@@ -13,7 +13,7 @@ NovaSheet 的可发布包和 workspace 内部依赖当前统一使用 `@novashee
 
 ## 2. 目标
 
-1. 所有 workspace package identity 由 `@novasheet/*` 一致迁移为 `@zhiguang/*`。
+1. 所有 workspace package identity 由 `@novasheet/*` 一致迁移为 `@zhiguang/novasheet-*`。
 2. 所有当前源码、测试、构建脚本和 Storybook 内部 import/dependency 使用新 scope。
 3. `bun.lock` 的 workspace package 图同步为新 scope。
 4. 当前使用者文档、发布文档、仓库工作规则中的安装命令和 filter 改用新 scope。
@@ -35,12 +35,12 @@ NovaSheet 的可发布包和 workspace 内部依赖当前统一使用 `@novashee
 
 | 现有名称 | 新名称 | 发布 |
 | --- | --- | --- |
-| `@novasheet/core` | `@zhiguang/core` | 是 |
-| `@novasheet/canvas2d` | `@zhiguang/canvas2d` | 是，依赖 core |
-| `@novasheet/react` | `@zhiguang/react` | 是，依赖 core、canvas2d |
-| `@novasheet/cell-kit` | `@zhiguang/cell-kit` | 是，依赖 core、canvas2d，peer 依赖 react |
-| `@novasheet/mbd` | `@zhiguang/mbd` | 否，继续 private |
-| `@novasheet/storybook` | `@zhiguang/storybook` | 否，继续 Changesets ignore |
+| `@novasheet/core` | `@zhiguang/novasheet-core` | 是 |
+| `@novasheet/canvas2d` | `@zhiguang/novasheet-canvas2d` | 是，依赖 core |
+| `@novasheet/react` | `@zhiguang/novasheet-react` | 是，依赖 core、canvas2d |
+| `@novasheet/cell-kit` | `@zhiguang/novasheet-cell-kit` | 是，依赖 core、canvas2d，peer 依赖 react |
+| `@novasheet/mbd` | `@zhiguang/novasheet-mbd` | 否，继续 private |
+| `@novasheet/storybook` | `@zhiguang/novasheet-storybook` | 否，继续 Changesets ignore |
 
 包版本维持 `0.1.0`。每个公开包仅包含其既有 `dist/` files；在 publish 前必须重新构建并以 `bun publish --dry-run` 检查 tarball 内容。
 
