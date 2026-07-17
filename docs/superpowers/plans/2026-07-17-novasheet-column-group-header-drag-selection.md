@@ -807,3 +807,372 @@ Expected: 无空白错误；所有剩余未提交文件都能明确归属，既�
 git add docs/superpowers/plans/2026-07-17-novasheet-column-group-header-drag-selection.md
 git commit -m "docs(plan): 完成分组表头连续拖选计划"
 ```
+
+---
+
+### Task 6: 修正冻结区分组表头命中并补齐手势清理回归
+
+**Files:**
+- Modify: `packages/core/src/dom/runtime/controllers/InputController.ts`
+- Modify: `packages/core/tests/dom/runtime/controllers/InputController.column-groups.test.ts`
+- Modify: `packages/core/tests/dom/interaction/drag/ColumnGroupHeaderDrag.test.ts`
+- Modify: `packages/core/tests/dom/runtime/controllers/DragCoordinator.test.ts`
+
+**Interfaces:**
+- Consumes:
+  - `RenderFrame.viewport.regions: RenderRegion[]`
+  - `RenderRegion.rect.x/rect.width`、`RenderRegion.scrollOffsetX` 与
+    `RenderRegion.colRange: [number, number]`
+  - Task 2 已交付的
+    `InputController.hitTestGroupHeader(event: WebPointerEvent): ColumnGroupHeaderHit | null`
+  - Task 2 已交付的
+    `InputController.hitTestGroupHeaderAtLevel(event: WebPointerEvent, level: number): ColumnGroupHeaderHit | null`
+  - Task 3 已交付的 `ColumnGroupHeaderDrag`：目标组未命中时保持上一次有效选区。
+- Produces:
+  - 上述两个 public hit 方法的签名不变；内部改为按 `RenderRegion` 水平 segment 将 pointer
+    canvas `x` 转为 view column。
+  - `hitTestGroupHeaderAtLevel()` 仅在 `event.x < 0` 或
+    `event.x >= frame.viewport.contentRect.width` 时钳到该层首组/末组；pointer 位于 viewport
+    内的行头 gutter、冻结无组列或 region 空隙时返回 `null`。
+  - `DragCoordinator.cancelActiveDrag()` 与 `destroy()` 后，后续 pointermove 不再修改 selection，
+    且 `DRAG_AUTO_SCROLL_KEY` 无待执行 scheduler task。
+
+- [ ] **Step 1: 写冻结区命中的失败测试**
+
+在 `InputController.column-groups.test.ts` 新增 `makeFrozenGroupedFrame()`。保留
+`makeGroupedFrame()` 的 3 列 group tree，并只替换 viewport，使 col0 冻结、center 已滚动 100px：
+
+```ts
+function makeFrozenGroupedFrame(): RenderFrame {
+  const frame = makeGroupedFrame()
+  return {
+    ...frame,
+    viewport: {
+      ...frame.viewport,
+      contentRect: { width: 300, height: 300 },
+      scrollX: 100,
+      regions: [
+        {
+          id: 'main',
+          rowBand: 'middle',
+          colBand: 'center',
+          rowRange: [0, 4],
+          colRange: [2, 2],
+          rect: { x: 100, y: TOTAL_HEADER_HEIGHT, width: 200, height: 240 },
+          scrollOffsetX: 200,
+          scrollOffsetY: 0,
+          zIndex: 10,
+        },
+        {
+          id: 'middleLeft',
+          rowBand: 'middle',
+          colBand: 'left',
+          rowRange: [0, 4],
+          colRange: [0, 0],
+          rect: { x: 0, y: TOTAL_HEADER_HEIGHT, width: 100, height: 240 },
+          scrollOffsetX: 0,
+          scrollOffsetY: 0,
+          zIndex: 20,
+        },
+      ],
+    },
+  }
+}
+```
+
+新增用例：
+
+```ts
+it('leftCols > 0 且 scrollX > 0 时冻结无组列不误命中 center 组', () => {
+  const { ctl } = makeCtl(makeFrozenGroupedFrame())
+  expect(ctl.hitTestGroupHeader({ x: 50, y: 10, shiftKey: false })).toBeNull()
+  expect(
+    ctl.hitTestGroupHeaderAtLevel({ x: 50, y: 200, shiftKey: false }, 0),
+  ).toBeNull()
+})
+
+it('按 center region 的 scrollOffsetX 命中滚动后的可见组列', () => {
+  const { ctl } = makeCtl(makeFrozenGroupedFrame())
+  expect(ctl.hitTestGroupHeader({ x: 150, y: 10, shiftKey: false })).toEqual({
+    groupId: 's1',
+    level: 0,
+    startViewCol: 1,
+    endViewCol: 2,
+  })
+})
+
+it('锁层拖选进入 viewport 内冻结段时返回 null，只有真正越界才钳位', () => {
+  const { ctl } = makeCtl(makeFrozenGroupedFrame())
+  expect(
+    ctl.hitTestGroupHeaderAtLevel({ x: 50, y: 200, shiftKey: false }, 0),
+  ).toBeNull()
+  expect(
+    ctl.hitTestGroupHeaderAtLevel({ x: -1, y: 200, shiftKey: false }, 0)?.groupId,
+  ).toBe('s1')
+  expect(
+    ctl.hitTestGroupHeaderAtLevel({ x: 300, y: 200, shiftKey: false }, 0)?.groupId,
+  ).toBe('s1')
+})
+```
+
+同时把原“横向越界钳位”测试的右侧坐标由 `350` 改为
+`frame.viewport.contentRect.width`，明确边界是 viewport 而非列总宽。
+
+- [ ] **Step 2: 跑冻结区目标测试确认红**
+
+Run:
+
+```bash
+bun test packages/core/tests/dom/runtime/controllers/InputController.column-groups.test.ts
+```
+
+Expected: FAIL；冻结段 `x=50` 被旧公式
+`event.x - rowHeaderWidth + scrollX` 算成逻辑列 1 并误命中 `s1`。
+
+- [ ] **Step 3: 以最小 region 公式修正两个 group hit 方法**
+
+在 `InputController.ts` 从 `../../../kernel/geometry/FrozenRegions` type-only import
+`RenderRegion`，新增两个 private helper；不修改 `ColumnGroupHeaderHit`、group tree、selection 或
+Canvas 契约：
+
+```ts
+private hitTestGroupHeaderViewCol(
+  frame: RuntimeRenderFrame,
+  x: number,
+): number | null {
+  const region = this.findHorizontalHeaderRegion(frame, x)
+  if (!region) return null
+  const logicalX = region.scrollOffsetX + x - region.rect.x
+  const colIndex = frame.colsAxis.positionToIndex(logicalX)
+  if (colIndex < region.colRange[0] || colIndex > region.colRange[1]) return null
+  return colIndex
+}
+
+private findHorizontalHeaderRegion(
+  frame: RuntimeRenderFrame,
+  x: number,
+): RenderRegion | null {
+  return [...frame.viewport.regions]
+    .filter((region) => region.rowBand === 'middle')
+    .sort((a, b) => b.zIndex - a.zIndex)
+    .find((region) => x >= region.rect.x && x < region.rect.x + region.rect.width) ?? null
+}
+```
+
+`hitTestGroupHeader()` 保留 y/level 校验，并在取 level 后改为直接调用共享的 private cell helper，
+避免再委托会执行越界钳位的 `hitTestGroupHeaderAtLevel()`：
+
+```ts
+const colIndex = this.hitTestGroupHeaderViewCol(frame, event.x)
+if (colIndex === null) return null
+return this.findGroupHeaderHitAtColumn(columnGroupHeader.rows[level], level, colIndex)
+```
+
+`hitTestGroupHeaderAtLevel()` 的最小选择行为：
+
+```ts
+if (row.length === 0) return null
+if (event.x < 0) return this.toColumnGroupHeaderHit(row[0]!, level)
+if (event.x >= frame.viewport.contentRect.width) {
+  return this.toColumnGroupHeaderHit(row[row.length - 1]!, level)
+}
+const colIndex = this.hitTestGroupHeaderViewCol(frame, event.x)
+if (colIndex === null) return null
+return this.findGroupHeaderHitAtColumn(row, level, colIndex)
+```
+
+共享 cell helper 使用现有 `RenderFrameGroupHeaderCell` 类型，不引入新的 public interface：
+
+```ts
+private findGroupHeaderHitAtColumn(
+  row: readonly RenderFrameGroupHeaderCell[] | undefined,
+  level: number,
+  colIndex: number,
+): ColumnGroupHeaderHit | null {
+  const cell = row?.find(
+    (candidate) =>
+      colIndex >= candidate.startViewCol && colIndex <= candidate.endViewCol,
+  )
+  return cell ? this.toColumnGroupHeaderHit(cell, level) : null
+}
+```
+
+区域公式固定为：
+
+```text
+logicalX = region.scrollOffsetX + event.x - region.rect.x
+```
+
+并必须在 `positionToIndex(logicalX)` 后校验 `colIndex ∈ region.colRange`。不得回退到全局
+`scrollX`/`rowHeaderWidth` 公式；pointer 在 viewport 内但未命中 region 时保持 `null`，使组拖选
+进入冻结无组列后保持上一次有效 selection。
+
+- [ ] **Step 4: 跑冻结区命中测试与 typecheck 确认绿**
+
+Run:
+
+```bash
+bun test packages/core/tests/dom/runtime/controllers/InputController.column-groups.test.ts
+bun run --filter @zhiguang/novasheet-core typecheck
+```
+
+Expected: PASS / 0 error；冻结无组列返回 `null`，center 仍返回 `s1`，viewport 外仍钳首/末组。
+
+- [ ] **Step 5: 写 Shift 右到左与 cancel/destroy 清理回归测试**
+
+在 `ColumnGroupHeaderDrag.test.ts` 的 `makeDrag()` options 增加：
+
+```ts
+hitTestGroupHeaderAtLevel?: (
+  event: WebPointerEvent,
+  level: number,
+) => ColumnGroupHeaderHit | null
+```
+
+并把 deps 中固定的 `hitTestGroupHeaderAtLevel` 改为：
+
+```ts
+hitTestGroupHeaderAtLevel: options.hitTestGroupHeaderAtLevel ?? ((event, level) =>
+  level === 0 ? (event.x < 300 ? s1 : s2) : null),
+```
+
+增加组拖选进入冻结无组段时保持 selection 的具体回归，以及右侧 anchor 向左扩选：
+
+```ts
+it('move 进入冻结无组段未命中时保持 pointerdown 已建立的选区', () => {
+  const frozen = makeDrag({ hitTestGroupHeaderAtLevel: () => null })
+  frozen.drag.tryStart({ x: 150, y: 10, shiftKey: false, button: 0 })
+  expect(frozen.selectWholeColumnRange).toHaveBeenCalledTimes(1)
+  frozen.drag.move({ x: 50, y: 200, shiftKey: false })
+  expect(frozen.selectWholeColumnRange).toHaveBeenCalledTimes(1)
+  expect(frozen.selectWholeColumnRange).toHaveBeenLastCalledWith(1, 2)
+})
+
+it('Shift 从右侧整列 anchor 向左组扩选时使用目标组左边界', () => {
+  const selection = {
+    activeCell: { rowIndex: 0, colIndex: 4 },
+    anchorCell: { rowIndex: 0, colIndex: 4 },
+    extentCell: { rowIndex: 2, colIndex: 3 },
+    selectedRange: { startRow: 0, endRow: 2, startCol: 3, endCol: 4 },
+  }
+  const shifted = makeDrag({ selection, isWholeColumnSelection: () => true })
+  shifted.drag.tryStart({ x: 150, y: 10, shiftKey: true, button: 0 })
+  expect(shifted.selectWholeColumnRange).toHaveBeenLastCalledWith(4, 1)
+})
+```
+
+在 `DragCoordinator.test.ts` 将 `makeCoordinator()` 扩展为接收
+`options: { groupHit?: ColumnGroupHeaderHit } = {}`，并以真实可观察 fake scheduler 替换立即执行
+fixture：
+
+```ts
+const pending = new Map<string, () => void>()
+const cancel = mock((key: string) => { pending.delete(key) })
+const selectWholeColumnRange = mock((_anchor: number, _extent: number) => {})
+// deps 片段
+scheduler: {
+  schedule: (key: string, callback: () => void) => { pending.set(key, callback) },
+  cancel,
+},
+hitTestGroupHeader: () => options.groupHit ?? null,
+hitTestGroupHeaderAtLevel: () => options.groupHit ?? null,
+selectWholeColumnRange,
+```
+
+helper 返回 `{ drag, cancel, pending, selectWholeColumnRange }`，并新增：
+
+```ts
+it('cancelActiveDrag 后 pointermove 不再选择且清除 auto-scroll task', () => {
+  const groupHit = { groupId: 's1', level: 0, startViewCol: 1, endViewCol: 2 }
+  const { drag, pending, selectWholeColumnRange } = makeCoordinator({ groupHit })
+  expect(drag.tryStartDrag({ x: 150, y: 10, shiftKey: false, button: 0 })).toBe(true)
+  drag.moveActiveDrag({ x: 399, y: 10, shiftKey: false })
+  expect(pending.size).toBe(1)
+  expect(drag.cancelActiveDrag()).toBe(true)
+  const callsAfterCancel = selectWholeColumnRange.mock.calls.length
+  expect(pending.size).toBe(0)
+  expect(drag.moveActiveDrag({ x: 350, y: 10, shiftKey: false })).toBe(false)
+  expect(selectWholeColumnRange).toHaveBeenCalledTimes(callsAfterCancel)
+})
+
+it('destroy 取消活跃组拖选并清除 auto-scroll task，且保持幂等', () => {
+  const groupHit = { groupId: 's1', level: 0, startViewCol: 1, endViewCol: 2 }
+  const { drag, pending, selectWholeColumnRange } = makeCoordinator({ groupHit })
+  drag.tryStartDrag({ x: 150, y: 10, shiftKey: false, button: 0 })
+  drag.moveActiveDrag({ x: 399, y: 10, shiftKey: false })
+  expect(pending.size).toBe(1)
+  drag.destroy()
+  drag.destroy()
+  const callsAfterDestroy = selectWholeColumnRange.mock.calls.length
+  expect(pending.size).toBe(0)
+  expect(drag.moveActiveDrag({ x: 350, y: 10, shiftKey: false })).toBe(false)
+  expect(selectWholeColumnRange).toHaveBeenCalledTimes(callsAfterDestroy)
+})
+```
+
+`DragCoordinator.test.ts` 以 `import type` 引入 `ColumnGroupHeaderHit`。现有 destroy 幂等测试继续
+保留；若因 fake scheduler 改造不再累计 cancel 调用次数，只把断言收紧为两次 `destroy()` 不抛且
+`pending.size === 0`，不得删除幂等覆盖。
+
+- [ ] **Step 6: 跑新增回归测试**
+
+Run:
+
+```bash
+bun test packages/core/tests/dom/interaction/drag/ColumnGroupHeaderDrag.test.ts \
+  packages/core/tests/dom/runtime/controllers/DragCoordinator.test.ts \
+  packages/core/tests/dom/runtime/controllers/InputController.test.ts
+```
+
+Expected: 全部 PASS；右到左 Shift 选择调用为 `(4, 1)`，cancel/destroy 后 selection 调用数不再
+增加且 `pending.size === 0`，现有 Escape → `cancelActiveDrag()` 路由测试仍绿。
+
+- [ ] **Step 7: 跑冻结选择、组头与拖拽 focused 回归**
+
+Run:
+
+```bash
+bun test packages/core/tests/dom/runtime/controllers/InputController.column-groups.test.ts \
+  packages/core/tests/dom/interaction/drag/ColumnGroupHeaderDrag.test.ts \
+  packages/core/tests/dom/runtime/controllers/DragCoordinator.test.ts \
+  packages/core/tests/dom/runtime/GridRuntime.col-reorder.test.ts \
+  packages/core/tests/acceptance/interaction/selection/bdd.test.ts \
+  packages/core/tests/acceptance/functional/column-groups/column-groups-bdd.test.ts
+```
+
+Expected: 全部 PASS；既有组头正反拖选、冻结列、`reorder: false`、列换位和 column group 行为无
+回归。
+
+- [ ] **Step 8: 运行四项全量门禁**
+
+Run:
+
+```bash
+bun run lint
+bun run --filter '*' typecheck
+bun test
+bun run --filter @zhiguang/novasheet-core build && \
+  bun run --filter @zhiguang/novasheet-canvas2d build
+```
+
+Expected: lint 0 error / 0 warning；所有 workspace typecheck exit 0；test 0 fail；build 严格按
+core → canvas2d 顺序全部 exit 0。
+
+- [ ] **Step 9: 检查范围并提交实现修正**
+
+Run:
+
+```bash
+git diff --check
+git status --short
+```
+
+Expected: 无空白错误；只暂存本 Task 的 4 个 code/test 文件，不改 spec 或 Task 1–5 已完成历史。
+
+```bash
+git add packages/core/src/dom/runtime/controllers/InputController.ts \
+  packages/core/tests/dom/runtime/controllers/InputController.column-groups.test.ts \
+  packages/core/tests/dom/interaction/drag/ColumnGroupHeaderDrag.test.ts \
+  packages/core/tests/dom/runtime/controllers/DragCoordinator.test.ts
+git commit -m "fix(core): 修正分组表头冻结区命中与拖拽清理"
+```
