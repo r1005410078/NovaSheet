@@ -5,6 +5,7 @@ import {
   applySelectionNavigation,
   parseSelectionNavigationKey,
   type Row,
+  type GridSelection,
 } from '../../../../src'
 
 import { DefaultSelectionState } from '../../../../src/features/selection/DefaultSelectionState'
@@ -14,6 +15,18 @@ import {
   mutableSchema,
   singleCellSelection,
 } from '../../_helpers/fixtures'
+
+function dispatchGridPointerDown(target: HTMLElement, point: { x: number; y: number }): void {
+  target.dispatchEvent(
+    new MouseEvent('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+      clientX: point.x,
+      clientY: point.y,
+      button: 0,
+    }),
+  )
+}
 
 describe('Core acceptance selection', () => {
 function createRemapData(): InMemoryDataSource {
@@ -76,6 +89,97 @@ describe('Core BDD Batch 4 selection navigation coordinates scenarios', () => {
 
     grid.destroy()
     document.body.removeChild(container)
+  })
+
+  it('core.L2.grid-frozen-pane-selection selects row/column/cell by frozen pane config', () => {
+    const changes: GridSelection[] = []
+    const { container, grid } = mountRecordingGrid({
+      data: createMutableData(),
+      frozen: { leftCols: 1, topRows: 1 },
+      selectionBehavior: {
+        frozenPanes: { left: 'row', top: 'column', topLeft: 'cell' },
+      },
+      onSelectionChange: (selection) => changes.push(selection),
+    })
+    const scrollHost = container.querySelector<HTMLElement>('[data-novasheet-scroll-host]')
+    if (scrollHost === null) throw new Error('expected Grid scroll host')
+
+    dispatchGridPointerDown(scrollHost, { x: 50, y: 74 })
+    expect(grid.getSelection().selectedRange).toEqual({
+      startRow: 1,
+      endRow: 1,
+      startCol: 0,
+      endCol: 3,
+    })
+    expect(grid.getSelection().activeCell).toEqual({ rowIndex: 1, colIndex: 0 })
+
+    dispatchGridPointerDown(scrollHost, { x: 150, y: 46 })
+    expect(grid.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 2,
+      startCol: 1,
+      endCol: 1,
+    })
+    expect(grid.getSelection().activeCell).toEqual({ rowIndex: 0, colIndex: 1 })
+
+    dispatchGridPointerDown(scrollHost, { x: 50, y: 46 })
+    expect(grid.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 0,
+      startCol: 0,
+      endCol: 0,
+    })
+    expect(changes.length).toBeGreaterThanOrEqual(3)
+
+    grid.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('core.L2.grid-frozen-pane-selection keeps plain cell selection when behavior omitted', () => {
+    const { container, grid } = mountRecordingGrid({
+      data: createMutableData(),
+      frozen: { leftCols: 1, topRows: 1 },
+    })
+    const scrollHost = container.querySelector<HTMLElement>('[data-novasheet-scroll-host]')
+    if (scrollHost === null) throw new Error('expected Grid scroll host')
+
+    dispatchGridPointerDown(scrollHost, { x: 50, y: 74 })
+    expect(grid.getSelection().selectedRange).toEqual({
+      startRow: 1,
+      endRow: 1,
+      startCol: 0,
+      endCol: 0,
+    })
+
+    grid.destroy()
+    document.body.removeChild(container)
+  })
+
+  it('core.L2.grid-header-corner-select-all selects everything only when opted in', () => {
+    const optIn = mountRecordingGrid({
+      data: createMutableData(),
+      excelHeaders: true,
+      selectionBehavior: { headerCorner: 'all' },
+    })
+    const optInScrollHost = optIn.container.querySelector<HTMLElement>('[data-novasheet-scroll-host]')
+    if (optInScrollHost === null) throw new Error('expected Grid scroll host')
+    dispatchGridPointerDown(optInScrollHost, { x: 8, y: 8 })
+    expect(optIn.grid.getSelection().selectedRange).toEqual({
+      startRow: 0,
+      endRow: 2,
+      startCol: 0,
+      endCol: 3,
+    })
+    optIn.grid.destroy()
+    document.body.removeChild(optIn.container)
+
+    const control = mountRecordingGrid({ data: createMutableData(), excelHeaders: true })
+    const controlScrollHost = control.container.querySelector<HTMLElement>('[data-novasheet-scroll-host]')
+    if (controlScrollHost === null) throw new Error('expected Grid scroll host')
+    dispatchGridPointerDown(controlScrollHost, { x: 8, y: 8 })
+    expect(control.grid.getSelection().selectedRange).toBeNull()
+    control.grid.destroy()
+    document.body.removeChild(control.container)
   })
 
   it('core.L0.selection-navigation-arrows parses keys and steps active cell', () => {

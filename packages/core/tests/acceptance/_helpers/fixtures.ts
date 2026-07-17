@@ -10,7 +10,9 @@ import {
   type CellEditorRegistry,
   type ExcelWorkspacePort,
   type GridEngineFrameSource,
+  type FrozenConfig,
   type GridSelection,
+  type GridSelectionBehavior,
   type PasteSkippedCell,
   type RenderBackend,
   type RenderBackendFactory,
@@ -70,6 +72,9 @@ export function mountRecordingGrid(
   options: {
     data?: InMemoryDataSource
     excelHeaders?: boolean
+    frozen?: Partial<FrozenConfig>
+    selectionBehavior?: GridSelectionBehavior
+    onSelectionChange?: (selection: GridSelection) => void
     rowHeaderField?: string
     onColumnsMoved?: (event: { fieldIds: readonly string[]; beforeFieldId: string | null }) => void
     onCopy?: (range: CellRange) => void
@@ -92,6 +97,9 @@ export function mountRecordingGrid(
     data: options.data ?? createDenseData(),
     backend,
     excelHeaders: options.excelHeaders,
+    frozen: options.frozen,
+    selectionBehavior: options.selectionBehavior,
+    onSelectionChange: options.onSelectionChange,
     rowHeaderField: options.rowHeaderField,
     onColumnsMoved: options.onColumnsMoved,
     onCopy: options.onCopy,
