@@ -31,7 +31,7 @@
 | 将“第 N 行/列”作为选择器配置 | view index 会随排序、筛选变化，不是稳定通用契约 |
 | 默认把冻结数据格变成选择器 | 破坏冻结可编辑列/行的既有单元格选择语义 |
 | 多段非连续选择 | 当前 `GridSelection` 只表达一个连续矩形，本次不扩张数据模型 |
-| 新增 Canvas hover、图标或主题 token | 本次只改变选择命中和已有选区绘制；视觉 affordance 后续独立设计 |
+| 新增 Canvas hover、图标或主题 token | 行选择器仅复用已有 `selectionBorder` / `selectionText`，其它视觉 affordance 后续独立设计 |
 | 把 `点号名称` 迁移为业务数据列 | 这是调用方的数据/schema 改造，可在使用该组件时独立完成 |
 
 ## 4. 公开 API
@@ -143,6 +143,12 @@ resolver 的求值域封闭：仅对 header corner 命中与数据 region 命中
 - 选择器窗格不禁用编辑：双击、F2、type-to-edit 仍按现有编辑入口作用于 activeCell。只读是独立关切（全局只读开关见 backlog），本设计不越界。
 - 行/列选中后的方向键与 Shift+方向键行为与现有行头/列头选择后一致；本设计不新增键盘语义。
 
+### 5.5 行选择器强选中态
+
+当选区覆盖全部数据列，且 `activeCell` 位于左冻结窗格时，Canvas2D 将该冻结列中已选行的数据格呈现为强行头状态：背景使用 `theme.colors.selectionBorder`，文字使用 `theme.colors.selectionText`。整行其余数据格继续由 DOM SelectionOverlay 使用 `selectionBg` 绘制浅色选区；没有左冻结窗格时不启用该状态。
+
+该规则只从既有 `RenderFrame.selection` 与冻结 `RenderRegion` 派生，不把 `selectionBehavior` 放入 `RenderFrame`，也不新增主题 token。
+
 ## 6. 架构
 
 ### 6.1 Kernel interaction
@@ -217,7 +223,7 @@ type SelectionIntent =
 | 现有行头 / 列头 | 继续分别选择整行 / 整列 |
 | 现有 `rowHeaderCornerLabel` | 点击仍无动作，除非显式 `headerCorner: 'all'` |
 | 现有 `frozen` 动态变更 | 区域由当前 frame 解析；配置按边界自动适用或失效，无需重配 |
-| Canvas2D / 未来后端 | 不依赖 Canvas 实现，只消费既有 `RenderFrame` 与 DOM input |
+| Canvas2D / 未来后端 | 选择逻辑不依赖 Canvas；Canvas2D 可从既有 `RenderFrame` 派生行选择器强状态 |
 
 ## 10. ADR
 

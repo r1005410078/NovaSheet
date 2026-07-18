@@ -51,6 +51,10 @@ export interface CellPaintParams {
   getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined
   /** Validation — 'invalid' 时绘制红边框 + 角标；'pending'/'ok'/undefined 不绘制。 */
   validationState?: 'ok' | 'invalid' | 'pending'
+  /** 单格背景覆盖色；用于把数据格呈现为行选择器等强状态。 */
+  backgroundColor?: string
+  /** 单格文字覆盖色；缺省使用 theme.colors.text。 */
+  textColor?: string
 }
 
 /** Canvas2D custom renderer 收到的单元格绘制上下文。 */
@@ -129,6 +133,10 @@ export class CellPainter {
   /** 绘制单个单元格：裁剪至矩形区域，按字段类型分发到对应绘制方法 */
   paint(ctx: CanvasRenderingContext2D, params: CellPaintParams): void {
     const { value, rect, field } = params
+    if (params.backgroundColor !== undefined) {
+      ctx.fillStyle = params.backgroundColor
+      ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
+    }
     // null / undefined 都不绘制：null = 显式空（与 SQL 语义一致），
     // undefined = 异步源缓存未命中（未来 M2+ 改成绘灰色占位骨架条）。
     if (value === null || value === undefined) {
@@ -149,7 +157,7 @@ export class CellPainter {
       return
     }
 
-    ctx.fillStyle = this.theme.colors.text
+    ctx.fillStyle = params.textColor ?? this.theme.colors.text
     ctx.textBaseline = 'middle'
     ctx.textAlign = this.getTextAlign(field)
 

@@ -809,4 +809,58 @@ describe('Canvas2DRenderer — regions 绘制', () => {
     expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionText })
     expect(ops).toContainEqual({ op: 'fillRect', args: [0, 60, 44, 28] })
   })
+
+  it('整行选中时左冻结首列使用与强行头一致的选中态', () => {
+    const { ctx, ops } = createRecordingContext()
+    const data = new InMemoryDataSource({
+      schema: SCHEMA,
+      rows: [
+        { name: 'Alice', age: 30 },
+        { name: 'Bob', age: 25 },
+        { name: 'Carol', age: 40 },
+      ],
+    })
+    const rowsAxis = new ChunkedAxis({
+      count: data.getRowCount(),
+      defaultSize: denseGridTheme.metrics.rowHeight,
+    })
+    const colsAxis = new ChunkedAxis({ count: SCHEMA.fields.length, defaultSize: 100 })
+    const frozen = new FrozenRegions(rowsAxis, colsAxis, { leftCols: 1 })
+    const viewport = new Viewport(rowsAxis, colsAxis, frozen)
+    viewport.setSize(400, 200)
+    viewport.setHeaderHeight(denseGridTheme.metrics.headerHeight)
+    const renderer = new Canvas2DRenderer({
+      ctx,
+      data,
+      viewport,
+      rowsAxis,
+      colsAxis,
+      theme: denseGridTheme,
+    })
+
+    renderer.render({
+      data,
+      theme: denseGridTheme,
+      rowsAxis,
+      colsAxis,
+      viewport: viewport.snapshot(),
+      collapsedRowGaps: [],
+      collapsedColGaps: [],
+      selection: {
+        activeCell: { rowIndex: 1, colIndex: 0 },
+        anchorCell: { rowIndex: 1, colIndex: 0 },
+        extentCell: { rowIndex: 1, colIndex: SCHEMA.fields.length - 1 },
+        selectedRange: {
+          startRow: 1,
+          endRow: 1,
+          startCol: 0,
+          endCol: SCHEMA.fields.length - 1,
+        },
+      },
+    })
+
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionBorder })
+    expect(ops).toContainEqual({ op: 'fillRect', args: [0, 60, 100, 28] })
+    expect(ops).toContainEqual({ op: 'set:fillStyle', value: denseGridTheme.colors.selectionText })
+  })
 })

@@ -9,9 +9,9 @@ export interface ExcelScenarioBoardRow {
   readonly fillColor: '#34a353' | '#ea4335'
 }
 
-export const EXCEL_SCENARIO_BOARD_GENERATED_AT = "2026-07-15T11:38:11.349Z"
+export const EXCEL_SCENARIO_BOARD_GENERATED_AT = "2026-07-17T09:03:42.253Z"
 
-export const EXCEL_SCENARIO_BOARD_STATS = {"covered":34,"total":34} as const
+export const EXCEL_SCENARIO_BOARD_STATS = {"covered":35,"total":35} as const
 
 export const EXCEL_SCENARIO_BOARD_ROWS: readonly ExcelScenarioBoardRow[] = [
   {
@@ -28,6 +28,15 @@ export const EXCEL_SCENARIO_BOARD_ROWS: readonly ExcelScenarioBoardRow[] = [
     "id": "excel.L3a.default-mount",
     "summary": "默认挂载 excel/grid/toolbar/canvas",
     "userStory": "作为业务开发者，当我把 NovaExcel 放进页面时，我希望开箱即见完整的 Excel 壳层（表格、工具栏、画布），以便确认组件已正确挂载并可继续交互。",
+    "manifestStatus": "draft",
+    "coverage": "covered",
+    "fillColor": "#34a353"
+  },
+  {
+    "layer": "L3a",
+    "id": "excel.L3a.frozen-pane-selection-prop",
+    "summary": "selectionBehavior prop 转发到 Grid 构造且不泄漏为 DOM attribute",
+    "userStory": "作为集成方，当我给 `NovaSheetGrid` 传入 `selectionBehavior` 时，我希望它被转发进 `Grid` 构造链并生效，且不作为未知 attribute 落到宿主 DOM 元素上，以便 React 层声明冻结窗格选择语义而无控制台告警。",
     "manifestStatus": "draft",
     "coverage": "covered",
     "fillColor": "#34a353"

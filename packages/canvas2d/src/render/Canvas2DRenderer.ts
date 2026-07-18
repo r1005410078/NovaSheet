@@ -144,6 +144,12 @@ interface Canvas2DPaintFrameContext {
   overflowCrossings: Set<string>
 }
 
+interface FrozenRowSelectorPaintState {
+  readonly startRow: number
+  readonly endRow: number
+  readonly colIndex: number
+}
+
 /**
  * 拥有每帧绘制管线。除 painter 实例外，Renderer 本身基本无状态：
  * 每次 paint() 都从 Viewport.snapshot() 取最新快照（spec §4 单一数据源），
@@ -462,6 +468,7 @@ export class Canvas2DRenderer implements RenderBackend {
     this.ctx.font = `${theme.metrics.fontSize}px ${theme.metrics.fontFamily}`
     this.preloadVisibleRows(ctx)
     const textWrapLookup = buildTextWrapLookup(cellFormats)
+    const frozenRowSelector = this.getFrozenRowSelectorPaintState(ctx.frame)
     for (const region of paintOrder)
       this.paintCellContentRegion(
         region,
@@ -476,6 +483,7 @@ export class Canvas2DRenderer implements RenderBackend {
         ctx.frame.getAttachment,
         ctx.frame.resolveCellType,
         ctx.frame.getValidationState,
+        frozenRowSelector,
       )
     this.paintHeaders(
       paintOrder,
@@ -697,6 +705,24 @@ export class Canvas2DRenderer implements RenderBackend {
     return { startRow: range.startRow, endRow: range.endRow }
   }
 
+  private getFrozenRowSelectorPaintState(
+    frame: RenderFrame,
+  ): FrozenRowSelectorPaintState | undefined {
+    const rowRange = this.getSelectedRowHeaderRange(frame)
+    const activeCell = frame.selection?.activeCell
+    if (!rowRange || !activeCell) return undefined
+
+    const leftRegion = frame.viewport.regions.find(
+      (region) =>
+        region.colBand === 'left' &&
+        activeCell.colIndex >= region.colRange[0] &&
+        activeCell.colIndex <= region.colRange[1],
+    )
+    if (!leftRegion) return undefined
+
+    return { ...rowRange, colIndex: activeCell.colIndex }
+  }
+
   private paintRowHeaders(
     frame: RenderFrame,
     regions: RenderRegion[],
@@ -763,6 +789,7 @@ export class Canvas2DRenderer implements RenderBackend {
     getAttachment?: <T>(namespace: string, viewRow: number, viewCol: number) => T | undefined,
     resolveCellType?: (rowIndex: number, colIndex: number, field: Field) => Field['type'],
     getValidationState?: (rowIndex: number, colIndex: number) => 'ok' | 'invalid' | 'pending',
+    frozenRowSelector?: FrozenRowSelectorPaintState,
   ): void {
     const { rowRange, colRange, rect, scrollOffsetX, scrollOffsetY } = region
     if (rowRange[1] < rowRange[0] || colRange[1] < colRange[0]) return
@@ -788,11 +815,17 @@ export class Canvas2DRenderer implements RenderBackend {
         const colWidth = colsAxis.getSize(c)
         const value = data.getCell(r, field.id)
         const resolvedField = resolvePaintField(field, r, c, resolveCellType)
+        const strongRowSelector =
+          frozenRowSelector !== undefined &&
+          c === frozenRowSelector.colIndex &&
+          r >= frozenRowSelector.startRow &&
+          r <= frozenRowSelector.endRow
         const mode = textWrapLookup.get(`${r}:${c}`) ?? (field.wrap === true ? 'wrap' : 'overflow')
         // overflow：单行文本超出本格且右邻格为空时，把绘制矩形向右扩到第一个非空格/可见列边界，
         // 让文字溢出显示（与 Excel/Sheets 一致）。number 不溢出。
         let paintWidth = colWidth
         if (
+          !strongRowSelector &&
           mode === 'overflow' &&
           resolvedField.type === 'text' &&
           typeof value === 'string' &&
@@ -822,6 +855,8 @@ export class Canvas2DRenderer implements RenderBackend {
           formatCell,
           getAttachment,
           validationState: getValidationState ? getValidationState(r, c) : undefined,
+          backgroundColor: strongRowSelector ? this.theme.colors.selectionBorder : undefined,
+          textColor: strongRowSelector ? this.theme.colors.selectionText : undefined,
         })
         this.collectCellActionHits({
           value,
