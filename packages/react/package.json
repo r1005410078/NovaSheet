@@ -1,6 +1,6 @@
 {
   "name": "@zhiguang/novasheet-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React adapter package for NovaSheet.",
   "license": "MIT",
   "type": "module",
@@ -45,8 +45,8 @@
     "lint:scenario-coverage": "bun scripts/check-scenario-coverage.ts --fail-on-missing --fail-on-orphan"
   },
   "dependencies": {
-    "@zhiguang/novasheet-canvas2d": "^0.1.0",
-    "@zhiguang/novasheet-core": "^0.1.0",
+    "@zhiguang/novasheet-canvas2d": "^0.1.1",
+    "@zhiguang/novasheet-core": "^0.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.575.0",
